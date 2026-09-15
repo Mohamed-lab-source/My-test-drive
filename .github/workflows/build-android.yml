@@ -6,6 +6,9 @@ on:
       - claude/senior-app-developer-0b9qqe
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,6 +30,26 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Link EAS project (first run only)
+        run: |
+          if ! grep -q '"projectId"' app.json; then
+            eas init --non-interactive --account toukhys-team
+          else
+            echo "EAS project already linked, skipping."
+          fi
+
+      - name: Commit linked EAS project id
+        run: |
+          if ! git diff --quiet app.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add app.json
+            git commit -m "chore: link EAS project [skip ci]"
+            git push
+          else
+            echo "No app.json changes to commit."
+          fi
 
       - name: Build Android APK
         run: eas build --platform android --profile preview --non-interactive
