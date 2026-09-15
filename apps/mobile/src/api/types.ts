@@ -1,0 +1,90 @@
+export type DietGoal = "NONE" | "FIT" | "INDULGENT" | "BALANCED";
+export type Difficulty = "EASY" | "MEDIUM" | "HARD";
+export type DishTag = "FIT" | "DESSERT" | "VEGETARIAN" | "QUICK" | "COMFORT" | "SPICY";
+
+export type Preference = {
+  id: string;
+  dietGoal: DietGoal;
+  favoriteCuisineSlugs: string[];
+  allergies: string[];
+};
+
+export type User = {
+  id: string;
+  email: string;
+  name: string;
+  preference: Preference | null;
+};
+
+export type Cuisine = {
+  id: string;
+  slug: string;
+  name: string;
+  recipeCount: number;
+};
+
+export type RecipeSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  dishType: string;
+  heroImageUrl: string;
+  baseServings: number;
+  prepMinutes: number;
+  cookMinutes: number;
+  difficulty: Difficulty;
+  tags: DishTag[];
+  cuisine: { slug: string; name: string };
+};
+
+export type RecipeIngredient = {
+  name: string;
+  quantity: number;
+  unit: string;
+  note: string | null;
+};
+
+export type RecipeStep = {
+  order: number;
+  instruction: string;
+  imageUrl: string;
+  timerMinutes: number | null;
+};
+
+export type RecipeDetail = RecipeSummary & {
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
+};
+
+export type ShoppingListItem = {
+  ingredientName: string;
+  quantity: number;
+  unit: string;
+  estimatedCost: number;
+};
+
+export type DeliveryPartner = {
+  id: string;
+  slug: string;
+  name: string;
+  websiteUrl: string;
+  logoEmoji: string;
+};
+
+export type ShoppingListResult = {
+  id: string;
+  recipe: { slug: string; title: string };
+  servings: number;
+  budget: number | null;
+  totalEstimatedCost: number;
+  withinBudget: boolean;
+  budgetDifference: number | null;
+  items: ShoppingListItem[];
+  deliveryPartners: DeliveryPartner[];
+};
+
+export type NearbyStores = {
+  mapsSearchUrl: string;
+  deliveryPartners: DeliveryPartner[];
+};

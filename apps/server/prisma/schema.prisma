@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DietGoal {
+  NONE
+  FIT
+  INDULGENT
+  BALANCED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum DishTag {
+  FIT
+  DESSERT
+  VEGETARIAN
+  QUICK
+  COMFORT
+  SPICY
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  createdAt     DateTime       @default(now())
+  preference    Preference?
+  shoppingLists ShoppingList[]
+}
+
+model Preference {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dietGoal             DietGoal @default(NONE)
+  favoriteCuisineSlugs String[] @default([])
+  allergies            String[] @default([])
+  updatedAt            DateTime @updatedAt
+}
+
+model Cuisine {
+  id      String   @id @default(cuid())
+  slug    String   @unique
+  name    String
+  recipes Recipe[]
+}
+
+model Recipe {
+  id            String             @id @default(cuid())
+  slug          String             @unique
+  title         String
+  description   String
+  cuisineId     String
+  cuisine       Cuisine            @relation(fields: [cuisineId], references: [id])
+  dishType      String
+  heroImageUrl  String
+  baseServings  Int
+  prepMinutes   Int
+  cookMinutes   Int
+  difficulty    Difficulty         @default(EASY)
+  tags          DishTag[]          @default([])
+  ingredients   RecipeIngredient[]
+  steps         RecipeStep[]
+  shoppingLists ShoppingList[]
+  createdAt     DateTime           @default(now())
+}
+
+model Ingredient {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  unit         String
+  pricePerUnit Float
+  category     String
+  recipeUses   RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id           String     @id @default(cuid())
+  recipeId     String
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Float
+  displayUnit  String
+  note         String?
+
+  @@index([recipeId])
+}
+
+model RecipeStep {
+  id           String  @id @default(cuid())
+  recipeId     String
+  recipe       Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  order        Int
+  instruction  String
+  imageUrl     String
+  timerMinutes Int?
+
+  @@index([recipeId])
+}
+
+model ShoppingList {
+  id                  String             @id @default(cuid())
+  userId              String?
+  user                User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId            String
+  recipe              Recipe             @relation(fields: [recipeId], references: [id])
+  servings            Int
+  budget              Float?
+  totalEstimatedCost  Float
+  withinBudget        Boolean
+  createdAt           DateTime           @default(now())
+  items               ShoppingListItem[]
+}
+
+model ShoppingListItem {
+  id             String       @id @default(cuid())
+  shoppingListId String
+  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  ingredientName String
+  quantity       Float
+  unit           String
+  estimatedCost  Float
+}
+
+model DeliveryPartner {
+  id         String @id @default(cuid())
+  slug       String @unique
+  name       String
+  websiteUrl String
+  logoEmoji  String
+}
