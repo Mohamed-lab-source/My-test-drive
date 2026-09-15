@@ -78,6 +78,29 @@ npm run start                # then press i / a / w, or scan the QR with Expo Go
 - iOS simulator / web: `http://localhost:4000/api` (the default)
 - Physical device: your computer's LAN IP, e.g. `http://192.168.1.20:4000/api`
 
+### Build an installable APK (no Android Studio needed)
+
+Expo's EAS Build compiles the app in the cloud and hands you a download
+link — no local Android SDK required. Run this from your own machine (not
+this sandbox, which blocks Expo's build servers):
+
+```bash
+cd apps/mobile
+npm install -g eas-cli   # or use `npx eas-cli` below instead
+eas login                # free Expo account
+eas build --platform android --profile preview
+```
+
+That builds using the `preview` profile in `eas.json` (produces a plain
+`.apk` you can sideload, instead of the Play Store `.aab` format). EAS
+prints a QR code and URL when it's done — scan it on your phone or download
+the `.apk` and install it directly (enable "install unknown apps" for your
+browser/file manager first).
+
+The app will point at whatever `EXPO_PUBLIC_API_URL` was set to at build
+time, so either deploy the server somewhere reachable from your phone first,
+or rebuild after changing `apps/mobile/.env`.
+
 ### App flow
 
 1. **Onboarding** — pick a goal (fit/dessert/balanced) and favorite cuisines;
