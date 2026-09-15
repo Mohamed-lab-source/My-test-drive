@@ -111,3 +111,7 @@ npm run start                # then press i / a / w, or scan the QR with Expo Go
   prefilled cart (no public partner API available).
 - Nearby-store search uses a keyless Google Maps search link rather than the
   paid Places API.
+- No app icon/splash assets are committed (binary files couldn't be pushed
+  through this session's text-only GitHub API path); `app.json` omits icon
+  fields so Expo falls back to its defaults. Add real branding assets under
+  `apps/mobile/assets/` and reference them in `app.json` before shipping.
