@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - claude/senior-app-developer-0b9qqe
-    paths:
-      - "apps/mobile/**"
   workflow_dispatch: {}
 
 jobs:
