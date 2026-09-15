@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { optionalAuth, requireAuth } from "../middleware/auth";
+import { computeShoppingList } from "../utils/shoppingListMath";
 
 export const shoppingListsRouter = Router();
 
@@ -9,10 +10,6 @@ const generateSchema = z.object({
   servings: z.number().int().min(1).max(50),
   budget: z.number().positive().optional(),
 });
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
 
 shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (req, res) => {
   const parsed = generateSchema.safeParse(req.body);
@@ -31,19 +28,17 @@ shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (re
     return;
   }
 
-  const scale = servings / recipe.baseServings;
-  const items = recipe.ingredients.map((ri) => {
-    const quantity = round2(ri.quantity * scale);
-    const estimatedCost = round2(quantity * ri.ingredient.pricePerUnit);
-    return {
-      ingredientName: ri.ingredient.name,
-      quantity,
-      unit: ri.displayUnit,
-      estimatedCost,
-    };
-  });
-  const totalEstimatedCost = round2(items.reduce((sum, i) => sum + i.estimatedCost, 0));
-  const withinBudget = budget === undefined ? true : totalEstimatedCost <= budget;
+  const { items, totalEstimatedCost, withinBudget, budgetDifference } = computeShoppingList(
+    recipe.ingredients.map((ri) => ({
+      name: ri.ingredient.name,
+      quantity: ri.quantity,
+      displayUnit: ri.displayUnit,
+      pricePerUnit: ri.ingredient.pricePerUnit,
+    })),
+    servings,
+    recipe.baseServings,
+    budget
+  );
 
   const saved = await prisma.shoppingList.create({
     data: {
@@ -67,7 +62,7 @@ shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (re
     budget: budget ?? null,
     totalEstimatedCost,
     withinBudget,
-    budgetDifference: budget === undefined ? null : round2(budget - totalEstimatedCost),
+    budgetDifference,
     items: saved.items.map((i) => ({
       ingredientName: i.ingredientName,
       quantity: i.quantity,

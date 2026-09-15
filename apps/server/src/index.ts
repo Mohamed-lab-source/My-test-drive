@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { env } from "./env";
 import { authRouter } from "./routes/auth";
 import { recipesRouter } from "./routes/recipes";
@@ -8,8 +10,18 @@ import { deliveryRouter } from "./routes/delivery";
 
 const app = express();
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/auth/signup", authLimiter);
+app.use("/api/auth/login", authLimiter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

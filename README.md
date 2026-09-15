@@ -98,6 +98,10 @@ npm run start                # then press i / a / w, or scan the QR with Expo Go
 - Server: verified end-to-end with `prisma migrate dev`, seeding, and a full
   curl smoke test (signup → set preferences → personalized recommendations →
   budget-aware shopping list generation → history → nearby stores).
+- Server unit tests: `npm run test -w apps/server` (Vitest) covers the
+  shopping-list scaling/pricing/budget math in `src/utils/shoppingListMath.ts`.
+- Basic hardening: `helmet` security headers and rate limiting (20 req/15min)
+  on `/api/auth/signup` and `/api/auth/login`.
 - Mobile: `npx tsc --noEmit` passes and `npx expo config` validates the app
   config. This sandbox's network policy blocks `api.expo.dev` /
   `reactnative.directory`, so an actual `expo start`/simulator run could not
