@@ -20,9 +20,9 @@ apps/
   NONE, favorite cuisines) drives recipe ranking, both server-side for signed
   in users and client-side (from locally stored onboarding answers) for
   anonymous browsing.
-- **Recipes**: seeded with 9 real recipes across Italian, Asian and Egyptian
-  cuisines (mains, quick meals, and desserts), each with ingredients, step
-  photos, prep/cook time and difficulty.
+- **Recipes**: seeded with 18 real recipes across Italian, Asian and Egyptian
+  cuisines (mains, appetizers, soups, breakfast, quick meals, and desserts),
+  each with ingredients, step photos, prep/cook time and difficulty.
 - **Shopping list**: given a recipe, desired servings and an optional budget,
   the API scales every ingredient's weight/volume/count, estimates cost per
   item (seeded EGP pricing) and totals it, flagging over/under budget.
