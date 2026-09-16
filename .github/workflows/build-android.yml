@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - claude/senior-app-developer-0b9qqe
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/build-android.yml"
   workflow_dispatch: {}
 
 permissions:
