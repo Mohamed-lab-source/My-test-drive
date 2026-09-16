@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -10,16 +10,33 @@ import type { RecipeDetail } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeDetail">;
 
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 export function RecipeDetailScreen({ route, navigation }: Props) {
   const { slug } = route.params;
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [servings, setServings] = useState(1);
 
   useEffect(() => {
     fetchRecipeDetail(slug)
-      .then(setRecipe)
+      .then((data) => {
+        setRecipe(data);
+        setServings(data.baseServings);
+      })
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const scaledIngredients = useMemo(() => {
+    if (!recipe) return [];
+    const scale = servings / recipe.baseServings;
+    return recipe.ingredients.map((ing) => ({
+      ...ing,
+      quantity: round2(ing.quantity * scale),
+    }));
+  }, [recipe, servings]);
 
   if (loading || !recipe) {
     return (
@@ -47,8 +64,29 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             <MetaPill label={`Serves ${recipe.baseServings}`} />
           </View>
 
-          <Text style={styles.sectionTitle}>Ingredients (for {recipe.baseServings})</Text>
-          {recipe.ingredients.map((ing) => (
+          <Text style={styles.sectionTitle}>How many people are eating?</Text>
+          <View style={styles.stepperRow}>
+            <Pressable
+              style={styles.stepperButton}
+              onPress={() => setServings((s) => Math.max(1, s - 1))}
+              accessibilityRole="button"
+              accessibilityLabel="Fewer people"
+            >
+              <Text style={styles.stepperButtonText}>−</Text>
+            </Pressable>
+            <Text style={styles.stepperValue}>{servings}</Text>
+            <Pressable
+              style={styles.stepperButton}
+              onPress={() => setServings((s) => Math.min(50, s + 1))}
+              accessibilityRole="button"
+              accessibilityLabel="More people"
+            >
+              <Text style={styles.stepperButtonText}>+</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.sectionTitle}>Ingredients (for {servings})</Text>
+          {scaledIngredients.map((ing) => (
             <View key={ing.name} style={styles.ingredientRow}>
               <Text style={styles.ingredientName}>{ing.name}</Text>
               <Text style={styles.ingredientQty}>
@@ -84,6 +122,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               slug: recipe.slug,
               title: recipe.title,
               baseServings: recipe.baseServings,
+              initialServings: servings,
             })
           }
         />
@@ -127,6 +166,17 @@ const styles = StyleSheet.create({
   },
   ingredientName: { color: colors.text, fontSize: 14 },
   ingredientQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+  stepperRow: { flexDirection: "row", alignItems: "center" },
+  stepperButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperButtonText: { fontSize: 20, fontWeight: "800", color: colors.primaryDark },
+  stepperValue: { fontSize: 20, fontWeight: "800", color: colors.text, marginHorizontal: spacing(3) },
   stepCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,

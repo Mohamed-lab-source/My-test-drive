@@ -96,8 +96,19 @@ const cuisines = [
   { slug: "egyptian", name: "Egyptian" },
 ];
 
-const img = (seed: string, w = 900, h = 600) =>
-  `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+// LoremFlickr returns real photos matching given keywords (unlike the previous
+// purely-random picsum.photos placeholders). "lock" pins a stable photo per
+// seed instead of a different random one on every fetch.
+function hashSeed(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return h % 100000;
+}
+
+const foodImg = (keywords: string, uniqueSeed: string, w = 900, h = 600) =>
+  `https://loremflickr.com/${w}/${h}/${encodeURIComponent(keywords)}?lock=${hashSeed(uniqueSeed)}`;
 
 type RecipeSeed = {
   slug: string;
@@ -105,6 +116,10 @@ type RecipeSeed = {
   description: string;
   cuisine: string;
   dishType: string;
+  // Keywords for sourcing a topically-relevant real food photo. Some dishes
+  // (Egyptian ones especially) don't have great English tag coverage on
+  // stock photo sites, so these fall back to the closest honest descriptor.
+  imageKeywords: string;
   baseServings: number;
   prepMinutes: number;
   cookMinutes: number;
@@ -118,6 +133,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "margherita-pizza",
     title: "Margherita Pizza",
+    imageKeywords: "margherita,pizza",
     description: "Classic Neapolitan-style pizza with tomato, fresh mozzarella and basil.",
     cuisine: "italian",
     dishType: "Pizza",
@@ -151,6 +167,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "spaghetti-carbonara",
     title: "Spaghetti Carbonara",
+    imageKeywords: "carbonara,pasta",
     description: "Creamy Roman pasta made with egg, cheese, cured pork and black pepper — no cream needed.",
     cuisine: "italian",
     dishType: "Pasta",
@@ -180,6 +197,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "tiramisu",
     title: "Tiramisu",
+    imageKeywords: "tiramisu,dessert",
     description: "No-bake Italian dessert layered with coffee-soaked ladyfingers and mascarpone cream.",
     cuisine: "italian",
     dishType: "Dessert",
@@ -210,6 +228,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "chicken-fried-rice",
     title: "Chicken Fried Rice",
+    imageKeywords: "friedrice,chicken",
     description: "Quick wok-fried rice with chicken, egg and vegetables in savory soy sauce.",
     cuisine: "asian",
     dishType: "Rice",
@@ -241,6 +260,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "pad-thai",
     title: "Pad Thai",
+    imageKeywords: "padthai,noodles",
     description: "Stir-fried rice noodles with shrimp, egg, peanuts and a tangy-sweet sauce.",
     cuisine: "asian",
     dishType: "Noodles",
@@ -274,6 +294,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "mango-sticky-rice",
     title: "Mango Sticky Rice",
+    imageKeywords: "mango,stickyrice",
     description: "Thai dessert of sweet coconut sticky rice served with ripe mango.",
     cuisine: "asian",
     dishType: "Dessert",
@@ -301,6 +322,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "koshari",
     title: "Koshari",
+    imageKeywords: "rice,lentils",
     description: "Egypt's beloved street food: rice, lentils and pasta topped with spiced tomato sauce, chickpeas and crispy onions.",
     cuisine: "egyptian",
     dishType: "Main Course",
@@ -335,6 +357,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "molokhia-with-chicken",
     title: "Molokhia with Chicken",
+    imageKeywords: "stew,greens",
     description: "Comforting Egyptian green stew made from jute leaves in garlicky broth, served with chicken and rice.",
     cuisine: "egyptian",
     dishType: "Main Course",
@@ -366,6 +389,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "basbousa",
     title: "Basbousa",
+    imageKeywords: "semolina,cake",
     description: "Sweet Egyptian semolina cake soaked in syrup, a beloved teatime dessert.",
     cuisine: "egyptian",
     dishType: "Dessert",
@@ -397,6 +421,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "mushroom-risotto",
     title: "Mushroom Risotto",
+    imageKeywords: "risotto,mushroom",
     description: "Creamy Arborio rice slowly simmered with mushrooms and Parmesan.",
     cuisine: "italian",
     dishType: "Main Course",
@@ -429,6 +454,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "bruschetta",
     title: "Bruschetta al Pomodoro",
+    imageKeywords: "bruschetta,tomato",
     description: "Toasted bread rubbed with garlic and piled high with fresh tomato and basil.",
     cuisine: "italian",
     dishType: "Appetizer",
@@ -456,6 +482,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "panna-cotta",
     title: "Panna Cotta",
+    imageKeywords: "pannacotta,dessert",
     description: "Silky Italian set cream dessert, lightly sweetened and vanilla-scented.",
     cuisine: "italian",
     dishType: "Dessert",
@@ -483,6 +510,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "beef-pho",
     title: "Beef Pho",
+    imageKeywords: "pho,noodlesoup",
     description: "Vietnamese noodle soup with a fragrant star-anise beef broth.",
     cuisine: "asian",
     dishType: "Soup",
@@ -518,6 +546,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "california-rolls",
     title: "California Rolls",
+    imageKeywords: "sushi,californiaroll",
     description: "Approachable sushi rolls with crab stick, avocado and cucumber.",
     cuisine: "asian",
     dishType: "Main Course",
@@ -549,6 +578,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "thai-green-curry",
     title: "Thai Green Curry",
+    imageKeywords: "greencurry,thaifood",
     description: "Fragrant, spicy coconut curry with chicken, eggplant and Thai basil.",
     cuisine: "asian",
     dishType: "Main Course",
@@ -580,6 +610,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "ful-medames",
     title: "Ful Medames",
+    imageKeywords: "fava,beans",
     description: "Classic Egyptian breakfast of stewed fava beans with olive oil, lemon and cumin.",
     cuisine: "egyptian",
     dishType: "Breakfast",
@@ -610,6 +641,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "mahshi-warak-enab",
     title: "Stuffed Grape Leaves (Mahshi)",
+    imageKeywords: "dolma,grapeleaves",
     description: "Grape leaves rolled around a herbed rice and beef filling, gently simmered.",
     cuisine: "egyptian",
     dishType: "Main Course",
@@ -643,6 +675,7 @@ const recipes: RecipeSeed[] = [
   {
     slug: "feteer-meshaltet",
     title: "Feteer Meshaltet",
+    imageKeywords: "flakypastry,layeredbread",
     description: "Flaky, layered Egyptian pastry, served plain with honey or filled sweet.",
     cuisine: "egyptian",
     dishType: "Dessert",
@@ -728,7 +761,7 @@ async function main() {
         description: r.description,
         cuisineId,
         dishType: r.dishType,
-        heroImageUrl: img(r.slug),
+        heroImageUrl: foodImg(r.imageKeywords, r.slug),
         baseServings: r.baseServings,
         prepMinutes: r.prepMinutes,
         cookMinutes: r.cookMinutes,
@@ -741,7 +774,7 @@ async function main() {
         description: r.description,
         cuisineId,
         dishType: r.dishType,
-        heroImageUrl: img(r.slug),
+        heroImageUrl: foodImg(r.imageKeywords, r.slug),
         baseServings: r.baseServings,
         prepMinutes: r.prepMinutes,
         cookMinutes: r.cookMinutes,
@@ -771,7 +804,7 @@ async function main() {
           recipeId: recipe.id,
           order: i + 1,
           instruction: step.instruction,
-          imageUrl: img(`${r.slug}-step-${i + 1}`),
+          imageUrl: foodImg(r.imageKeywords, `${r.slug}-step-${i + 1}`),
           timerMinutes: step.timerMinutes,
         },
       });

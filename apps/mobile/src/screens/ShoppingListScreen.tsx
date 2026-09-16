@@ -23,8 +23,8 @@ import type { ShoppingListResult } from "../api/types";
 type Props = NativeStackScreenProps<RootStackParamList, "ShoppingList">;
 
 export function ShoppingListScreen({ route }: Props) {
-  const { slug, title, baseServings } = route.params;
-  const [servings, setServings] = useState(baseServings);
+  const { slug, title, baseServings, initialServings } = route.params;
+  const [servings, setServings] = useState(initialServings ?? baseServings);
   const [budget, setBudget] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ShoppingListResult | null>(null);

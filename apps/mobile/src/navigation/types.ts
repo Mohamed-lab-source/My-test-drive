@@ -11,7 +11,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList>;
   RecipeList: { cuisineSlug?: string; tag?: string; title: string };
   RecipeDetail: { slug: string };
-  ShoppingList: { slug: string; title: string; baseServings: number };
+  ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
   Login: undefined;
   Signup: undefined;
 };
