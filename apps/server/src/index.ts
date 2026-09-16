@@ -27,6 +27,13 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// Some PaaS platforms (Railway included) default their deploy healthcheck
+// to "/" rather than a configured path -- keep this cheap and dependency-free
+// so it can't itself become a source of failed healthchecks.
+app.get("/", (_req, res) => {
+  res.json({ status: "ok", service: "cookmate-api" });
+});
+
 app.use("/api/auth", authRouter);
 app.use("/api", recipesRouter);
 app.use("/api", shoppingListsRouter);
