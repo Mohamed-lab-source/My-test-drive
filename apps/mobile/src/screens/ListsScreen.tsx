@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -64,7 +64,9 @@ export function ListsScreen({ navigation }: Props) {
         }
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <Image source={{ uri: item.recipe.heroImageUrl }} style={styles.thumb} />
+            <View style={styles.thumb}>
+              <Text style={styles.thumbEmoji}>🍽️</Text>
+            </View>
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>{item.recipe.title}</Text>
               <Text style={styles.rowMeta}>
@@ -98,7 +100,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  thumb: { width: 56, height: 56, borderRadius: radius.sm, backgroundColor: colors.chipBackground },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.sm,
+    backgroundColor: colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbEmoji: { fontSize: 24 },
   rowBody: { flex: 1, marginLeft: spacing(1.5) },
   rowTitle: { fontWeight: "700", color: colors.text, fontSize: 14 },
   rowMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },

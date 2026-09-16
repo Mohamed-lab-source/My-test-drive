@@ -1,7 +1,13 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../theme";
 import type { RecipeSummary } from "../api/types";
+
+const CUISINE_EMOJI: Record<string, string> = {
+  italian: "🍝",
+  asian: "🍜",
+  egyptian: "🍲",
+};
 
 type Props = {
   recipe: RecipeSummary;
@@ -12,7 +18,9 @@ export function RecipeCard({ recipe, onPress }: Props) {
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   return (
     <Pressable style={styles.card} onPress={onPress} accessibilityRole="button">
-      <Image source={{ uri: recipe.heroImageUrl }} style={styles.image} />
+      <View style={styles.imagePlaceholder}>
+        <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+      </View>
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={1}>
           {recipe.title}
@@ -41,10 +49,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  image: {
+  imagePlaceholder: {
     width: "100%",
     height: 140,
     backgroundColor: colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imagePlaceholderEmoji: {
+    fontSize: 44,
   },
   body: {
     padding: spacing(1.5),

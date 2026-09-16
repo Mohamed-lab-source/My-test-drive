@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -7,6 +7,12 @@ import { fetchRecipeDetail } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { colors, radius, spacing } from "../theme";
 import type { RecipeDetail } from "../api/types";
+
+const CUISINE_EMOJI: Record<string, string> = {
+  italian: "🍝",
+  asian: "🍜",
+  egyptian: "🍲",
+};
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeDetail">;
 
@@ -51,7 +57,9 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView>
-        <Image source={{ uri: recipe.heroImageUrl }} style={styles.hero} />
+        <View style={styles.hero}>
+          <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+        </View>
         <View style={styles.content}>
           <Text style={styles.title}>{recipe.title}</Text>
           <Text style={styles.description}>{recipe.description}</Text>
@@ -98,7 +106,6 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>Steps</Text>
           {recipe.steps.map((step) => (
             <View key={step.order} style={styles.stepCard}>
-              <Image source={{ uri: step.imageUrl }} style={styles.stepImage} />
               <View style={styles.stepBody}>
                 <View style={styles.stepHeader}>
                   <View style={styles.stepBadge}>
@@ -142,7 +149,14 @@ function MetaPill({ label }: { label: string }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   loadingSafe: { flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
-  hero: { width: "100%", height: 240, backgroundColor: colors.chipBackground },
+  hero: {
+    width: "100%",
+    height: 200,
+    backgroundColor: colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroEmoji: { fontSize: 72 },
   content: { padding: spacing(3), paddingBottom: spacing(2) },
   title: { fontSize: 24, fontWeight: "800", color: colors.text },
   description: { color: colors.textMuted, marginTop: spacing(1), lineHeight: 20 },
@@ -185,7 +199,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  stepImage: { width: "100%", height: 160, backgroundColor: colors.chipBackground },
   stepBody: { padding: spacing(1.5) },
   stepHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   stepBadge: {
