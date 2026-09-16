@@ -22,7 +22,11 @@ apps/
   anonymous browsing.
 - **Recipes**: seeded with 18 real recipes across Italian, Asian and Egyptian
   cuisines (mains, appetizers, soups, breakfast, quick meals, and desserts),
-  each with ingredients, step photos, prep/cook time and difficulty.
+  each with ingredients, steps, prep/cook time and difficulty.
+- **Nutrition**: each ingredient carries calories/protein/fat/carbs per unit
+  (per gram/ml/piece, standard nutrition-database estimates); the recipe
+  detail endpoint sums this across the recipe and divides by base servings
+  to report calories/protein/fat/carbs per serving.
 - **Shopping list**: given a recipe, desired servings and an optional budget,
   the API scales every ingredient's weight/volume/count, estimates cost per
   item (seeded EGP pricing) and totals it, flagging over/under budget.
@@ -134,6 +138,9 @@ or rebuild after changing `apps/mobile/.env`.
 
 - Ingredient prices are estimated EGP figures for demo purposes, not live
   market prices.
+- Nutrition figures are standard nutrition-database estimates for each
+  ingredient, not lab-measured values for the specific brands/cuts a shopper
+  would actually buy.
 - Delivery partner links open each app/website's homepage rather than a
   prefilled cart (no public partner API available).
 - Nearby-store search uses a keyless Google Maps search link rather than the

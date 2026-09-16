@@ -110,6 +110,22 @@ recipesRouter.get("/recipes/:slug", async (req, res) => {
     return;
   }
 
+  const totals = recipe.ingredients.reduce(
+    (acc, ri) => ({
+      kcal: acc.kcal + ri.quantity * ri.ingredient.caloriesPerUnit,
+      protein: acc.protein + ri.quantity * ri.ingredient.proteinPerUnit,
+      fat: acc.fat + ri.quantity * ri.ingredient.fatPerUnit,
+      carbs: acc.carbs + ri.quantity * ri.ingredient.carbsPerUnit,
+    }),
+    { kcal: 0, protein: 0, fat: 0, carbs: 0 }
+  );
+  const nutritionPerServing = {
+    calories: Math.round(totals.kcal / recipe.baseServings),
+    proteinGrams: Math.round((totals.protein / recipe.baseServings) * 10) / 10,
+    fatGrams: Math.round((totals.fat / recipe.baseServings) * 10) / 10,
+    carbsGrams: Math.round((totals.carbs / recipe.baseServings) * 10) / 10,
+  };
+
   res.json({
     id: recipe.id,
     slug: recipe.slug,
@@ -123,6 +139,7 @@ recipesRouter.get("/recipes/:slug", async (req, res) => {
     cookMinutes: recipe.cookMinutes,
     difficulty: recipe.difficulty,
     tags: recipe.tags,
+    nutritionPerServing,
     ingredients: recipe.ingredients.map((ri) => ({
       name: ri.ingredient.name,
       quantity: ri.quantity,

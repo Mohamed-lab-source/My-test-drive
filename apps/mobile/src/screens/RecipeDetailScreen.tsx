@@ -72,6 +72,14 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             <MetaPill label={`Serves ${recipe.baseServings}`} />
           </View>
 
+          <Text style={styles.sectionTitle}>Nutrition (per serving)</Text>
+          <View style={styles.nutritionRow}>
+            <NutritionStat label="Calories" value={`${recipe.nutritionPerServing.calories}`} unit="kcal" />
+            <NutritionStat label="Protein" value={`${recipe.nutritionPerServing.proteinGrams}`} unit="g" />
+            <NutritionStat label="Fat" value={`${recipe.nutritionPerServing.fatGrams}`} unit="g" />
+            <NutritionStat label="Carbs" value={`${recipe.nutritionPerServing.carbsGrams}`} unit="g" />
+          </View>
+
           <Text style={styles.sectionTitle}>How many people are eating?</Text>
           <View style={styles.stepperRow}>
             <Pressable
@@ -138,6 +146,18 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   );
 }
 
+function NutritionStat({ label, value, unit }: { label: string; value: string; unit: string }) {
+  return (
+    <View style={styles.nutritionStat}>
+      <Text style={styles.nutritionValue}>
+        {value}
+        <Text style={styles.nutritionUnit}> {unit}</Text>
+      </Text>
+      <Text style={styles.nutritionLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function MetaPill({ label }: { label: string }) {
   return (
     <View style={styles.metaPill}>
@@ -171,6 +191,18 @@ const styles = StyleSheet.create({
   },
   metaPillText: { fontSize: 11, fontWeight: "700", color: colors.primaryDark },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
+  nutritionRow: { flexDirection: "row", justifyContent: "space-between" },
+  nutritionStat: {
+    flex: 1,
+    backgroundColor: colors.chipBackground,
+    borderRadius: radius.md,
+    paddingVertical: spacing(1.5),
+    alignItems: "center",
+    marginRight: spacing(1),
+  },
+  nutritionValue: { fontSize: 16, fontWeight: "800", color: colors.primaryDark },
+  nutritionUnit: { fontSize: 11, fontWeight: "600", color: colors.textMuted },
+  nutritionLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   ingredientRow: {
     flexDirection: "row",
     justifyContent: "space-between",

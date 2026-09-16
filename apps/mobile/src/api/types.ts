@@ -52,9 +52,17 @@ export type RecipeStep = {
   timerMinutes: number | null;
 };
 
+export type NutritionPerServing = {
+  calories: number;
+  proteinGrams: number;
+  fatGrams: number;
+  carbsGrams: number;
+};
+
 export type RecipeDetail = RecipeSummary & {
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
+  nutritionPerServing: NutritionPerServing;
 };
 
 export type ShoppingListItem = {

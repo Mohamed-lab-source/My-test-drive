@@ -77,12 +77,19 @@ model Recipe {
 }
 
 model Ingredient {
-  id           String             @id @default(cuid())
-  name         String             @unique
-  unit         String
-  pricePerUnit Float
-  category     String
-  recipeUses   RecipeIngredient[]
+  id               String             @id @default(cuid())
+  name             String             @unique
+  unit             String
+  pricePerUnit     Float
+  category         String
+  // Nutrition per single unit of `unit` (per gram, per millilitre, or per
+  // piece), matching pricePerUnit's convention so recipe totals are computed
+  // the same way as cost: quantity * caloriesPerUnit, etc.
+  caloriesPerUnit  Float              @default(0)
+  proteinPerUnit   Float              @default(0)
+  fatPerUnit       Float              @default(0)
+  carbsPerUnit     Float              @default(0)
+  recipeUses       RecipeIngredient[]
 }
 
 model RecipeIngredient {
