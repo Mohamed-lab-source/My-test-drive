@@ -29,6 +29,11 @@ jobs:
         with:
           node-version: 22
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Install dependencies
         run: npm install
 
@@ -58,5 +63,20 @@ jobs:
             echo "No app.json changes to commit."
           fi
 
-      - name: Build Android APK
-        run: eas build --platform android --profile preview --non-interactive
+      # Runs the build on this runner's own hardware instead of EAS's cloud
+      # build queue, so it doesn't count against the Expo account's monthly
+      # cloud build quota. Still uses EAS only to fetch the existing signing
+      # keystore, so the APK stays install-compatible with earlier builds.
+      - name: Build Android APK locally
+        run: eas build --platform android --profile preview --non-interactive --local --output cookmate-preview.apk
+
+      - name: Publish APK to a rolling GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-preview-latest
+          name: Cookmate Android preview (latest)
+          body: |
+            Automatically rebuilt from commit ${{ github.sha }}.
+            Download `cookmate-preview.apk` below and open it on your Android device
+            (you may need to allow installs from this source) to install or update the app.
+          files: apps/mobile/cookmate-preview.apk
