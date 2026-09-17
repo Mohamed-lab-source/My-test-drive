@@ -1,5 +1,7 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { AnimatedPressable } from "./AnimatedPressable";
+import { FadeSlideIn } from "./FadeSlideIn";
 import { colors, radius, spacing } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import type { RecipeSummary } from "../api/types";
@@ -7,31 +9,35 @@ import type { RecipeSummary } from "../api/types";
 type Props = {
   recipe: RecipeSummary;
   onPress: () => void;
+  /** Position within its list, used to stagger the entrance animation. */
+  index?: number;
 };
 
-export function RecipeCard({ recipe, onPress }: Props) {
+export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   return (
-    <Pressable style={styles.card} onPress={onPress} accessibilityRole="button">
-      <View style={styles.imagePlaceholder}>
-        <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
-      </View>
-      <View style={styles.body}>
-        <Text style={styles.title} numberOfLines={1}>
-          {recipe.title}
-        </Text>
-        <Text style={styles.meta}>
-          {recipe.cuisine.name} · {recipe.dishType} · {totalMinutes} min
-        </Text>
-        <View style={styles.tagRow}>
-          {recipe.tags.map((tag) => (
-            <View key={tag} style={styles.tagBadge}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-          ))}
+    <FadeSlideIn index={index}>
+      <AnimatedPressable style={styles.card} onPress={onPress} pressScale={0.98} accessibilityRole="button">
+        <View style={styles.imagePlaceholder}>
+          <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
         </View>
-      </View>
-    </Pressable>
+        <View style={styles.body}>
+          <Text style={styles.title} numberOfLines={1}>
+            {recipe.title}
+          </Text>
+          <Text style={styles.meta}>
+            {recipe.cuisine.name} · {recipe.dishType} · {totalMinutes} min
+          </Text>
+          <View style={styles.tagRow}>
+            {recipe.tags.map((tag) => (
+              <View key={tag} style={styles.tagBadge}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </AnimatedPressable>
+    </FadeSlideIn>
   );
 }
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, Pressable, RefreshControl, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -10,6 +10,8 @@ import { useLocale } from "../i18n/LocaleContext";
 import { fetchCuisines, fetchRecipes, fetchRecommended } from "../api/endpoints";
 import { rankRecipes } from "../utils/rank";
 import { RecipeCard } from "../components/RecipeCard";
+import { AnimatedPressable } from "../components/AnimatedPressable";
+import { FadeSlideIn } from "../components/FadeSlideIn";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { colors, radius, spacing } from "../theme";
 import type { Cuisine, RecipeSummary } from "../api/types";
@@ -69,46 +71,55 @@ export function HomeScreen({ navigation }: Props) {
 
             <Text style={styles.sectionTitle}>{t("home.browseByCuisine")}</Text>
             <View style={styles.cuisineWrap}>
-              {cuisines.map((c) => (
-                <Pressable
-                  key={c.id}
-                  style={styles.cuisineCard}
-                  onPress={() => navigation.navigate("RecipeList", { cuisineSlug: c.slug, title: c.name })}
-                >
-                  <Text style={styles.cuisineEmoji}>{CUISINE_EMOJI[c.slug] ?? "🍽️"}</Text>
-                  <Text style={styles.cuisineName}>{c.name}</Text>
-                  <Text style={styles.cuisineCount}>{t("home.recipeCount", { count: c.recipeCount })}</Text>
-                </Pressable>
+              {cuisines.map((c, i) => (
+                <FadeSlideIn key={c.id} index={i}>
+                  <AnimatedPressable
+                    style={styles.cuisineCard}
+                    pressScale={0.94}
+                    onPress={() => navigation.navigate("RecipeList", { cuisineSlug: c.slug, title: c.name })}
+                  >
+                    <Text style={styles.cuisineEmoji}>{CUISINE_EMOJI[c.slug] ?? "🍽️"}</Text>
+                    <Text style={styles.cuisineName}>{c.name}</Text>
+                    <Text style={styles.cuisineCount}>{t("home.recipeCount", { count: c.recipeCount })}</Text>
+                  </AnimatedPressable>
+                </FadeSlideIn>
               ))}
             </View>
 
             <View style={styles.quickRow}>
-              <Pressable
+              <AnimatedPressable
                 style={styles.quickChip}
+                pressScale={0.94}
                 onPress={() => navigation.navigate("RecipeList", { tag: "DESSERT", title: t("home.dessertsTitle") })}
               >
                 <Text style={styles.quickChipText}>{t("home.desserts")}</Text>
-              </Pressable>
-              <Pressable
+              </AnimatedPressable>
+              <AnimatedPressable
                 style={styles.quickChip}
+                pressScale={0.94}
                 onPress={() => navigation.navigate("RecipeList", { tag: "FIT", title: t("home.fitTitle") })}
               >
                 <Text style={styles.quickChipText}>{t("home.fit")}</Text>
-              </Pressable>
-              <Pressable
+              </AnimatedPressable>
+              <AnimatedPressable
                 style={styles.quickChip}
+                pressScale={0.94}
                 onPress={() => navigation.navigate("RecipeList", { tag: "QUICK", title: t("home.quickTitle") })}
               >
                 <Text style={styles.quickChipText}>{t("home.quick")}</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
 
             <Text style={styles.sectionTitle}>{t("home.recommended")}</Text>
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <View style={styles.recommendedItem}>
-            <RecipeCard recipe={item} onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })} />
+            <RecipeCard
+              recipe={item}
+              index={index}
+              onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })}
+            />
           </View>
         )}
         contentContainerStyle={styles.listContent}

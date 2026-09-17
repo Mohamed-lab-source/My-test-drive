@@ -1,5 +1,6 @@
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, StyleSheet, Text } from "react-native";
+import { AnimatedPressable } from "./AnimatedPressable";
 import { colors, radius, spacing } from "../theme";
 
 type Props = {
@@ -13,9 +14,10 @@ type Props = {
 export function PrimaryButton({ label, onPress, loading, disabled, variant = "primary" }: Props) {
   const isOutline = variant === "outline";
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={disabled || loading}
+      pressScale={0.97}
       style={[
         styles.button,
         isOutline ? styles.outline : styles.solid,
@@ -28,7 +30,7 @@ export function PrimaryButton({ label, onPress, loading, disabled, variant = "pr
       ) : (
         <Text style={isOutline ? styles.outlineText : styles.solidText}>{label}</Text>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

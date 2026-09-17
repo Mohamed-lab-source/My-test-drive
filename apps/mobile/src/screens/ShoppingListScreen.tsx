@@ -17,6 +17,9 @@ import type { RootStackParamList } from "../navigation/types";
 import { fetchNearbyStores, generateShoppingList } from "../api/endpoints";
 import { apiErrorMessage } from "../api/client";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { AnimatedPressable } from "../components/AnimatedPressable";
+import { FadeSlideIn } from "../components/FadeSlideIn";
+import { PopOnChange } from "../components/PopOnChange";
 import { useLocale } from "../i18n/LocaleContext";
 import { colors, radius, spacing } from "../theme";
 import type { ShoppingListResult } from "../api/types";
@@ -83,16 +86,23 @@ export function ShoppingListScreen({ route, navigation }: Props) {
 
         <Text style={[styles.label, { textAlign }]}>{t("shoppingList.servings")}</Text>
         <View style={styles.stepperRow}>
-          <Pressable
+          <AnimatedPressable
             style={styles.stepperButton}
+            pressScale={0.88}
             onPress={() => setServings((s) => Math.max(1, s - 1))}
           >
             <Text style={styles.stepperButtonText}>−</Text>
-          </Pressable>
-          <Text style={styles.stepperValue}>{servings}</Text>
-          <Pressable style={styles.stepperButton} onPress={() => setServings((s) => Math.min(50, s + 1))}>
+          </AnimatedPressable>
+          <PopOnChange changeKey={servings}>
+            <Text style={styles.stepperValue}>{servings}</Text>
+          </PopOnChange>
+          <AnimatedPressable
+            style={styles.stepperButton}
+            pressScale={0.88}
+            onPress={() => setServings((s) => Math.min(50, s + 1))}
+          >
             <Text style={styles.stepperButtonText}>+</Text>
-          </Pressable>
+          </AnimatedPressable>
         </View>
 
         <Text style={[styles.label, { textAlign }]}>{t("shoppingList.budgetLabel")}</Text>
@@ -110,7 +120,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
         </View>
 
         {result ? (
-          <View style={styles.resultSection}>
+          <FadeSlideIn style={styles.resultSection}>
             <View
               style={[
                 styles.budgetBanner,
@@ -138,29 +148,32 @@ export function ShoppingListScreen({ route, navigation }: Props) {
             <Text style={[styles.sectionTitle, { textAlign }]}>
               {t("shoppingList.listTitle", { count: result.servings })}
             </Text>
-            {result.items.map((item) => (
-              <View key={item.ingredientName} style={styles.itemRow}>
-                <Text style={styles.itemName}>{item.ingredientName}</Text>
-                <View style={styles.itemRight}>
-                  <Text style={styles.itemQty}>
-                    {item.quantity} {item.unit}
-                  </Text>
-                  <Text style={styles.itemCost}>{item.estimatedCost.toFixed(2)} EGP</Text>
+            {result.items.map((item, i) => (
+              <FadeSlideIn key={item.ingredientName} index={i}>
+                <View style={styles.itemRow}>
+                  <Text style={styles.itemName}>{item.ingredientName}</Text>
+                  <View style={styles.itemRight}>
+                    <Text style={styles.itemQty}>
+                      {item.quantity} {item.unit}
+                    </Text>
+                    <Text style={styles.itemCost}>{item.estimatedCost.toFixed(2)} EGP</Text>
+                  </View>
                 </View>
-              </View>
+              </FadeSlideIn>
             ))}
 
             <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
             <View style={styles.partnerRow}>
               {result.deliveryPartners.map((partner) => (
-                <Pressable
+                <AnimatedPressable
                   key={partner.id}
                   style={styles.partnerCard}
+                  pressScale={0.94}
                   onPress={() => Linking.openURL(partner.websiteUrl)}
                 >
                   <Text style={styles.partnerEmoji}>{partner.logoEmoji}</Text>
                   <Text style={styles.partnerName}>{partner.name}</Text>
-                </Pressable>
+                </AnimatedPressable>
               ))}
             </View>
 
@@ -177,7 +190,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
                 <Text style={styles.mapsLink}>{t("shoppingList.openMaps")}</Text>
               </Pressable>
             ) : null}
-          </View>
+          </FadeSlideIn>
         ) : null}
       </ScrollView>
     </SafeAreaView>

@@ -1,5 +1,6 @@
 import React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
+import { AnimatedPressable } from "./AnimatedPressable";
 import { colors, radius, spacing } from "../theme";
 
 type Props = {
@@ -10,14 +11,15 @@ type Props = {
 
 export function Chip({ label, selected, onPress }: Props) {
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      pressScale={0.93}
       style={[styles.chip, selected && styles.chipSelected]}
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
     >
       <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

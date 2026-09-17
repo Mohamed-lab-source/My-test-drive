@@ -36,6 +36,9 @@ export function RootNavigator() {
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
           headerShadowVisible: false,
+          // Apple-style push: slide in from the right with the outgoing
+          // screen parallax-dimming underneath, matching iOS's UINavigationController.
+          animation: "slide_from_right",
         }}
       >
         <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />

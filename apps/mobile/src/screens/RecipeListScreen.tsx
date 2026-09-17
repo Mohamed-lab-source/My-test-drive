@@ -48,8 +48,12 @@ export function RecipeListScreen({ route, navigation }: Props) {
         data={recipes}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <RecipeCard recipe={item} onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })} />
+        renderItem={({ item, index }) => (
+          <RecipeCard
+            recipe={item}
+            index={index}
+            onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })}
+          />
         )}
         ListEmptyComponent={!loading ? <Text style={styles.empty}>{t("recipeList.empty")}</Text> : null}
       />

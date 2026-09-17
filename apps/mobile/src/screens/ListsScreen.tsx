@@ -8,6 +8,7 @@ import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { fetchShoppingListHistory } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { FadeSlideIn } from "../components/FadeSlideIn";
 import { useLocale } from "../i18n/LocaleContext";
 import { colors, radius, spacing } from "../theme";
 
@@ -56,24 +57,26 @@ export function ListsScreen({ navigation }: Props) {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={<Text style={styles.headline}>{t("lists.headline")}</Text>}
         ListEmptyComponent={!loading ? <Text style={styles.emptySubtitle}>{t("lists.empty")}</Text> : null}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={styles.thumb}>
-              <Text style={styles.thumbEmoji}>🍽️</Text>
+        renderItem={({ item, index }) => (
+          <FadeSlideIn index={index}>
+            <View style={styles.row}>
+              <View style={styles.thumb}>
+                <Text style={styles.thumbEmoji}>🍽️</Text>
+              </View>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>{item.recipe.title}</Text>
+                <Text style={styles.rowMeta}>
+                  {t("lists.rowMeta", { servings: item.servings, cost: item.totalEstimatedCost.toFixed(2) })}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: item.withinBudget ? colors.success : colors.danger },
+                ]}
+              />
             </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>{item.recipe.title}</Text>
-              <Text style={styles.rowMeta}>
-                {t("lists.rowMeta", { servings: item.servings, cost: item.totalEstimatedCost.toFixed(2) })}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: item.withinBudget ? colors.success : colors.danger },
-              ]}
-            />
-          </View>
+          </FadeSlideIn>
         )}
       />
     </SafeAreaView>

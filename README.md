@@ -29,6 +29,18 @@ apps/
   PNG with `react-native-view-shot`, and hands it to the OS's native share
   sheet via `expo-sharing` — so it can go to WhatsApp, Instagram, Messages,
   or anywhere else the device offers, without per-app integration.
+- **Motion**: every tappable surface (buttons, chips, cards, cuisine tiles,
+  steppers, tab bar) uses a shared `AnimatedPressable` that springs down on
+  press and bounces back on release — the same feel as iOS's `UIButton`
+  highlight state — plus a light haptic tick via `expo-haptics`. Lists and
+  screen content ease in with a staggered fade/slide (`FadeSlideIn`), and
+  values that update in place (servings counters) pop briefly
+  (`PopOnChange`). Screen pushes use `slide_from_right`; modals (Login/
+  Signup) use native "card sheet" presentation. All built on React Native's
+  core `Animated` API with `useNativeDriver: true` — no extra native
+  dependency, since `react-native-reanimated` v4 would require the New
+  Architecture and a worklets babel plugin that couldn't be verified against
+  a real device build from this environment.
 - **Personalization**: a `Preference` (diet goal: FIT / INDULGENT / BALANCED /
   NONE, favorite cuisines) drives recipe ranking, both server-side for signed
   in users and client-side (from locally stored onboarding answers) for

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
@@ -7,6 +7,9 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipeDetail } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { AnimatedPressable } from "../components/AnimatedPressable";
+import { FadeSlideIn } from "../components/FadeSlideIn";
+import { PopOnChange } from "../components/PopOnChange";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { useLocale } from "../i18n/LocaleContext";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
@@ -79,7 +82,9 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView>
         <View style={styles.hero}>
-          <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+          <FadeSlideIn>
+            <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+          </FadeSlideIn>
         </View>
         <View style={styles.content}>
           <Text style={[styles.title, { textAlign }]}>{recipe.title}</Text>
@@ -119,54 +124,62 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.servingsQuestion")}</Text>
           <View style={styles.stepperRow}>
-            <Pressable
+            <AnimatedPressable
               style={styles.stepperButton}
+              pressScale={0.88}
               onPress={() => setServings((s) => Math.max(1, s - 1))}
               accessibilityRole="button"
               accessibilityLabel={t("recipeDetail.fewerPeople")}
             >
               <Text style={styles.stepperButtonText}>−</Text>
-            </Pressable>
-            <Text style={styles.stepperValue}>{servings}</Text>
-            <Pressable
+            </AnimatedPressable>
+            <PopOnChange changeKey={servings}>
+              <Text style={styles.stepperValue}>{servings}</Text>
+            </PopOnChange>
+            <AnimatedPressable
               style={styles.stepperButton}
+              pressScale={0.88}
               onPress={() => setServings((s) => Math.min(50, s + 1))}
               accessibilityRole="button"
               accessibilityLabel={t("recipeDetail.morePeople")}
             >
               <Text style={styles.stepperButtonText}>+</Text>
-            </Pressable>
+            </AnimatedPressable>
           </View>
 
           <Text style={[styles.sectionTitle, { textAlign }]}>
             {t("recipeDetail.ingredientsFor", { count: servings })}
           </Text>
-          {scaledIngredients.map((ing) => (
-            <View key={ing.name} style={styles.ingredientRow}>
-              <Text style={styles.ingredientName}>{ing.name}</Text>
-              <Text style={styles.ingredientQty}>
-                {ing.quantity} {ing.unit}
-              </Text>
-            </View>
+          {scaledIngredients.map((ing, i) => (
+            <FadeSlideIn key={ing.name} index={i}>
+              <View style={styles.ingredientRow}>
+                <Text style={styles.ingredientName}>{ing.name}</Text>
+                <Text style={styles.ingredientQty}>
+                  {ing.quantity} {ing.unit}
+                </Text>
+              </View>
+            </FadeSlideIn>
           ))}
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.steps")}</Text>
-          {recipe.steps.map((step) => (
-            <View key={step.order} style={styles.stepCard}>
-              <View style={styles.stepBody}>
-                <View style={styles.stepHeader}>
-                  <View style={styles.stepBadge}>
-                    <Text style={styles.stepBadgeText}>{step.order}</Text>
+          {recipe.steps.map((step, i) => (
+            <FadeSlideIn key={step.order} index={i}>
+              <View style={styles.stepCard}>
+                <View style={styles.stepBody}>
+                  <View style={styles.stepHeader}>
+                    <View style={styles.stepBadge}>
+                      <Text style={styles.stepBadgeText}>{step.order}</Text>
+                    </View>
+                    {step.timerMinutes ? (
+                      <Text style={styles.stepTimer}>
+                        ⏱ {step.timerMinutes} {t("recipeDetail.min")}
+                      </Text>
+                    ) : null}
                   </View>
-                  {step.timerMinutes ? (
-                    <Text style={styles.stepTimer}>
-                      ⏱ {step.timerMinutes} {t("recipeDetail.min")}
-                    </Text>
-                  ) : null}
+                  <Text style={[styles.stepInstruction, { textAlign }]}>{step.instruction}</Text>
                 </View>
-                <Text style={[styles.stepInstruction, { textAlign }]}>{step.instruction}</Text>
               </View>
-            </View>
+            </FadeSlideIn>
           ))}
         </View>
       </ScrollView>
