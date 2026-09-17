@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -28,6 +28,12 @@ export function HomeScreen({ navigation }: Props) {
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { width: windowWidth } = useWindowDimensions();
+  // Fixed pixel width (not a percentage) so the grid can't misbehave if
+  // percentage widths ever interact badly with `gap` in a wrapped row --
+  // 3 columns, accounting for the screen's horizontal padding and the two
+  // gaps between columns.
+  const cuisineCardWidth = (windowWidth - spacing(3) * 2 - spacing(1.5) * 2) / 3;
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [recommended, setRecommended] = useState<RecipeSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,12 +83,14 @@ export function HomeScreen({ navigation }: Props) {
               {cuisines.map((c, i) => (
                 <FadeSlideIn key={c.id} index={i}>
                   <AnimatedPressable
-                    style={styles.cuisineCard}
+                    style={[styles.cuisineCard, { width: cuisineCardWidth, height: cuisineCardWidth }]}
                     pressScale={0.94}
                     onPress={() => navigation.navigate("RecipeList", { cuisineSlug: c.slug, title: c.name })}
                   >
                     <Text style={styles.cuisineEmoji}>{CUISINE_EMOJI[c.slug] ?? "🍽️"}</Text>
-                    <Text style={styles.cuisineName}>{c.name}</Text>
+                    <Text style={styles.cuisineName} numberOfLines={1}>
+                      {c.name}
+                    </Text>
                     <Text style={styles.cuisineCount}>{t("home.recipeCount", { count: c.recipeCount })}</Text>
                   </AnimatedPressable>
                 </FadeSlideIn>
@@ -141,15 +149,15 @@ const createStyles = (colors: ThemeColors) =>
     sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
     cuisineWrap: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1.5) },
     cuisineCard: {
-      width: "30%",
       backgroundColor: colors.surface,
       borderRadius: radius.md,
-      padding: spacing(1.5),
+      padding: spacing(1),
       alignItems: "center",
+      justifyContent: "center",
       borderWidth: 1,
       borderColor: colors.border,
     },
-    cuisineEmoji: { fontSize: 28 },
+    cuisineEmoji: { fontSize: 26 },
     cuisineName: { fontWeight: "700", color: colors.text, marginTop: 6, fontSize: 12, textAlign: "center" },
     cuisineCount: { color: colors.textMuted, fontSize: 10, marginTop: 2 },
     quickRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(2), gap: spacing(1) },
