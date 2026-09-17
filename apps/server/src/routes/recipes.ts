@@ -44,10 +44,16 @@ export function recipeSummarySelect() {
     difficulty: true,
     tags: true,
     cuisine: { select: { slug: true, name: true, nameAr: true } },
+    ratings: { select: { score: true } },
   } as const;
 }
 
 export function localizeSummary(r: any, lang: Lang) {
+  const ratingCount = r.ratings?.length ?? 0;
+  const avgRating =
+    ratingCount > 0
+      ? Math.round((r.ratings.reduce((sum: number, x: { score: number }) => sum + x.score, 0) / ratingCount) * 10) / 10
+      : null;
   return {
     id: r.id,
     slug: r.slug,
@@ -60,6 +66,8 @@ export function localizeSummary(r: any, lang: Lang) {
     cookMinutes: r.cookMinutes,
     difficulty: r.difficulty,
     tags: r.tags,
+    avgRating,
+    ratingCount,
     cuisine: {
       slug: r.cuisine.slug,
       name: lang === "ar" ? r.cuisine.nameAr ?? r.cuisine.name : r.cuisine.name,
@@ -133,7 +141,7 @@ recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
   res.json(scored.map((s) => localizeSummary(s.recipe, lang)));
 });
 
-recipesRouter.get("/recipes/:slug", async (req, res) => {
+recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   const lang = parseLang(req.query.lang);
   const recipe = await prisma.recipe.findUnique({
     where: { slug: req.params.slug },
@@ -143,12 +151,18 @@ recipesRouter.get("/recipes/:slug", async (req, res) => {
         include: { ingredient: true },
       },
       steps: { orderBy: { order: "asc" } },
+      ratings: { select: { userId: true, score: true } },
     },
   });
   if (!recipe) {
     res.status(404).json({ error: "Recipe not found" });
     return;
   }
+
+  const ratingCount = recipe.ratings.length;
+  const avgRating =
+    ratingCount > 0 ? Math.round((recipe.ratings.reduce((sum, r) => sum + r.score, 0) / ratingCount) * 10) / 10 : null;
+  const myRating = req.userId ? recipe.ratings.find((r) => r.userId === req.userId)?.score ?? null : null;
 
   const totals = recipe.ingredients.reduce(
     (acc, ri) => ({
@@ -182,12 +196,16 @@ recipesRouter.get("/recipes/:slug", async (req, res) => {
     cookMinutes: recipe.cookMinutes,
     difficulty: recipe.difficulty,
     tags: recipe.tags,
+    avgRating,
+    ratingCount,
+    myRating,
     nutritionPerServing,
     ingredients: recipe.ingredients.map((ri) => ({
       name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,
       unit: ri.displayUnit,
       note: ri.note,
+      substitute: lang === "ar" ? ri.ingredient.substituteAr ?? ri.ingredient.substituteEn : ri.ingredient.substituteEn,
     })),
     steps: recipe.steps.map((s) => ({
       order: s.order,

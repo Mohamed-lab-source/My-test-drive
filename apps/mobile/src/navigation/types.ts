@@ -23,6 +23,7 @@ export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   Glossary: undefined;
+  Search: undefined;
 };
 
 declare global {

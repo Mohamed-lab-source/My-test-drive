@@ -5,6 +5,7 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { LocalPreferenceProvider } from "./src/context/LocalPreferenceContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
 import { UnitsProvider } from "./src/context/UnitsContext";
+import { RecentlyViewedProvider } from "./src/context/RecentlyViewedContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -28,7 +29,9 @@ export default function App() {
             <LocalPreferenceProvider>
               <AuthProvider>
                 <FavoritesProvider>
-                  <AppShell />
+                  <RecentlyViewedProvider>
+                    <AppShell />
+                  </RecentlyViewedProvider>
                 </FavoritesProvider>
               </AuthProvider>
             </LocalPreferenceProvider>

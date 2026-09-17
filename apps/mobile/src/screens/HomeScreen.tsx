@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { FlatList, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
+import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { fetchCuisines, fetchRecipes, fetchRecommended } from "../api/endpoints";
 import { rankRecipes } from "../utils/rank";
@@ -25,6 +26,7 @@ type Props = CompositeScreenProps<
 export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
   const { preference } = useLocalPreference();
+  const { recentRecipes } = useRecentlyViewed();
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -78,6 +80,16 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.headline}>{t("home.headline")}</Text>
             </View>
 
+            <AnimatedPressable
+              style={styles.searchBar}
+              pressScale={0.98}
+              onPress={() => navigation.navigate("Search")}
+              accessibilityRole="button"
+            >
+              <Text style={styles.searchIcon}>🔍</Text>
+              <Text style={styles.searchPlaceholder}>{t("search.placeholder")}</Text>
+            </AnimatedPressable>
+
             <Text style={styles.sectionTitle}>{t("home.browseByCuisine")}</Text>
             <View style={styles.cuisineWrap}>
               {cuisines.map((c, i) => (
@@ -121,6 +133,28 @@ export function HomeScreen({ navigation }: Props) {
               </AnimatedPressable>
             </View>
 
+            {recentRecipes.length > 0 ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.recentlyViewed")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentScroll}>
+                  {recentRecipes.map((r, i) => (
+                    <FadeSlideIn key={r.slug} index={i}>
+                      <AnimatedPressable
+                        style={styles.recentCard}
+                        pressScale={0.96}
+                        onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
+                      >
+                        <Text style={styles.recentEmoji}>{CUISINE_EMOJI[r.cuisine.slug] ?? "🍽️"}</Text>
+                        <Text style={styles.recentTitle} numberOfLines={2}>
+                          {r.title}
+                        </Text>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
+
             <Text style={styles.sectionTitle}>{t("home.recommended")}</Text>
           </View>
         }
@@ -146,6 +180,19 @@ const createStyles = (colors: ThemeColors) =>
     header: { marginBottom: spacing(2) },
     greeting: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
     headline: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 4 },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing(2),
+      paddingVertical: spacing(1.25),
+      marginTop: spacing(1),
+    },
+    searchIcon: { fontSize: 15, marginEnd: spacing(1) },
+    searchPlaceholder: { color: colors.textMuted, fontSize: 14 },
     sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
     cuisineWrap: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1.5) },
     cuisineCard: {
@@ -168,5 +215,18 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing(2),
     },
     quickChipText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+    recentScroll: {},
+    recentCard: {
+      width: 110,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing(1.5),
+      marginEnd: spacing(1.5),
+      alignItems: "center",
+    },
+    recentEmoji: { fontSize: 28 },
+    recentTitle: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: spacing(1), textAlign: "center" },
     recommendedItem: {},
   });

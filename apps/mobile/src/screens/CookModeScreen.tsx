@@ -100,11 +100,18 @@ export function CookModeScreen({ route, navigation }: Props) {
             </Text>
             <ScrollView style={styles.modalList}>
               {ingredients.map((ing) => (
-                <View key={ing.name} style={styles.modalRow}>
-                  <Text style={styles.modalRowName}>{ing.name}</Text>
-                  <Text style={styles.modalRowQty}>
-                    {formatQuantity(ing.quantity, ing.unit, unitSystem)}
-                  </Text>
+                <View key={ing.name} style={styles.modalCell}>
+                  <View style={styles.modalRow}>
+                    <Text style={styles.modalRowName}>{ing.name}</Text>
+                    <Text style={styles.modalRowQty}>
+                      {formatQuantity(ing.quantity, ing.unit, unitSystem)}
+                    </Text>
+                  </View>
+                  {ing.substitute ? (
+                    <Text style={[styles.modalRowSubstitute, { textAlign }]}>
+                      {t("recipeDetail.substituteHint", { substitute: ing.substitute })}
+                    </Text>
+                  ) : null}
                 </View>
               ))}
             </ScrollView>
@@ -190,15 +197,18 @@ const createStyles = (colors: ThemeColors) =>
     modalTitle: { fontSize: 18, fontWeight: "800", color: colors.text },
     modalSubtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2, marginBottom: spacing(2) },
     modalList: { marginBottom: spacing(2) },
-    modalRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
+    modalCell: {
       paddingVertical: spacing(1),
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
+    modalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
     modalRowName: { color: colors.text, fontSize: 14 },
     modalRowQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    modalRowSubstitute: { color: colors.primaryDark, fontSize: 11, marginTop: 2 },
     modalClose: {
       backgroundColor: colors.chipBackground,
       borderRadius: radius.lg,

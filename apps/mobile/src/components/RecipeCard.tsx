@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AnimatedPressable } from "./AnimatedPressable";
 import { FadeSlideIn } from "./FadeSlideIn";
+import { StarRating } from "./StarRating";
 import { useTheme } from "../theme/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -42,6 +43,14 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
           <Text style={styles.meta}>
             {recipe.cuisine.name} · {recipe.dishType} · {totalMinutes} min
           </Text>
+          {recipe.avgRating !== null ? (
+            <View style={styles.ratingRow}>
+              <StarRating value={recipe.avgRating} size={12} />
+              <Text style={styles.ratingText}>
+                {recipe.avgRating.toFixed(1)} ({recipe.ratingCount})
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.tagRow}>
             {recipe.tags.map((tag) => (
               <View key={tag} style={styles.tagBadge}>
@@ -99,6 +108,16 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 12,
       color: colors.textMuted,
       marginTop: 2,
+    },
+    ratingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 4,
+    },
+    ratingText: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginStart: 4,
     },
     tagRow: {
       flexDirection: "row",

@@ -4,6 +4,7 @@ import type {
   DietGoal,
   NearbyStores,
   Preference,
+  RatingResult,
   RecipeDetail,
   RecipeSummary,
   ShoppingListResult,
@@ -93,4 +94,9 @@ export async function addFavorite(slug: string) {
 
 export async function removeFavorite(slug: string) {
   await api.delete(`/favorites/${slug}`);
+}
+
+export async function rateRecipe(slug: string, score: number, comment?: string) {
+  const { data } = await api.post<RatingResult>(`/recipes/${slug}/ratings`, { score, comment });
+  return data;
 }

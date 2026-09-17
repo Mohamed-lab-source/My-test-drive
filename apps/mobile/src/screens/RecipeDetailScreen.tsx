@@ -5,15 +5,18 @@ import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { fetchRecipeDetail } from "../api/endpoints";
+import { fetchRecipeDetail, rateRecipe } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
+import { StarRating } from "../components/StarRating";
 import { useLocale } from "../i18n/LocaleContext";
+import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useUnits } from "../context/UnitsContext";
+import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { formatQuantity } from "../utils/units";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useTheme } from "../theme/ThemeContext";
@@ -33,10 +36,14 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { unitSystem } = useUnits();
+  const { isAuthenticated } = useAuth();
+  const { addRecent } = useRecentlyViewed();
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
   const [sharing, setSharing] = useState(false);
+  const [myRating, setMyRating] = useState<number | null>(null);
+  const [rating, setRating] = useState(false);
   const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
@@ -45,8 +52,11 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
       .then((data) => {
         setRecipe(data);
         setServings((prev) => (prev === 1 ? data.baseServings : prev));
+        setMyRating(data.myRating);
+        addRecent(data);
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, locale]);
 
   const scaledIngredients = useMemo(() => {
@@ -86,6 +96,21 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const handleRate = async (score: number) => {
+    const previous = myRating;
+    setMyRating(score);
+    setRating(true);
+    try {
+      const result = await rateRecipe(recipe.slug, score);
+      setRecipe((prev) => (prev ? { ...prev, avgRating: result.average, ratingCount: result.count } : prev));
+    } catch {
+      setMyRating(previous);
+      Alert.alert(t("recipeDetail.rateError"));
+    } finally {
+      setRating(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView>
@@ -106,6 +131,15 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             </AnimatedPressable>
           </View>
           <Text style={[styles.description, { textAlign }]}>{recipe.description}</Text>
+
+          {recipe.ratingCount > 0 ? (
+            <View style={styles.avgRatingRow}>
+              <StarRating value={recipe.avgRating ?? 0} size={16} />
+              <Text style={styles.avgRatingText}>
+                {recipe.avgRating?.toFixed(1)} · {t("recipeDetail.ratingCount", { count: recipe.ratingCount })}
+              </Text>
+            </View>
+          ) : null}
 
           <View style={styles.metaRow}>
             <MetaPill label={`${recipe.cuisine.name}`} styles={styles} />
@@ -173,9 +207,16 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           </Text>
           {scaledIngredients.map((ing, i) => (
             <FadeSlideIn key={ing.name} index={i}>
-              <View style={styles.ingredientRow}>
-                <Text style={styles.ingredientName}>{ing.name}</Text>
-                <Text style={styles.ingredientQty}>{formatQuantity(ing.quantity, ing.unit, unitSystem)}</Text>
+              <View style={styles.ingredientCell}>
+                <View style={styles.ingredientRow}>
+                  <Text style={styles.ingredientName}>{ing.name}</Text>
+                  <Text style={styles.ingredientQty}>{formatQuantity(ing.quantity, ing.unit, unitSystem)}</Text>
+                </View>
+                {ing.substitute ? (
+                  <Text style={[styles.ingredientSubstitute, { textAlign }]}>
+                    {t("recipeDetail.substituteHint", { substitute: ing.substitute })}
+                  </Text>
+                ) : null}
               </View>
             </FadeSlideIn>
           ))}
@@ -200,6 +241,16 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               </View>
             </FadeSlideIn>
           ))}
+
+          <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.rateThis")}</Text>
+          {isAuthenticated ? (
+            <View style={styles.rateRow}>
+              <StarRating value={myRating ?? 0} onChange={handleRate} size={30} />
+              {rating ? <ActivityIndicator size="small" color={colors.primary} style={styles.rateSpinner} /> : null}
+            </View>
+          ) : (
+            <Text style={[styles.rateLoginHint, { textAlign }]}>{t("recipeDetail.rateLoginHint")}</Text>
+          )}
         </View>
       </ScrollView>
       <View style={styles.offScreen} pointerEvents="none">
@@ -309,6 +360,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   favoriteIcon: { fontSize: 18 },
   description: { color: colors.textMuted, marginTop: spacing(1), lineHeight: 20 },
+  avgRatingRow: { flexDirection: "row", alignItems: "center", marginTop: spacing(1) },
+  avgRatingText: { color: colors.textMuted, fontSize: 13, fontWeight: "600", marginStart: spacing(1) },
+  rateRow: { flexDirection: "row", alignItems: "center" },
+  rateSpinner: { marginStart: spacing(1.5) },
+  rateLoginHint: { color: colors.textMuted, fontSize: 13 },
   metaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(2) },
   metaPill: {
     backgroundColor: colors.chipBackground,
@@ -332,15 +388,18 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   nutritionValue: { fontSize: 16, fontWeight: "800", color: colors.primaryDark },
   nutritionUnit: { fontSize: 11, fontWeight: "600", color: colors.textMuted },
   nutritionLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  ingredientRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  ingredientCell: {
     paddingVertical: spacing(1),
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  ingredientRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   ingredientName: { color: colors.text, fontSize: 14 },
   ingredientQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+  ingredientSubstitute: { color: colors.primaryDark, fontSize: 12, marginTop: 2 },
   stepperRow: { flexDirection: "row", alignItems: "center" },
   stepperButton: {
     width: 40,

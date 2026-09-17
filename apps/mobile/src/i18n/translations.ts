@@ -30,6 +30,7 @@ const en = {
   "home.fitTitle": "Fit & healthy",
   "home.quickTitle": "Quick meals",
   "home.recommended": "Recommended for you",
+  "home.recentlyViewed": "Recently viewed",
 
   "recipeList.title": "Recipes",
   "recipeList.filter.all": "All",
@@ -54,6 +55,11 @@ const en = {
   "recipeDetail.min": "min",
   "recipeDetail.serves": "Serves {count}",
   "recipeDetail.planShoppingList": "Plan shopping list",
+  "recipeDetail.ratingCount": "{count} ratings",
+  "recipeDetail.rateThis": "Rate this recipe",
+  "recipeDetail.rateLoginHint": "Log in to rate this recipe.",
+  "recipeDetail.rateError": "Couldn't save your rating. Try again.",
+  "recipeDetail.substituteHint": "No this? Try: {substitute}",
 
   "shoppingList.title": "Shopping List",
   "shoppingList.subtitle": "Tell us how many people and your budget — we'll do the math.",
@@ -105,6 +111,10 @@ const en = {
   "glossary.title": "Cooking glossary",
   "glossary.searchPlaceholder": "Search techniques…",
   "glossary.empty": "No techniques match your search.",
+
+  "search.title": "Search recipes",
+  "search.placeholder": "Search recipes by name…",
+  "search.empty": "No recipes found.",
 
   "login.title": "Welcome back",
   "login.email": "Email",
@@ -187,6 +197,7 @@ const ar: Record<keyof typeof en, string> = {
   "home.fitTitle": "رياضي وصحي",
   "home.quickTitle": "وجبات سريعة",
   "home.recommended": "مقترح لك",
+  "home.recentlyViewed": "شوهد مؤخراً",
 
   "recipeList.title": "الوصفات",
   "recipeList.filter.all": "الكل",
@@ -211,6 +222,11 @@ const ar: Record<keyof typeof en, string> = {
   "recipeDetail.min": "دقيقة",
   "recipeDetail.serves": "تكفي {count}",
   "recipeDetail.planShoppingList": "خطط لقائمة التسوق",
+  "recipeDetail.ratingCount": "{count} تقييم",
+  "recipeDetail.rateThis": "قيّم هذه الوصفة",
+  "recipeDetail.rateLoginHint": "سجّل الدخول لتقييم هذه الوصفة.",
+  "recipeDetail.rateError": "تعذّر حفظ تقييمك. حاول مرة أخرى.",
+  "recipeDetail.substituteHint": "لا تملكه؟ جرّب: {substitute}",
 
   "shoppingList.title": "قائمة التسوق",
   "shoppingList.subtitle": "أخبرينا بعدد الأشخاص وميزانيتك، وسنتولى الحساب.",
@@ -262,6 +278,10 @@ const ar: Record<keyof typeof en, string> = {
   "glossary.title": "معجم تقنيات الطبخ",
   "glossary.searchPlaceholder": "ابحث عن تقنية…",
   "glossary.empty": "لا توجد تقنيات مطابقة لبحثك.",
+
+  "search.title": "بحث عن وصفات",
+  "search.placeholder": "ابحث عن وصفة بالاسم…",
+  "search.empty": "لم يتم العثور على وصفات.",
 
   "login.title": "مرحبًا بعودتك",
   "login.email": "البريد الإلكتروني",

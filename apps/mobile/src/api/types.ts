@@ -35,6 +35,8 @@ export type RecipeSummary = {
   cookMinutes: number;
   difficulty: Difficulty;
   tags: DishTag[];
+  avgRating: number | null;
+  ratingCount: number;
   cuisine: { slug: string; name: string };
 };
 
@@ -43,6 +45,7 @@ export type RecipeIngredient = {
   quantity: number;
   unit: string;
   note: string | null;
+  substitute: string | null;
 };
 
 export type RecipeStep = {
@@ -63,6 +66,13 @@ export type RecipeDetail = RecipeSummary & {
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
   nutritionPerServing: NutritionPerServing;
+  myRating: number | null;
+};
+
+export type RatingResult = {
+  myScore: number;
+  average: number;
+  count: number;
 };
 
 export type ShoppingListItem = {

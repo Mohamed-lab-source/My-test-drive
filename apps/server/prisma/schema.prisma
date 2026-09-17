@@ -39,6 +39,7 @@ model User {
   preference    Preference?
   shoppingLists ShoppingList[]
   favorites     Favorite[]
+  ratings       Rating[]
 }
 
 model Preference {
@@ -79,6 +80,7 @@ model Recipe {
   steps         RecipeStep[]
   shoppingLists ShoppingList[]
   favoritedBy   Favorite[]
+  ratings       Rating[]
   createdAt     DateTime           @default(now())
 }
 
@@ -96,6 +98,10 @@ model Ingredient {
   proteinPerUnit   Float              @default(0)
   fatPerUnit       Float              @default(0)
   carbsPerUnit     Float              @default(0)
+  // Short "use instead" suggestion for a home cook missing this ingredient, e.g.
+  // "1:1 plain yogurt". Null when there's no good common substitute (water, salt).
+  substituteEn     String?
+  substituteAr     String?
   recipeUses       RecipeIngredient[]
 }
 
@@ -159,6 +165,21 @@ model Favorite {
 
   @@unique([userId, recipeId])
   @@index([userId])
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, recipeId])
+  @@index([recipeId])
 }
 
 model DeliveryPartner {
