@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { CompositeScreenProps } from "@react-navigation/native";
@@ -10,7 +10,8 @@ import { fetchShoppingListHistory } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { useLocale } from "../i18n/LocaleContext";
-import { colors, radius, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { radius, spacing, type ThemeColors } from "../theme";
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, "Lists">,
@@ -22,6 +23,8 @@ type HistoryItem = Awaited<ReturnType<typeof fetchShoppingListHistory>>[number];
 export function ListsScreen({ navigation }: Props) {
   const { isAuthenticated } = useAuth();
   const { t } = useLocale();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -83,7 +86,7 @@ export function ListsScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   listContent: { padding: spacing(3) },
   headline: { fontSize: 22, fontWeight: "800", color: colors.text, marginBottom: spacing(2) },
@@ -106,7 +109,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   thumbEmoji: { fontSize: 24 },
-  rowBody: { flex: 1, marginLeft: spacing(1.5) },
+  rowBody: { flex: 1, marginStart: spacing(1.5) },
   rowTitle: { fontWeight: "700", color: colors.text, fontSize: 14 },
   rowMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },

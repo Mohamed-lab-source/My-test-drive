@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -9,7 +9,8 @@ import { apiErrorMessage } from "../api/client";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useLocale } from "../i18n/LocaleContext";
 import { useGoogleAuthRequest, isGoogleSignInConfigured } from "../auth/googleAuth";
-import { colors, radius, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { radius, spacing, type ThemeColors } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Signup">;
 
@@ -17,6 +18,8 @@ export function SignupScreen({ navigation }: Props) {
   const { signup, loginWithGoogle, savePreferences } = useAuth();
   const { preference } = useLocalPreference();
   const { t, isRTL } = useLocale();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -132,7 +135,7 @@ export function SignupScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { flex: 1, padding: spacing(3), justifyContent: "center" },

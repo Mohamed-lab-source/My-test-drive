@@ -49,7 +49,17 @@ apps/
   Asian, Egyptian, Mexican, Indian, Levantine, Mediterranean, French,
   American, Moroccan, Turkish — mains, appetizers, soups, breakfast, quick
   meals, and desserts), each with ingredients, steps, prep/cook time and
-  difficulty.
+  difficulty. Every step that uses a real spice or dried herb (cumin,
+  turmeric, garam masala, ras el hanout, paprika, oregano, star anise,
+  cinnamon...) explains the actual technique — blooming ground spices in hot
+  oil before adding liquid so they don't taste raw, toasting whole spices to
+  wake up their oils, not letting them scorch, crushing garlic and cumin
+  into a paste, Turkey's classic sizzled-butter soup finish — rather than
+  just listing "add spices."
+- **Dark mode**: Light, Dark, or System, switchable from Profile and
+  persisted locally. Every screen consumes its colors from a `ThemeContext`
+  (not a static import), so the whole app — including the navigation bar and
+  status bar — repaints immediately.
 - **Nutrition**: each ingredient carries calories/protein/fat/carbs per unit
   (per gram/ml/piece, standard nutrition-database estimates); the recipe
   detail endpoint sums this across the recipe and divides by base servings
@@ -193,7 +203,8 @@ Until both are set, the "Continue with Google" button shows a friendly
    uses device location.
 5. **Profile** — sign up/log in (email/password or Google) to sync diet
    goal, favorite cuisines and shopping list history across sessions; also
-   where you switch the app's language between English and Arabic.
+   where you switch the app's language between English and Arabic, and its
+   appearance between Light, Dark and System.
 
 ## Testing notes
 

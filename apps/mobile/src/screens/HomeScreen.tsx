@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
@@ -13,7 +13,8 @@ import { RecipeCard } from "../components/RecipeCard";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
-import { colors, radius, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { radius, spacing, type ThemeColors } from "../theme";
 import type { Cuisine, RecipeSummary } from "../api/types";
 
 type Props = CompositeScreenProps<
@@ -25,6 +26,8 @@ export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
   const { preference } = useLocalPreference();
   const { t, locale } = useLocale();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [recommended, setRecommended] = useState<RecipeSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -128,37 +131,34 @@ export function HomeScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  listContent: { padding: spacing(3), paddingBottom: spacing(6) },
-  header: { marginBottom: spacing(2) },
-  greeting: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
-  headline: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
-  cuisineWrap: { flexDirection: "row", flexWrap: "wrap" },
-  cuisineCard: {
-    width: "31%",
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing(1.5),
-    marginRight: "3%",
-    marginBottom: spacing(1.5),
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cuisineEmoji: { fontSize: 28 },
-  cuisineName: { fontWeight: "700", color: colors.text, marginTop: 6, fontSize: 12, textAlign: "center" },
-  cuisineCount: { color: colors.textMuted, fontSize: 10, marginTop: 2 },
-  quickRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing(2) },
-  quickChip: {
-    backgroundColor: colors.secondary,
-    borderRadius: radius.pill,
-    paddingVertical: spacing(1),
-    paddingHorizontal: spacing(2),
-    marginRight: spacing(1),
-    marginBottom: spacing(1),
-  },
-  quickChipText: { color: "#fff", fontWeight: "700", fontSize: 12 },
-  recommendedItem: {},
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    listContent: { padding: spacing(3), paddingBottom: spacing(6) },
+    header: { marginBottom: spacing(2) },
+    greeting: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    headline: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 4 },
+    sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
+    cuisineWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing(1.5) },
+    cuisineCard: {
+      width: "30%",
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      padding: spacing(1.5),
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cuisineEmoji: { fontSize: 28 },
+    cuisineName: { fontWeight: "700", color: colors.text, marginTop: 6, fontSize: 12, textAlign: "center" },
+    cuisineCount: { color: colors.textMuted, fontSize: 10, marginTop: 2 },
+    quickRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing(2), gap: spacing(1) },
+    quickChip: {
+      backgroundColor: colors.secondary,
+      borderRadius: radius.pill,
+      paddingVertical: spacing(1),
+      paddingHorizontal: spacing(2),
+    },
+    quickChipText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+    recommendedItem: {},
+  });

@@ -13,7 +13,8 @@ import { PopOnChange } from "../components/PopOnChange";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { useLocale } from "../i18n/LocaleContext";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
-import { colors, radius, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { radius, spacing, type ThemeColors } from "../theme";
 import type { RecipeDetail } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeDetail">;
@@ -25,6 +26,8 @@ function round2(n: number): number {
 export function RecipeDetailScreen({ route, navigation }: Props) {
   const { slug } = route.params;
   const { t, locale, isRTL } = useLocale();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
@@ -91,11 +94,11 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           <Text style={[styles.description, { textAlign }]}>{recipe.description}</Text>
 
           <View style={styles.metaRow}>
-            <MetaPill label={`${recipe.cuisine.name}`} />
-            <MetaPill label={recipe.dishType} />
-            <MetaPill label={`${totalMinutes} ${t("recipeDetail.min")}`} />
-            <MetaPill label={recipe.difficulty} />
-            <MetaPill label={t("recipeDetail.serves", { count: recipe.baseServings })} />
+            <MetaPill label={`${recipe.cuisine.name}`} styles={styles} />
+            <MetaPill label={recipe.dishType} styles={styles} />
+            <MetaPill label={`${totalMinutes} ${t("recipeDetail.min")}`} styles={styles} />
+            <MetaPill label={recipe.difficulty} styles={styles} />
+            <MetaPill label={t("recipeDetail.serves", { count: recipe.baseServings })} styles={styles} />
           </View>
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.nutrition")}</Text>
@@ -104,21 +107,25 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               label={t("recipeDetail.calories")}
               value={`${recipe.nutritionPerServing.calories}`}
               unit={t("recipeDetail.kcal")}
+              styles={styles}
             />
             <NutritionStat
               label={t("recipeDetail.protein")}
               value={`${recipe.nutritionPerServing.proteinGrams}`}
               unit={t("recipeDetail.gramsUnit")}
+              styles={styles}
             />
             <NutritionStat
               label={t("recipeDetail.fat")}
               value={`${recipe.nutritionPerServing.fatGrams}`}
               unit={t("recipeDetail.gramsUnit")}
+              styles={styles}
             />
             <NutritionStat
               label={t("recipeDetail.carbs")}
               value={`${recipe.nutritionPerServing.carbsGrams}`}
               unit={t("recipeDetail.gramsUnit")}
+              styles={styles}
             />
           </View>
 
@@ -217,7 +224,19 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   );
 }
 
-function NutritionStat({ label, value, unit }: { label: string; value: string; unit: string }) {
+type Styles = ReturnType<typeof createStyles>;
+
+function NutritionStat({
+  label,
+  value,
+  unit,
+  styles,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  styles: Styles;
+}) {
   return (
     <View style={styles.nutritionStat}>
       <Text style={styles.nutritionValue}>
@@ -229,7 +248,7 @@ function NutritionStat({ label, value, unit }: { label: string; value: string; u
   );
 }
 
-function MetaPill({ label }: { label: string }) {
+function MetaPill({ label, styles }: { label: string; styles: Styles }) {
   return (
     <View style={styles.metaPill}>
       <Text style={styles.metaPillText}>{label}</Text>
@@ -237,7 +256,7 @@ function MetaPill({ label }: { label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   loadingSafe: { flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
   hero: {
@@ -257,7 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: spacing(1.5),
     paddingVertical: 6,
-    marginRight: spacing(1),
+    marginEnd: spacing(1),
     marginBottom: spacing(1),
   },
   metaPillText: { fontSize: 11, fontWeight: "700", color: colors.primaryDark },
@@ -269,7 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing(1.5),
     alignItems: "center",
-    marginRight: spacing(1),
+    marginEnd: spacing(1),
   },
   nutritionValue: { fontSize: 16, fontWeight: "800", color: colors.primaryDark },
   nutritionUnit: { fontSize: 11, fontWeight: "600", color: colors.textMuted },

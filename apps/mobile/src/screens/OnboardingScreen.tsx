@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -7,7 +7,8 @@ import { useLocale } from "../i18n/LocaleContext";
 import { fetchCuisines } from "../api/endpoints";
 import { Chip } from "../components/Chip";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { colors, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { spacing, type ThemeColors } from "../theme";
 import type { Cuisine, DietGoal } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
@@ -15,6 +16,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 export function OnboardingScreen({ navigation }: Props) {
   const { setPreference } = useLocalPreference();
   const { t, isRTL } = useLocale();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [dietGoal, setDietGoal] = useState<DietGoal>("NONE");
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
@@ -77,15 +80,16 @@ export function OnboardingScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing(3), paddingTop: spacing(6) },
-  eyebrow: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
-  title: { color: colors.primary, fontSize: 34, fontWeight: "800", marginTop: 4 },
-  subtitle: { color: colors.textMuted, fontSize: 15, marginTop: spacing(1.5), lineHeight: 21 },
-  section: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(4), marginBottom: spacing(1.5) },
-  goalGrid: { flexDirection: "row", flexWrap: "wrap" },
-  goalItem: { marginRight: spacing(1) },
-  row: { flexDirection: "row", flexWrap: "wrap" },
-  footer: { marginTop: spacing(5) },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing(3), paddingTop: spacing(6) },
+    eyebrow: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    title: { color: colors.primary, fontSize: 34, fontWeight: "800", marginTop: 4 },
+    subtitle: { color: colors.textMuted, fontSize: 15, marginTop: spacing(1.5), lineHeight: 21 },
+    section: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(4), marginBottom: spacing(1.5) },
+    goalGrid: { flexDirection: "row", flexWrap: "wrap" },
+    goalItem: { marginEnd: spacing(1) },
+    row: { flexDirection: "row", flexWrap: "wrap" },
+    footer: { marginTop: spacing(5) },
+  });

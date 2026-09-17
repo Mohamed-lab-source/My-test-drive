@@ -7,7 +7,7 @@ import { HomeScreen } from "../screens/HomeScreen";
 import { ListsScreen } from "../screens/ListsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { useLocale } from "../i18n/LocaleContext";
-import { colors } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -36,6 +36,7 @@ function TabIcon({ name, focused }: { name: keyof MainTabParamList; focused: boo
 
 export function MainTabs() {
   const { t } = useLocale();
+  const { colors } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -10,7 +10,8 @@ import { fetchCuisines } from "../api/endpoints";
 import { Chip } from "../components/Chip";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useLocale } from "../i18n/LocaleContext";
-import { colors, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { spacing, type ThemeColors } from "../theme";
 import type { Cuisine, DietGoal } from "../api/types";
 
 type Props = CompositeScreenProps<
@@ -21,6 +22,8 @@ type Props = CompositeScreenProps<
 export function ProfileScreen({ navigation }: Props) {
   const { user, isAuthenticated, logout, savePreferences } = useAuth();
   const { t, locale, setLocale } = useLocale();
+  const { colors, preference: themePreference, setPreference: setThemePreference } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
 
@@ -36,16 +39,24 @@ export function ProfileScreen({ navigation }: Props) {
   }, [locale]);
 
   const languageSwitcher = (
-    <View style={styles.languageRow}>
+    <View style={styles.chipRow}>
       <Chip label="English" selected={locale === "en"} onPress={() => setLocale("en")} />
       <Chip label="العربية" selected={locale === "ar"} onPress={() => setLocale("ar")} />
+    </View>
+  );
+
+  const themeSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.themeLight")} selected={themePreference === "light"} onPress={() => setThemePreference("light")} />
+      <Chip label={t("profile.themeDark")} selected={themePreference === "dark"} onPress={() => setThemePreference("dark")} />
+      <Chip label={t("profile.themeSystem")} selected={themePreference === "system"} onPress={() => setThemePreference("system")} />
     </View>
   );
 
   if (!isAuthenticated || !user) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.loggedOut}>
+        <ScrollView contentContainerStyle={styles.loggedOut}>
           <Text style={styles.headline}>{t("profile.saveTitle")}</Text>
           <Text style={styles.subtitle}>{t("profile.saveSubtitle")}</Text>
           <View style={styles.buttonSpacing}>
@@ -54,9 +65,11 @@ export function ProfileScreen({ navigation }: Props) {
           <View style={styles.buttonSpacing}>
             <PrimaryButton label={t("profile.createAccount")} variant="outline" onPress={() => navigation.navigate("Signup")} />
           </View>
-          <Text style={[styles.section, styles.languageSection]}>{t("profile.language")}</Text>
+          <Text style={[styles.section, styles.languageSection]}>{t("profile.appearance")}</Text>
+          {themeSwitcher}
+          <Text style={styles.section}>{t("profile.language")}</Text>
           {languageSwitcher}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -96,14 +109,14 @@ export function ProfileScreen({ navigation }: Props) {
         <Text style={styles.subtitle}>{user.email}</Text>
 
         <Text style={styles.section}>{t("profile.dietGoal")}</Text>
-        <View style={styles.row}>
+        <View style={styles.chipRow}>
           {GOALS.map((g) => (
             <Chip key={g.value} label={g.label} selected={dietGoal === g.value} onPress={() => updateGoal(g.value)} />
           ))}
         </View>
 
         <Text style={styles.section}>{t("profile.favoriteCuisines")}</Text>
-        <View style={styles.row}>
+        <View style={styles.chipRow}>
           {cuisines.map((c) => (
             <Chip
               key={c.slug}
@@ -113,6 +126,9 @@ export function ProfileScreen({ navigation }: Props) {
             />
           ))}
         </View>
+
+        <Text style={styles.section}>{t("profile.appearance")}</Text>
+        {themeSwitcher}
 
         <Text style={styles.section}>{t("profile.language")}</Text>
         {languageSwitcher}
@@ -127,17 +143,17 @@ export function ProfileScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing(3) },
-  headline: { fontSize: 22, fontWeight: "800", color: colors.text },
-  subtitle: { color: colors.textMuted, marginTop: 4 },
-  section: { fontSize: 15, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
-  languageSection: { marginTop: spacing(4) },
-  languageRow: { flexDirection: "row", flexWrap: "wrap" },
-  row: { flexDirection: "row", flexWrap: "wrap" },
-  saving: { color: colors.textMuted, fontSize: 12, marginTop: spacing(1) },
-  logoutButton: { marginTop: spacing(5) },
-  loggedOut: { flex: 1, padding: spacing(3), justifyContent: "center" },
-  buttonSpacing: { marginTop: spacing(2) },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing(3) },
+    headline: { fontSize: 22, fontWeight: "800", color: colors.text },
+    subtitle: { color: colors.textMuted, marginTop: 4 },
+    section: { fontSize: 15, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
+    languageSection: { marginTop: spacing(4) },
+    chipRow: { flexDirection: "row", flexWrap: "wrap" },
+    saving: { color: colors.textMuted, fontSize: 12, marginTop: spacing(1) },
+    logoutButton: { marginTop: spacing(5) },
+    loggedOut: { flexGrow: 1, padding: spacing(3), justifyContent: "center" },
+    buttonSpacing: { marginTop: spacing(2) },
+  });

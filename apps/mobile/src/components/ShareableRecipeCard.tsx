@@ -1,7 +1,9 @@
 import React, { forwardRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
-import { colors, radius, spacing } from "../theme";
+// Always rendered with the light palette regardless of the app's active theme —
+// a shared image should look the same (and stay legible) wherever it lands.
+import { lightColors as colors, radius, spacing } from "../theme";
 import type { RecipeDetail } from "../api/types";
 
 type Props = {

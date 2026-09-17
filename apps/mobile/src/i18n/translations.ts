@@ -90,6 +90,10 @@ const en = {
   "profile.errorSave": "Couldn't save",
   "profile.language": "Language",
   "profile.restartHint": "Restart the app to fully switch text direction.",
+  "profile.appearance": "Appearance",
+  "profile.themeLight": "Light",
+  "profile.themeDark": "Dark",
+  "profile.themeSystem": "System",
 
   "login.title": "Welcome back",
   "login.email": "Email",
@@ -211,6 +215,10 @@ const ar: Record<keyof typeof en, string> = {
   "profile.errorSave": "تعذّر الحفظ",
   "profile.language": "اللغة",
   "profile.restartHint": "أعيدي تشغيل التطبيق للتبديل الكامل لاتجاه النص.",
+  "profile.appearance": "المظهر",
+  "profile.themeLight": "فاتح",
+  "profile.themeDark": "داكن",
+  "profile.themeSystem": "تلقائي",
 
   "login.title": "مرحبًا بعودتك",
   "login.email": "البريد الإلكتروني",

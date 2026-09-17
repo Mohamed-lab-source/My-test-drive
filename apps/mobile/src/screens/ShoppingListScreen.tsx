@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -21,7 +21,8 @@ import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
 import { useLocale } from "../i18n/LocaleContext";
-import { colors, radius, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { radius, spacing, type ThemeColors } from "../theme";
 import type { ShoppingListResult } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ShoppingList">;
@@ -29,6 +30,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "ShoppingList">;
 export function ShoppingListScreen({ route, navigation }: Props) {
   const { slug, title, baseServings, initialServings } = route.params;
   const { t, isRTL } = useLocale();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [servings, setServings] = useState(initialServings ?? baseServings);
   const [budget, setBudget] = useState("");
   const [loading, setLoading] = useState(false);
@@ -197,7 +200,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing(3), paddingBottom: spacing(6) },
   title: { fontSize: 22, fontWeight: "800", color: colors.text },
@@ -250,7 +253,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: "center",
     paddingVertical: spacing(2),
-    marginRight: spacing(1),
+    marginEnd: spacing(1),
   },
   partnerEmoji: { fontSize: 26 },
   partnerName: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: 4 },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -6,7 +6,8 @@ import { fetchRecipes } from "../api/endpoints";
 import { RecipeCard } from "../components/RecipeCard";
 import { Chip } from "../components/Chip";
 import { useLocale } from "../i18n/LocaleContext";
-import { colors, spacing } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
+import { spacing, type ThemeColors } from "../theme";
 import type { DishTag, RecipeSummary } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
@@ -14,6 +15,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 export function RecipeListScreen({ route, navigation }: Props) {
   const { cuisineSlug, tag: initialTag, title } = route.params;
   const { t, locale } = useLocale();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTag, setActiveTag] = useState<DishTag | undefined>(initialTag as DishTag | undefined);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,9 +64,10 @@ export function RecipeListScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  filterRow: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: spacing(3), paddingTop: spacing(2) },
-  listContent: { padding: spacing(3), paddingTop: spacing(1) },
-  empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    filterRow: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: spacing(3), paddingTop: spacing(2) },
+    listContent: { padding: spacing(3), paddingTop: spacing(1) },
+    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
+  });
