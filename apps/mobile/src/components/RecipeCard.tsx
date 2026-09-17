@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { AnimatedPressable } from "./AnimatedPressable";
 import { FadeSlideIn } from "./FadeSlideIn";
 import { useTheme } from "../theme/ThemeContext";
+import { useFavorites } from "../context/FavoritesContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import type { RecipeSummary } from "../api/types";
@@ -17,12 +18,22 @@ type Props = {
 export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const favorited = isFavorite(recipe.slug);
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   return (
     <FadeSlideIn index={index}>
       <AnimatedPressable style={styles.card} onPress={onPress} pressScale={0.98} accessibilityRole="button">
         <View style={styles.imagePlaceholder}>
           <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+          <AnimatedPressable
+            style={styles.favoriteButton}
+            pressScale={0.85}
+            haptic
+            onPress={() => toggleFavorite(recipe)}
+          >
+            <Text style={styles.favoriteIcon}>{favorited ? "❤️" : "🤍"}</Text>
+          </AnimatedPressable>
         </View>
         <View style={styles.body}>
           <Text style={styles.title} numberOfLines={1}>
@@ -64,6 +75,18 @@ const createStyles = (colors: ThemeColors) =>
     imagePlaceholderEmoji: {
       fontSize: 44,
     },
+    favoriteButton: {
+      position: "absolute",
+      top: spacing(1),
+      end: spacing(1),
+      width: 32,
+      height: 32,
+      borderRadius: radius.pill,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    favoriteIcon: { fontSize: 15 },
     body: {
       padding: spacing(1.5),
     },

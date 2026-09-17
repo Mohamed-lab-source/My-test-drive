@@ -38,6 +38,7 @@ model User {
   createdAt     DateTime       @default(now())
   preference    Preference?
   shoppingLists ShoppingList[]
+  favorites     Favorite[]
 }
 
 model Preference {
@@ -77,6 +78,7 @@ model Recipe {
   ingredients   RecipeIngredient[]
   steps         RecipeStep[]
   shoppingLists ShoppingList[]
+  favoritedBy   Favorite[]
   createdAt     DateTime           @default(now())
 }
 
@@ -145,6 +147,18 @@ model ShoppingListItem {
   quantity       Float
   unit           String
   estimatedCost  Float
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, recipeId])
+  @@index([userId])
 }
 
 model DeliveryPartner {

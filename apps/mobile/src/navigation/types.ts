@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
+import type { RecipeIngredient, RecipeStep } from "../api/types";
 
 export type MainTabParamList = {
   Home: undefined;
@@ -12,8 +13,16 @@ export type RootStackParamList = {
   RecipeList: { cuisineSlug?: string; tag?: string; title: string };
   RecipeDetail: { slug: string };
   ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
+  CookMode: {
+    title: string;
+    cuisineSlug: string;
+    steps: RecipeStep[];
+    ingredients: RecipeIngredient[];
+    servings: number;
+  };
   Login: undefined;
   Signup: undefined;
+  Glossary: undefined;
 };
 
 declare global {

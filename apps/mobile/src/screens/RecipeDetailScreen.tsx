@@ -12,6 +12,9 @@ import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { useLocale } from "../i18n/LocaleContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { useUnits } from "../context/UnitsContext";
+import { formatQuantity } from "../utils/units";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -28,6 +31,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { t, locale, isRTL } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { unitSystem } = useUnits();
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
@@ -90,7 +95,16 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           </FadeSlideIn>
         </View>
         <View style={styles.content}>
-          <Text style={[styles.title, { textAlign }]}>{recipe.title}</Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, styles.titleFlex, { textAlign }]}>{recipe.title}</Text>
+            <AnimatedPressable
+              style={styles.favoriteButton}
+              pressScale={0.85}
+              onPress={() => toggleFavorite(recipe)}
+            >
+              <Text style={styles.favoriteIcon}>{isFavorite(recipe.slug) ? "❤️" : "🤍"}</Text>
+            </AnimatedPressable>
+          </View>
           <Text style={[styles.description, { textAlign }]}>{recipe.description}</Text>
 
           <View style={styles.metaRow}>
@@ -161,9 +175,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             <FadeSlideIn key={ing.name} index={i}>
               <View style={styles.ingredientRow}>
                 <Text style={styles.ingredientName}>{ing.name}</Text>
-                <Text style={styles.ingredientQty}>
-                  {ing.quantity} {ing.unit}
-                </Text>
+                <Text style={styles.ingredientQty}>{formatQuantity(ing.quantity, ing.unit, unitSystem)}</Text>
               </View>
             </FadeSlideIn>
           ))}
@@ -206,16 +218,31 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label={t("recipeDetail.planShoppingList")}
+          label={t("cookMode.startCooking")}
           onPress={() =>
-            navigation.navigate("ShoppingList", {
-              slug: recipe.slug,
+            navigation.navigate("CookMode", {
               title: recipe.title,
-              baseServings: recipe.baseServings,
-              initialServings: servings,
+              cuisineSlug: recipe.cuisine.slug,
+              steps: recipe.steps,
+              ingredients: scaledIngredients,
+              servings,
             })
           }
         />
+        <View style={styles.shareButton}>
+          <PrimaryButton
+            label={t("recipeDetail.planShoppingList")}
+            variant="outline"
+            onPress={() =>
+              navigation.navigate("ShoppingList", {
+                slug: recipe.slug,
+                title: recipe.title,
+                baseServings: recipe.baseServings,
+                initialServings: servings,
+              })
+            }
+          />
+        </View>
         <View style={styles.shareButton}>
           <PrimaryButton label={t("share.button")} onPress={handleShare} loading={sharing} variant="outline" />
         </View>
@@ -268,7 +295,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   heroEmoji: { fontSize: 72 },
   content: { padding: spacing(3), paddingBottom: spacing(2) },
+  titleRow: { flexDirection: "row", alignItems: "center" },
   title: { fontSize: 24, fontWeight: "800", color: colors.text },
+  titleFlex: { flex: 1 },
+  favoriteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+    marginStart: spacing(1),
+  },
+  favoriteIcon: { fontSize: 18 },
   description: { color: colors.textMuted, marginTop: spacing(1), lineHeight: 20 },
   metaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(2) },
   metaPill: {

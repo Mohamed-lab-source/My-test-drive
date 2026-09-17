@@ -22,6 +22,8 @@ import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
+import { useUnits } from "../context/UnitsContext";
+import { formatQuantity } from "../utils/units";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { ShoppingListResult } from "../api/types";
 
@@ -31,6 +33,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
   const { slug, title, baseServings, initialServings } = route.params;
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
+  const { unitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [servings, setServings] = useState(initialServings ?? baseServings);
   const [budget, setBudget] = useState("");
@@ -157,7 +160,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
                   <Text style={styles.itemName}>{item.ingredientName}</Text>
                   <View style={styles.itemRight}>
                     <Text style={styles.itemQty}>
-                      {item.quantity} {item.unit}
+                      {formatQuantity(item.quantity, item.unit, unitSystem)}
                     </Text>
                     <Text style={styles.itemCost}>{item.estimatedCost.toFixed(2)} EGP</Text>
                   </View>

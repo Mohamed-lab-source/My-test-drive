@@ -3,6 +3,8 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "./src/context/AuthContext";
 import { LocalPreferenceProvider } from "./src/context/LocalPreferenceContext";
+import { FavoritesProvider } from "./src/context/FavoritesContext";
+import { UnitsProvider } from "./src/context/UnitsContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -22,11 +24,15 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <LocaleProvider>
-          <LocalPreferenceProvider>
-            <AuthProvider>
-              <AppShell />
-            </AuthProvider>
-          </LocalPreferenceProvider>
+          <UnitsProvider>
+            <LocalPreferenceProvider>
+              <AuthProvider>
+                <FavoritesProvider>
+                  <AppShell />
+                </FavoritesProvider>
+              </AuthProvider>
+            </LocalPreferenceProvider>
+          </UnitsProvider>
         </LocaleProvider>
       </ThemeProvider>
     </SafeAreaProvider>

@@ -6,9 +6,9 @@ import type { DishTag } from "@prisma/client";
 
 export const recipesRouter = Router();
 
-type Lang = "en" | "ar";
+export type Lang = "en" | "ar";
 
-function parseLang(value: unknown): Lang {
+export function parseLang(value: unknown): Lang {
   return value === "ar" ? "ar" : "en";
 }
 
@@ -28,7 +28,7 @@ recipesRouter.get("/cuisines", async (req, res) => {
   );
 });
 
-function recipeSummarySelect() {
+export function recipeSummarySelect() {
   return {
     id: true,
     slug: true,
@@ -47,7 +47,7 @@ function recipeSummarySelect() {
   } as const;
 }
 
-function localizeSummary(r: any, lang: Lang) {
+export function localizeSummary(r: any, lang: Lang) {
   return {
     id: r.id,
     slug: r.slug,

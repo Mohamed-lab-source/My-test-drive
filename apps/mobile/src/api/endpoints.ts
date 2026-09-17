@@ -81,3 +81,16 @@ export async function fetchNearbyStores(lat?: number, lng?: number) {
   const { data } = await api.get<NearbyStores>("/nearby-stores", { params: { lat, lng } });
   return data;
 }
+
+export async function fetchFavorites() {
+  const { data } = await api.get<RecipeSummary[]>("/favorites");
+  return data;
+}
+
+export async function addFavorite(slug: string) {
+  await api.post(`/favorites/${slug}`);
+}
+
+export async function removeFavorite(slug: string) {
+  await api.delete(`/favorites/${slug}`);
+}

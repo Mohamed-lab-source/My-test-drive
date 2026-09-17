@@ -11,6 +11,7 @@ import { Chip } from "../components/Chip";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
+import { useUnits } from "../context/UnitsContext";
 import { spacing, type ThemeColors } from "../theme";
 import type { Cuisine, DietGoal } from "../api/types";
 
@@ -23,6 +24,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { user, isAuthenticated, logout, savePreferences } = useAuth();
   const { t, locale, setLocale } = useLocale();
   const { colors, preference: themePreference, setPreference: setThemePreference } = useTheme();
+  const { unitSystem, setUnitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
@@ -53,6 +55,13 @@ export function ProfileScreen({ navigation }: Props) {
     </View>
   );
 
+  const unitsSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.unitsMetric")} selected={unitSystem === "metric"} onPress={() => setUnitSystem("metric")} />
+      <Chip label={t("profile.unitsImperial")} selected={unitSystem === "imperial"} onPress={() => setUnitSystem("imperial")} />
+    </View>
+  );
+
   if (!isAuthenticated || !user) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -69,6 +78,15 @@ export function ProfileScreen({ navigation }: Props) {
           {themeSwitcher}
           <Text style={styles.section}>{t("profile.language")}</Text>
           {languageSwitcher}
+          <Text style={styles.section}>{t("profile.units")}</Text>
+          {unitsSwitcher}
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("glossary.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("Glossary")}
+            />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -132,6 +150,17 @@ export function ProfileScreen({ navigation }: Props) {
 
         <Text style={styles.section}>{t("profile.language")}</Text>
         {languageSwitcher}
+
+        <Text style={styles.section}>{t("profile.units")}</Text>
+        {unitsSwitcher}
+
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("glossary.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("Glossary")}
+          />
+        </View>
 
         {saving ? <Text style={styles.saving}>{t("profile.saving")}</Text> : null}
 

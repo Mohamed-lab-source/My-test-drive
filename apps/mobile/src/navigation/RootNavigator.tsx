@@ -8,8 +8,10 @@ import { OnboardingScreen } from "../screens/OnboardingScreen";
 import { RecipeListScreen } from "../screens/RecipeListScreen";
 import { RecipeDetailScreen } from "../screens/RecipeDetailScreen";
 import { ShoppingListScreen } from "../screens/ShoppingListScreen";
+import { CookModeScreen } from "../screens/CookModeScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
+import { GlossaryScreen } from "../screens/GlossaryScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -60,6 +62,11 @@ export function RootNavigator() {
         <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: "" }} />
         <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: t("shoppingList.title") }} />
         <Stack.Screen
+          name="CookMode"
+          component={CookModeScreen}
+          options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
           name="Login"
           component={LoginScreen}
           options={{ presentation: "modal", title: t("login.headerTitle") }}
@@ -69,6 +76,7 @@ export function RootNavigator() {
           component={SignupScreen}
           options={{ presentation: "modal", title: t("signup.headerTitle") }}
         />
+        <Stack.Screen name="Glossary" component={GlossaryScreen} options={{ title: t("glossary.title") }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
