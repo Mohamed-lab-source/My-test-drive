@@ -3,13 +3,13 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipeDetail, fetchRecipes } from "../api/endpoints";
@@ -125,7 +125,7 @@ export function MealPlannerScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.subtitle, { textAlign }]}>{t("mealPlanner.subtitle")}</Text>
 
