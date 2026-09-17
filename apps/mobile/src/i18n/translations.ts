@@ -98,6 +98,10 @@ const en = {
   "login.switchToSignup": "Don't have an account? Sign up",
   "login.error": "Couldn't log in",
   "login.headerTitle": "Log in",
+  "login.or": "or",
+  "login.google": "Continue with Google",
+  "login.googleError": "Couldn't sign in with Google",
+  "login.googleUnavailable": "Google sign-in isn't set up for this build yet",
 
   "signup.title": "Create your account",
   "signup.name": "Name",
@@ -109,6 +113,11 @@ const en = {
   "signup.switchToLogin": "Already have an account? Log in",
   "signup.error": "Couldn't create account",
   "signup.headerTitle": "Sign up",
+
+  "share.button": "Share recipe",
+  "share.dialogTitle": "Share this recipe",
+  "share.error": "Couldn't share this recipe",
+  "share.branding": "Made with Cookmate",
 
   "tabs.home": "Home",
   "tabs.lists": "My Lists",
@@ -210,6 +219,10 @@ const ar: Record<keyof typeof en, string> = {
   "login.switchToSignup": "ليس لديك حساب؟ أنشئي واحدًا",
   "login.error": "تعذّر تسجيل الدخول",
   "login.headerTitle": "تسجيل الدخول",
+  "login.or": "أو",
+  "login.google": "المتابعة عبر جوجل",
+  "login.googleError": "تعذّر تسجيل الدخول عبر جوجل",
+  "login.googleUnavailable": "تسجيل الدخول عبر جوجل غير مفعّل في هذا الإصدار بعد",
 
   "signup.title": "أنشئي حسابك",
   "signup.name": "الاسم",
@@ -221,6 +234,11 @@ const ar: Record<keyof typeof en, string> = {
   "signup.switchToLogin": "لديك حساب بالفعل؟ سجّلي الدخول",
   "signup.error": "تعذّر إنشاء الحساب",
   "signup.headerTitle": "إنشاء حساب",
+
+  "share.button": "مشاركة الوصفة",
+  "share.dialogTitle": "شارك هذه الوصفة",
+  "share.error": "تعذّرت مشاركة الوصفة",
+  "share.branding": "بواسطة تطبيق Cookmate",
 
   "tabs.home": "الرئيسية",
   "tabs.lists": "قوائمي",

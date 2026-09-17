@@ -8,7 +8,8 @@ export function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, SALT_ROUNDS);
 }
 
-export function verifyPassword(plain: string, hash: string): Promise<boolean> {
+export function verifyPassword(plain: string, hash: string | null): Promise<boolean> {
+  if (!hash) return Promise.resolve(false);
   return bcrypt.compare(plain, hash);
 }
 

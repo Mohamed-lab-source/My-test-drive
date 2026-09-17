@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setAuthToken } from "../api/client";
-import { fetchMe, login as apiLogin, signup as apiSignup, updatePreferences } from "../api/endpoints";
+import { fetchMe, googleSignIn, login as apiLogin, signup as apiSignup, updatePreferences } from "../api/endpoints";
 import type { DietGoal, Preference, User } from "../api/types";
 
 const TOKEN_KEY = "cookmate.token";
@@ -12,6 +12,7 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   savePreferences: (patch: { dietGoal?: DietGoal; favoriteCuisineSlugs?: string[] }) => Promise<Preference>;
 };
@@ -54,6 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const { token, user: loggedInUser } = await googleSignIn(idToken);
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    setAuthToken(token);
+    setUser(loggedInUser);
+  }, []);
+
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem(TOKEN_KEY);
     setAuthToken(null);
@@ -76,10 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user,
       login,
       signup,
+      loginWithGoogle,
       logout,
       savePreferences,
     }),
-    [user, isBootstrapping, login, signup, logout, savePreferences]
+    [user, isBootstrapping, login, signup, loginWithGoogle, logout, savePreferences]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

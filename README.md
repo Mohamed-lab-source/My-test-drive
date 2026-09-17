@@ -18,7 +18,17 @@ apps/
   mobile/   Expo (React Native + TypeScript) app, React Navigation
 ```
 
-- **Auth**: email/password with JWT, bcrypt-hashed passwords.
+- **Auth**: email/password with JWT, bcrypt-hashed passwords, plus optional
+  Google sign-in (`POST /api/auth/google`, verifies a Google ID token
+  server-side and issues the same JWT). Google sign-in auto-links to an
+  existing email/password account with a matching email, or creates a new
+  account. It returns a clear "not configured" error until `GOOGLE_CLIENT_ID`
+  is set — see "Google sign-in setup" below.
+- **Recipe sharing**: the recipe detail screen renders an off-screen branded
+  card (title, cuisine, scaled ingredients, numbered steps), captures it to a
+  PNG with `react-native-view-shot`, and hands it to the OS's native share
+  sheet via `expo-sharing` — so it can go to WhatsApp, Instagram, Messages,
+  or anywhere else the device offers, without per-app integration.
 - **Personalization**: a `Preference` (diet goal: FIT / INDULGENT / BALANCED /
   NONE, favorite cuisines) drives recipe ranking, both server-side for signed
   in users and client-side (from locally stored onboarding answers) for
@@ -70,9 +80,10 @@ Health check: `curl http://localhost:4000/api/health`
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| POST | `/api/auth/signup`, `/api/auth/login` | JWT auth |
+| POST | `/api/auth/signup`, `/api/auth/login` | email/password JWT auth |
+| POST | `/api/auth/google` | Google ID token → JWT (needs `GOOGLE_CLIENT_ID`) |
 | GET/PUT | `/api/auth/me`, `/api/auth/me/preferences` | profile + diet goal/cuisines |
-| GET | `/api/cuisines` | Italian / Asian / Egyptian |
+| GET | `/api/cuisines` | all 11 cuisines |
 | GET | `/api/recipes?cuisine=&tag=&q=` | filterable list |
 | GET | `/api/recipes/recommended` | personalized ranking |
 | GET | `/api/recipes/:slug` | full detail incl. steps + photos |
@@ -117,6 +128,39 @@ The app will point at whatever `EXPO_PUBLIC_API_URL` was set to at build
 time, so either deploy the server somewhere reachable from your phone first,
 or rebuild after changing `apps/mobile/.env`.
 
+### Google sign-in setup
+
+Google sign-in needs one OAuth Client ID from Google Cloud Console — this
+can only be created by whoever owns (or creates) the Google account/project,
+so it's not something that can be generated for you. Once you have it, it
+goes in two places (it's a public identifier, not a secret, so it's fine to
+commit/ship):
+
+1. Go to [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)
+   (create a new project first if you don't have one — top-left project
+   picker → "New Project").
+2. If prompted, configure the **OAuth consent screen** first: choose
+   "External", fill in an app name + your email for the required fields,
+   and add your email as a test user. This only needs to be done once per
+   project.
+3. Back on the Credentials page: **Create Credentials → OAuth client ID →
+   Application type: Web application**. (Web, not Android/iOS — this avoids
+   needing an Android signing certificate fingerprint, since the app opens
+   Google's sign-in page in a browser rather than using a native SDK.)
+4. Under **Authorized redirect URIs**, add exactly:
+   `https://auth.expo.io/@toukhys-team/cookmate`
+5. Click Create. Copy the **Client ID** shown (looks like
+   `123456789-abc...apps.googleusercontent.com`).
+6. Put that value in:
+   - `apps/mobile/eas.json` → `build.preview.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID`
+     (rebuild the APK afterward — `EXPO_PUBLIC_*` vars are baked in at build
+     time).
+   - The Railway service's environment variables → `GOOGLE_CLIENT_ID` (same
+     value; redeploy to pick it up).
+
+Until both are set, the "Continue with Google" button shows a friendly
+"not set up yet" message instead of failing silently.
+
 ### App flow
 
 1. **Onboarding** — pick a goal (fit/dessert/balanced) and favorite cuisines;
@@ -125,15 +169,17 @@ or rebuild after changing `apps/mobile/.env`.
    and a personalized "Recommended for you" row.
 3. **Recipe detail** — cuisine emoji, time/difficulty/servings chips, a
    nutrition panel (calories/protein/fat/carbs per serving), a servings
-   stepper that live-rescales every ingredient quantity, and numbered step
-   cards.
+   stepper that live-rescales every ingredient quantity, numbered step
+   cards, and a "Share recipe" button that generates a branded image (title,
+   scaled ingredients, steps) and opens the device's share sheet for
+   WhatsApp, Instagram, or anywhere else.
 4. **Shopping list** — set servings and an optional EGP budget, generate a
    weighted list with per-item and total cost, an over/under-budget banner,
    delivery partner buttons, and a "find nearby supermarkets" button that
    uses device location.
-5. **Profile** — sign up/log in to sync diet goal, favorite cuisines and
-   shopping list history across sessions; also where you switch the app's
-   language between English and Arabic.
+5. **Profile** — sign up/log in (email/password or Google) to sync diet
+   goal, favorite cuisines and shopping list history across sessions; also
+   where you switch the app's language between English and Arabic.
 
 ## Testing notes
 
@@ -178,3 +224,14 @@ or rebuild after changing `apps/mobile/.env`.
   Native's `I18nManager`, which only fully re-flows on the next app
   launch — text and content flip immediately, but the user is prompted to
   restart the app for pixel-perfect RTL mirroring of the whole UI.
+- Google sign-in routes through Expo's hosted auth proxy
+  (`auth.expo.io`) rather than native Android/iOS Google Sign-In SDKs, since
+  that avoids needing an Android signing certificate fingerprint for this
+  sideloaded (non-Play-Store) build. If that proxy is ever retired, the
+  fallback is switching `apps/mobile/src/auth/googleAuth.ts` to platform
+  native client IDs.
+- The share feature always shares one composed image (title + ingredients +
+  steps) rather than deep-linking into WhatsApp/Instagram's own
+  recipe/story-specific composers — the OS share sheet is what actually
+  offers "send to WhatsApp", "share to Instagram Story", "save image", etc.,
+  and this works without maintaining per-app integrations.

@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipeDetail } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { useLocale } from "../i18n/LocaleContext";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { colors, radius, spacing } from "../theme";
@@ -22,6 +25,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
+  const [sharing, setSharing] = useState(false);
+  const shareCardRef = useRef<View>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -52,6 +57,23 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const textAlign = isRTL ? "right" : "left";
+
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      const uri = await captureRef(shareCardRef, { format: "png", quality: 0.92 });
+      const canShareFile = Platform.OS !== "web" && (await Sharing.isAvailableAsync());
+      if (canShareFile) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: t("share.dialogTitle") });
+      } else {
+        await Share.share({ message: `${recipe.title}\n\n${recipe.description}` });
+      }
+    } catch {
+      Alert.alert(t("share.error"));
+    } finally {
+      setSharing(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -148,6 +170,20 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           ))}
         </View>
       </ScrollView>
+      <View style={styles.offScreen} pointerEvents="none">
+        <ShareableRecipeCard
+          ref={shareCardRef}
+          recipe={recipe}
+          servings={servings}
+          ingredients={scaledIngredients}
+          ingredientsLabel={t("recipeDetail.ingredientsFor", { count: servings })}
+          stepsLabel={t("recipeDetail.steps")}
+          servesLabel={t("recipeDetail.serves", { count: servings })}
+          brandingLabel={t("share.branding")}
+          isRTL={isRTL}
+        />
+      </View>
+
       <View style={styles.footer}>
         <PrimaryButton
           label={t("recipeDetail.planShoppingList")}
@@ -160,6 +196,9 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             })
           }
         />
+        <View style={styles.shareButton}>
+          <PrimaryButton label={t("share.button")} onPress={handleShare} loading={sharing} variant="outline" />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -269,4 +308,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  shareButton: { marginTop: spacing(1.5) },
+  offScreen: { position: "absolute", top: -9999, left: 0, opacity: 0 },
 });
