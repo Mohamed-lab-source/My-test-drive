@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
@@ -17,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useUnits } from "../context/UnitsContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
+import { useNotes } from "../context/NotesContext";
 import { formatQuantity } from "../utils/units";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useTheme } from "../theme/ThemeContext";
@@ -38,6 +39,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { unitSystem } = useUnits();
   const { isAuthenticated } = useAuth();
   const { addRecent } = useRecentlyViewed();
+  const { getNote, setNote } = useNotes();
+  const [noteText, setNoteText] = useState("");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
@@ -58,6 +61,11 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, locale]);
+
+  useEffect(() => {
+    setNoteText(getNote(slug));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   const scaledIngredients = useMemo(() => {
     if (!recipe) return [];
@@ -147,6 +155,10 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             <MetaPill label={`${totalMinutes} ${t("recipeDetail.min")}`} styles={styles} />
             <MetaPill label={recipe.difficulty} styles={styles} />
             <MetaPill label={t("recipeDetail.serves", { count: recipe.baseServings })} styles={styles} />
+            <MetaPill
+              label={t("recipeCard.costPerServing", { cost: Math.round(recipe.costPerServing) })}
+              styles={styles}
+            />
           </View>
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.nutrition")}</Text>
@@ -251,6 +263,17 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           ) : (
             <Text style={[styles.rateLoginHint, { textAlign }]}>{t("recipeDetail.rateLoginHint")}</Text>
           )}
+
+          <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.myNotes")}</Text>
+          <TextInput
+            style={[styles.notesInput, { textAlign }]}
+            placeholder={t("recipeDetail.myNotesPlaceholder")}
+            placeholderTextColor={colors.textMuted}
+            value={noteText}
+            onChangeText={setNoteText}
+            onBlur={() => setNote(slug, noteText)}
+            multiline
+          />
         </View>
       </ScrollView>
       <View style={styles.offScreen} pointerEvents="none">
@@ -365,6 +388,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   rateRow: { flexDirection: "row", alignItems: "center" },
   rateSpinner: { marginStart: spacing(1.5) },
   rateLoginHint: { color: colors.textMuted, fontSize: 13 },
+  notesInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing(1.5),
+    color: colors.text,
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
   metaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(2) },
   metaPill: {
     backgroundColor: colors.chipBackground,

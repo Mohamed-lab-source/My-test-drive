@@ -5,6 +5,7 @@ import { FadeSlideIn } from "./FadeSlideIn";
 import { StarRating } from "./StarRating";
 import { useTheme } from "../theme/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { useLocale } from "../i18n/LocaleContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import type { RecipeSummary } from "../api/types";
@@ -19,6 +20,7 @@ type Props = {
 export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useLocale();
   const { isFavorite, toggleFavorite } = useFavorites();
   const favorited = isFavorite(recipe.slug);
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
@@ -42,6 +44,9 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
           </Text>
           <Text style={styles.meta}>
             {recipe.cuisine.name} · {recipe.dishType} · {totalMinutes} min
+          </Text>
+          <Text style={styles.costText}>
+            {t("recipeCard.costPerServing", { cost: Math.round(recipe.costPerServing) })}
           </Text>
           {recipe.avgRating !== null ? (
             <View style={styles.ratingRow}>
@@ -108,6 +113,12 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 12,
       color: colors.textMuted,
       marginTop: 2,
+    },
+    costText: {
+      fontSize: 11,
+      color: colors.secondary,
+      fontWeight: "600",
+      marginTop: 4,
     },
     ratingRow: {
       flexDirection: "row",

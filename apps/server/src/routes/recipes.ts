@@ -45,7 +45,16 @@ export function recipeSummarySelect() {
     tags: true,
     cuisine: { select: { slug: true, name: true, nameAr: true } },
     ratings: { select: { score: true } },
+    ingredients: { select: { quantity: true, ingredient: { select: { pricePerUnit: true } } } },
   } as const;
+}
+
+function estimateCostPerServing(
+  ingredients: { quantity: number; ingredient: { pricePerUnit: number } }[],
+  baseServings: number
+): number {
+  const totalCost = ingredients.reduce((sum, ri) => sum + ri.quantity * ri.ingredient.pricePerUnit, 0);
+  return Math.round((totalCost / baseServings) * 100) / 100;
 }
 
 export function localizeSummary(r: any, lang: Lang) {
@@ -68,6 +77,7 @@ export function localizeSummary(r: any, lang: Lang) {
     tags: r.tags,
     avgRating,
     ratingCount,
+    costPerServing: estimateCostPerServing(r.ingredients, r.baseServings),
     cuisine: {
       slug: r.cuisine.slug,
       name: lang === "ar" ? r.cuisine.nameAr ?? r.cuisine.name : r.cuisine.name,
@@ -179,6 +189,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     fatGrams: Math.round((totals.fat / recipe.baseServings) * 10) / 10,
     carbsGrams: Math.round((totals.carbs / recipe.baseServings) * 10) / 10,
   };
+  const costPerServing = estimateCostPerServing(recipe.ingredients, recipe.baseServings);
 
   res.json({
     id: recipe.id,
@@ -200,6 +211,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     ratingCount,
     myRating,
     nutritionPerServing,
+    costPerServing,
     ingredients: recipe.ingredients.map((ri) => ({
       name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,

@@ -37,6 +37,7 @@ export type RecipeSummary = {
   tags: DishTag[];
   avgRating: number | null;
   ratingCount: number;
+  costPerServing: number;
   cuisine: { slug: string; name: string };
 };
 

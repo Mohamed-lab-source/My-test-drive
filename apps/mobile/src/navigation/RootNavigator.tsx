@@ -13,6 +13,7 @@ import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
 import { GlossaryScreen } from "../screens/GlossaryScreen";
 import { SearchScreen } from "../screens/SearchScreen";
+import { MealPlannerScreen } from "../screens/MealPlannerScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -82,6 +83,11 @@ export function RootNavigator() {
           name="Search"
           component={SearchScreen}
           options={{ presentation: "modal", title: t("search.title") }}
+        />
+        <Stack.Screen
+          name="MealPlanner"
+          component={MealPlannerScreen}
+          options={{ title: t("mealPlanner.title") }}
         />
       </Stack.Navigator>
     </NavigationContainer>

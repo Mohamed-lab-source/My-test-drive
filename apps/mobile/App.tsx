@@ -6,6 +6,8 @@ import { LocalPreferenceProvider } from "./src/context/LocalPreferenceContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
 import { UnitsProvider } from "./src/context/UnitsContext";
 import { RecentlyViewedProvider } from "./src/context/RecentlyViewedContext";
+import { NotesProvider } from "./src/context/NotesContext";
+import { MealPlanProvider } from "./src/context/MealPlanContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -30,7 +32,11 @@ export default function App() {
               <AuthProvider>
                 <FavoritesProvider>
                   <RecentlyViewedProvider>
-                    <AppShell />
+                    <NotesProvider>
+                      <MealPlanProvider>
+                        <AppShell />
+                      </MealPlanProvider>
+                    </NotesProvider>
                   </RecentlyViewedProvider>
                 </FavoritesProvider>
               </AuthProvider>

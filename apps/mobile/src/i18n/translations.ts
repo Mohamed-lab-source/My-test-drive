@@ -31,6 +31,27 @@ const en = {
   "home.quickTitle": "Quick meals",
   "home.recommended": "Recommended for you",
   "home.recentlyViewed": "Recently viewed",
+  "home.planWeek": "📅 Plan my week",
+
+  "weekday.0": "Sunday",
+  "weekday.1": "Monday",
+  "weekday.2": "Tuesday",
+  "weekday.3": "Wednesday",
+  "weekday.4": "Thursday",
+  "weekday.5": "Friday",
+  "weekday.6": "Saturday",
+
+  "mealPlanner.title": "Meal Planner",
+  "mealPlanner.subtitle": "Plan the next 7 days, then generate one combined shopping list.",
+  "mealPlanner.today": "Today",
+  "mealPlanner.tomorrow": "Tomorrow",
+  "mealPlanner.addRecipe": "+ Add a recipe",
+  "mealPlanner.pickerTitle": "Choose a recipe",
+  "mealPlanner.generateShoppingList": "Generate this week's shopping list",
+  "mealPlanner.combinedListTitle": "This week's shopping list",
+  "mealPlanner.estimatedTotal": "Estimated total: {amount} EGP",
+
+  "recipeCard.costPerServing": "~{cost} EGP/serving",
 
   "recipeList.title": "Recipes",
   "recipeList.filter.all": "All",
@@ -60,6 +81,8 @@ const en = {
   "recipeDetail.rateLoginHint": "Log in to rate this recipe.",
   "recipeDetail.rateError": "Couldn't save your rating. Try again.",
   "recipeDetail.substituteHint": "No this? Try: {substitute}",
+  "recipeDetail.myNotes": "My notes",
+  "recipeDetail.myNotesPlaceholder": "Jot down tweaks for next time (e.g. \"used less salt\")…",
 
   "shoppingList.title": "Shopping List",
   "shoppingList.subtitle": "Tell us how many people and your budget — we'll do the math.",
@@ -198,6 +221,27 @@ const ar: Record<keyof typeof en, string> = {
   "home.quickTitle": "وجبات سريعة",
   "home.recommended": "مقترح لك",
   "home.recentlyViewed": "شوهد مؤخراً",
+  "home.planWeek": "📅 خطّط أسبوعي",
+
+  "weekday.0": "الأحد",
+  "weekday.1": "الإثنين",
+  "weekday.2": "الثلاثاء",
+  "weekday.3": "الأربعاء",
+  "weekday.4": "الخميس",
+  "weekday.5": "الجمعة",
+  "weekday.6": "السبت",
+
+  "mealPlanner.title": "مخطط الوجبات",
+  "mealPlanner.subtitle": "خطّط للأيام السبعة القادمة، ثم أنشئ قائمة تسوق موحدة.",
+  "mealPlanner.today": "اليوم",
+  "mealPlanner.tomorrow": "غداً",
+  "mealPlanner.addRecipe": "+ أضف وصفة",
+  "mealPlanner.pickerTitle": "اختر وصفة",
+  "mealPlanner.generateShoppingList": "أنشئ قائمة تسوق هذا الأسبوع",
+  "mealPlanner.combinedListTitle": "قائمة تسوق هذا الأسبوع",
+  "mealPlanner.estimatedTotal": "التكلفة التقديرية: {amount} جنيه",
+
+  "recipeCard.costPerServing": "~{cost} جنيه/للحصة",
 
   "recipeList.title": "الوصفات",
   "recipeList.filter.all": "الكل",
@@ -227,6 +271,8 @@ const ar: Record<keyof typeof en, string> = {
   "recipeDetail.rateLoginHint": "سجّل الدخول لتقييم هذه الوصفة.",
   "recipeDetail.rateError": "تعذّر حفظ تقييمك. حاول مرة أخرى.",
   "recipeDetail.substituteHint": "لا تملكه؟ جرّب: {substitute}",
+  "recipeDetail.myNotes": "ملاحظاتي",
+  "recipeDetail.myNotesPlaceholder": "دوّن تعديلاتك للمرة القادمة (مثلاً: \"استخدمت ملح أقل\")…",
 
   "shoppingList.title": "قائمة التسوق",
   "shoppingList.subtitle": "أخبرينا بعدد الأشخاص وميزانيتك، وسنتولى الحساب.",
