@@ -8,6 +8,7 @@ import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { fetchShoppingListHistory } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { useLocale } from "../i18n/LocaleContext";
 import { colors, radius, spacing } from "../theme";
 
 type Props = CompositeScreenProps<
@@ -19,6 +20,7 @@ type HistoryItem = Awaited<ReturnType<typeof fetchShoppingListHistory>>[number];
 
 export function ListsScreen({ navigation }: Props) {
   const { isAuthenticated } = useAuth();
+  const { t } = useLocale();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,12 +38,10 @@ export function ListsScreen({ navigation }: Props) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Sign in to save your lists</Text>
-          <Text style={styles.emptySubtitle}>
-            Your shopping list history will show up here once you're logged in.
-          </Text>
+          <Text style={styles.emptyTitle}>{t("lists.signInTitle")}</Text>
+          <Text style={styles.emptySubtitle}>{t("lists.signInSubtitle")}</Text>
           <View style={styles.emptyButton}>
-            <PrimaryButton label="Go to profile" onPress={() => navigation.navigate("Main", { screen: "Profile" })} />
+            <PrimaryButton label={t("lists.goToProfile")} onPress={() => navigation.navigate("Main", { screen: "Profile" })} />
           </View>
         </View>
       </SafeAreaView>
@@ -54,14 +54,8 @@ export function ListsScreen({ navigation }: Props) {
         data={history}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={<Text style={styles.headline}>Your shopping lists</Text>}
-        ListEmptyComponent={
-          !loading ? (
-            <Text style={styles.emptySubtitle}>
-              No shopping lists yet — generate one from any recipe's page.
-            </Text>
-          ) : null
-        }
+        ListHeaderComponent={<Text style={styles.headline}>{t("lists.headline")}</Text>}
+        ListEmptyComponent={!loading ? <Text style={styles.emptySubtitle}>{t("lists.empty")}</Text> : null}
         renderItem={({ item }) => (
           <View style={styles.row}>
             <View style={styles.thumb}>
@@ -70,7 +64,7 @@ export function ListsScreen({ navigation }: Props) {
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle}>{item.recipe.title}</Text>
               <Text style={styles.rowMeta}>
-                {item.servings} servings · {item.totalEstimatedCost.toFixed(2)} EGP
+                {t("lists.rowMeta", { servings: item.servings, cost: item.totalEstimatedCost.toFixed(2) })}
               </Text>
             </View>
             <View

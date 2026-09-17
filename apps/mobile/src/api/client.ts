@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Platform } from "react-native";
+import { getCurrentLocale } from "../i18n/LocaleContext";
 
 function defaultApiUrl(): string {
   if (Platform.OS === "android") return "http://10.0.2.2:4000/api";
@@ -21,6 +22,7 @@ api.interceptors.request.use((config) => {
     config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${authToken}`;
   }
+  config.params = { ...(config.params ?? {}), lang: getCurrentLocale() };
   return config;
 });
 

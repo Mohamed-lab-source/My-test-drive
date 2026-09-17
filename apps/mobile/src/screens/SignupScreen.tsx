@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { apiErrorMessage } from "../api/client";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { useLocale } from "../i18n/LocaleContext";
 import { colors, radius, spacing } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Signup">;
@@ -14,6 +15,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Signup">;
 export function SignupScreen({ navigation }: Props) {
   const { signup, savePreferences } = useAuth();
   const { preference } = useLocalPreference();
+  const { t, isRTL } = useLocale();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,30 +34,32 @@ export function SignupScreen({ navigation }: Props) {
       }
       navigation.goBack();
     } catch (error) {
-      Alert.alert("Couldn't create account", apiErrorMessage(error));
+      Alert.alert(t("signup.error"), apiErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
+  const textAlign = isRTL ? "right" : "left";
+
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         <View style={styles.content}>
-          <Text style={styles.title}>Create your account</Text>
+          <Text style={[styles.title, { textAlign }]}>{t("signup.title")}</Text>
 
-          <Text style={styles.label}>Name</Text>
+          <Text style={[styles.label, { textAlign }]}>{t("signup.name")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { textAlign }]}
             value={name}
             onChangeText={setName}
-            placeholder="Your name"
+            placeholder={t("signup.namePlaceholder")}
             placeholderTextColor={colors.textMuted}
           />
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={[styles.label, { textAlign }]}>{t("signup.email")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { textAlign }]}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
@@ -64,19 +68,19 @@ export function SignupScreen({ navigation }: Props) {
             placeholderTextColor={colors.textMuted}
           />
 
-          <Text style={styles.label}>Password</Text>
+          <Text style={[styles.label, { textAlign }]}>{t("signup.password")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { textAlign }]}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
-            placeholder="At least 8 characters"
+            placeholder={t("signup.passwordPlaceholder")}
             placeholderTextColor={colors.textMuted}
           />
 
           <View style={styles.button}>
             <PrimaryButton
-              label="Sign up"
+              label={t("signup.submit")}
               onPress={submit}
               loading={loading}
               disabled={!email || !password || !name}
@@ -84,7 +88,7 @@ export function SignupScreen({ navigation }: Props) {
           </View>
 
           <Pressable onPress={() => navigation.replace("Login")}>
-            <Text style={styles.link}>Already have an account? Log in</Text>
+            <Text style={styles.link}>{t("signup.switchToLogin")}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

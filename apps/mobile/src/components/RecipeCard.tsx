@@ -1,13 +1,8 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../theme";
+import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import type { RecipeSummary } from "../api/types";
-
-const CUISINE_EMOJI: Record<string, string> = {
-  italian: "🍝",
-  asian: "🍜",
-  egyptian: "🍲",
-};
 
 type Props = {
   recipe: RecipeSummary;

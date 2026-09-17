@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -17,19 +17,25 @@ import type { RootStackParamList } from "../navigation/types";
 import { fetchNearbyStores, generateShoppingList } from "../api/endpoints";
 import { apiErrorMessage } from "../api/client";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { useLocale } from "../i18n/LocaleContext";
 import { colors, radius, spacing } from "../theme";
 import type { ShoppingListResult } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ShoppingList">;
 
-export function ShoppingListScreen({ route }: Props) {
+export function ShoppingListScreen({ route, navigation }: Props) {
   const { slug, title, baseServings, initialServings } = route.params;
+  const { t, isRTL } = useLocale();
   const [servings, setServings] = useState(initialServings ?? baseServings);
   const [budget, setBudget] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ShoppingListResult | null>(null);
   const [mapsUrl, setMapsUrl] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    navigation.setOptions({ title: t("shoppingList.title") });
+  }, [navigation, t]);
 
   const generate = async () => {
     Keyboard.dismiss();
@@ -39,7 +45,7 @@ export function ShoppingListScreen({ route }: Props) {
       const data = await generateShoppingList(slug, servings, parsedBudget);
       setResult(data);
     } catch (error) {
-      Alert.alert("Couldn't build your list", apiErrorMessage(error));
+      Alert.alert(t("shoppingList.errorGenerate"), apiErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -61,19 +67,21 @@ export function ShoppingListScreen({ route }: Props) {
       );
       setMapsUrl(mapsSearchUrl);
     } catch (error) {
-      Alert.alert("Couldn't get your location", apiErrorMessage(error));
+      Alert.alert(t("shoppingList.errorLocation"), apiErrorMessage(error));
     } finally {
       setLocating(false);
     }
   };
 
+  const textAlign = isRTL ? "right" : "left";
+
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>Tell us how many people and your budget — we'll do the math.</Text>
+        <Text style={[styles.title, { textAlign }]}>{title}</Text>
+        <Text style={[styles.subtitle, { textAlign }]}>{t("shoppingList.subtitle")}</Text>
 
-        <Text style={styles.label}>Servings</Text>
+        <Text style={[styles.label, { textAlign }]}>{t("shoppingList.servings")}</Text>
         <View style={styles.stepperRow}>
           <Pressable
             style={styles.stepperButton}
@@ -87,10 +95,10 @@ export function ShoppingListScreen({ route }: Props) {
           </Pressable>
         </View>
 
-        <Text style={styles.label}>Budget (EGP, optional)</Text>
+        <Text style={[styles.label, { textAlign }]}>{t("shoppingList.budgetLabel")}</Text>
         <TextInput
-          style={styles.input}
-          placeholder="e.g. 150"
+          style={[styles.input, { textAlign }]}
+          placeholder={t("shoppingList.budgetPlaceholder")}
           placeholderTextColor={colors.textMuted}
           keyboardType="decimal-pad"
           value={budget}
@@ -98,7 +106,7 @@ export function ShoppingListScreen({ route }: Props) {
         />
 
         <View style={styles.generateButton}>
-          <PrimaryButton label="Generate shopping list" onPress={generate} loading={loading} />
+          <PrimaryButton label={t("shoppingList.generate")} onPress={generate} loading={loading} />
         </View>
 
         {result ? (
@@ -110,18 +118,26 @@ export function ShoppingListScreen({ route }: Props) {
               ]}
             >
               <Text style={[styles.budgetTotal, { color: result.withinBudget ? colors.success : colors.danger }]}>
-                Estimated total: {result.totalEstimatedCost.toFixed(2)} EGP
+                {t("shoppingList.estimatedTotal", { amount: result.totalEstimatedCost.toFixed(2) })}
               </Text>
               {result.budget !== null && (
                 <Text style={styles.budgetSub}>
                   {result.withinBudget
-                    ? `${result.budgetDifference?.toFixed(2)} EGP under your ${result.budget} EGP budget`
-                    : `${Math.abs(result.budgetDifference ?? 0).toFixed(2)} EGP over your ${result.budget} EGP budget`}
+                    ? t("shoppingList.underBudget", {
+                        diff: result.budgetDifference?.toFixed(2) ?? "0",
+                        budget: result.budget,
+                      })
+                    : t("shoppingList.overBudget", {
+                        diff: Math.abs(result.budgetDifference ?? 0).toFixed(2),
+                        budget: result.budget,
+                      })}
                 </Text>
               )}
             </View>
 
-            <Text style={styles.sectionTitle}>Shopping list ({result.servings} servings)</Text>
+            <Text style={[styles.sectionTitle, { textAlign }]}>
+              {t("shoppingList.listTitle", { count: result.servings })}
+            </Text>
             {result.items.map((item) => (
               <View key={item.ingredientName} style={styles.itemRow}>
                 <Text style={styles.itemName}>{item.ingredientName}</Text>
@@ -134,7 +150,7 @@ export function ShoppingListScreen({ route }: Props) {
               </View>
             ))}
 
-            <Text style={styles.sectionTitle}>Get the ingredients</Text>
+            <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
             <View style={styles.partnerRow}>
               {result.deliveryPartners.map((partner) => (
                 <Pressable
@@ -150,7 +166,7 @@ export function ShoppingListScreen({ route }: Props) {
 
             <View style={styles.nearbyButton}>
               <PrimaryButton
-                label="Find nearby supermarkets"
+                label={t("shoppingList.findNearby")}
                 variant="outline"
                 onPress={findNearbyStores}
                 loading={locating}
@@ -158,7 +174,7 @@ export function ShoppingListScreen({ route }: Props) {
             </View>
             {mapsUrl ? (
               <Pressable onPress={() => Linking.openURL(mapsUrl)}>
-                <Text style={styles.mapsLink}>Open in Google Maps →</Text>
+                <Text style={styles.mapsLink}>{t("shoppingList.openMaps")}</Text>
               </Pressable>
             ) : null}
           </View>

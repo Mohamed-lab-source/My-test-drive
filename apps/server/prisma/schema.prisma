@@ -53,6 +53,7 @@ model Cuisine {
   id      String   @id @default(cuid())
   slug    String   @unique
   name    String
+  nameAr  String?
   recipes Recipe[]
 }
 
@@ -60,7 +61,9 @@ model Recipe {
   id            String             @id @default(cuid())
   slug          String             @unique
   title         String
+  titleAr       String?
   description   String
+  descriptionAr String?
   cuisineId     String
   cuisine       Cuisine            @relation(fields: [cuisineId], references: [id])
   dishType      String
@@ -79,6 +82,7 @@ model Recipe {
 model Ingredient {
   id               String             @id @default(cuid())
   name             String             @unique
+  nameAr           String?
   unit             String
   pricePerUnit     Float
   category         String
@@ -111,6 +115,7 @@ model RecipeStep {
   recipe       Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   order        Int
   instruction  String
+  instructionAr String?
   imageUrl     String
   timerMinutes Int?
 

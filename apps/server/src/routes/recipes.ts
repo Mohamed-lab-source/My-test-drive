@@ -6,36 +6,73 @@ import type { DishTag } from "@prisma/client";
 
 export const recipesRouter = Router();
 
-recipesRouter.get("/cuisines", async (_req, res) => {
+type Lang = "en" | "ar";
+
+function parseLang(value: unknown): Lang {
+  return value === "ar" ? "ar" : "en";
+}
+
+recipesRouter.get("/cuisines", async (req, res) => {
+  const lang = parseLang(req.query.lang);
   const cuisines = await prisma.cuisine.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { recipes: true } } },
   });
   res.json(
-    cuisines.map((c) => ({ id: c.id, slug: c.slug, name: c.name, recipeCount: c._count.recipes }))
+    cuisines.map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      name: lang === "ar" ? c.nameAr ?? c.name : c.name,
+      recipeCount: c._count.recipes,
+    }))
   );
 });
 
-const recipeSummarySelect = {
-  id: true,
-  slug: true,
-  title: true,
-  description: true,
-  dishType: true,
-  heroImageUrl: true,
-  baseServings: true,
-  prepMinutes: true,
-  cookMinutes: true,
-  difficulty: true,
-  tags: true,
-  cuisine: { select: { slug: true, name: true } },
-} as const;
+function recipeSummarySelect() {
+  return {
+    id: true,
+    slug: true,
+    title: true,
+    titleAr: true,
+    description: true,
+    descriptionAr: true,
+    dishType: true,
+    heroImageUrl: true,
+    baseServings: true,
+    prepMinutes: true,
+    cookMinutes: true,
+    difficulty: true,
+    tags: true,
+    cuisine: { select: { slug: true, name: true, nameAr: true } },
+  } as const;
+}
+
+function localizeSummary(r: any, lang: Lang) {
+  return {
+    id: r.id,
+    slug: r.slug,
+    title: lang === "ar" ? r.titleAr ?? r.title : r.title,
+    description: lang === "ar" ? r.descriptionAr ?? r.description : r.description,
+    dishType: r.dishType,
+    heroImageUrl: r.heroImageUrl,
+    baseServings: r.baseServings,
+    prepMinutes: r.prepMinutes,
+    cookMinutes: r.cookMinutes,
+    difficulty: r.difficulty,
+    tags: r.tags,
+    cuisine: {
+      slug: r.cuisine.slug,
+      name: lang === "ar" ? r.cuisine.nameAr ?? r.cuisine.name : r.cuisine.name,
+    },
+  };
+}
 
 const listQuerySchema = z.object({
   cuisine: z.string().optional(),
   tag: z.string().optional(),
   dishType: z.string().optional(),
   q: z.string().optional(),
+  lang: z.string().optional(),
 });
 
 recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
@@ -45,6 +82,7 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
     return;
   }
   const { cuisine, tag, dishType, q } = parsed.data;
+  const lang = parseLang(parsed.data.lang);
 
   const recipes = await prisma.recipe.findMany({
     where: {
@@ -53,10 +91,10 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
       tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
       title: q ? { contains: q, mode: "insensitive" } : undefined,
     },
-    select: recipeSummarySelect,
+    select: recipeSummarySelect(),
     orderBy: { title: "asc" },
   });
-  res.json(recipes);
+  res.json(recipes.map((r) => localizeSummary(r, lang)));
 });
 
 /**
@@ -65,8 +103,9 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
  * generic popular set for anonymous users.
  */
 recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
+  const lang = parseLang(req.query.lang);
   const allRecipes = await prisma.recipe.findMany({
-    select: recipeSummarySelect,
+    select: recipeSummarySelect(),
     orderBy: { title: "asc" },
   });
 
@@ -76,7 +115,7 @@ recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
   }
 
   if (!preference) {
-    res.json(allRecipes.slice(0, 6));
+    res.json(allRecipes.slice(0, 6).map((r) => localizeSummary(r, lang)));
     return;
   }
 
@@ -91,14 +130,15 @@ recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
     return { recipe: r, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  res.json(scored.map((s) => s.recipe));
+  res.json(scored.map((s) => localizeSummary(s.recipe, lang)));
 });
 
 recipesRouter.get("/recipes/:slug", async (req, res) => {
+  const lang = parseLang(req.query.lang);
   const recipe = await prisma.recipe.findUnique({
     where: { slug: req.params.slug },
     include: {
-      cuisine: { select: { slug: true, name: true } },
+      cuisine: { select: { slug: true, name: true, nameAr: true } },
       ingredients: {
         include: { ingredient: true },
       },
@@ -129,9 +169,12 @@ recipesRouter.get("/recipes/:slug", async (req, res) => {
   res.json({
     id: recipe.id,
     slug: recipe.slug,
-    title: recipe.title,
-    description: recipe.description,
-    cuisine: recipe.cuisine,
+    title: lang === "ar" ? recipe.titleAr ?? recipe.title : recipe.title,
+    description: lang === "ar" ? recipe.descriptionAr ?? recipe.description : recipe.description,
+    cuisine: {
+      slug: recipe.cuisine.slug,
+      name: lang === "ar" ? recipe.cuisine.nameAr ?? recipe.cuisine.name : recipe.cuisine.name,
+    },
     dishType: recipe.dishType,
     heroImageUrl: recipe.heroImageUrl,
     baseServings: recipe.baseServings,
@@ -141,14 +184,14 @@ recipesRouter.get("/recipes/:slug", async (req, res) => {
     tags: recipe.tags,
     nutritionPerServing,
     ingredients: recipe.ingredients.map((ri) => ({
-      name: ri.ingredient.name,
+      name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,
       unit: ri.displayUnit,
       note: ri.note,
     })),
     steps: recipe.steps.map((s) => ({
       order: s.order,
-      instruction: s.instruction,
+      instruction: lang === "ar" ? s.instructionAr ?? s.instruction : s.instruction,
       imageUrl: s.imageUrl,
       timerMinutes: s.timerMinutes,
     })),

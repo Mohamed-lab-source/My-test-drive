@@ -1,11 +1,14 @@
 # Cookmate
 
-A cooking companion app: pick what you're in the mood for (fit & healthy, a
-dessert, or just balanced), browse recipes by cuisine (Italian, Asian,
-Egyptian) or dish type, follow step-by-step instructions with photos, and
-generate a weighted shopping list scaled to your servings and budget — with
-quick links to grocery delivery apps (Talabat, Breadfast, InstaShop) and
-nearby supermarkets.
+A cooking companion app for people who can't cook yet: pick what you're in
+the mood for (fit & healthy, a dessert, or just balanced), browse recipes
+across 11 world cuisines (Italian, Asian, Egyptian, Mexican, Indian,
+Levantine, Mediterranean, French, American, Moroccan, Turkish) or dish type,
+follow step-by-step instructions with nutrition facts, and generate a
+weighted shopping list scaled to your servings and budget — with quick links
+to grocery delivery apps (Talabat, Breadfast, InstaShop) and nearby
+supermarkets. The app works in English and Arabic (with right-to-left
+layout), switchable from Profile at any time.
 
 ## Architecture
 
@@ -20,13 +23,22 @@ apps/
   NONE, favorite cuisines) drives recipe ranking, both server-side for signed
   in users and client-side (from locally stored onboarding answers) for
   anonymous browsing.
-- **Recipes**: seeded with 18 real recipes across Italian, Asian and Egyptian
-  cuisines (mains, appetizers, soups, breakfast, quick meals, and desserts),
-  each with ingredients, steps, prep/cook time and difficulty.
+- **Recipes**: seeded with 42 real recipes across 11 cuisines (Italian,
+  Asian, Egyptian, Mexican, Indian, Levantine, Mediterranean, French,
+  American, Moroccan, Turkish — mains, appetizers, soups, breakfast, quick
+  meals, and desserts), each with ingredients, steps, prep/cook time and
+  difficulty.
 - **Nutrition**: each ingredient carries calories/protein/fat/carbs per unit
   (per gram/ml/piece, standard nutrition-database estimates); the recipe
   detail endpoint sums this across the recipe and divides by base servings
   to report calories/protein/fat/carbs per serving.
+- **Languages**: English and Arabic. Every cuisine name, recipe title,
+  description, ingredient name and step instruction has an Arabic
+  translation stored alongside the English original; the API picks one
+  based on a `?lang=en|ar` query param (falling back to English if a
+  translation is ever missing). The mobile app sends this automatically
+  based on the user's chosen language and mirrors the layout to
+  right-to-left for Arabic.
 - **Shopping list**: given a recipe, desired servings and an optional budget,
   the API scales every ingredient's weight/volume/count, estimates cost per
   item (seeded EGP pricing) and totals it, flagging over/under budget.
@@ -109,16 +121,19 @@ or rebuild after changing `apps/mobile/.env`.
 
 1. **Onboarding** — pick a goal (fit/dessert/balanced) and favorite cuisines;
    stored locally so recommendations work before you ever sign up.
-2. **Home** — cuisine categories, quick filters (desserts/fit/quick), and a
-   personalized "Recommended for you" row.
-3. **Recipe detail** — hero photo, time/difficulty/servings chips,
-   ingredient list, and numbered step cards each with its own photo.
+2. **Home** — cuisine categories (all 11), quick filters (desserts/fit/quick),
+   and a personalized "Recommended for you" row.
+3. **Recipe detail** — cuisine emoji, time/difficulty/servings chips, a
+   nutrition panel (calories/protein/fat/carbs per serving), a servings
+   stepper that live-rescales every ingredient quantity, and numbered step
+   cards.
 4. **Shopping list** — set servings and an optional EGP budget, generate a
    weighted list with per-item and total cost, an over/under-budget banner,
    delivery partner buttons, and a "find nearby supermarkets" button that
    uses device location.
 5. **Profile** — sign up/log in to sync diet goal, favorite cuisines and
-   shopping list history across sessions.
+   shopping list history across sessions; also where you switch the app's
+   language between English and Arabic.
 
 ## Testing notes
 
@@ -149,3 +164,17 @@ or rebuild after changing `apps/mobile/.env`.
   through this session's text-only GitHub API path); `app.json` omits icon
   fields so Expo falls back to its defaults. Add real branding assets under
   `apps/mobile/assets/` and reference them in `app.json` before shipping.
+- No photos anywhere in the app — an earlier version used stock photos that
+  didn't reliably match the dish, so they were removed in favor of honest
+  cuisine emoji placeholders until real, licensed food photography is
+  available.
+- Arabic covers all cuisine names, recipe titles/descriptions, ingredient
+  names, step instructions and app UI chrome. It does **not** cover
+  categorical/enum data (dish type like "Pizza", tags like "FIT"/"DESSERT",
+  difficulty like "MEDIUM") — those still render in English regardless of
+  language, since translating enum values would need a separate mapping
+  layer not built here.
+- Switching language forces a right-to-left layout change via React
+  Native's `I18nManager`, which only fully re-flows on the next app
+  launch — text and content flip immediately, but the user is prompted to
+  restart the app for pixel-perfect RTL mirroring of the whole UI.

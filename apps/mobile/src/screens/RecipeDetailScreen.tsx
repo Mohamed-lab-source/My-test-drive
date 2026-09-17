@@ -5,14 +5,10 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipeDetail } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { useLocale } from "../i18n/LocaleContext";
+import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { colors, radius, spacing } from "../theme";
 import type { RecipeDetail } from "../api/types";
-
-const CUISINE_EMOJI: Record<string, string> = {
-  italian: "🍝",
-  asian: "🍜",
-  egyptian: "🍲",
-};
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeDetail">;
 
@@ -22,18 +18,20 @@ function round2(n: number): number {
 
 export function RecipeDetailScreen({ route, navigation }: Props) {
   const { slug } = route.params;
+  const { t, locale, isRTL } = useLocale();
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
 
   useEffect(() => {
+    setLoading(true);
     fetchRecipeDetail(slug)
       .then((data) => {
         setRecipe(data);
-        setServings(data.baseServings);
+        setServings((prev) => (prev === 1 ? data.baseServings : prev));
       })
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, locale]);
 
   const scaledIngredients = useMemo(() => {
     if (!recipe) return [];
@@ -53,6 +51,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   }
 
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
+  const textAlign = isRTL ? "right" : "left";
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -61,32 +60,48 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
         </View>
         <View style={styles.content}>
-          <Text style={styles.title}>{recipe.title}</Text>
-          <Text style={styles.description}>{recipe.description}</Text>
+          <Text style={[styles.title, { textAlign }]}>{recipe.title}</Text>
+          <Text style={[styles.description, { textAlign }]}>{recipe.description}</Text>
 
           <View style={styles.metaRow}>
             <MetaPill label={`${recipe.cuisine.name}`} />
             <MetaPill label={recipe.dishType} />
-            <MetaPill label={`${totalMinutes} min`} />
+            <MetaPill label={`${totalMinutes} ${t("recipeDetail.min")}`} />
             <MetaPill label={recipe.difficulty} />
-            <MetaPill label={`Serves ${recipe.baseServings}`} />
+            <MetaPill label={t("recipeDetail.serves", { count: recipe.baseServings })} />
           </View>
 
-          <Text style={styles.sectionTitle}>Nutrition (per serving)</Text>
+          <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.nutrition")}</Text>
           <View style={styles.nutritionRow}>
-            <NutritionStat label="Calories" value={`${recipe.nutritionPerServing.calories}`} unit="kcal" />
-            <NutritionStat label="Protein" value={`${recipe.nutritionPerServing.proteinGrams}`} unit="g" />
-            <NutritionStat label="Fat" value={`${recipe.nutritionPerServing.fatGrams}`} unit="g" />
-            <NutritionStat label="Carbs" value={`${recipe.nutritionPerServing.carbsGrams}`} unit="g" />
+            <NutritionStat
+              label={t("recipeDetail.calories")}
+              value={`${recipe.nutritionPerServing.calories}`}
+              unit={t("recipeDetail.kcal")}
+            />
+            <NutritionStat
+              label={t("recipeDetail.protein")}
+              value={`${recipe.nutritionPerServing.proteinGrams}`}
+              unit={t("recipeDetail.gramsUnit")}
+            />
+            <NutritionStat
+              label={t("recipeDetail.fat")}
+              value={`${recipe.nutritionPerServing.fatGrams}`}
+              unit={t("recipeDetail.gramsUnit")}
+            />
+            <NutritionStat
+              label={t("recipeDetail.carbs")}
+              value={`${recipe.nutritionPerServing.carbsGrams}`}
+              unit={t("recipeDetail.gramsUnit")}
+            />
           </View>
 
-          <Text style={styles.sectionTitle}>How many people are eating?</Text>
+          <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.servingsQuestion")}</Text>
           <View style={styles.stepperRow}>
             <Pressable
               style={styles.stepperButton}
               onPress={() => setServings((s) => Math.max(1, s - 1))}
               accessibilityRole="button"
-              accessibilityLabel="Fewer people"
+              accessibilityLabel={t("recipeDetail.fewerPeople")}
             >
               <Text style={styles.stepperButtonText}>−</Text>
             </Pressable>
@@ -95,13 +110,15 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               style={styles.stepperButton}
               onPress={() => setServings((s) => Math.min(50, s + 1))}
               accessibilityRole="button"
-              accessibilityLabel="More people"
+              accessibilityLabel={t("recipeDetail.morePeople")}
             >
               <Text style={styles.stepperButtonText}>+</Text>
             </Pressable>
           </View>
 
-          <Text style={styles.sectionTitle}>Ingredients (for {servings})</Text>
+          <Text style={[styles.sectionTitle, { textAlign }]}>
+            {t("recipeDetail.ingredientsFor", { count: servings })}
+          </Text>
           {scaledIngredients.map((ing) => (
             <View key={ing.name} style={styles.ingredientRow}>
               <Text style={styles.ingredientName}>{ing.name}</Text>
@@ -111,7 +128,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             </View>
           ))}
 
-          <Text style={styles.sectionTitle}>Steps</Text>
+          <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.steps")}</Text>
           {recipe.steps.map((step) => (
             <View key={step.order} style={styles.stepCard}>
               <View style={styles.stepBody}>
@@ -120,10 +137,12 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
                     <Text style={styles.stepBadgeText}>{step.order}</Text>
                   </View>
                   {step.timerMinutes ? (
-                    <Text style={styles.stepTimer}>⏱ {step.timerMinutes} min</Text>
+                    <Text style={styles.stepTimer}>
+                      ⏱ {step.timerMinutes} {t("recipeDetail.min")}
+                    </Text>
                   ) : null}
                 </View>
-                <Text style={styles.stepInstruction}>{step.instruction}</Text>
+                <Text style={[styles.stepInstruction, { textAlign }]}>{step.instruction}</Text>
               </View>
             </View>
           ))}
@@ -131,7 +150,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
       </ScrollView>
       <View style={styles.footer}>
         <PrimaryButton
-          label="Plan shopping list"
+          label={t("recipeDetail.planShoppingList")}
           onPress={() =>
             navigation.navigate("ShoppingList", {
               slug: recipe.slug,

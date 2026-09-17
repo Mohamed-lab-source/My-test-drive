@@ -1,52 +1,54 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
+import { useLocale } from "../i18n/LocaleContext";
+import { fetchCuisines } from "../api/endpoints";
 import { Chip } from "../components/Chip";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { colors, spacing } from "../theme";
-import type { DietGoal } from "../api/types";
+import type { Cuisine, DietGoal } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
-const GOALS: { value: DietGoal; label: string; blurb: string }[] = [
-  { value: "FIT", label: "Fit & healthy", blurb: "Lighter, high-protein recipes" },
-  { value: "INDULGENT", label: "Feeling a dessert", blurb: "Sweet treats first" },
-  { value: "BALANCED", label: "Balanced", blurb: "A bit of everything" },
-  { value: "NONE", label: "No preference", blurb: "Show me everything" },
-];
-
-const CUISINES = [
-  { slug: "italian", name: "Italian" },
-  { slug: "asian", name: "Asian" },
-  { slug: "egyptian", name: "Egyptian" },
-];
-
 export function OnboardingScreen({ navigation }: Props) {
   const { setPreference } = useLocalPreference();
+  const { t, isRTL } = useLocale();
   const [dietGoal, setDietGoal] = useState<DietGoal>("NONE");
-  const [cuisines, setCuisines] = useState<string[]>([]);
+  const [cuisines, setCuisines] = useState<Cuisine[]>([]);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+
+  const GOALS: { value: DietGoal; label: string; blurb: string }[] = [
+    { value: "FIT", label: t("onboarding.goal.fit"), blurb: t("onboarding.goal.fit.blurb") },
+    { value: "INDULGENT", label: t("onboarding.goal.indulgent"), blurb: t("onboarding.goal.indulgent.blurb") },
+    { value: "BALANCED", label: t("onboarding.goal.balanced"), blurb: t("onboarding.goal.balanced.blurb") },
+    { value: "NONE", label: t("onboarding.goal.none"), blurb: t("onboarding.goal.none.blurb") },
+  ];
+
+  useEffect(() => {
+    fetchCuisines().then(setCuisines).catch(() => {});
+  }, []);
 
   const toggleCuisine = (slug: string) => {
-    setCuisines((prev) => (prev.includes(slug) ? prev.filter((c) => c !== slug) : [...prev, slug]));
+    setSelectedCuisines((prev) => (prev.includes(slug) ? prev.filter((c) => c !== slug) : [...prev, slug]));
   };
 
   const finish = async () => {
-    await setPreference({ dietGoal, favoriteCuisineSlugs: cuisines, onboarded: true });
+    await setPreference({ dietGoal, favoriteCuisineSlugs: selectedCuisines, onboarded: true });
     navigation.reset({ index: 0, routes: [{ name: "Main" }] });
   };
+
+  const textAlign = isRTL ? "right" : "left";
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.eyebrow}>Welcome to</Text>
-        <Text style={styles.title}>Cookmate</Text>
-        <Text style={styles.subtitle}>
-          Tell us what you're in the mood for so we can recommend the right recipes.
-        </Text>
+        <Text style={[styles.eyebrow, { textAlign }]}>{t("onboarding.welcomeTo")}</Text>
+        <Text style={[styles.title, { textAlign }]}>Cookmate</Text>
+        <Text style={[styles.subtitle, { textAlign }]}>{t("onboarding.subtitle")}</Text>
 
-        <Text style={styles.section}>What are you after right now?</Text>
+        <Text style={[styles.section, { textAlign }]}>{t("onboarding.goalQuestion")}</Text>
         <View style={styles.goalGrid}>
           {GOALS.map((goal) => (
             <View key={goal.value} style={styles.goalItem}>
@@ -55,15 +57,20 @@ export function OnboardingScreen({ navigation }: Props) {
           ))}
         </View>
 
-        <Text style={styles.section}>Favorite cuisines</Text>
+        <Text style={[styles.section, { textAlign }]}>{t("onboarding.favoriteCuisines")}</Text>
         <View style={styles.row}>
-          {CUISINES.map((c) => (
-            <Chip key={c.slug} label={c.name} selected={cuisines.includes(c.slug)} onPress={() => toggleCuisine(c.slug)} />
+          {cuisines.map((c) => (
+            <Chip
+              key={c.slug}
+              label={c.name}
+              selected={selectedCuisines.includes(c.slug)}
+              onPress={() => toggleCuisine(c.slug)}
+            />
           ))}
         </View>
 
         <View style={styles.footer}>
-          <PrimaryButton label="Let's cook" onPress={finish} />
+          <PrimaryButton label={t("onboarding.cta")} onPress={finish} />
         </View>
       </ScrollView>
     </SafeAreaView>

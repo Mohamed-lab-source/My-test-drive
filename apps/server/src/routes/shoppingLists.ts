@@ -18,6 +18,7 @@ shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (re
     return;
   }
   const { servings, budget } = parsed.data;
+  const lang = req.query.lang === "ar" ? "ar" : "en";
 
   const recipe = await prisma.recipe.findUnique({
     where: { slug: req.params.slug },
@@ -30,7 +31,7 @@ shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (re
 
   const { items, totalEstimatedCost, withinBudget, budgetDifference } = computeShoppingList(
     recipe.ingredients.map((ri) => ({
-      name: ri.ingredient.name,
+      name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,
       displayUnit: ri.displayUnit,
       pricePerUnit: ri.ingredient.pricePerUnit,
@@ -57,7 +58,7 @@ shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (re
 
   res.status(201).json({
     id: saved.id,
-    recipe: { slug: recipe.slug, title: recipe.title },
+    recipe: { slug: recipe.slug, title: lang === "ar" ? recipe.titleAr ?? recipe.title : recipe.title },
     servings,
     budget: budget ?? null,
     totalEstimatedCost,

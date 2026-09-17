@@ -5,6 +5,7 @@ import type { MainTabParamList } from "./types";
 import { HomeScreen } from "../screens/HomeScreen";
 import { ListsScreen } from "../screens/ListsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import { useLocale } from "../i18n/LocaleContext";
 import { colors } from "../theme";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -16,6 +17,7 @@ const ICONS: Record<keyof MainTabParamList, string> = {
 };
 
 export function MainTabs() {
+  const { t } = useLocale();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -25,9 +27,9 @@ export function MainTabs() {
         tabBarIcon: () => <Text style={{ fontSize: 18 }}>{ICONS[route.name]}</Text>,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Lists" component={ListsScreen} options={{ title: "My Lists" }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: t("tabs.home") }} />
+      <Tab.Screen name="Lists" component={ListsScreen} options={{ title: t("tabs.lists") }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t("tabs.profile") }} />
     </Tab.Navigator>
   );
 }

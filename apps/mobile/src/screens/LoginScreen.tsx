@@ -6,12 +6,14 @@ import type { RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { apiErrorMessage } from "../api/client";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { useLocale } from "../i18n/LocaleContext";
 import { colors, radius, spacing } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 export function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
+  const { t, isRTL } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,21 +24,23 @@ export function LoginScreen({ navigation }: Props) {
       await login(email.trim().toLowerCase(), password);
       navigation.goBack();
     } catch (error) {
-      Alert.alert("Couldn't log in", apiErrorMessage(error));
+      Alert.alert(t("login.error"), apiErrorMessage(error));
     } finally {
       setLoading(false);
     }
   };
 
+  const textAlign = isRTL ? "right" : "left";
+
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
         <View style={styles.content}>
-          <Text style={styles.title}>Welcome back</Text>
+          <Text style={[styles.title, { textAlign }]}>{t("login.title")}</Text>
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={[styles.label, { textAlign }]}>{t("login.email")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { textAlign }]}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
@@ -45,9 +49,9 @@ export function LoginScreen({ navigation }: Props) {
             placeholderTextColor={colors.textMuted}
           />
 
-          <Text style={styles.label}>Password</Text>
+          <Text style={[styles.label, { textAlign }]}>{t("login.password")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { textAlign }]}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -56,11 +60,11 @@ export function LoginScreen({ navigation }: Props) {
           />
 
           <View style={styles.button}>
-            <PrimaryButton label="Log in" onPress={submit} loading={loading} disabled={!email || !password} />
+            <PrimaryButton label={t("login.submit")} onPress={submit} loading={loading} disabled={!email || !password} />
           </View>
 
           <Pressable onPress={() => navigation.replace("Signup")}>
-            <Text style={styles.link}>Don't have an account? Sign up</Text>
+            <Text style={styles.link}>{t("login.switchToSignup")}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

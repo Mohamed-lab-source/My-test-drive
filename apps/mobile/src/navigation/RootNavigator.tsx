@@ -11,14 +11,16 @@ import { ShoppingListScreen } from "../screens/ShoppingListScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
+import { useLocale } from "../i18n/LocaleContext";
 import { colors } from "../theme";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
   const { preference, isLoading } = useLocalPreference();
+  const { isLoading: isLocaleLoading, t } = useLocale();
 
-  if (isLoading) {
+  if (isLoading || isLocaleLoading) {
     return (
       <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
         <ActivityIndicator color={colors.primary} size="large" />
@@ -38,18 +40,18 @@ export function RootNavigator() {
       >
         <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-        <Stack.Screen name="RecipeList" component={RecipeListScreen} options={{ title: "Recipes" }} />
+        <Stack.Screen name="RecipeList" component={RecipeListScreen} options={{ title: t("recipeList.title") }} />
         <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: "" }} />
-        <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: "Shopping List" }} />
+        <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: t("shoppingList.title") }} />
         <Stack.Screen
           name="Login"
           component={LoginScreen}
-          options={{ presentation: "modal", title: "Log in" }}
+          options={{ presentation: "modal", title: t("login.headerTitle") }}
         />
         <Stack.Screen
           name="Signup"
           component={SignupScreen}
-          options={{ presentation: "modal", title: "Sign up" }}
+          options={{ presentation: "modal", title: t("signup.headerTitle") }}
         />
       </Stack.Navigator>
     </NavigationContainer>
