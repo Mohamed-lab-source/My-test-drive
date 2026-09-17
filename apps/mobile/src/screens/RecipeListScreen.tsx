@@ -67,7 +67,7 @@ export function RecipeListScreen({ route, navigation }: Props) {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    filterRow: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: spacing(3), paddingTop: spacing(2) },
+    filterRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: spacing(3), paddingTop: spacing(2) },
     listContent: { padding: spacing(3), paddingTop: spacing(1) },
     empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
   });

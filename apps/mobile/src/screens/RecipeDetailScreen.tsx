@@ -270,7 +270,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { padding: spacing(3), paddingBottom: spacing(2) },
   title: { fontSize: 24, fontWeight: "800", color: colors.text },
   description: { color: colors.textMuted, marginTop: spacing(1), lineHeight: 20 },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing(2) },
+  metaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(2) },
   metaPill: {
     backgroundColor: colors.chipBackground,
     borderRadius: radius.pill,

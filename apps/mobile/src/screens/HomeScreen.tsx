@@ -139,7 +139,7 @@ const createStyles = (colors: ThemeColors) =>
     greeting: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
     headline: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 4 },
     sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
-    cuisineWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing(1.5) },
+    cuisineWrap: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1.5) },
     cuisineCard: {
       width: "30%",
       backgroundColor: colors.surface,
@@ -152,7 +152,7 @@ const createStyles = (colors: ThemeColors) =>
     cuisineEmoji: { fontSize: 28 },
     cuisineName: { fontWeight: "700", color: colors.text, marginTop: 6, fontSize: 12, textAlign: "center" },
     cuisineCount: { color: colors.textMuted, fontSize: 10, marginTop: 2 },
-    quickRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing(2), gap: spacing(1) },
+    quickRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(2), gap: spacing(1) },
     quickChip: {
       backgroundColor: colors.secondary,
       borderRadius: radius.pill,

@@ -151,7 +151,7 @@ const createStyles = (colors: ThemeColors) =>
     subtitle: { color: colors.textMuted, marginTop: 4 },
     section: { fontSize: 15, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
     languageSection: { marginTop: spacing(4) },
-    chipRow: { flexDirection: "row", flexWrap: "wrap" },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
     saving: { color: colors.textMuted, fontSize: 12, marginTop: spacing(1) },
     logoutButton: { marginTop: spacing(5) },
     loggedOut: { flexGrow: 1, padding: spacing(3), justifyContent: "center" },

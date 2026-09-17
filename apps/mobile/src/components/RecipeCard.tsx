@@ -80,6 +80,7 @@ const createStyles = (colors: ThemeColors) =>
     tagRow: {
       flexDirection: "row",
       flexWrap: "wrap",
+      alignItems: "flex-start",
       marginTop: spacing(1),
     },
     tagBadge: {

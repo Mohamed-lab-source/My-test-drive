@@ -88,8 +88,8 @@ const createStyles = (colors: ThemeColors) =>
     title: { color: colors.primary, fontSize: 34, fontWeight: "800", marginTop: 4 },
     subtitle: { color: colors.textMuted, fontSize: 15, marginTop: spacing(1.5), lineHeight: 21 },
     section: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(4), marginBottom: spacing(1.5) },
-    goalGrid: { flexDirection: "row", flexWrap: "wrap" },
+    goalGrid: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
     goalItem: { marginEnd: spacing(1) },
-    row: { flexDirection: "row", flexWrap: "wrap" },
+    row: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
     footer: { marginTop: spacing(5) },
   });
