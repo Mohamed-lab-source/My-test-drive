@@ -152,9 +152,11 @@ commit/ship):
 5. Click Create. Copy the **Client ID** shown (looks like
    `123456789-abc...apps.googleusercontent.com`).
 6. Put that value in:
-   - `apps/mobile/eas.json` → `build.preview.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID`
-     (rebuild the APK afterward — `EXPO_PUBLIC_*` vars are baked in at build
-     time).
+   - `apps/mobile/eas.json` → add `"EXPO_PUBLIC_GOOGLE_CLIENT_ID": "<your client id>"`
+     inside `build.preview.env` (EAS rejects an empty string there, which is
+     why it isn't pre-added as a blank placeholder — add the whole key once
+     you have a real value). Rebuild the APK afterward — `EXPO_PUBLIC_*`
+     vars are baked in at build time.
    - The Railway service's environment variables → `GOOGLE_CLIENT_ID` (same
      value; redeploy to pick it up).
 
