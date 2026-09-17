@@ -44,26 +44,29 @@ export function ListsScreen({ navigation }: Props) {
     }, [isAuthenticated])
   );
 
-  const segmentedControl = (
-    <View style={styles.segmentedControl}>
-      <AnimatedPressable
-        style={[styles.segment, segment === "favorites" && styles.segmentActive]}
-        pressScale={0.97}
-        onPress={() => setSegment("favorites")}
-      >
-        <Text style={[styles.segmentText, segment === "favorites" && styles.segmentTextActive]}>
-          {t("lists.favoritesTab")}
-        </Text>
-      </AnimatedPressable>
-      <AnimatedPressable
-        style={[styles.segment, segment === "shoppingLists" && styles.segmentActive]}
-        pressScale={0.97}
-        onPress={() => setSegment("shoppingLists")}
-      >
-        <Text style={[styles.segmentText, segment === "shoppingLists" && styles.segmentTextActive]}>
-          {t("lists.shoppingListsTab")}
-        </Text>
-      </AnimatedPressable>
+  const header = (
+    <View style={styles.header}>
+      <Text style={styles.headline}>{t("tabs.lists")}</Text>
+      <View style={styles.segmentedControl}>
+        <AnimatedPressable
+          style={[styles.segment, segment === "favorites" && styles.segmentActive]}
+          pressScale={0.97}
+          onPress={() => setSegment("favorites")}
+        >
+          <Text style={[styles.segmentText, segment === "favorites" && styles.segmentTextActive]}>
+            {t("lists.favoritesTab")}
+          </Text>
+        </AnimatedPressable>
+        <AnimatedPressable
+          style={[styles.segment, segment === "shoppingLists" && styles.segmentActive]}
+          pressScale={0.97}
+          onPress={() => setSegment("shoppingLists")}
+        >
+          <Text style={[styles.segmentText, segment === "shoppingLists" && styles.segmentTextActive]}>
+            {t("lists.shoppingListsTab")}
+          </Text>
+        </AnimatedPressable>
+      </View>
     </View>
   );
 
@@ -74,7 +77,7 @@ export function ListsScreen({ navigation }: Props) {
           data={favoriteRecipes}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={segmentedControl}
+          ListHeaderComponent={header}
           ListEmptyComponent={
             !favoritesLoading ? (
               <View style={styles.emptyState}>
@@ -95,7 +98,7 @@ export function ListsScreen({ navigation }: Props) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.content}>
-          {segmentedControl}
+          {header}
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>{t("lists.signInTitle")}</Text>
             <Text style={styles.emptySubtitle}>{t("lists.signInSubtitle")}</Text>
@@ -116,8 +119,8 @@ export function ListsScreen({ navigation }: Props) {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View>
-            {segmentedControl}
-            <Text style={styles.headline}>{t("lists.headline")}</Text>
+            {header}
+            <Text style={styles.sectionTitle}>{t("lists.headline")}</Text>
           </View>
         }
         ListEmptyComponent={!loading ? <Text style={styles.emptySubtitle}>{t("lists.empty")}</Text> : null}
@@ -150,7 +153,9 @@ export function ListsScreen({ navigation }: Props) {
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1, padding: spacing(3) },
-  listContent: { padding: spacing(3) },
+  listContent: { padding: spacing(3), flexGrow: 1 },
+  header: { marginBottom: spacing(1) },
+  headline: { fontSize: 24, fontWeight: "800", color: colors.text, marginTop: spacing(1), marginBottom: spacing(2) },
   segmentedControl: {
     flexDirection: "row",
     backgroundColor: colors.chipBackground,
@@ -167,7 +172,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   segmentActive: { backgroundColor: colors.primary },
   segmentText: { fontSize: 13, fontWeight: "700", color: colors.textMuted },
   segmentTextActive: { color: "#fff" },
-  headline: { fontSize: 22, fontWeight: "800", color: colors.text, marginBottom: spacing(2) },
+  sectionTitle: { fontSize: 18, fontWeight: "800", color: colors.text, marginBottom: spacing(2) },
   row: {
     flexDirection: "row",
     alignItems: "center",
