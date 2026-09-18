@@ -59,6 +59,9 @@ const en = {
 
   "mealPlanner.title": "Meal Planner",
   "mealPlanner.subtitle": "Plan the next 7 days, then generate one combined shopping list.",
+  "mealPlanner.daysPlanned": "Days planned",
+  "mealPlanner.avgCalories": "Avg kcal/day",
+  "mealPlanner.avgProtein": "Avg protein/day",
   "mealPlanner.today": "Today",
   "mealPlanner.tomorrow": "Tomorrow",
   "mealPlanner.addRecipe": "+ Add a recipe",
@@ -300,6 +303,9 @@ const ar: Record<keyof typeof en, string> = {
 
   "mealPlanner.title": "مخطط الوجبات",
   "mealPlanner.subtitle": "خطّط للأيام السبعة القادمة، ثم أنشئ قائمة تسوق موحدة.",
+  "mealPlanner.daysPlanned": "أيام مخططة",
+  "mealPlanner.avgCalories": "متوسط السعرات/يوم",
+  "mealPlanner.avgProtein": "متوسط البروتين/يوم",
   "mealPlanner.today": "اليوم",
   "mealPlanner.tomorrow": "غداً",
   "mealPlanner.addRecipe": "+ أضف وصفة",

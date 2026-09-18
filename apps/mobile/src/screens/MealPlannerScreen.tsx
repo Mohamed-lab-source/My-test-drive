@@ -134,6 +134,20 @@ export function MealPlannerScreen({ navigation }: Props) {
     .map((dateKey) => [dateKey, plan[dateKey]] as const)
     .filter((entry): entry is [string, RecipeSummary] => Boolean(entry[1]));
 
+  const weeklyNutrition =
+    plannedEntries.length > 0
+      ? {
+          daysPlanned: plannedEntries.length,
+          avgCalories: Math.round(
+            plannedEntries.reduce((sum, [, r]) => sum + r.caloriesPerServing, 0) / plannedEntries.length
+          ),
+          avgProtein:
+            Math.round(
+              (plannedEntries.reduce((sum, [, r]) => sum + r.proteinPerServing, 0) / plannedEntries.length) * 10
+            ) / 10,
+        }
+      : null;
+
   const generateShoppingList = async () => {
     if (plannedEntries.length === 0) return;
     setGenerating(true);
@@ -170,6 +184,25 @@ export function MealPlannerScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.subtitle, { textAlign }]}>{t("mealPlanner.subtitle")}</Text>
+
+        {weeklyNutrition ? (
+          <View style={styles.nutritionRow}>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>
+                {weeklyNutrition.daysPlanned}/{DAYS_AHEAD}
+              </Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.daysPlanned")}</Text>
+            </View>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>{weeklyNutrition.avgCalories}</Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.avgCalories")}</Text>
+            </View>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>{weeklyNutrition.avgProtein}g</Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.avgProtein")}</Text>
+            </View>
+          </View>
+        ) : null}
 
         {Array.from({ length: DAYS_AHEAD }).map((_, offset) => {
           const dateKey = dateKeyFor(offset);
@@ -330,6 +363,16 @@ const createStyles = (colors: ThemeColors) =>
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing(3), paddingBottom: spacing(6) },
     subtitle: { color: colors.textMuted, marginBottom: spacing(2), lineHeight: 20 },
+    nutritionRow: {
+      flexDirection: "row",
+      backgroundColor: colors.chipBackground,
+      borderRadius: 14,
+      paddingVertical: spacing(1.5),
+      marginBottom: spacing(2.5),
+    },
+    nutritionStat: { flex: 1, alignItems: "center" },
+    nutritionValue: { fontSize: 18, fontWeight: "800", color: colors.primaryDark },
+    nutritionLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2, textAlign: "center" },
     dayRow: { marginBottom: spacing(1.5) },
     dayLabel: { fontSize: 13, fontWeight: "700", color: colors.textMuted, marginBottom: spacing(0.5) },
     plannedCard: {
