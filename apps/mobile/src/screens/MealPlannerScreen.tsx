@@ -7,6 +7,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -76,6 +77,23 @@ export function MealPlannerScreen({ navigation }: Props) {
   useEffect(() => {
     fetchDeliveryPartners().then(setDeliveryPartners).catch(() => {});
   }, []);
+
+  const handleShareList = async () => {
+    if (!aggregated) return;
+    const lines = aggregated.map((item) => `- ${item.name}: ${formatQuantity(item.quantity, item.unit, unitSystem)}`);
+    const message = [
+      t("mealPlanner.combinedListTitle"),
+      "",
+      ...lines,
+      "",
+      t("mealPlanner.estimatedTotal", { amount: totalCost }),
+    ].join("\n");
+    try {
+      await Share.share({ message });
+    } catch {
+      // User cancelled or share failed silently; nothing to recover.
+    }
+  };
 
   const findNearbyStores = async () => {
     setLocating(true);
@@ -314,6 +332,9 @@ export function MealPlannerScreen({ navigation }: Props) {
                 <Text style={styles.mapsLink}>{t("shoppingList.openMaps")}</Text>
               </Pressable>
             ) : null}
+            <View style={styles.shareButton}>
+              <PrimaryButton label={t("shoppingList.share")} variant="outline" onPress={handleShareList} />
+            </View>
           </FadeSlideIn>
         ) : null}
       </ScrollView>
@@ -450,6 +471,7 @@ const createStyles = (colors: ThemeColors) =>
     partnerEmoji: { fontSize: 26 },
     partnerName: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: 4 },
     nearbyButton: { marginTop: spacing(2) },
+    shareButton: { marginTop: spacing(1.5) },
     mapsLink: { color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: spacing(1.5) },
     modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalSheet: {

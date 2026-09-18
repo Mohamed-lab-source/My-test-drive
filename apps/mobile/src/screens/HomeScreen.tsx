@@ -64,6 +64,15 @@ export function HomeScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [surprising, setSurprising] = useState(false);
   const [cookingSlug, setCookingSlug] = useState<string | null>(null);
+  const [dailyRecipe, setDailyRecipe] = useState<RecipeSummary | null>(null);
+
+  useEffect(() => {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    fetchRandomRecipe({ seed: todayKey })
+      .then(({ slug }) => fetchRecipeDetail(slug))
+      .then(setDailyRecipe)
+      .catch(() => {});
+  }, [locale]);
 
   const load = useCallback(async () => {
     const [cuisineList] = await Promise.all([fetchCuisines()]);
@@ -155,6 +164,16 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.searchPlaceholder}>{t("search.placeholder")}</Text>
             </AnimatedPressable>
 
+            {dailyRecipe ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.recipeOfTheDay")}</Text>
+                <RecipeCard
+                  recipe={dailyRecipe}
+                  onPress={() => navigation.navigate("RecipeDetail", { slug: dailyRecipe.slug })}
+                />
+              </>
+            ) : null}
+
             <Text style={styles.sectionTitle}>{t("home.browseByCuisine")}</Text>
             <View style={styles.cuisineWrap}>
               {cuisines.map((c, i) => (
@@ -216,6 +235,13 @@ export function HomeScreen({ navigation }: Props) {
                 onPress={() => navigation.navigate("RecipeList", { title: t("home.budgetTitle"), sortByCost: true })}
               >
                 <Text style={styles.quickChipText}>{t("home.budgetPicks")}</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={styles.quickChip}
+                pressScale={0.94}
+                onPress={() => navigation.navigate("RecipeList", { title: t("home.topRatedTitle"), sortByRating: true })}
+              >
+                <Text style={styles.quickChipText}>{t("home.topRated")}</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 style={[styles.quickChip, styles.surpriseChip]}

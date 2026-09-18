@@ -276,16 +276,29 @@ const randomQuerySchema = z.object({
   cuisine: z.string().optional(),
   tag: z.string().optional(),
   dishType: z.string().optional(),
+  // When present, picks deterministically instead of randomly -- the same
+  // seed (e.g. today's date) always yields the same recipe, for a stable
+  // "recipe of the day" pick rather than a fresh one on every call.
+  seed: z.string().optional(),
 });
 
-/** Picks one recipe at random, optionally narrowed by the same filters as GET /recipes. */
+/** Simple, fast string hash (djb2) -- good enough to spread seeds evenly across a candidate list, not for anything security-sensitive. */
+function hashSeed(seed: string): number {
+  let hash = 5381;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 33) ^ seed.charCodeAt(i);
+  }
+  return Math.abs(hash);
+}
+
+/** Picks one recipe at random (or deterministically via ?seed=), optionally narrowed by the same filters as GET /recipes. */
 recipesRouter.get("/recipes/random", async (req, res) => {
   const parsed = randomQuerySchema.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { cuisine, tag, dishType } = parsed.data;
+  const { cuisine, tag, dishType, seed } = parsed.data;
 
   const candidates = await prisma.recipe.findMany({
     where: {
@@ -294,12 +307,15 @@ recipesRouter.get("/recipes/random", async (req, res) => {
       tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
     },
     select: { slug: true },
+    orderBy: { slug: "asc" },
   });
   if (candidates.length === 0) {
     res.status(404).json({ error: "No recipes match" });
     return;
   }
-  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  const pick = seed
+    ? candidates[hashSeed(seed) % candidates.length]
+    : candidates[Math.floor(Math.random() * candidates.length)];
   res.json({ slug: pick.slug });
 });
 

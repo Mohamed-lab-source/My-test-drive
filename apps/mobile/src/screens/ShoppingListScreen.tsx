@@ -5,6 +5,7 @@ import {
   Linking,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -72,6 +73,25 @@ export function ShoppingListScreen({ route, navigation }: Props) {
       Alert.alert(t("shoppingList.errorGenerate"), apiErrorMessage(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShareList = async () => {
+    if (!result) return;
+    const lines = result.items.map(
+      (item) => `- ${item.ingredientName}: ${formatQuantity(item.quantity, item.unit, unitSystem)}`
+    );
+    const message = [
+      t("shoppingList.shareTitle", { title }),
+      "",
+      ...lines,
+      "",
+      t("shoppingList.estimatedTotal", { amount: result.totalEstimatedCost.toFixed(2) }),
+    ].join("\n");
+    try {
+      await Share.share({ message });
+    } catch {
+      // User cancelled or share failed silently; nothing to recover.
     }
   };
 
@@ -235,6 +255,9 @@ export function ShoppingListScreen({ route, navigation }: Props) {
                 <Text style={styles.mapsLink}>{t("shoppingList.openMaps")}</Text>
               </Pressable>
             ) : null}
+            <View style={styles.shareButton}>
+              <PrimaryButton label={t("shoppingList.share")} variant="outline" onPress={handleShareList} />
+            </View>
           </FadeSlideIn>
         ) : null}
       </ScrollView>
@@ -318,5 +341,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   partnerEmoji: { fontSize: 26 },
   partnerName: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: 4 },
   nearbyButton: { marginTop: spacing(2) },
+  shareButton: { marginTop: spacing(1.5) },
   mapsLink: { color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: spacing(1.5) },
 });

@@ -7,6 +7,7 @@ type NotesMap = Record<string, string>;
 
 type NotesContextValue = {
   isLoading: boolean;
+  notes: NotesMap;
   getNote: (slug: string) => string;
   setNote: (slug: string, text: string) => void;
 };
@@ -43,7 +44,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const getNote = useCallback((slug: string) => notes[slug] ?? "", [notes]);
 
-  const value = useMemo(() => ({ isLoading, getNote, setNote }), [isLoading, getNote, setNote]);
+  const value = useMemo(
+    () => ({ isLoading, notes, getNote, setNote }),
+    [isLoading, notes, getNote, setNote]
+  );
 
   return <NotesContext.Provider value={value}>{children}</NotesContext.Provider>;
 }

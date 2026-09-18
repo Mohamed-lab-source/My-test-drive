@@ -61,7 +61,12 @@ export async function fetchRecommended() {
   return data;
 }
 
-export async function fetchRandomRecipe(params?: { cuisine?: string; tag?: string; dishType?: string }) {
+export async function fetchRandomRecipe(params?: {
+  cuisine?: string;
+  tag?: string;
+  dishType?: string;
+  seed?: string;
+}) {
   const { data } = await api.get<{ slug: string }>("/recipes/random", { params });
   return data;
 }

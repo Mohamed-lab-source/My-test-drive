@@ -99,6 +99,9 @@ export function ProfileScreen({ navigation }: Props) {
               onPress={() => navigation.navigate("Glossary")}
             />
           </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -207,6 +210,9 @@ export function ProfileScreen({ navigation }: Props) {
             variant="outline"
             onPress={() => navigation.navigate("Glossary")}
           />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
         </View>
 
         {saving ? <Text style={styles.saving}>{t("profile.saving")}</Text> : null}

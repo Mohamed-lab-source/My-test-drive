@@ -14,18 +14,23 @@ import type { DishTag, RecipeSummary } from "../api/types";
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
 export function RecipeListScreen({ route, navigation }: Props) {
-  const { cuisineSlug, tag: initialTag, title, sortByCost } = route.params;
+  const { cuisineSlug, tag: initialTag, title, sortByCost, sortByRating } = route.params;
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTag, setActiveTag] = useState<DishTag | undefined>(initialTag as DishTag | undefined);
-  const [cheapestFirst, setCheapestFirst] = useState(Boolean(sortByCost));
+  const [sortMode, setSortMode] = useState<"none" | "cheapest" | "topRated">(
+    sortByRating ? "topRated" : sortByCost ? "cheapest" : "none"
+  );
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const displayRecipes = cheapestFirst
-    ? [...recipes].sort((a, b) => a.costPerServing - b.costPerServing)
-    : recipes;
+  const displayRecipes =
+    sortMode === "cheapest"
+      ? [...recipes].sort((a, b) => a.costPerServing - b.costPerServing)
+      : sortMode === "topRated"
+        ? [...recipes].sort((a, b) => (b.avgRating ?? -1) - (a.avgRating ?? -1))
+        : recipes;
 
   const TAG_FILTERS: { value: DishTag | undefined; label: string }[] = [
     { value: undefined, label: t("recipeList.filter.all") },
@@ -56,8 +61,13 @@ export function RecipeListScreen({ route, navigation }: Props) {
       <View style={styles.filterRowSecondary}>
         <Chip
           label={t("recipeList.filter.cheapestFirst")}
-          selected={cheapestFirst}
-          onPress={() => setCheapestFirst((v) => !v)}
+          selected={sortMode === "cheapest"}
+          onPress={() => setSortMode((m) => (m === "cheapest" ? "none" : "cheapest"))}
+        />
+        <Chip
+          label={t("recipeList.filter.topRated")}
+          selected={sortMode === "topRated"}
+          onPress={() => setSortMode((m) => (m === "topRated" ? "none" : "topRated"))}
         />
       </View>
       <FlatList

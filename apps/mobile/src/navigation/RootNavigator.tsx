@@ -13,6 +13,7 @@ import { CookModeScreen } from "../screens/CookModeScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
 import { GlossaryScreen } from "../screens/GlossaryScreen";
+import { NotesListScreen } from "../screens/NotesListScreen";
 import { SearchScreen } from "../screens/SearchScreen";
 import { MealPlannerScreen } from "../screens/MealPlannerScreen";
 import { PantryFinderScreen } from "../screens/PantryFinderScreen";
@@ -81,6 +82,7 @@ export function RootNavigator() {
           options={{ presentation: "modal", title: t("signup.headerTitle") }}
         />
         <Stack.Screen name="Glossary" component={GlossaryScreen} options={{ title: t("glossary.title") }} />
+        <Stack.Screen name="Notes" component={NotesListScreen} options={{ title: t("notes.title") }} />
         <Stack.Screen
           name="Search"
           component={SearchScreen}

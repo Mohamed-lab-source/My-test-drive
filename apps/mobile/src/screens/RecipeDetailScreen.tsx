@@ -29,6 +29,7 @@ import { radius, spacing, type ThemeColors } from "../theme";
 import type { DietGoal, RecipeDetail } from "../api/types";
 
 const BODY_GOALS: DietGoal[] = ["LOSE_WEIGHT", "BUILD_MUSCLE", "GAIN_WEIGHT"];
+const SERVINGS_PRESETS = [2, 4, 6, 8];
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeDetail">;
 
@@ -246,6 +247,11 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             >
               <Text style={styles.stepperButtonText}>+</Text>
             </AnimatedPressable>
+          </View>
+          <View style={styles.servingsPresetRow}>
+            {SERVINGS_PRESETS.map((preset) => (
+              <Chip key={preset} label={String(preset)} selected={servings === preset} onPress={() => setServings(preset)} />
+            ))}
           </View>
 
           <Text style={[styles.sectionTitle, { textAlign }]}>
@@ -500,6 +506,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   adaptTitle: { marginBottom: spacing(1) },
   chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
   stepperRow: { flexDirection: "row", alignItems: "center" },
+  servingsPresetRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(1.5) },
   stepperButton: {
     width: 40,
     height: 40,
