@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Modal, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useKeepAwake } from "expo-keep-awake";
+import * as Speech from "expo-speech";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { AnimatedPressable } from "../components/AnimatedPressable";
@@ -33,11 +34,42 @@ export function CookModeScreen({ route, navigation }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [index, setIndex] = useState(0);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const step = steps[index];
   const isLast = index === steps.length - 1;
   const progress = (index + 1) / steps.length;
   const textAlign = isRTL ? "right" : "left";
+
+  useEffect(() => {
+    if (!voiceEnabled) return;
+    Speech.stop();
+    Speech.speak(step.instruction, {
+      language: isRTL ? "ar" : "en-US",
+      onStart: () => setSpeaking(true),
+      onDone: () => setSpeaking(false),
+      onStopped: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceEnabled, index]);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
+  const toggleVoice = () => {
+    if (voiceEnabled) {
+      Speech.stop();
+      setSpeaking(false);
+      setVoiceEnabled(false);
+    } else {
+      setVoiceEnabled(true);
+    }
+  };
 
   const confirmExit = () => {
     Alert.alert(t("cookMode.exitTitle"), t("cookMode.exitMessage"), [
@@ -74,9 +106,19 @@ export function CookModeScreen({ route, navigation }: Props) {
           <Text style={styles.iconButtonText}>✕</Text>
         </AnimatedPressable>
         <Text style={styles.stepOf}>{t("cookMode.stepOf", { current: index + 1, total: steps.length })}</Text>
-        <AnimatedPressable style={styles.iconButton} pressScale={0.9} onPress={() => setIngredientsVisible(true)}>
-          <Text style={styles.iconButtonText}>📋</Text>
-        </AnimatedPressable>
+        <View style={styles.headerRightGroup}>
+          <AnimatedPressable
+            style={[styles.iconButton, styles.voiceButtonSpacing, voiceEnabled && styles.iconButtonActive]}
+            pressScale={0.9}
+            onPress={toggleVoice}
+            accessibilityLabel={t("cookMode.voiceToggle")}
+          >
+            <Text style={styles.iconButtonText}>{voiceEnabled ? (speaking ? "🔊" : "🔈") : "🔇"}</Text>
+          </AnimatedPressable>
+          <AnimatedPressable style={styles.iconButton} pressScale={0.9} onPress={() => setIngredientsVisible(true)}>
+            <Text style={styles.iconButtonText}>📋</Text>
+          </AnimatedPressable>
+        </View>
       </View>
 
       <View style={styles.progressTrack}>
@@ -162,6 +204,8 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing(2),
       paddingTop: spacing(1),
     },
+    headerRightGroup: { flexDirection: "row", alignItems: "center" },
+    voiceButtonSpacing: { marginEnd: spacing(1) },
     iconButton: {
       width: 40,
       height: 40,
@@ -170,6 +214,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    iconButtonActive: { backgroundColor: colors.primary },
     iconButtonText: { fontSize: 18, color: colors.text },
     stepOf: { fontSize: 14, fontWeight: "700", color: colors.textMuted },
     progressTrack: {
