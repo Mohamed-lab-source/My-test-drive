@@ -12,6 +12,9 @@ enum DietGoal {
   FIT
   INDULGENT
   BALANCED
+  LOSE_WEIGHT
+  BUILD_MUSCLE
+  GAIN_WEIGHT
 }
 
 enum Difficulty {

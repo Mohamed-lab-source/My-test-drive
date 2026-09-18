@@ -17,7 +17,14 @@ import { FadeSlideIn } from "../components/FadeSlideIn";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
+import type { TranslationKey } from "../i18n/translations";
 import type { Cuisine, RecipeSummary } from "../api/types";
+
+const RECOMMENDED_TITLE_KEY: Record<string, TranslationKey> = {
+  LOSE_WEIGHT: "home.recommendedLoseWeight",
+  BUILD_MUSCLE: "home.recommendedBuildMuscle",
+  GAIN_WEIGHT: "home.recommendedGainWeight",
+};
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, "Home">,
@@ -65,6 +72,8 @@ export function HomeScreen({ navigation }: Props) {
   };
 
   const greetingName = isAuthenticated ? user?.name.split(" ")[0] : undefined;
+  const dietGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : preference.dietGoal;
+  const recommendedTitle = t(RECOMMENDED_TITLE_KEY[dietGoal] ?? "home.recommended");
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -170,7 +179,7 @@ export function HomeScreen({ navigation }: Props) {
               </>
             ) : null}
 
-            <Text style={styles.sectionTitle}>{t("home.recommended")}</Text>
+            <Text style={styles.sectionTitle}>{recommendedTitle}</Text>
           </View>
         }
         renderItem={({ item, index }) => (

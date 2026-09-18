@@ -153,7 +153,9 @@ authRouter.get("/me", requireAuth, async (req, res) => {
 });
 
 const preferencesSchema = z.object({
-  dietGoal: z.enum(["NONE", "FIT", "INDULGENT", "BALANCED"]).optional(),
+  dietGoal: z
+    .enum(["NONE", "FIT", "INDULGENT", "BALANCED", "LOSE_WEIGHT", "BUILD_MUSCLE", "GAIN_WEIGHT"])
+    .optional(),
   favoriteCuisineSlugs: z.array(z.string()).optional(),
   allergies: z.array(z.string()).optional(),
 });

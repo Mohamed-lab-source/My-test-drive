@@ -24,10 +24,10 @@ export function OnboardingScreen({ navigation }: Props) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
 
   const GOALS: { value: DietGoal; label: string; blurb: string }[] = [
-    { value: "FIT", label: t("onboarding.goal.fit"), blurb: t("onboarding.goal.fit.blurb") },
-    { value: "INDULGENT", label: t("onboarding.goal.indulgent"), blurb: t("onboarding.goal.indulgent.blurb") },
-    { value: "BALANCED", label: t("onboarding.goal.balanced"), blurb: t("onboarding.goal.balanced.blurb") },
     { value: "NONE", label: t("onboarding.goal.none"), blurb: t("onboarding.goal.none.blurb") },
+    { value: "LOSE_WEIGHT", label: t("onboarding.goal.loseWeight"), blurb: t("onboarding.goal.loseWeight.blurb") },
+    { value: "BUILD_MUSCLE", label: t("onboarding.goal.buildMuscle"), blurb: t("onboarding.goal.buildMuscle.blurb") },
+    { value: "GAIN_WEIGHT", label: t("onboarding.goal.gainWeight"), blurb: t("onboarding.goal.gainWeight.blurb") },
   ];
 
   useEffect(() => {
@@ -60,6 +60,9 @@ export function OnboardingScreen({ navigation }: Props) {
             </View>
           ))}
         </View>
+        <Text style={[styles.goalBlurb, { textAlign }]}>
+          {GOALS.find((g) => g.value === dietGoal)?.blurb}
+        </Text>
 
         <Text style={[styles.section, { textAlign }]}>{t("onboarding.favoriteCuisines")}</Text>
         <View style={styles.row}>
@@ -91,6 +94,7 @@ const createStyles = (colors: ThemeColors) =>
     section: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(4), marginBottom: spacing(1.5) },
     goalGrid: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
     goalItem: { marginEnd: spacing(1) },
+    goalBlurb: { color: colors.textMuted, fontSize: 13, marginTop: spacing(1) },
     row: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
     footer: { marginTop: spacing(5) },
   });

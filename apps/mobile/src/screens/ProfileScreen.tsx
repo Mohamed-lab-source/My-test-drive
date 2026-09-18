@@ -33,10 +33,10 @@ export function ProfileScreen({ navigation }: Props) {
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
 
   const GOALS: { value: DietGoal; label: string }[] = [
-    { value: "FIT", label: t("onboarding.goal.fit") },
-    { value: "INDULGENT", label: t("onboarding.goal.indulgent") },
-    { value: "BALANCED", label: t("onboarding.goal.balanced") },
     { value: "NONE", label: t("onboarding.goal.none") },
+    { value: "LOSE_WEIGHT", label: t("onboarding.goal.loseWeight") },
+    { value: "BUILD_MUSCLE", label: t("onboarding.goal.buildMuscle") },
+    { value: "GAIN_WEIGHT", label: t("onboarding.goal.gainWeight") },
   ];
 
   useEffect(() => {

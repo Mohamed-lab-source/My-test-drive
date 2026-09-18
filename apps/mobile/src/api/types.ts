@@ -1,4 +1,11 @@
-export type DietGoal = "NONE" | "FIT" | "INDULGENT" | "BALANCED";
+export type DietGoal =
+  | "NONE"
+  | "FIT"
+  | "INDULGENT"
+  | "BALANCED"
+  | "LOSE_WEIGHT"
+  | "BUILD_MUSCLE"
+  | "GAIN_WEIGHT";
 export type Difficulty = "EASY" | "MEDIUM" | "HARD";
 export type DishTag = "FIT" | "DESSERT" | "VEGETARIAN" | "QUICK" | "COMFORT" | "SPICY";
 export type Allergen = "GLUTEN" | "DAIRY" | "EGGS" | "NUTS" | "PEANUTS" | "SHELLFISH" | "FISH" | "SOY" | "SESAME";
@@ -40,6 +47,8 @@ export type RecipeSummary = {
   ratingCount: number;
   costPerServing: number;
   allergens: Allergen[];
+  caloriesPerServing: number;
+  proteinPerServing: number;
   cuisine: { slug: string; name: string };
 };
 

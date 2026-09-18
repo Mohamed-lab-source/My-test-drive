@@ -51,6 +51,11 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
             {recipe.cuisine.name} · {recipe.dishType} · {totalMinutes} min
           </Text>
           <Text style={styles.costText}>
+            {t("recipeCard.nutritionSummary", {
+              calories: recipe.caloriesPerServing,
+              protein: recipe.proteinPerServing,
+            })}
+            {" · "}
             {t("recipeCard.costPerServing", { cost: Math.round(recipe.costPerServing) })}
           </Text>
           {recipe.avgRating !== null ? (

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { optionalAuth } from "../middleware/auth";
-import type { DishTag } from "@prisma/client";
+import type { DietGoal, DishTag } from "@prisma/client";
 
 export const recipesRouter = Router();
 
@@ -48,7 +48,17 @@ export function recipeSummarySelect() {
     ingredients: {
       select: {
         quantity: true,
-        ingredient: { select: { id: true, name: true, nameAr: true, pricePerUnit: true, allergens: true } },
+        ingredient: {
+          select: {
+            id: true,
+            name: true,
+            nameAr: true,
+            pricePerUnit: true,
+            allergens: true,
+            caloriesPerUnit: true,
+            proteinPerUnit: true,
+          },
+        },
       },
     },
   } as const;
@@ -60,6 +70,23 @@ function estimateCostPerServing(
 ): number {
   const totalCost = ingredients.reduce((sum, ri) => sum + ri.quantity * ri.ingredient.pricePerUnit, 0);
   return Math.round((totalCost / baseServings) * 100) / 100;
+}
+
+function estimateNutritionSummary(
+  ingredients: { quantity: number; ingredient: { caloriesPerUnit: number; proteinPerUnit: number } }[],
+  baseServings: number
+): { caloriesPerServing: number; proteinPerServing: number } {
+  const totals = ingredients.reduce(
+    (acc, ri) => ({
+      kcal: acc.kcal + ri.quantity * ri.ingredient.caloriesPerUnit,
+      protein: acc.protein + ri.quantity * ri.ingredient.proteinPerUnit,
+    }),
+    { kcal: 0, protein: 0 }
+  );
+  return {
+    caloriesPerServing: Math.round(totals.kcal / baseServings),
+    proteinPerServing: Math.round((totals.protein / baseServings) * 10) / 10,
+  };
 }
 
 function collectAllergens(ingredients: { ingredient: { allergens: string[] } }[]): string[] {
@@ -92,6 +119,7 @@ export function localizeSummary(r: any, lang: Lang) {
     ratingCount,
     costPerServing: estimateCostPerServing(r.ingredients, r.baseServings),
     allergens: collectAllergens(r.ingredients),
+    ...estimateNutritionSummary(r.ingredients, r.baseServings),
     cuisine: {
       slug: r.cuisine.slug,
       name: lang === "ar" ? r.cuisine.nameAr ?? r.cuisine.name : r.cuisine.name,
@@ -130,9 +158,45 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
 });
 
 /**
- * Personalized recommendations: recipes matching the user's diet goal (FIT -> tag FIT,
- * INDULGENT -> tag DESSERT) and favorite cuisines are ranked first. Falls back to a
- * generic popular set for anonymous users.
+ * Body-goal component of the recommendation score, using each recipe's
+ * estimated nutrition per serving:
+ *  - LOSE_WEIGHT: rewards lower-calorie, higher-protein (more filling) plates.
+ *  - BUILD_MUSCLE: rewards protein-dense plates regardless of calories.
+ *  - GAIN_WEIGHT: rewards calorie-dense plates.
+ * Old style-based goals (FIT/INDULGENT) keep their original tag-matching
+ * behavior for any preference rows still set to them.
+ */
+function goalScore(
+  dietGoal: DietGoal,
+  r: { tags: DishTag[]; caloriesPerServing: number; proteinPerServing: number }
+): number {
+  switch (dietGoal) {
+    case "LOSE_WEIGHT": {
+      const calorieScore = Math.max(0, 3 - r.caloriesPerServing / 200);
+      const proteinScore = Math.min(2, r.proteinPerServing / 15);
+      return calorieScore + proteinScore - (r.tags.includes("DESSERT") ? 1.5 : 0);
+    }
+    case "BUILD_MUSCLE": {
+      const proteinScore = r.proteinPerServing / 10;
+      return proteinScore + (r.tags.includes("FIT") ? 1 : 0);
+    }
+    case "GAIN_WEIGHT": {
+      const calorieScore = r.caloriesPerServing / 200;
+      return calorieScore + (r.tags.includes("COMFORT") || r.tags.includes("DESSERT") ? 1 : 0);
+    }
+    case "FIT":
+      return r.tags.includes("FIT") ? 2 : 0;
+    case "INDULGENT":
+      return r.tags.includes("DESSERT") ? 2 : 0;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Personalized recommendations: scored by the user's body goal (see goalScore)
+ * plus a boost for favorite cuisines. Falls back to a generic popular set for
+ * anonymous users.
  */
 recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
   const lang = parseLang(req.query.lang);
@@ -140,6 +204,7 @@ recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
     select: recipeSummarySelect(),
     orderBy: { title: "asc" },
   });
+  const summaries = allRecipes.map((r) => ({ raw: r, summary: localizeSummary(r, lang) }));
 
   let preference = null;
   if (req.userId) {
@@ -147,22 +212,19 @@ recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
   }
 
   if (!preference) {
-    res.json(allRecipes.slice(0, 6).map((r) => localizeSummary(r, lang)));
+    res.json(summaries.slice(0, 6).map((s) => s.summary));
     return;
   }
 
-  const wantsTag: DishTag | null =
-    preference.dietGoal === "FIT" ? "FIT" : preference.dietGoal === "INDULGENT" ? "DESSERT" : null;
   const favoriteCuisines = new Set(preference.favoriteCuisineSlugs);
 
-  const scored = allRecipes.map((r) => {
-    let score = 0;
-    if (wantsTag && r.tags.includes(wantsTag)) score += 2;
-    if (favoriteCuisines.has(r.cuisine.slug)) score += 1;
-    return { recipe: r, score };
+  const scored = summaries.map(({ raw, summary }) => {
+    let score = goalScore(preference.dietGoal, summary);
+    if (favoriteCuisines.has(raw.cuisine.slug)) score += 1;
+    return { summary, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  res.json(scored.map((s) => localizeSummary(s.recipe, lang)));
+  res.json(scored.map((s) => s.summary));
 });
 
 recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
@@ -205,6 +267,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   };
   const costPerServing = estimateCostPerServing(recipe.ingredients, recipe.baseServings);
   const allergens = collectAllergens(recipe.ingredients);
+  const { caloriesPerServing, proteinPerServing } = estimateNutritionSummary(recipe.ingredients, recipe.baseServings);
 
   res.json({
     id: recipe.id,
@@ -228,6 +291,8 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     nutritionPerServing,
     costPerServing,
     allergens,
+    caloriesPerServing,
+    proteinPerServing,
     ingredients: recipe.ingredients.map((ri) => ({
       name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,
