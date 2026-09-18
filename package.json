@@ -1,0 +1,13 @@
+{
+  "name": "atomic-habits",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Local-first habit coaching app inspired by Atomic Habits",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch",
+    "serve": "http-server public -p 8080 -c-1",
+    "dev": "npm run build && npm run serve"
+  }
+}
