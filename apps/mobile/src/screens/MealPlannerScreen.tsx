@@ -59,6 +59,16 @@ export function MealPlannerScreen({ navigation }: Props) {
   const [generating, setGenerating] = useState(false);
   const [aggregated, setAggregated] = useState<AggregatedItem[] | null>(null);
   const [totalCost, setTotalCost] = useState(0);
+  const [haveAlready, setHaveAlready] = useState<Set<string>>(new Set());
+
+  const toggleHaveAlready = (key: string) => {
+    setHaveAlready((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
   const [mapsUrl, setMapsUrl] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
@@ -150,6 +160,7 @@ export function MealPlannerScreen({ navigation }: Props) {
       }
       setAggregated(Array.from(totals.values()).sort((a, b) => a.name.localeCompare(b.name)));
       setTotalCost(Math.round(cost * 100) / 100);
+      setHaveAlready(new Set());
     } finally {
       setGenerating(false);
     }
@@ -216,12 +227,31 @@ export function MealPlannerScreen({ navigation }: Props) {
               {t("mealPlanner.combinedListTitle")}
             </Text>
             <Text style={styles.totalCost}>{t("mealPlanner.estimatedTotal", { amount: totalCost })}</Text>
-            {aggregated.map((item) => (
-              <View key={`${item.name}|${item.unit}`} style={styles.itemRow}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemQty}>{formatQuantity(item.quantity, item.unit, unitSystem)}</Text>
-              </View>
-            ))}
+            <Text style={[styles.pantryHint, { textAlign }]}>{t("shoppingList.pantryHint")}</Text>
+            {aggregated.map((item) => {
+              const key = `${item.name}|${item.unit}`;
+              const have = haveAlready.has(key);
+              return (
+                <AnimatedPressable
+                  key={key}
+                  style={styles.itemRow}
+                  pressScale={0.99}
+                  onPress={() => toggleHaveAlready(key)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: have }}
+                >
+                  <View style={styles.itemLeft}>
+                    <View style={[styles.checkbox, have && styles.checkboxChecked]}>
+                      {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                    </View>
+                    <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.name}</Text>
+                  </View>
+                  <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
+                    {formatQuantity(item.quantity, item.unit, unitSystem)}
+                  </Text>
+                </AnimatedPressable>
+              );
+            })}
 
             <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
             <View style={styles.partnerRow}>
@@ -338,14 +368,30 @@ const createStyles = (colors: ThemeColors) =>
     resultSection: { marginTop: spacing(3) },
     sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: spacing(0.5) },
     totalCost: { color: colors.primaryDark, fontWeight: "700", marginBottom: spacing(1.5) },
+    pantryHint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing(1) },
     itemRow: {
       flexDirection: "row",
+      alignItems: "center",
       justifyContent: "space-between",
       paddingVertical: spacing(1),
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
+    itemLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginEnd: spacing(1.25),
+    },
+    checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+    checkboxMark: { color: "#fff", fontSize: 12, fontWeight: "800" },
     itemName: { color: colors.text, fontSize: 14, flex: 1 },
+    itemNameChecked: { color: colors.textMuted, textDecorationLine: "line-through" },
     itemQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
     partnerRow: { flexDirection: "row" },
     partnerCard: {

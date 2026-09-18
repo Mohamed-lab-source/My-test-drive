@@ -41,6 +41,20 @@ export function ShoppingListScreen({ route, navigation }: Props) {
   const [result, setResult] = useState<ShoppingListResult | null>(null);
   const [mapsUrl, setMapsUrl] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [haveAlready, setHaveAlready] = useState<Set<string>>(new Set());
+
+  const toggleHaveAlready = (ingredientName: string) => {
+    setHaveAlready((prev) => {
+      const next = new Set(prev);
+      if (next.has(ingredientName)) next.delete(ingredientName);
+      else next.add(ingredientName);
+      return next;
+    });
+  };
+
+  const stillNeedCost = result
+    ? result.items.reduce((sum, item) => (haveAlready.has(item.ingredientName) ? sum : sum + item.estimatedCost), 0)
+    : 0;
 
   useEffect(() => {
     navigation.setOptions({ title: t("shoppingList.title") });
@@ -53,6 +67,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
       const parsedBudget = budget.trim() ? Number(budget) : undefined;
       const data = await generateShoppingList(slug, servings, parsedBudget);
       setResult(data);
+      setHaveAlready(new Set());
     } catch (error) {
       Alert.alert(t("shoppingList.errorGenerate"), apiErrorMessage(error));
     } finally {
@@ -151,22 +166,46 @@ export function ShoppingListScreen({ route, navigation }: Props) {
               )}
             </View>
 
-            <Text style={[styles.sectionTitle, { textAlign }]}>
-              {t("shoppingList.listTitle", { count: result.servings })}
-            </Text>
-            {result.items.map((item, i) => (
-              <FadeSlideIn key={item.ingredientName} index={i}>
-                <View style={styles.itemRow}>
-                  <Text style={styles.itemName}>{item.ingredientName}</Text>
-                  <View style={styles.itemRight}>
-                    <Text style={styles.itemQty}>
-                      {formatQuantity(item.quantity, item.unit, unitSystem)}
-                    </Text>
-                    <Text style={styles.itemCost}>{item.estimatedCost.toFixed(2)} EGP</Text>
-                  </View>
-                </View>
-              </FadeSlideIn>
-            ))}
+            <View style={styles.listTitleRow}>
+              <Text style={[styles.sectionTitle, { textAlign }]}>
+                {t("shoppingList.listTitle", { count: result.servings })}
+              </Text>
+              {haveAlready.size > 0 ? (
+                <Text style={styles.stillNeedText}>
+                  {t("shoppingList.stillNeed", { amount: stillNeedCost.toFixed(2) })}
+                </Text>
+              ) : null}
+            </View>
+            <Text style={[styles.pantryHint, { textAlign }]}>{t("shoppingList.pantryHint")}</Text>
+            {result.items.map((item, i) => {
+              const have = haveAlready.has(item.ingredientName);
+              return (
+                <FadeSlideIn key={item.ingredientName} index={i}>
+                  <AnimatedPressable
+                    style={styles.itemRow}
+                    pressScale={0.99}
+                    onPress={() => toggleHaveAlready(item.ingredientName)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: have }}
+                  >
+                    <View style={styles.itemLeft}>
+                      <View style={[styles.checkbox, have && styles.checkboxChecked]}>
+                        {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                      </View>
+                      <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.ingredientName}</Text>
+                    </View>
+                    <View style={styles.itemRight}>
+                      <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
+                        {formatQuantity(item.quantity, item.unit, unitSystem)}
+                      </Text>
+                      <Text style={[styles.itemCost, have && styles.itemNameChecked]}>
+                        {item.estimatedCost.toFixed(2)} EGP
+                      </Text>
+                    </View>
+                  </AnimatedPressable>
+                </FadeSlideIn>
+              );
+            })}
 
             <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
             <View style={styles.partnerRow}>
@@ -236,14 +275,32 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   budgetTotal: { fontSize: 17, fontWeight: "800" },
   budgetSub: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
+  listTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  stillNeedText: { fontSize: 12, fontWeight: "700", color: colors.secondary },
+  pantryHint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing(1) },
   itemRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: spacing(1),
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  itemLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginEnd: spacing(1.25),
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkboxMark: { color: "#fff", fontSize: 12, fontWeight: "800" },
   itemName: { color: colors.text, fontSize: 14, flex: 1 },
+  itemNameChecked: { color: colors.textMuted, textDecorationLine: "line-through" },
   itemRight: { alignItems: "flex-end" },
   itemQty: { color: colors.textMuted, fontSize: 13 },
   itemCost: { color: colors.primaryDark, fontSize: 13, fontWeight: "700" },
