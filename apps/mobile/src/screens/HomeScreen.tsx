@@ -7,6 +7,7 @@ import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
+import { daysUntil, useLeftovers } from "../context/LeftoversContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
@@ -36,6 +37,7 @@ type Props = CompositeScreenProps<
 export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
   const { displayStreak } = useCookStreak();
+  const { leftovers, removeLeftover } = useLeftovers();
   const { preference } = useLocalPreference();
   const { recentRecipes } = useRecentlyViewed();
   const { t, locale } = useLocale();
@@ -191,6 +193,50 @@ export function HomeScreen({ navigation }: Props) {
               </AnimatedPressable>
             </View>
 
+            {leftovers.length > 0 ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.leftoversTitle")}</Text>
+                {leftovers.map((item, i) => {
+                  const remaining = daysUntil(item.useByDate);
+                  const statusLabel =
+                    remaining < 0
+                      ? t("home.leftoversExpired")
+                      : remaining === 0
+                        ? t("home.leftoversUseToday")
+                        : t("home.leftoversUseByDays", { days: remaining });
+                  return (
+                    <FadeSlideIn key={item.id} index={i}>
+                      <View style={styles.leftoverRow}>
+                        <AnimatedPressable
+                          style={styles.leftoverMain}
+                          pressScale={0.98}
+                          onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })}
+                        >
+                          <Text style={styles.leftoverEmoji}>{CUISINE_EMOJI[item.cuisineSlug] ?? "🍽️"}</Text>
+                          <View style={styles.leftoverTextCol}>
+                            <Text style={styles.leftoverTitle} numberOfLines={1}>
+                              {item.title}
+                            </Text>
+                            <Text style={[styles.leftoverStatus, remaining < 0 && styles.leftoverStatusExpired]}>
+                              {statusLabel}
+                            </Text>
+                          </View>
+                        </AnimatedPressable>
+                        <AnimatedPressable
+                          style={styles.leftoverDoneButton}
+                          pressScale={0.85}
+                          onPress={() => removeLeftover(item.id)}
+                          accessibilityLabel={t("home.leftoversMarkEaten")}
+                        >
+                          <Text style={styles.leftoverDoneText}>✓</Text>
+                        </AnimatedPressable>
+                      </View>
+                    </FadeSlideIn>
+                  );
+                })}
+              </>
+            ) : null}
+
             {recentRecipes.length > 0 ? (
               <>
                 <Text style={styles.sectionTitle}>{t("home.recentlyViewed")}</Text>
@@ -282,6 +328,32 @@ const createStyles = (colors: ThemeColors) =>
     },
     quickChipText: { color: "#fff", fontWeight: "700", fontSize: 12 },
     surpriseChip: { backgroundColor: colors.primary },
+    leftoverRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing(1.5),
+      marginBottom: spacing(1),
+    },
+    leftoverMain: { flex: 1, flexDirection: "row", alignItems: "center" },
+    leftoverEmoji: { fontSize: 24, marginEnd: spacing(1.5) },
+    leftoverTextCol: { flex: 1 },
+    leftoverTitle: { fontSize: 14, fontWeight: "700", color: colors.text },
+    leftoverStatus: { fontSize: 12, color: colors.secondary, fontWeight: "600", marginTop: 2 },
+    leftoverStatusExpired: { color: colors.danger },
+    leftoverDoneButton: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.pill,
+      backgroundColor: colors.chipBackground,
+      alignItems: "center",
+      justifyContent: "center",
+      marginStart: spacing(1),
+    },
+    leftoverDoneText: { color: colors.primaryDark, fontWeight: "800", fontSize: 15 },
     recentScroll: {},
     recentCard: {
       width: 110,

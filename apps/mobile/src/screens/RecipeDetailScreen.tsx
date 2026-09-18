@@ -344,6 +344,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           label={t("cookMode.startCooking")}
           onPress={() =>
             navigation.navigate("CookMode", {
+              slug: recipe.slug,
               title: recipe.title,
               cuisineSlug: recipe.cuisine.slug,
               steps: recipe.steps,

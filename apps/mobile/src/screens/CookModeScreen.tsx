@@ -13,6 +13,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
+import { useLeftovers } from "../context/LeftoversContext";
 import { formatQuantity } from "../utils/units";
 import { intersectAllergens } from "../utils/allergens";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -22,12 +23,13 @@ type Props = NativeStackScreenProps<RootStackParamList, "CookMode">;
 
 export function CookModeScreen({ route, navigation }: Props) {
   useKeepAwake();
-  const { title, cuisineSlug, steps, ingredients, servings } = route.params;
+  const { slug, title, cuisineSlug, steps, ingredients, servings } = route.params;
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
   const { user } = useAuth();
   const { recordCooked } = useCookStreak();
+  const { addLeftover } = useLeftovers();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [index, setIndex] = useState(0);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
@@ -49,6 +51,13 @@ export function CookModeScreen({ route, navigation }: Props) {
       const streak = recordCooked();
       const message = streak > 1 ? t("cookMode.doneMessageStreak", { streak }) : t("cookMode.doneMessage");
       Alert.alert(t("cookMode.doneTitle"), message, [
+        {
+          text: t("cookMode.saveLeftovers"),
+          onPress: () => {
+            addLeftover({ slug, title, cuisineSlug }, servings);
+            navigation.goBack();
+          },
+        },
         { text: t("cookMode.doneButton"), onPress: () => navigation.goBack() },
       ]);
       return;
