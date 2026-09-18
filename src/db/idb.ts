@@ -58,3 +58,24 @@ export async function remove(store: StoreName, id: string): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
 }
+
+export async function clearStore(store: StoreName): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction(store, "readwrite");
+  tx.objectStore(store).clear();
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+export async function putAll<T>(store: StoreName, values: T[]): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction(store, "readwrite");
+  const objectStore = tx.objectStore(store);
+  for (const value of values) objectStore.put(value);
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}

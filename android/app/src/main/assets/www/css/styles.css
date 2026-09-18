@@ -808,6 +808,13 @@ svg {
   overflow-x: auto;
 }
 
+.heatmap-wrap svg {
+  /* Let a wide (full-year) heatmap keep its real cell size and scroll
+     horizontally within the wrapper, instead of the global svg{max-width:100%}
+     shrinking every cell down to fit. */
+  max-width: none;
+}
+
 .heatmap-legend {
   margin-top: 8px;
   font-size: 12px;
@@ -1541,4 +1548,201 @@ body.modal-open {
 .insight-icon {
   font-size: 22px;
   flex-shrink: 0;
+}
+
+/* ---- Today: time-of-day sections ---- */
+
+.today-section {
+  margin-bottom: 20px;
+}
+
+.today-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0 4px 8px;
+}
+
+.today-section .list-card {
+  margin-bottom: 0;
+}
+
+.segmented-control-4 .segmented-label {
+  padding: 6px 2px;
+  font-size: 12px;
+}
+
+/* ---- Undo snackbar ---- */
+
+#snackbar-root {
+  position: fixed;
+  left: 50%;
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 65;
+  width: 100%;
+  max-width: 560px;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.snackbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--label);
+  color: var(--bg-grouped);
+  padding: 13px 16px;
+  border-radius: var(--radius-row);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+.snackbar.snackbar-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.snackbar.snackbar-out {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.snackbar-message {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snackbar-action {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* ---- Search bar ---- */
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-btn);
+  padding: 9px 12px;
+  margin-bottom: 16px;
+}
+
+.search-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  color: var(--label);
+  padding: 0;
+}
+
+.search-input::placeholder {
+  color: var(--label-tertiary);
+}
+
+.search-clear {
+  flex-shrink: 0;
+  border: none;
+  background: var(--bg-fill-strong);
+  color: var(--label-secondary);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heatmap-range-spacer {
+  height: 12px;
+}
+
+/* ---- Settings ---- */
+
+.view-header-with-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-gear {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.wizard-header-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.backup-textarea {
+  width: 100%;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 12px;
+  color: var(--label);
+  background: var(--bg-fill);
+  border: none;
+  border-radius: var(--radius-btn);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  resize: vertical;
+}
+
+.backup-textarea::placeholder {
+  color: var(--label-tertiary);
+  font-family: var(--font-sans);
+}
+
+.settings-error {
+  color: var(--red);
+  font-size: 13px;
+  margin: -4px 0 12px;
+}
+
+.settings-warning {
+  color: var(--red);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+
+.btn-danger-fill {
+  background: var(--red);
+  color: #fff;
+  flex: 1;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
 }

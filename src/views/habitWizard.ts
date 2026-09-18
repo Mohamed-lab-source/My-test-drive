@@ -3,7 +3,8 @@ import { escapeHtml } from "../utils/html.js";
 import { WEEKDAY_LABELS } from "../utils/date.js";
 import { HABIT_TEMPLATES, ICON_CHOICES } from "../domain/templates.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
-import type { Habit, Frequency, StackAnchor, Weekday } from "../domain/types.js";
+import { positionSegmentedThumb } from "../segmented.js";
+import type { Habit, Frequency, StackAnchor, Weekday, TimeOfDay } from "../domain/types.js";
 
 interface WizardState {
   name: string;
@@ -11,6 +12,7 @@ interface WizardState {
   identityId: string;
   freqType: "daily" | "weekdays";
   weekdays: Set<Weekday>;
+  timeOfDay: TimeOfDay;
   cue: string;
   craving: string;
   response: string;
@@ -28,6 +30,7 @@ function blankState(): WizardState {
     identityId: "",
     freqType: "daily",
     weekdays: new Set(),
+    timeOfDay: "anytime",
     cue: "",
     craving: "",
     response: "",
@@ -46,6 +49,7 @@ function stateFromHabit(habit: Habit): WizardState {
     identityId: habit.identityId ?? "",
     freqType: habit.frequency.type,
     weekdays: new Set(habit.frequency.type === "weekdays" ? habit.frequency.days : []),
+    timeOfDay: habit.timeOfDay ?? "anytime",
     cue: habit.cue,
     craving: habit.craving,
     response: habit.response,
@@ -264,6 +268,19 @@ export function openHabitWizard(options: WizardOptions = {}): void {
           ).join("")}
         </div>
 
+        <div class="form-section-label">Time of day</div>
+        <div class="form-card-row segmented-row">
+          <div class="segmented-control segmented-control-4" id="wizard-time-control">
+            ${(["anytime", "morning", "afternoon", "evening"] as TimeOfDay[])
+              .map(
+                (t) => `
+              <input type="radio" id="w-time-${t}" name="w-time" value="${t}" ${state.timeOfDay === t ? "checked" : ""} class="segmented-input" />
+              <label for="w-time-${t}" class="segmented-label">${t[0]!.toUpperCase()}${t.slice(1)}</label>`
+              )
+              .join("")}
+          </div>
+        </div>
+
         <div class="form-section-label">Habit stacking</div>
         <div class="form-card-row segmented-row">
           <div class="segmented-control segmented-control-3" id="wizard-stack-control">
@@ -295,7 +312,7 @@ export function openHabitWizard(options: WizardOptions = {}): void {
       radio.addEventListener("change", () => {
         state.freqType = radio.value as "daily" | "weekdays";
         weekdayPicker.classList.toggle("hidden", state.freqType !== "weekdays");
-        positionThumb(body.querySelector("#wizard-freq-control")!);
+        positionSegmentedThumb(body.querySelector("#wizard-freq-control")!);
       });
     });
     body.querySelectorAll<HTMLInputElement>("[data-weekday]").forEach((cb) => {
@@ -303,6 +320,13 @@ export function openHabitWizard(options: WizardOptions = {}): void {
         const day = Number(cb.dataset["weekday"]) as Weekday;
         if (cb.checked) state.weekdays.add(day);
         else state.weekdays.delete(day);
+      });
+    });
+
+    body.querySelectorAll<HTMLInputElement>('input[name="w-time"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        state.timeOfDay = radio.value as TimeOfDay;
+        positionSegmentedThumb(body.querySelector("#wizard-time-control")!);
       });
     });
 
@@ -315,15 +339,16 @@ export function openHabitWizard(options: WizardOptions = {}): void {
         stackDetailRow.classList.toggle("hidden", state.stackType === "none");
         stackHabitSelect.classList.toggle("hidden", state.stackType !== "habit");
         stackCustomInput.classList.toggle("hidden", state.stackType !== "custom");
-        positionThumb(body.querySelector("#wizard-stack-control")!);
+        positionSegmentedThumb(body.querySelector("#wizard-stack-control")!);
       });
     });
     stackHabitSelect.addEventListener("change", () => (state.stackHabitId = stackHabitSelect.value));
     stackCustomInput.addEventListener("input", () => (state.stackCustom = stackCustomInput.value));
 
     wireNav(body, () => true);
-    positionThumb(body.querySelector("#wizard-freq-control")!);
-    positionThumb(body.querySelector("#wizard-stack-control")!);
+    positionSegmentedThumb(body.querySelector("#wizard-freq-control")!);
+    positionSegmentedThumb(body.querySelector("#wizard-time-control")!);
+    positionSegmentedThumb(body.querySelector("#wizard-stack-control")!);
   }
 
   // ---- Step: make it stick (four laws + 2-min) ----
@@ -398,7 +423,7 @@ export function openHabitWizard(options: WizardOptions = {}): void {
         <div class="review-icon">${state.icon}</div>
         <div class="review-name">${escapeHtml(state.name)}</div>
         ${identityLabel ? `<div class="pill pill-identity">I am ${escapeHtml(identityLabel)}</div>` : ""}
-        <div class="review-line">${freqLabel}</div>
+        <div class="review-line">${freqLabel}${state.timeOfDay !== "anytime" ? ` · ${state.timeOfDay[0]!.toUpperCase()}${state.timeOfDay.slice(1)}` : ""}</div>
         ${anchorLabel ? `<div class="review-line muted">${escapeHtml(anchorLabel)}</div>` : ""}
         ${state.twoMinuteVersion ? `<div class="pill pill-two-min">2-min: ${escapeHtml(state.twoMinuteVersion)}</div>` : ""}
       </div>
@@ -412,6 +437,7 @@ export function openHabitWizard(options: WizardOptions = {}): void {
         icon: state.icon,
         identityId: state.identityId || null,
         frequency: frequency(),
+        timeOfDay: state.timeOfDay,
         cue: state.cue.trim(),
         craving: state.craving.trim(),
         response: state.response.trim(),
@@ -451,14 +477,6 @@ export function openHabitWizard(options: WizardOptions = {}): void {
         if (canAdvance()) goTo(step + 1);
       });
     }
-  }
-
-  function positionThumb(control: HTMLElement | null): void {
-    if (!control) return;
-    const inputs = Array.from(control.querySelectorAll<HTMLInputElement>(".segmented-input"));
-    const index = Math.max(0, inputs.findIndex((i) => i.checked));
-    control.style.setProperty("--segment-count", String(inputs.length));
-    control.style.setProperty("--segment-index", String(index));
   }
 
   document.body.classList.add("modal-open");

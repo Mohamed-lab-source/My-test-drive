@@ -130,3 +130,18 @@ export async function removeScorecardEntry(id: string): Promise<void> {
   state.scorecard = state.scorecard.filter((e) => e.id !== id);
   notify();
 }
+
+// ---- Backup / restore ----
+
+export const exportAllData = repo.exportAllData;
+export const isValidBackup = repo.isValidBackup;
+
+export async function restoreFromBackup(backup: repo.BackupFile): Promise<void> {
+  await repo.restoreFromBackup(backup);
+  await loadAll();
+}
+
+export async function resetAllData(): Promise<void> {
+  await repo.resetAllData();
+  await loadAll();
+}

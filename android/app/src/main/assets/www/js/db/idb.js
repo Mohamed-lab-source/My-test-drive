@@ -50,4 +50,24 @@ export async function remove(store, id) {
         tx.onerror = () => reject(tx.error);
     });
 }
+export async function clearStore(store) {
+    const db = await openDatabase();
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).clear();
+    return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+export async function putAll(store, values) {
+    const db = await openDatabase();
+    const tx = db.transaction(store, "readwrite");
+    const objectStore = tx.objectStore(store);
+    for (const value of values)
+        objectStore.put(value);
+    return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
 //# sourceMappingURL=idb.js.map

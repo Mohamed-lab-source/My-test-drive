@@ -12,6 +12,10 @@ import {
   isVote,
 } from "../domain/analytics.js";
 import { statTile, heatmapSVG, barList } from "../charts/svg.js";
+import { positionSegmentedThumb } from "../segmented.js";
+import { openSettings } from "./settings.js";
+
+let heatmapDays: 84 | 364 = 84;
 
 function weeklyInsight(thisWeek: number, prevWeek: number): { icon: string; text: string } | null {
   if (thisWeek === 0 && prevWeek === 0) return null;
@@ -29,7 +33,7 @@ export function renderDashboard(container: HTMLElement): void {
   const activeHabits = habits.filter((h) => !h.archived);
   const activeIdentities = identities.filter((i) => !i.archived);
 
-  const last84 = lastNDates(84);
+  const heatmapDates = lastNDates(heatmapDays);
   const last30 = lastNDates(30);
 
   const totalVotes = totalVotesAllTime(checkins);
@@ -42,7 +46,7 @@ export function renderDashboard(container: HTMLElement): void {
     0
   );
 
-  const consistencyCells = dailyConsistency(activeHabits, checkins, last84);
+  const consistencyCells = dailyConsistency(activeHabits, checkins, heatmapDates);
 
   const barData = activeHabits
     .map((h) => ({
@@ -59,9 +63,12 @@ export function renderDashboard(container: HTMLElement): void {
 
   container.innerHTML = `
     <section class="view">
-      <header class="view-header">
-        <h1>Dashboard</h1>
-        <p class="view-subtitle">The data behind the 1% — small, consistent votes compounding over time.</p>
+      <header class="view-header view-header-with-action">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="view-subtitle">The data behind the 1% — small, consistent votes compounding over time.</p>
+        </div>
+        <button type="button" class="icon-btn settings-gear" id="open-settings" aria-label="Settings">⚙️</button>
       </header>
 
       ${insight ? `<div class="insight-card"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
@@ -74,7 +81,14 @@ export function renderDashboard(container: HTMLElement): void {
       </div>
 
       <div class="card">
-        <h2 class="card-title">Consistency — last 12 weeks</h2>
+        <h2 class="card-title">Consistency</h2>
+        <div class="segmented-control segmented-control-2" id="heatmap-range-control">
+          <input type="radio" id="range-12w" name="range" value="84" ${heatmapDays === 84 ? "checked" : ""} class="segmented-input" />
+          <label for="range-12w" class="segmented-label">12 weeks</label>
+          <input type="radio" id="range-1y" name="range" value="364" ${heatmapDays === 364 ? "checked" : ""} class="segmented-input" />
+          <label for="range-1y" class="segmented-label">Full year</label>
+        </div>
+        <div class="heatmap-range-spacer"></div>
         ${
           consistencyCells.length === 0 || activeHabits.length === 0
             ? `<div class="empty-state">No habits yet.</div>`
@@ -114,4 +128,15 @@ export function renderDashboard(container: HTMLElement): void {
       </div>
     </section>
   `;
+
+  container.querySelector("#open-settings")!.addEventListener("click", () => openSettings());
+
+  const rangeControl = container.querySelector<HTMLElement>("#heatmap-range-control");
+  positionSegmentedThumb(rangeControl);
+  container.querySelectorAll<HTMLInputElement>('input[name="range"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      heatmapDays = Number(radio.value) as 84 | 364;
+      renderDashboard(container);
+    });
+  });
 }

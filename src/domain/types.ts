@@ -17,6 +17,8 @@ export type Frequency =
   | { type: "daily" }
   | { type: "weekdays"; days: Weekday[] };
 
+export type TimeOfDay = "anytime" | "morning" | "afternoon" | "evening";
+
 /** "After [ANCHOR], I will [this habit]." */
 export type StackAnchor =
   | { type: "none" }
@@ -30,6 +32,7 @@ export interface Habit {
   icon: string;
   identityId: string | null;
   frequency: Frequency;
+  timeOfDay: TimeOfDay;
 
   /** The Four Laws, captured at creation time. */
   cue: string;

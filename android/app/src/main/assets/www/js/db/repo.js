@@ -1,4 +1,4 @@
-import { getAll, put, remove } from "./idb.js";
+import { getAll, put, remove, clearStore, putAll, STORES } from "./idb.js";
 import { newId } from "../utils/id.js";
 // ---- Identities ----
 export async function listIdentities() {
@@ -23,7 +23,9 @@ export async function archiveIdentity(id) {
 }
 // ---- Habits ----
 export async function listHabits() {
-    return getAll("habits");
+    const habits = await getAll("habits");
+    // Backfill fields added after some habits were created.
+    return habits.map((h) => ({ ...h, timeOfDay: h.timeOfDay ?? "anytime" }));
 }
 export async function createHabit(input) {
     const habit = {
@@ -87,5 +89,41 @@ export async function addScorecardEntry(activity, rating, note = "") {
 }
 export async function removeScorecardEntry(id) {
     await remove("scorecard", id);
+}
+export async function exportAllData() {
+    const [identities, habits, checkins, scorecard] = await Promise.all([
+        listIdentities(),
+        listHabits(),
+        listCheckIns(),
+        listScorecard(),
+    ]);
+    return {
+        app: "atomic-habits",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: { identities, habits, checkins, scorecard },
+    };
+}
+export function isValidBackup(value) {
+    if (!value || typeof value !== "object")
+        return false;
+    const v = value;
+    if (v["app"] !== "atomic-habits" || typeof v["data"] !== "object" || v["data"] === null)
+        return false;
+    const data = v["data"];
+    return STORES.every((store) => Array.isArray(data[store]));
+}
+/** Replaces all local data with the contents of a backup. */
+export async function restoreFromBackup(backup) {
+    await Promise.all(STORES.map((store) => clearStore(store)));
+    await Promise.all([
+        putAll("identities", backup.data.identities),
+        putAll("habits", backup.data.habits),
+        putAll("checkins", backup.data.checkins),
+        putAll("scorecard", backup.data.scorecard),
+    ]);
+}
+export async function resetAllData() {
+    await Promise.all(STORES.map((store) => clearStore(store)));
 }
 //# sourceMappingURL=repo.js.map

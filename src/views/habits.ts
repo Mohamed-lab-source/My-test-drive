@@ -4,7 +4,13 @@ import { WEEKDAY_LABELS } from "../utils/date.js";
 import { openHabitWizard } from "./habitWizard.js";
 import { openHabitDetail } from "./habitDetail.js";
 import { enableSwipeToReveal } from "../swipe.js";
+import { undoableArchive } from "./undoArchive.js";
 import type { Habit, Frequency } from "../domain/types.js";
+
+// Persists across re-renders since renderHabits() rebuilds the DOM from
+// scratch on every store change; a plain module variable is the simplest way
+// to keep the query alive without losing the input's focus mid-render.
+let searchQuery = "";
 
 function stackDescription(habit: Habit, allHabits: Habit[]): string | null {
   const anchor = habit.stackAnchor;
@@ -26,15 +32,15 @@ function frequencyLabel(f: Frequency): string {
 
 function renderChainTree(
   habit: Habit,
-  allHabits: Habit[],
+  visibleHabits: Habit[],
   identityLabel: (id: string | null) => string,
   depth: number,
   index: number
 ): string {
-  const children = allHabits.filter(
-    (h) => !h.archived && h.stackAnchor.type === "habit" && h.stackAnchor.habitId === habit.id
+  const children = visibleHabits.filter(
+    (h) => h.stackAnchor.type === "habit" && h.stackAnchor.habitId === habit.id
   );
-  const desc = stackDescription(habit, allHabits);
+  const desc = stackDescription(habit, visibleHabits);
   return `
     <div class="habit-node" style="margin-left: ${depth * 22}px">
       <div class="swipe-row stagger-in" style="--stagger-index: ${index}">
@@ -66,9 +72,37 @@ function renderChainTree(
           </div>
         </div>
       </div>
-      ${children.map((c, i) => renderChainTree(c, allHabits, identityLabel, depth + 1, index + i + 1)).join("")}
+      ${children.map((c, i) => renderChainTree(c, visibleHabits, identityLabel, depth + 1, index + i + 1)).join("")}
     </div>
   `;
+}
+
+function buildListHtml(activeHabits: Habit[], identityLabel: (id: string | null) => string): string {
+  const query = searchQuery.trim().toLowerCase();
+  const visible = query ? activeHabits.filter((h) => h.name.toLowerCase().includes(query)) : activeHabits;
+
+  // Roots = habits not chained after another *visible* habit (so a chain
+  // renders as a tree; if the anchor isn't visible - archived, or filtered
+  // out by search - this falls back to root).
+  const roots = visible.filter((h) => {
+    const anchor = h.stackAnchor;
+    if (anchor.type !== "habit") return true;
+    return !visible.some((p) => p.id === anchor.habitId);
+  });
+
+  if (roots.length === 0 && query) {
+    return `<div class="empty-state">
+      <div class="empty-illustration">🔍</div>
+      <p>No habits match "${escapeHtml(searchQuery.trim())}".</p>
+    </div>`;
+  }
+  if (roots.length === 0) {
+    return `<div class="empty-state">
+      <div class="empty-illustration">🌱</div>
+      <p>No habits yet. Tap "Add a habit" above to plant your first one.</p>
+    </div>`;
+  }
+  return roots.map((h, i) => renderChainTree(h, visible, identityLabel, 0, i)).join("");
 }
 
 export function renderHabits(container: HTMLElement): void {
@@ -82,14 +116,6 @@ export function renderHabits(container: HTMLElement): void {
     return found ? found.statement : "no identity";
   };
 
-  // Roots = habits not chained after another still-active habit (so a chain
-  // renders as a tree; if the anchor habit was archived, this falls back to root).
-  const trueRoots = activeHabits.filter((h) => {
-    const anchor = h.stackAnchor;
-    if (anchor.type !== "habit") return true;
-    return !activeHabits.some((p) => p.id === anchor.habitId);
-  });
-
   container.innerHTML = `
     <section class="view">
       <header class="view-header">
@@ -101,22 +127,44 @@ export function renderHabits(container: HTMLElement): void {
         <span class="add-habit-cta-icon">+</span> Add a habit
       </button>
 
-      <div class="habit-list">
-        ${
-          trueRoots.length === 0
-            ? `<div class="empty-state">
-                <div class="empty-illustration">🌱</div>
-                <p>No habits yet. Tap "Add a habit" above to plant your first one.</p>
-              </div>`
-            : trueRoots.map((h, i) => renderChainTree(h, activeHabits, identityLabel, 0, i)).join("")
-        }
-      </div>
+      ${
+        activeHabits.length > 3
+          ? `<div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="habit-search" class="search-input" placeholder="Search habits" value="${escapeHtml(searchQuery)}" />
+              <button type="button" class="search-clear ${searchQuery ? "" : "hidden"}" id="habit-search-clear" aria-label="Clear search">&times;</button>
+            </div>`
+          : ""
+      }
+
+      <div class="habit-list" id="habit-list">${buildListHtml(activeHabits, identityLabel)}</div>
     </section>
   `;
 
   container.querySelector("#open-add-habit")!.addEventListener("click", () => openHabitWizard());
 
-  container.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach((btn) => {
+  const listEl = container.querySelector<HTMLElement>("#habit-list")!;
+  wireListInteractions(listEl, habits);
+
+  const searchInput = container.querySelector<HTMLInputElement>("#habit-search");
+  searchInput?.addEventListener("input", () => {
+    searchQuery = searchInput.value;
+    const clearBtn = container.querySelector<HTMLButtonElement>("#habit-search-clear");
+    if (clearBtn) clearBtn.classList.toggle("hidden", searchQuery.length === 0);
+    listEl.innerHTML = buildListHtml(activeHabits, identityLabel);
+    wireListInteractions(listEl, habits);
+  });
+  container.querySelector("#habit-search-clear")?.addEventListener("click", () => {
+    searchQuery = "";
+    if (searchInput) searchInput.value = "";
+    listEl.innerHTML = buildListHtml(activeHabits, identityLabel);
+    wireListInteractions(listEl, habits);
+    searchInput?.focus();
+  });
+}
+
+function wireListInteractions(listEl: HTMLElement, habits: Habit[]): void {
+  listEl.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const habit = habits.find((h) => h.id === btn.dataset["edit"]);
@@ -124,19 +172,20 @@ export function renderHabits(container: HTMLElement): void {
     });
   });
 
-  container.querySelectorAll<HTMLButtonElement>("[data-archive-habit]").forEach((btn) => {
+  listEl.querySelectorAll<HTMLButtonElement>("[data-archive-habit]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      archiveHabit(btn.dataset["archiveHabit"]!);
+      const habit = habits.find((h) => h.id === btn.dataset["archiveHabit"]);
+      if (habit) undoableArchive(habit);
     });
   });
 
-  container.querySelectorAll<HTMLElement>("[data-open-detail]").forEach((el) => {
+  listEl.querySelectorAll<HTMLElement>("[data-open-detail]").forEach((el) => {
     el.addEventListener("click", () => {
       const habit = habits.find((h) => h.id === el.dataset["openDetail"]);
       if (habit) openHabitDetail(habit);
     });
   });
 
-  enableSwipeToReveal(container);
+  enableSwipeToReveal(listEl);
 }
