@@ -1,5 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
@@ -11,7 +21,7 @@ import { daysUntil, useLeftovers } from "../context/LeftoversContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
-import { fetchCuisines, fetchRandomRecipe, fetchRecipes, fetchRecommended } from "../api/endpoints";
+import { fetchCuisines, fetchRandomRecipe, fetchRecipeDetail, fetchRecipes, fetchRecommended } from "../api/endpoints";
 import { apiErrorMessage } from "../api/client";
 import { rankRecipes } from "../utils/rank";
 import { RecipeCard } from "../components/RecipeCard";
@@ -53,6 +63,7 @@ export function HomeScreen({ navigation }: Props) {
   const [recommended, setRecommended] = useState<RecipeSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [surprising, setSurprising] = useState(false);
+  const [cookingSlug, setCookingSlug] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [cuisineList] = await Promise.all([fetchCuisines()]);
@@ -86,6 +97,25 @@ export function HomeScreen({ navigation }: Props) {
       Alert.alert(t("home.surpriseMeError"), apiErrorMessage(error));
     } finally {
       setSurprising(false);
+    }
+  };
+
+  const handleCookAgain = async (recipe: RecipeSummary) => {
+    setCookingSlug(recipe.slug);
+    try {
+      const detail = await fetchRecipeDetail(recipe.slug);
+      navigation.navigate("CookMode", {
+        slug: detail.slug,
+        title: detail.title,
+        cuisineSlug: detail.cuisine.slug,
+        steps: detail.steps,
+        ingredients: detail.ingredients,
+        servings: detail.baseServings,
+      });
+    } catch (error) {
+      Alert.alert(t("home.cookAgainError"), apiErrorMessage(error));
+    } finally {
+      setCookingSlug(null);
     }
   };
 
@@ -255,6 +285,19 @@ export function HomeScreen({ navigation }: Props) {
                         pressScale={0.96}
                         onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
                       >
+                        <AnimatedPressable
+                          style={styles.cookAgainButton}
+                          pressScale={0.85}
+                          onPress={() => handleCookAgain(r)}
+                          disabled={cookingSlug !== null}
+                          accessibilityLabel={t("home.cookAgain")}
+                        >
+                          {cookingSlug === r.slug ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <Text style={styles.cookAgainIcon}>▶</Text>
+                          )}
+                        </AnimatedPressable>
                         <Text style={styles.recentEmoji}>{CUISINE_EMOJI[r.cuisine.slug] ?? "🍽️"}</Text>
                         <Text style={styles.recentTitle} numberOfLines={2}>
                           {r.title}
@@ -371,8 +414,22 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing(1.5),
       marginEnd: spacing(1.5),
       alignItems: "center",
+      position: "relative",
     },
     recentEmoji: { fontSize: 28 },
     recentTitle: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: spacing(1), textAlign: "center" },
+    cookAgainButton: {
+      position: "absolute",
+      top: spacing(0.75),
+      end: spacing(0.75),
+      width: 24,
+      height: 24,
+      borderRadius: radius.pill,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1,
+    },
+    cookAgainIcon: { color: "#fff", fontSize: 10 },
     recommendedItem: {},
   });
