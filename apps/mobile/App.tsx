@@ -8,6 +8,7 @@ import { UnitsProvider } from "./src/context/UnitsContext";
 import { RecentlyViewedProvider } from "./src/context/RecentlyViewedContext";
 import { NotesProvider } from "./src/context/NotesContext";
 import { MealPlanProvider } from "./src/context/MealPlanContext";
+import { CookStreakProvider } from "./src/context/CookStreakContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -34,7 +35,9 @@ export default function App() {
                   <RecentlyViewedProvider>
                     <NotesProvider>
                       <MealPlanProvider>
-                        <AppShell />
+                        <CookStreakProvider>
+                          <AppShell />
+                        </CookStreakProvider>
                       </MealPlanProvider>
                     </NotesProvider>
                   </RecentlyViewedProvider>

@@ -135,6 +135,9 @@ const en = {
 
   "profile.saveTitle": "Save your preferences and lists",
   "profile.saveSubtitle": "Sign in to sync your diet goals and shopping list history.",
+  "profile.streakCurrent": "Day streak",
+  "profile.streakLongest": "Best streak",
+  "profile.streakTotal": "Recipes cooked",
   "profile.login": "Log in",
   "profile.createAccount": "Create an account",
   "profile.dietGoal": "Diet goal",
@@ -219,6 +222,7 @@ const en = {
   "cookMode.timeUp": "Time's up!",
   "cookMode.doneTitle": "Nicely done!",
   "cookMode.doneMessage": "You finished all the steps. Enjoy your meal!",
+  "cookMode.doneMessageStreak": "You finished all the steps. Enjoy your meal! 🔥 {streak}-day cook streak",
   "cookMode.doneButton": "Back to recipe",
 
   "tabs.home": "Home",
@@ -358,6 +362,9 @@ const ar: Record<keyof typeof en, string> = {
 
   "profile.saveTitle": "احفظي تفضيلاتك وقوائمك",
   "profile.saveSubtitle": "سجّلي الدخول لمزامنة أهدافك الغذائية وسجل قوائم التسوق.",
+  "profile.streakCurrent": "أيام متتالية",
+  "profile.streakLongest": "أفضل سلسلة",
+  "profile.streakTotal": "وصفات تم طهيها",
   "profile.login": "تسجيل الدخول",
   "profile.createAccount": "إنشاء حساب",
   "profile.dietGoal": "الهدف الغذائي",
@@ -442,6 +449,7 @@ const ar: Record<keyof typeof en, string> = {
   "cookMode.timeUp": "انتهى الوقت!",
   "cookMode.doneTitle": "أحسنتِ!",
   "cookMode.doneMessage": "أنهيتِ كل الخطوات. بالهناء والشفاء!",
+  "cookMode.doneMessageStreak": "أنهيتِ كل الخطوات. بالهناء والشفاء! 🔥 سلسلة طهي لمدة {streak} يوم",
   "cookMode.doneButton": "العودة للوصفة",
 
   "tabs.home": "الرئيسية",

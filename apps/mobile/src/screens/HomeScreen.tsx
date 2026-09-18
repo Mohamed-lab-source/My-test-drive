@@ -6,6 +6,7 @@ import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
+import { useCookStreak } from "../context/CookStreakContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
@@ -34,6 +35,7 @@ type Props = CompositeScreenProps<
 
 export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
+  const { displayStreak } = useCookStreak();
   const { preference } = useLocalPreference();
   const { recentRecipes } = useRecentlyViewed();
   const { t, locale } = useLocale();
@@ -98,9 +100,16 @@ export function HomeScreen({ navigation }: Props) {
         ListHeaderComponent={
           <View>
             <View style={styles.header}>
-              <Text style={styles.greeting}>
-                {greetingName ? t("home.greeting", { name: greetingName }) : t("home.greetingGeneric")}
-              </Text>
+              <View style={styles.greetingRow}>
+                <Text style={styles.greeting}>
+                  {greetingName ? t("home.greeting", { name: greetingName }) : t("home.greetingGeneric")}
+                </Text>
+                {displayStreak > 0 ? (
+                  <View style={styles.streakBadge}>
+                    <Text style={styles.streakBadgeText}>🔥 {displayStreak}</Text>
+                  </View>
+                ) : null}
+              </View>
               <Text style={styles.headline}>{t("home.headline")}</Text>
             </View>
 
@@ -227,7 +236,15 @@ const createStyles = (colors: ThemeColors) =>
     safe: { flex: 1, backgroundColor: colors.background },
     listContent: { padding: spacing(3), paddingBottom: spacing(6) },
     header: { marginBottom: spacing(2) },
+    greetingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
     greeting: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    streakBadge: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing(1.25),
+      paddingVertical: 3,
+    },
+    streakBadgeText: { fontSize: 12, fontWeight: "800", color: colors.primaryDark },
     headline: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 4 },
     searchBar: {
       flexDirection: "row",

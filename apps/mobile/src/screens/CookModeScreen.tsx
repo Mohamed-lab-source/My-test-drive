@@ -12,6 +12,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { useAuth } from "../context/AuthContext";
+import { useCookStreak } from "../context/CookStreakContext";
 import { formatQuantity } from "../utils/units";
 import { intersectAllergens } from "../utils/allergens";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -26,6 +27,7 @@ export function CookModeScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
   const { user } = useAuth();
+  const { recordCooked } = useCookStreak();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [index, setIndex] = useState(0);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
@@ -44,7 +46,9 @@ export function CookModeScreen({ route, navigation }: Props) {
 
   const goNext = () => {
     if (isLast) {
-      Alert.alert(t("cookMode.doneTitle"), t("cookMode.doneMessage"), [
+      const streak = recordCooked();
+      const message = streak > 1 ? t("cookMode.doneMessageStreak", { streak }) : t("cookMode.doneMessage");
+      Alert.alert(t("cookMode.doneTitle"), message, [
         { text: t("cookMode.doneButton"), onPress: () => navigation.goBack() },
       ]);
       return;

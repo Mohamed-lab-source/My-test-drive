@@ -6,6 +6,7 @@ import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
+import { useCookStreak } from "../context/CookStreakContext";
 import { apiErrorMessage } from "../api/client";
 import { fetchCuisines } from "../api/endpoints";
 import { Chip } from "../components/Chip";
@@ -28,6 +29,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { t, locale, setLocale } = useLocale();
   const { colors, preference: themePreference, setPreference: setThemePreference } = useTheme();
   const { unitSystem, setUnitSystem } = useUnits();
+  const { displayStreak, longestStreak, totalCooked } = useCookStreak();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
@@ -71,6 +73,13 @@ export function ProfileScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.loggedOut}>
           <Text style={styles.headline}>{t("profile.saveTitle")}</Text>
           <Text style={styles.subtitle}>{t("profile.saveSubtitle")}</Text>
+          <StreakStats
+            displayStreak={displayStreak}
+            longestStreak={longestStreak}
+            totalCooked={totalCooked}
+            t={t}
+            styles={styles}
+          />
           <View style={styles.buttonSpacing}>
             <PrimaryButton label={t("profile.login")} onPress={() => navigation.navigate("Login")} />
           </View>
@@ -144,6 +153,14 @@ export function ProfileScreen({ navigation }: Props) {
         <Text style={styles.headline}>{user.name}</Text>
         <Text style={styles.subtitle}>{user.email}</Text>
 
+        <StreakStats
+          displayStreak={displayStreak}
+          longestStreak={longestStreak}
+          totalCooked={totalCooked}
+          t={t}
+          styles={styles}
+        />
+
         <Text style={styles.section}>{t("profile.dietGoal")}</Text>
         <View style={styles.chipRow}>
           {GOALS.map((g) => (
@@ -202,6 +219,39 @@ export function ProfileScreen({ navigation }: Props) {
   );
 }
 
+type Styles = ReturnType<typeof createStyles>;
+
+function StreakStats({
+  displayStreak,
+  longestStreak,
+  totalCooked,
+  t,
+  styles,
+}: {
+  displayStreak: number;
+  longestStreak: number;
+  totalCooked: number;
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+  styles: Styles;
+}) {
+  return (
+    <View style={styles.streakRow}>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>🔥 {displayStreak}</Text>
+        <Text style={styles.streakLabel}>{t("profile.streakCurrent")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{longestStreak}</Text>
+        <Text style={styles.streakLabel}>{t("profile.streakLongest")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{totalCooked}</Text>
+        <Text style={styles.streakLabel}>{t("profile.streakTotal")}</Text>
+      </View>
+    </View>
+  );
+}
+
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
@@ -215,4 +265,14 @@ const createStyles = (colors: ThemeColors) =>
     logoutButton: { marginTop: spacing(5) },
     loggedOut: { flexGrow: 1, padding: spacing(3), justifyContent: "center" },
     buttonSpacing: { marginTop: spacing(2) },
+    streakRow: {
+      flexDirection: "row",
+      backgroundColor: colors.chipBackground,
+      borderRadius: 14,
+      marginTop: spacing(2.5),
+      paddingVertical: spacing(1.5),
+    },
+    streakStat: { flex: 1, alignItems: "center" },
+    streakValue: { fontSize: 18, fontWeight: "800", color: colors.primaryDark },
+    streakLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2, textAlign: "center" },
   });
