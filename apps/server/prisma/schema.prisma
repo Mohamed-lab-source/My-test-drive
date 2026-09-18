@@ -118,6 +118,12 @@ model Ingredient {
   substituteEn     String?
   substituteAr     String?
   allergens        Allergen[]         @default([])
+  // Diet-goal-driven swap, e.g. { "LOSE_WEIGHT": "Oatmeal Flour" }. The value
+  // is another Ingredient's `name`, looked up at request time so its own
+  // nutrition/price feed the recalculated totals. Keys are DietGoal values;
+  // stored as loose JSON (not a relation) so recipes.ts can look several up
+  // in one query without a self-join.
+  goalSubstitutes  Json?
   recipeUses       RecipeIngredient[]
 }
 

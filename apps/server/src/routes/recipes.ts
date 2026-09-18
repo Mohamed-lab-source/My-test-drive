@@ -227,8 +227,54 @@ recipesRouter.get("/recipes/recommended", optionalAuth, async (req, res) => {
   res.json(scored.map((s) => s.summary));
 });
 
+const GOAL_SUBSTITUTE_GOALS = ["LOSE_WEIGHT", "BUILD_MUSCLE", "GAIN_WEIGHT"] as const;
+type GoalSubstituteGoal = (typeof GOAL_SUBSTITUTE_GOALS)[number];
+
+function parseGoalSubstituteGoal(value: unknown): GoalSubstituteGoal | null {
+  return typeof value === "string" && (GOAL_SUBSTITUTE_GOALS as readonly string[]).includes(value)
+    ? (value as GoalSubstituteGoal)
+    : null;
+}
+
+/**
+ * A recipe ingredient's Ingredient row, possibly swapped for the ingredient
+ * named in its `goalSubstitutes[goal]` (e.g. Flour -> Oatmeal Flour for
+ * LOSE_WEIGHT). The swap keeps the original quantity/unit -- it's a 1:1
+ * weight/volume/piece substitution, not a recipe rewrite -- so nutrition and
+ * cost recompute correctly from the substitute's own per-unit figures.
+ */
+async function applyGoalSubstitutions<
+  T extends { ingredient: { name: string; nameAr: string | null; goalSubstitutes: unknown } }
+>(ingredients: T[], goal: GoalSubstituteGoal | null) {
+  if (!goal) {
+    return ingredients.map((ri) => ({ ri, substitutedFrom: null as string | null }));
+  }
+
+  const substituteNames = new Set<string>();
+  for (const ri of ingredients) {
+    const map = ri.ingredient.goalSubstitutes as Partial<Record<GoalSubstituteGoal, string>> | null;
+    const subName = map?.[goal];
+    if (subName) substituteNames.add(subName);
+  }
+  if (substituteNames.size === 0) {
+    return ingredients.map((ri) => ({ ri, substitutedFrom: null as string | null }));
+  }
+
+  const substitutes = await prisma.ingredient.findMany({ where: { name: { in: Array.from(substituteNames) } } });
+  const substituteByName = new Map(substitutes.map((s) => [s.name, s]));
+
+  return ingredients.map((ri) => {
+    const map = ri.ingredient.goalSubstitutes as Partial<Record<GoalSubstituteGoal, string>> | null;
+    const subName = map?.[goal];
+    const sub = subName ? substituteByName.get(subName) : undefined;
+    if (!sub) return { ri, substitutedFrom: null as string | null };
+    return { ri: { ...ri, ingredient: sub }, substitutedFrom: ri.ingredient.name };
+  });
+}
+
 recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   const lang = parseLang(req.query.lang);
+  const goal = parseGoalSubstituteGoal(req.query.goal);
   const recipe = await prisma.recipe.findUnique({
     where: { slug: req.params.slug },
     include: {
@@ -250,7 +296,10 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     ratingCount > 0 ? Math.round((recipe.ratings.reduce((sum, r) => sum + r.score, 0) / ratingCount) * 10) / 10 : null;
   const myRating = req.userId ? recipe.ratings.find((r) => r.userId === req.userId)?.score ?? null : null;
 
-  const totals = recipe.ingredients.reduce(
+  const adapted = await applyGoalSubstitutions(recipe.ingredients, goal);
+  const effectiveIngredients = adapted.map((a) => a.ri);
+
+  const totals = effectiveIngredients.reduce(
     (acc, ri) => ({
       kcal: acc.kcal + ri.quantity * ri.ingredient.caloriesPerUnit,
       protein: acc.protein + ri.quantity * ri.ingredient.proteinPerUnit,
@@ -265,9 +314,9 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     fatGrams: Math.round((totals.fat / recipe.baseServings) * 10) / 10,
     carbsGrams: Math.round((totals.carbs / recipe.baseServings) * 10) / 10,
   };
-  const costPerServing = estimateCostPerServing(recipe.ingredients, recipe.baseServings);
-  const allergens = collectAllergens(recipe.ingredients);
-  const { caloriesPerServing, proteinPerServing } = estimateNutritionSummary(recipe.ingredients, recipe.baseServings);
+  const costPerServing = estimateCostPerServing(effectiveIngredients, recipe.baseServings);
+  const allergens = collectAllergens(effectiveIngredients);
+  const { caloriesPerServing, proteinPerServing } = estimateNutritionSummary(effectiveIngredients, recipe.baseServings);
 
   res.json({
     id: recipe.id,
@@ -293,13 +342,15 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     allergens,
     caloriesPerServing,
     proteinPerServing,
-    ingredients: recipe.ingredients.map((ri) => ({
+    adaptedForGoal: goal,
+    ingredients: adapted.map(({ ri, substitutedFrom }) => ({
       name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,
       unit: ri.displayUnit,
       note: ri.note,
       substitute: lang === "ar" ? ri.ingredient.substituteAr ?? ri.ingredient.substituteEn : ri.ingredient.substituteEn,
       allergens: ri.ingredient.allergens,
+      substitutedFrom,
     })),
     steps: recipe.steps.map((s) => ({
       order: s.order,

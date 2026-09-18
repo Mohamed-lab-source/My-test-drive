@@ -95,6 +95,10 @@ const en = {
   "recipeDetail.rateLoginHint": "Log in to rate this recipe.",
   "recipeDetail.rateError": "Couldn't save your rating. Try again.",
   "recipeDetail.substituteHint": "No this? Try: {substitute}",
+  "recipeDetail.adaptSectionTitle": "Adapt to your goal",
+  "recipeDetail.adaptOriginal": "Original",
+  "recipeDetail.adaptAdapted": "Adapted for you",
+  "recipeDetail.substitutedFrom": "Swapped from {original} to fit your goal",
   "recipeDetail.myNotes": "My notes",
   "recipeDetail.myNotesPlaceholder": "Jot down tweaks for next time (e.g. \"used less salt\")…",
 
@@ -311,6 +315,10 @@ const ar: Record<keyof typeof en, string> = {
   "recipeDetail.rateLoginHint": "سجّل الدخول لتقييم هذه الوصفة.",
   "recipeDetail.rateError": "تعذّر حفظ تقييمك. حاول مرة أخرى.",
   "recipeDetail.substituteHint": "لا تملكه؟ جرّب: {substitute}",
+  "recipeDetail.adaptSectionTitle": "التكيّف مع هدفك",
+  "recipeDetail.adaptOriginal": "الوصفة الأصلية",
+  "recipeDetail.adaptAdapted": "مُعدّلة لهدفك",
+  "recipeDetail.substitutedFrom": "استُبدلت من {original} لتناسب هدفك",
   "recipeDetail.myNotes": "ملاحظاتي",
   "recipeDetail.myNotesPlaceholder": "دوّن تعديلاتك للمرة القادمة (مثلاً: \"استخدمت ملح أقل\")…",
 

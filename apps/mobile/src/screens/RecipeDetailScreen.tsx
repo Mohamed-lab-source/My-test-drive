@@ -8,6 +8,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipeDetail, rateRecipe } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
+import { Chip } from "../components/Chip";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
@@ -15,6 +16,7 @@ import { StarRating } from "../components/StarRating";
 import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useUnits } from "../context/UnitsContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useNotes } from "../context/NotesContext";
@@ -24,7 +26,9 @@ import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
-import type { RecipeDetail } from "../api/types";
+import type { DietGoal, RecipeDetail } from "../api/types";
+
+const BODY_GOALS: DietGoal[] = ["LOSE_WEIGHT", "BUILD_MUSCLE", "GAIN_WEIGHT"];
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeDetail">;
 
@@ -40,6 +44,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { unitSystem } = useUnits();
   const { isAuthenticated, user } = useAuth();
+  const { preference: localPreference } = useLocalPreference();
   const { addRecent } = useRecentlyViewed();
   const { getNote, setNote } = useNotes();
   const [noteText, setNoteText] = useState("");
@@ -51,9 +56,13 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [rating, setRating] = useState(false);
   const shareCardRef = useRef<View>(null);
 
+  const myGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : localPreference.dietGoal;
+  const hasBodyGoal = BODY_GOALS.includes(myGoal);
+  const [wantsAdapted, setWantsAdapted] = useState(true);
+
   useEffect(() => {
     setLoading(true);
-    fetchRecipeDetail(slug)
+    fetchRecipeDetail(slug, hasBodyGoal && wantsAdapted ? myGoal : undefined)
       .then((data) => {
         setRecipe(data);
         setServings((prev) => (prev === 1 ? data.baseServings : prev));
@@ -62,7 +71,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, locale]);
+  }, [slug, locale, hasBodyGoal, wantsAdapted, myGoal]);
 
   useEffect(() => {
     setNoteText(getNote(slug));
@@ -174,6 +183,18 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             />
           </View>
 
+          {hasBodyGoal ? (
+            <View style={styles.adaptRow}>
+              <Text style={[styles.sectionTitle, styles.adaptTitle, { textAlign }]}>
+                {t("recipeDetail.adaptSectionTitle")}
+              </Text>
+              <View style={styles.chipRow}>
+                <Chip label={t("recipeDetail.adaptOriginal")} selected={!wantsAdapted} onPress={() => setWantsAdapted(false)} />
+                <Chip label={t("recipeDetail.adaptAdapted")} selected={wantsAdapted} onPress={() => setWantsAdapted(true)} />
+              </View>
+            </View>
+          ) : null}
+
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.nutrition")}</Text>
           <View style={styles.nutritionRow}>
             <NutritionStat
@@ -244,6 +265,11 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
                 {ingredientConflicts.length > 0 ? (
                   <Text style={[styles.ingredientAllergenNote, { textAlign }]}>
                     {ingredientConflicts.map((a) => t(`allergen.${a}` as TranslationKey)).join(", ")}
+                  </Text>
+                ) : null}
+                {ing.substitutedFrom ? (
+                  <Text style={[styles.ingredientAdaptedNote, { textAlign }]}>
+                    {t("recipeDetail.substitutedFrom", { original: ing.substitutedFrom })}
                   </Text>
                 ) : null}
                 {ing.substitute ? (
@@ -468,6 +494,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   ingredientAllergenNote: { color: colors.danger, fontSize: 11, fontWeight: "700", marginTop: 2 },
   ingredientQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
   ingredientSubstitute: { color: colors.primaryDark, fontSize: 12, marginTop: 2 },
+  ingredientAdaptedNote: { color: colors.secondary, fontSize: 12, fontWeight: "600", marginTop: 2 },
+  adaptRow: { marginTop: spacing(1) },
+  adaptTitle: { marginBottom: spacing(1) },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
   stepperRow: { flexDirection: "row", alignItems: "center" },
   stepperButton: {
     width: 40,

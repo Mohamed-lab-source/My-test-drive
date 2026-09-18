@@ -59,6 +59,8 @@ export type RecipeIngredient = {
   note: string | null;
   substitute: string | null;
   allergens: Allergen[];
+  /** Original ingredient name this was swapped from for a goal, e.g. "Flour" when name is "Oatmeal Flour". Null when not substituted. */
+  substitutedFrom: string | null;
 };
 
 export type RecipeStep = {
@@ -80,6 +82,7 @@ export type RecipeDetail = RecipeSummary & {
   steps: RecipeStep[];
   nutritionPerServing: NutritionPerServing;
   myRating: number | null;
+  adaptedForGoal: DietGoal | null;
 };
 
 export type RatingResult = {

@@ -60,8 +60,9 @@ export async function fetchRecommended() {
   return data;
 }
 
-export async function fetchRecipeDetail(slug: string) {
-  const { data } = await api.get<RecipeDetail>(`/recipes/${slug}`);
+export async function fetchRecipeDetail(slug: string, goal?: DietGoal) {
+  const params = goal && goal !== "NONE" ? { goal } : undefined;
+  const { data } = await api.get<RecipeDetail>(`/recipes/${slug}`, { params });
   return data;
 }
 

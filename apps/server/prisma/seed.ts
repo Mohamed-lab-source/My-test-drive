@@ -1,4 +1,4 @@
-import { PrismaClient, DishTag, Difficulty, Allergen } from "@prisma/client";
+import { PrismaClient, Prisma, DishTag, Difficulty, Allergen } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -14,6 +14,11 @@ const prisma = new PrismaClient();
 // app's language is set to Arabic.
 type Nutrition = { kcal: number; protein: number; fat: number; carbs: number };
 
+// Diet-goal-driven ingredient swap, e.g. Flour -> Oatmeal Flour for
+// LOSE_WEIGHT. The value must be another ingredient's `name` in this same
+// list, so its nutrition/price can be looked up at request time.
+type GoalSubstitutes = { LOSE_WEIGHT?: string; BUILD_MUSCLE?: string; GAIN_WEIGHT?: string };
+
 const ingredientMaster: {
   name: string;
   nameAr: string;
@@ -24,16 +29,17 @@ const ingredientMaster: {
   substituteEn?: string;
   substituteAr?: string;
   allergens?: Allergen[];
+  goalSubstitutes?: GoalSubstitutes;
 }[] = [
-  { name: "Flour", nameAr: "دقيق", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 364, protein: 10, fat: 1, carbs: 76 } , substituteEn: "1:1 all-purpose or whole wheat flour", substituteAr: "دقيق القمح الكامل بنفس النسبة" , allergens: [Allergen.GLUTEN] },
+  { name: "Flour", nameAr: "دقيق", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 364, protein: 10, fat: 1, carbs: 76 } , substituteEn: "1:1 all-purpose or whole wheat flour", substituteAr: "دقيق القمح الكامل بنفس النسبة" , allergens: [Allergen.GLUTEN], goalSubstitutes: { LOSE_WEIGHT: "Oatmeal Flour" } },
   { name: "Yeast", nameAr: "خميرة", unit: "g", pricePerUnit: 0.2, category: "pantry", nutrition: { kcal: 325, protein: 40, fat: 7, carbs: 41 } , substituteEn: "same amount of baking powder for quick breads (won't rise as much)", substituteAr: "بيكنج باودر بنفس الكمية للخبز السريع (لن يرتفع بنفس القدر)" },
   { name: "Olive Oil", nameAr: "زيت زيتون", unit: "ml", pricePerUnit: 0.25, category: "pantry", nutrition: { kcal: 884, protein: 0, fat: 100, carbs: 0 } , substituteEn: "any neutral vegetable oil", substituteAr: "أي زيت نباتي محايد" },
   { name: "Salt", nameAr: "ملح", unit: "g", pricePerUnit: 0.01, category: "pantry", nutrition: { kcal: 0, protein: 0, fat: 0, carbs: 0 } },
-  { name: "Sugar", nameAr: "سكر", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 387, protein: 0, fat: 0, carbs: 100 } , substituteEn: "honey, use slightly less", substituteAr: "عسل بكمية أقل قليلاً" },
+  { name: "Sugar", nameAr: "سكر", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 387, protein: 0, fat: 0, carbs: 100 } , substituteEn: "honey, use slightly less", substituteAr: "عسل بكمية أقل قليلاً", goalSubstitutes: { LOSE_WEIGHT: "Stevia" } },
   { name: "Tomato", nameAr: "طماطم", unit: "g", pricePerUnit: 0.02, category: "produce", nutrition: { kcal: 18, protein: 0.9, fat: 0.2, carbs: 3.9 } , substituteEn: "canned chopped tomatoes", substituteAr: "طماطم معلبة مقطعة" },
   { name: "Mozzarella Cheese", nameAr: "جبنة موزاريلا", unit: "g", pricePerUnit: 0.35, category: "dairy", nutrition: { kcal: 280, protein: 22, fat: 22, carbs: 2.2 } , substituteEn: "any mild melting cheese like Gouda", substituteAr: "أي جبنة تذوب بسهولة مثل الجودة" , allergens: [Allergen.DAIRY] },
   { name: "Basil Leaves", nameAr: "ورق ريحان", unit: "g", pricePerUnit: 0.3, category: "produce", nutrition: { kcal: 23, protein: 3.2, fat: 0.6, carbs: 2.7 } , substituteEn: "dried basil, use a third of the amount", substituteAr: "ريحان مجفف بثلث الكمية" },
-  { name: "Spaghetti Pasta", nameAr: "مكرونة اسباجيتي", unit: "g", pricePerUnit: 0.045, category: "pantry", nutrition: { kcal: 371, protein: 13, fat: 1.5, carbs: 75 } , substituteEn: "any long pasta shape", substituteAr: "أي شكل معكرونة طويلة" , allergens: [Allergen.GLUTEN] },
+  { name: "Spaghetti Pasta", nameAr: "مكرونة اسباجيتي", unit: "g", pricePerUnit: 0.045, category: "pantry", nutrition: { kcal: 371, protein: 13, fat: 1.5, carbs: 75 } , substituteEn: "any long pasta shape", substituteAr: "أي شكل معكرونة طويلة" , allergens: [Allergen.GLUTEN], goalSubstitutes: { LOSE_WEIGHT: "Zucchini Noodles", BUILD_MUSCLE: "Chickpea Pasta" } },
   { name: "Egg", nameAr: "بيضة", unit: "pcs", pricePerUnit: 6, category: "dairy", nutrition: { kcal: 78, protein: 6.3, fat: 5.3, carbs: 0.6 } , substituteEn: "1/4 cup plain yogurt per egg for baking", substituteAr: "ربع كوب زبادي سادة لكل بيضة في الحلويات" , allergens: [Allergen.EGGS] },
   { name: "Beef Bacon", nameAr: "بيكون بقري", unit: "g", pricePerUnit: 0.3, category: "meat", nutrition: { kcal: 300, protein: 20, fat: 24, carbs: 1 } , substituteEn: "smoked turkey slices", substituteAr: "شرائح ديك رومي مدخن" },
   { name: "Parmesan Cheese", nameAr: "جبنة بارميزان", unit: "g", pricePerUnit: 0.5, category: "dairy", nutrition: { kcal: 431, protein: 38, fat: 29, carbs: 4.1 } , substituteEn: "Pecorino or any hard aged cheese", substituteAr: "جبنة بيكورينو أو أي جبنة صلبة معتقة" , allergens: [Allergen.DAIRY] },
@@ -42,8 +48,8 @@ const ingredientMaster: {
   { name: "Ladyfinger Biscuits", nameAr: "بسكويت أصابع الست", unit: "pcs", pricePerUnit: 2, category: "pantry", nutrition: { kcal: 38, protein: 0.8, fat: 0.6, carbs: 7 } , substituteEn: "sponge cake slices", substituteAr: "شرائح كيك إسفنجي" , allergens: [Allergen.GLUTEN, Allergen.EGGS, Allergen.DAIRY] },
   { name: "Cocoa Powder", nameAr: "بودرة كاكاو", unit: "g", pricePerUnit: 0.2, category: "pantry", nutrition: { kcal: 228, protein: 20, fat: 14, carbs: 58 } , substituteEn: "melted dark chocolate, reduce the added sugar", substituteAr: "شوكولاتة داكنة مذابة مع تقليل السكر" },
   { name: "Brewed Coffee", nameAr: "قهوة مغلية", unit: "ml", pricePerUnit: 0.1, category: "pantry", nutrition: { kcal: 1, protein: 0.1, fat: 0, carbs: 0 } , substituteEn: "instant coffee dissolved in hot water", substituteAr: "قهوة سريعة الذوبان في ماء ساخن" },
-  { name: "Rice", nameAr: "أرز", unit: "g", pricePerUnit: 0.035, category: "pantry", nutrition: { kcal: 365, protein: 7, fat: 0.7, carbs: 80 } , substituteEn: "any long-grain rice", substituteAr: "أي أرز طويل الحبة" },
-  { name: "Chicken Breast", nameAr: "صدر دجاج", unit: "g", pricePerUnit: 0.18, category: "meat", nutrition: { kcal: 165, protein: 31, fat: 3.6, carbs: 0 } , substituteEn: "boneless chicken thigh", substituteAr: "فخذ دجاج منزوع العظم" },
+  { name: "Rice", nameAr: "أرز", unit: "g", pricePerUnit: 0.035, category: "pantry", nutrition: { kcal: 365, protein: 7, fat: 0.7, carbs: 80 } , substituteEn: "any long-grain rice", substituteAr: "أي أرز طويل الحبة", goalSubstitutes: { LOSE_WEIGHT: "Cauliflower Rice", BUILD_MUSCLE: "Quinoa" } },
+  { name: "Chicken Breast", nameAr: "صدر دجاج", unit: "g", pricePerUnit: 0.18, category: "meat", nutrition: { kcal: 165, protein: 31, fat: 3.6, carbs: 0 } , substituteEn: "boneless chicken thigh", substituteAr: "فخذ دجاج منزوع العظم", goalSubstitutes: { GAIN_WEIGHT: "Chicken Thigh" } },
   { name: "Soy Sauce", nameAr: "صويا صوص", unit: "ml", pricePerUnit: 0.06, category: "pantry", nutrition: { kcal: 53, protein: 8, fat: 0, carbs: 4.9 } , substituteEn: "Worcestershire sauce mixed with a little water", substituteAr: "صوص ووستر ممزوج بقليل من الماء" , allergens: [Allergen.SOY, Allergen.GLUTEN] },
   { name: "Spring Onion", nameAr: "بصل أخضر", unit: "g", pricePerUnit: 0.03, category: "produce", nutrition: { kcal: 32, protein: 1.8, fat: 0.2, carbs: 7.3 } , substituteEn: "regular onion, use less", substituteAr: "بصل عادي بكمية أقل" },
   { name: "Carrot", nameAr: "جزر", unit: "g", pricePerUnit: 0.015, category: "produce", nutrition: { kcal: 41, protein: 0.9, fat: 0.2, carbs: 10 } },
@@ -57,7 +63,7 @@ const ingredientMaster: {
   { name: "Coconut Milk", nameAr: "حليب جوز الهند", unit: "ml", pricePerUnit: 0.09, category: "pantry", nutrition: { kcal: 230, protein: 2.3, fat: 24, carbs: 5.5 } , substituteEn: "evaporated milk with a splash of coconut extract", substituteAr: "حليب مبخر مع قليل من خلاصة جوز الهند" },
   { name: "Mango", nameAr: "مانجو", unit: "pcs", pricePerUnit: 25, category: "produce", nutrition: { kcal: 100, protein: 1.4, fat: 0.6, carbs: 25 } , substituteEn: "ripe peach or papaya", substituteAr: "خوخ ناضج أو بابايا" },
   { name: "Brown Lentils", nameAr: "عدس بني", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 353, protein: 25, fat: 1.1, carbs: 60 } , substituteEn: "green lentils", substituteAr: "عدس أخضر" },
-  { name: "Small Macaroni", nameAr: "مكرونة صغيرة", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 371, protein: 13, fat: 1.5, carbs: 75 } , substituteEn: "any small pasta shape", substituteAr: "أي شكل معكرونة صغيرة" , allergens: [Allergen.GLUTEN] },
+  { name: "Small Macaroni", nameAr: "مكرونة صغيرة", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 371, protein: 13, fat: 1.5, carbs: 75 } , substituteEn: "any small pasta shape", substituteAr: "أي شكل معكرونة صغيرة" , allergens: [Allergen.GLUTEN], goalSubstitutes: { LOSE_WEIGHT: "Zucchini Noodles", BUILD_MUSCLE: "Chickpea Pasta" } },
   { name: "Chickpeas", nameAr: "حمص", unit: "g", pricePerUnit: 0.04, category: "pantry", nutrition: { kcal: 164, protein: 8.9, fat: 2.6, carbs: 27 } , substituteEn: "white beans", substituteAr: "فاصوليا بيضاء" },
   { name: "Onion", nameAr: "بصل", unit: "g", pricePerUnit: 0.015, category: "produce", nutrition: { kcal: 40, protein: 1.1, fat: 0.1, carbs: 9.3 } , substituteEn: "shallots", substituteAr: "بصل شالوت" },
   { name: "Vinegar", nameAr: "خل", unit: "ml", pricePerUnit: 0.02, category: "pantry", nutrition: { kcal: 18, protein: 0, fat: 0, carbs: 0.4 } , substituteEn: "lemon juice", substituteAr: "عصير ليمون" },
@@ -66,8 +72,8 @@ const ingredientMaster: {
   { name: "Chicken Stock", nameAr: "مرقة دجاج", unit: "ml", pricePerUnit: 0.02, category: "pantry", nutrition: { kcal: 4, protein: 0.6, fat: 0.1, carbs: 0.3 } , substituteEn: "vegetable stock or a bouillon cube in water", substituteAr: "مرقة خضار أو مكعب مرقة في ماء" },
   { name: "Coriander", nameAr: "كزبرة", unit: "g", pricePerUnit: 0.04, category: "produce", nutrition: { kcal: 216, protein: 23, fat: 13, carbs: 52 } , substituteEn: "parsley (milder flavor)", substituteAr: "بقدونس (نكهة أخف)" },
   { name: "Semolina", nameAr: "سميد", unit: "g", pricePerUnit: 0.025, category: "pantry", nutrition: { kcal: 360, protein: 12.7, fat: 1, carbs: 73 } , substituteEn: "fine cornmeal", substituteAr: "دقيق ذرة ناعم" , allergens: [Allergen.GLUTEN] },
-  { name: "Yogurt", nameAr: "زبادي", unit: "g", pricePerUnit: 0.04, category: "dairy", nutrition: { kcal: 61, protein: 3.5, fat: 3.3, carbs: 4.7 } , substituteEn: "sour cream", substituteAr: "قشدة حامضة" , allergens: [Allergen.DAIRY] },
-  { name: "Butter", nameAr: "زبدة", unit: "g", pricePerUnit: 0.18, category: "dairy", nutrition: { kcal: 717, protein: 0.9, fat: 81, carbs: 0.1 } , substituteEn: "margarine or neutral oil, three-quarters the amount", substituteAr: "مارجرين أو زيت محايد (ثلاثة أرباع الكمية)" , allergens: [Allergen.DAIRY] },
+  { name: "Yogurt", nameAr: "زبادي", unit: "g", pricePerUnit: 0.04, category: "dairy", nutrition: { kcal: 61, protein: 3.5, fat: 3.3, carbs: 4.7 } , substituteEn: "sour cream", substituteAr: "قشدة حامضة" , allergens: [Allergen.DAIRY], goalSubstitutes: { BUILD_MUSCLE: "Greek Yogurt" } },
+  { name: "Butter", nameAr: "زبدة", unit: "g", pricePerUnit: 0.18, category: "dairy", nutrition: { kcal: 717, protein: 0.9, fat: 81, carbs: 0.1 } , substituteEn: "margarine or neutral oil, three-quarters the amount", substituteAr: "مارجرين أو زيت محايد (ثلاثة أرباع الكمية)" , allergens: [Allergen.DAIRY], goalSubstitutes: { LOSE_WEIGHT: "Greek Yogurt" } },
   { name: "Baking Powder", nameAr: "بيكنج باودر", unit: "g", pricePerUnit: 0.08, category: "pantry", nutrition: { kcal: 53, protein: 0, fat: 0, carbs: 28 } , substituteEn: "1/4 tsp baking soda plus 1/2 tsp cream of tartar per tsp", substituteAr: "ربع ملعقة صغيرة بيكربونات مع نصف ملعقة كريم تارتار لكل ملعقة" },
   { name: "Shredded Coconut", nameAr: "جوز هند مبشور", unit: "g", pricePerUnit: 0.15, category: "pantry", nutrition: { kcal: 660, protein: 6.9, fat: 65, carbs: 24 } , substituteEn: "coconut flakes", substituteAr: "رقائق جوز الهند" },
   { name: "Water", nameAr: "ماء", unit: "ml", pricePerUnit: 0, category: "pantry", nutrition: { kcal: 0, protein: 0, fat: 0, carbs: 0 } },
@@ -76,7 +82,7 @@ const ingredientMaster: {
   { name: "Vegetable Stock", nameAr: "مرقة خضار", unit: "ml", pricePerUnit: 0.02, category: "pantry", nutrition: { kcal: 3, protein: 0.3, fat: 0.1, carbs: 0.5 } , substituteEn: "water with a bouillon cube", substituteAr: "ماء مع مكعب مرقة" },
   { name: "Crusty Bread", nameAr: "خبز مقرمش", unit: "pcs", pricePerUnit: 15, category: "pantry", nutrition: { kcal: 662, protein: 22, fat: 8, carbs: 122 } , substituteEn: "any rustic white bread", substituteAr: "أي خبز أبيض ريفي" , allergens: [Allergen.GLUTEN] },
   { name: "Cherry Tomato", nameAr: "طماطم كرزية", unit: "g", pricePerUnit: 0.03, category: "produce", nutrition: { kcal: 18, protein: 0.9, fat: 0.2, carbs: 3.9 } , substituteEn: "regular tomato, diced", substituteAr: "طماطم عادية مقطعة" },
-  { name: "Heavy Cream", nameAr: "كريمة ثقيلة", unit: "ml", pricePerUnit: 0.15, category: "dairy", nutrition: { kcal: 340, protein: 2.1, fat: 36, carbs: 2.8 } , substituteEn: "evaporated milk with a little butter", substituteAr: "حليب مبخر مع قليل من الزبدة" , allergens: [Allergen.DAIRY] },
+  { name: "Heavy Cream", nameAr: "كريمة ثقيلة", unit: "ml", pricePerUnit: 0.15, category: "dairy", nutrition: { kcal: 340, protein: 2.1, fat: 36, carbs: 2.8 } , substituteEn: "evaporated milk with a little butter", substituteAr: "حليب مبخر مع قليل من الزبدة" , allergens: [Allergen.DAIRY], goalSubstitutes: { LOSE_WEIGHT: "Milk" } },
   { name: "Gelatin", nameAr: "جيلاتين", unit: "g", pricePerUnit: 0.5, category: "pantry", nutrition: { kcal: 335, protein: 85, fat: 0.1, carbs: 0 } , substituteEn: "agar-agar, use half the amount", substituteAr: "أجار أجار (نصف الكمية)" },
   { name: "Vanilla Extract", nameAr: "خلاصة فانيليا", unit: "ml", pricePerUnit: 0.3, category: "pantry", nutrition: { kcal: 288, protein: 0.1, fat: 0.1, carbs: 13 } , substituteEn: "vanilla sugar or a pinch of cinnamon", substituteAr: "سكر الفانيليا أو رشة قرفة" },
   { name: "Beef Brisket", nameAr: "صدر بقري", unit: "g", pricePerUnit: 0.25, category: "meat", nutrition: { kcal: 291, protein: 18, fat: 24, carbs: 0 } , substituteEn: "beef chuck roast", substituteAr: "لحم بقري (تشاك)" },
@@ -99,7 +105,7 @@ const ingredientMaster: {
   { name: "Ghee", nameAr: "سمن", unit: "g", pricePerUnit: 0.25, category: "dairy", nutrition: { kcal: 900, protein: 0, fat: 100, carbs: 0 } , substituteEn: "clarified butter or regular butter", substituteAr: "زبدة مصفاة أو زبدة عادية" , allergens: [Allergen.DAIRY] },
   { name: "Honey", nameAr: "عسل", unit: "g", pricePerUnit: 0.1, category: "pantry", nutrition: { kcal: 304, protein: 0.3, fat: 0, carbs: 82 } , substituteEn: "sugar dissolved in a little water", substituteAr: "سكر مذاب في قليل من الماء" },
   { name: "Grape Leaves", nameAr: "ورق عنب", unit: "g", pricePerUnit: 0.08, category: "produce", nutrition: { kcal: 33, protein: 2.4, fat: 0.8, carbs: 6 } , substituteEn: "blanched cabbage leaves", substituteAr: "ورق كرنب مسلوق" },
-  { name: "Ground Beef", nameAr: "لحم بقري مفروم", unit: "g", pricePerUnit: 0.22, category: "meat", nutrition: { kcal: 254, protein: 17, fat: 20, carbs: 0 } , substituteEn: "ground turkey or ground lamb", substituteAr: "لحم ديك رومي مفروم أو لحم ضأن مفروم" },
+  { name: "Ground Beef", nameAr: "لحم بقري مفروم", unit: "g", pricePerUnit: 0.22, category: "meat", nutrition: { kcal: 254, protein: 17, fat: 20, carbs: 0 } , substituteEn: "ground turkey or ground lamb", substituteAr: "لحم ديك رومي مفروم أو لحم ضأن مفروم", goalSubstitutes: { LOSE_WEIGHT: "Turkey Breast" } },
   { name: "Dill", nameAr: "شبت", unit: "g", pricePerUnit: 0.05, category: "produce", nutrition: { kcal: 43, protein: 3.5, fat: 1.1, carbs: 7 } , substituteEn: "fennel fronds", substituteAr: "أوراق الشمر" },
   { name: "Mint", nameAr: "نعناع", unit: "g", pricePerUnit: 0.05, category: "produce", nutrition: { kcal: 44, protein: 3.3, fat: 0.7, carbs: 8 } , substituteEn: "basil (different but fresh)", substituteAr: "ريحان (مختلف لكن منعش)" },
   // Added for Mexican / Indian / Levantine / Mediterranean / French / American / Moroccan / Turkish cuisines.
@@ -162,7 +168,7 @@ const ingredientMaster: {
   { name: "Sesame Seeds", nameAr: "سمسم", unit: "g", pricePerUnit: 0.15, category: "pantry", nutrition: { kcal: 573, protein: 18, fat: 50, carbs: 23 }, allergens: [Allergen.SESAME] },
   { name: "Harissa", nameAr: "هريسة", unit: "g", pricePerUnit: 0.3, category: "pantry", nutrition: { kcal: 70, protein: 2, fat: 4, carbs: 8 }, substituteEn: "chili paste with a pinch of cumin", substituteAr: "معجون شطة مع رشة كمون" },
   { name: "Hot Sauce", nameAr: "صوص حار", unit: "ml", pricePerUnit: 0.15, category: "pantry", nutrition: { kcal: 12, protein: 0.5, fat: 0.4, carbs: 2 } },
-  { name: "Mayonnaise", nameAr: "مايونيز", unit: "g", pricePerUnit: 0.1, category: "pantry", nutrition: { kcal: 680, protein: 1, fat: 75, carbs: 1 }, substituteEn: "plain yogurt mixed with a little mustard", substituteAr: "زبادي سادة مع قليل من الخردل", allergens: [Allergen.EGGS] },
+  { name: "Mayonnaise", nameAr: "مايونيز", unit: "g", pricePerUnit: 0.1, category: "pantry", nutrition: { kcal: 680, protein: 1, fat: 75, carbs: 1 }, substituteEn: "plain yogurt mixed with a little mustard", substituteAr: "زبادي سادة مع قليل من الخردل", allergens: [Allergen.EGGS], goalSubstitutes: { LOSE_WEIGHT: "Greek Yogurt" } },
   { name: "Ketchup", nameAr: "كاتشب", unit: "ml", pricePerUnit: 0.06, category: "pantry", nutrition: { kcal: 112, protein: 1.3, fat: 0.3, carbs: 27 } },
   { name: "Gochujang", nameAr: "معجون غوتشوجانج", unit: "g", pricePerUnit: 0.3, category: "pantry", nutrition: { kcal: 170, protein: 4, fat: 2, carbs: 35 }, substituteEn: "chili paste with a pinch of sugar and miso", substituteAr: "معجون شطة مع قليل من السكر والميسو", allergens: [Allergen.SOY] },
   { name: "Miso Paste", nameAr: "معجون ميسو", unit: "g", pricePerUnit: 0.35, category: "pantry", nutrition: { kcal: 199, protein: 12, fat: 6, carbs: 26 }, allergens: [Allergen.SOY] },
@@ -179,7 +185,7 @@ const ingredientMaster: {
   { name: "Bay Leaves", nameAr: "ورق لورا", unit: "g", pricePerUnit: 0.4, category: "pantry", nutrition: { kcal: 313, protein: 7.6, fat: 8.4, carbs: 75 } },
   { name: "Chili Flakes", nameAr: "رقائق فلفل حار", unit: "g", pricePerUnit: 0.25, category: "pantry", nutrition: { kcal: 282, protein: 12, fat: 15, carbs: 50 }, substituteEn: "a pinch of cayenne or chili powder", substituteAr: "رشة كايين أو بودرة شطة" },
   { name: "Curry Powder", nameAr: "بودرة كاري", unit: "g", pricePerUnit: 0.2, category: "pantry", nutrition: { kcal: 325, protein: 14, fat: 14, carbs: 58 }, substituteEn: "garam masala", substituteAr: "جارام ماسالا" },
-  { name: "Orzo Pasta", nameAr: "مكرونة أورزو", unit: "g", pricePerUnit: 0.05, category: "pantry", nutrition: { kcal: 371, protein: 13, fat: 1.5, carbs: 75 }, substituteEn: "small macaroni or broken spaghetti", substituteAr: "مكرونة صغيرة أو سباجيتي مكسور", allergens: [Allergen.GLUTEN] },
+  { name: "Orzo Pasta", nameAr: "مكرونة أورزو", unit: "g", pricePerUnit: 0.05, category: "pantry", nutrition: { kcal: 371, protein: 13, fat: 1.5, carbs: 75 }, substituteEn: "small macaroni or broken spaghetti", substituteAr: "مكرونة صغيرة أو سباجيتي مكسور", allergens: [Allergen.GLUTEN], goalSubstitutes: { LOSE_WEIGHT: "Cauliflower Rice", BUILD_MUSCLE: "Quinoa" } },
   { name: "Farro", nameAr: "فارو", unit: "g", pricePerUnit: 0.08, category: "pantry", nutrition: { kcal: 340, protein: 13, fat: 2.5, carbs: 67 }, substituteEn: "bulgur or barley", substituteAr: "برغل أو شعير", allergens: [Allergen.GLUTEN] },
   { name: "Polenta", nameAr: "بولينتا", unit: "g", pricePerUnit: 0.06, category: "pantry", nutrition: { kcal: 359, protein: 8.1, fat: 1.3, carbs: 77 }, substituteEn: "fine cornmeal", substituteAr: "دقيق ذرة ناعم" },
   { name: "Quinoa", nameAr: "كينوا", unit: "g", pricePerUnit: 0.15, category: "pantry", nutrition: { kcal: 368, protein: 14, fat: 6, carbs: 64 }, substituteEn: "bulgur or couscous", substituteAr: "برغل أو كسكسي" },
@@ -190,20 +196,29 @@ const ingredientMaster: {
   { name: "Pomegranate Molasses", nameAr: "دبس الرمان", unit: "ml", pricePerUnit: 0.25, category: "pantry", nutrition: { kcal: 250, protein: 0.5, fat: 0, carbs: 62 }, substituteEn: "lemon juice with a touch of honey", substituteAr: "عصير ليمون مع قليل من العسل" },
   { name: "Capers", nameAr: "كبر", unit: "g", pricePerUnit: 0.4, category: "pantry", nutrition: { kcal: 23, protein: 2.4, fat: 0.9, carbs: 4.9 }, substituteEn: "chopped green olives", substituteAr: "زيتون أخضر مفروم" },
   { name: "Sun-Dried Tomatoes", nameAr: "طماطم مجففة", unit: "g", pricePerUnit: 0.35, category: "pantry", nutrition: { kcal: 258, protein: 14, fat: 3, carbs: 56 }, substituteEn: "regular tomato, roasted", substituteAr: "طماطم عادية محمّصة" },
-  { name: "Milk", nameAr: "حليب", unit: "ml", pricePerUnit: 0.02, category: "dairy", nutrition: { kcal: 61, protein: 3.2, fat: 3.3, carbs: 4.8 }, substituteEn: "water with a spoon of milk powder", substituteAr: "ماء مع ملعقة حليب بودرة", allergens: [Allergen.DAIRY] },
+  { name: "Milk", nameAr: "حليب", unit: "ml", pricePerUnit: 0.02, category: "dairy", nutrition: { kcal: 61, protein: 3.2, fat: 3.3, carbs: 4.8 }, substituteEn: "water with a spoon of milk powder", substituteAr: "ماء مع ملعقة حليب بودرة", allergens: [Allergen.DAIRY], goalSubstitutes: { GAIN_WEIGHT: "Coconut Milk" } },
   { name: "Cream Cheese", nameAr: "جبنة كريمي", unit: "g", pricePerUnit: 0.15, category: "dairy", nutrition: { kcal: 342, protein: 6, fat: 34, carbs: 4 }, substituteEn: "mascarpone or strained yogurt", substituteAr: "ماسكاربوني أو زبادي مصفى", allergens: [Allergen.DAIRY] },
   { name: "Labneh", nameAr: "لبنة", unit: "g", pricePerUnit: 0.1, category: "dairy", nutrition: { kcal: 150, protein: 5.5, fat: 12, carbs: 4 }, substituteEn: "strained plain yogurt", substituteAr: "زبادي سادة مصفى", allergens: [Allergen.DAIRY] },
   { name: "Halloumi Cheese", nameAr: "جبنة حلوم", unit: "g", pricePerUnit: 0.4, category: "dairy", nutrition: { kcal: 321, protein: 21, fat: 25, carbs: 2 }, substituteEn: "firm feta, pan-fried", substituteAr: "جبنة فيتا صلبة مقلية", allergens: [Allergen.DAIRY] },
   { name: "Salmon Fillet", nameAr: "سمك سلمون", unit: "g", pricePerUnit: 0.45, category: "seafood", nutrition: { kcal: 208, protein: 20, fat: 13, carbs: 0 }, substituteEn: "any firm white fish", substituteAr: "أي سمك أبيض متماسك", allergens: [Allergen.FISH] },
-  { name: "White Fish Fillet", nameAr: "سمك أبيض", unit: "g", pricePerUnit: 0.3, category: "seafood", nutrition: { kcal: 96, protein: 20, fat: 1.5, carbs: 0 }, substituteEn: "tilapia or any mild white fish", substituteAr: "بلطي أو أي سمك أبيض خفيف النكهة", allergens: [Allergen.FISH] },
+  { name: "White Fish Fillet", nameAr: "سمك أبيض", unit: "g", pricePerUnit: 0.3, category: "seafood", nutrition: { kcal: 96, protein: 20, fat: 1.5, carbs: 0 }, substituteEn: "tilapia or any mild white fish", substituteAr: "بلطي أو أي سمك أبيض خفيف النكهة", allergens: [Allergen.FISH], goalSubstitutes: { GAIN_WEIGHT: "Salmon Fillet" } },
   { name: "Tuna", nameAr: "تونة", unit: "g", pricePerUnit: 0.35, category: "seafood", nutrition: { kcal: 132, protein: 28, fat: 1, carbs: 0 }, substituteEn: "canned salmon", substituteAr: "سلمون معلب", allergens: [Allergen.FISH] },
-  { name: "Turkey Breast", nameAr: "صدر ديك رومي", unit: "g", pricePerUnit: 0.22, category: "meat", nutrition: { kcal: 135, protein: 30, fat: 1, carbs: 0 }, substituteEn: "chicken breast", substituteAr: "صدر دجاج" },
+  { name: "Turkey Breast", nameAr: "صدر ديك رومي", unit: "g", pricePerUnit: 0.22, category: "meat", nutrition: { kcal: 135, protein: 30, fat: 1, carbs: 0 }, substituteEn: "chicken breast", substituteAr: "صدر دجاج", goalSubstitutes: { GAIN_WEIGHT: "Chicken Thigh" } },
   { name: "Chicken Thigh", nameAr: "فخذ دجاج", unit: "g", pricePerUnit: 0.16, category: "meat", nutrition: { kcal: 177, protein: 24, fat: 8, carbs: 0 }, substituteEn: "chicken breast, reduce cooking time slightly", substituteAr: "صدر دجاج مع تقليل وقت الطهي قليلاً" },
   { name: "Beef Short Rib", nameAr: "ضلوع بقري", unit: "g", pricePerUnit: 0.32, category: "meat", nutrition: { kcal: 295, protein: 22, fat: 23, carbs: 0 }, substituteEn: "beef brisket", substituteAr: "صدر بقري" },
   { name: "Okra", nameAr: "بامية", unit: "g", pricePerUnit: 0.03, category: "produce", nutrition: { kcal: 33, protein: 1.9, fat: 0.2, carbs: 7.5 } },
   { name: "Vermicelli", nameAr: "شعرية", unit: "g", pricePerUnit: 0.045, category: "pantry", nutrition: { kcal: 371, protein: 13, fat: 1.5, carbs: 75 }, substituteEn: "small macaroni or broken spaghetti", substituteAr: "مكرونة صغيرة أو سباجيتي مكسور", allergens: [Allergen.GLUTEN] },
   { name: "Za'atar", nameAr: "زعتر", unit: "g", pricePerUnit: 0.09, category: "pantry", nutrition: { kcal: 306, protein: 10, fat: 9, carbs: 47 }, substituteEn: "dried thyme mixed with sesame seeds and sumac", substituteAr: "زعتر مجفف مع سمسم وسماق", allergens: [Allergen.SESAME] },
   { name: "White Beans", nameAr: "فاصوليا بيضاء", unit: "g", pricePerUnit: 0.06, category: "pantry", nutrition: { kcal: 139, protein: 9.7, fat: 0.5, carbs: 25 }, substituteEn: "fava beans or chickpeas", substituteAr: "فول أو حمص" },
+  // ---- Goal-swap targets: lighter, leaner, or denser variants of common
+  // staples, referenced only via goalSubstitutes below, not used directly
+  // in any base recipe ----
+  { name: "Oatmeal Flour", nameAr: "دقيق الشوفان", unit: "g", pricePerUnit: 0.06, category: "pantry", nutrition: { kcal: 389, protein: 17, fat: 7, carbs: 66 }, substituteEn: "ground rolled oats", substituteAr: "شوفان مطحون", allergens: [Allergen.GLUTEN] },
+  { name: "Cauliflower Rice", nameAr: "أرز القرنبيط", unit: "g", pricePerUnit: 0.04, category: "produce", nutrition: { kcal: 25, protein: 2, fat: 0.3, carbs: 5 }, substituteEn: "finely riced cauliflower florets", substituteAr: "زهرات قرنبيط مبشورة ناعمًا" },
+  { name: "Zucchini Noodles", nameAr: "شعيرية الكوسة", unit: "g", pricePerUnit: 0.03, category: "produce", nutrition: { kcal: 17, protein: 1.2, fat: 0.3, carbs: 3.1 }, substituteEn: "zucchini spiralized into thin ribbons", substituteAr: "كوسة مقطعة لشرائط رفيعة بمبشرة حلزونية" },
+  { name: "Stevia", nameAr: "ستيفيا", unit: "g", pricePerUnit: 1.2, category: "pantry", nutrition: { kcal: 0, protein: 0, fat: 0, carbs: 0 }, substituteEn: "a few drops of liquid stevia, to taste", substituteAr: "بضع قطرات من ستيفيا السائلة حسب الرغبة" },
+  { name: "Greek Yogurt", nameAr: "زبادي يوناني", unit: "g", pricePerUnit: 0.07, category: "dairy", nutrition: { kcal: 59, protein: 10, fat: 0.4, carbs: 3.6 }, substituteEn: "regular yogurt strained through cheesecloth", substituteAr: "زبادي عادي مصفى بقطعة شاش", allergens: [Allergen.DAIRY] },
+  { name: "Chickpea Pasta", nameAr: "مكرونة الحمص", unit: "g", pricePerUnit: 0.12, category: "pantry", nutrition: { kcal: 356, protein: 21, fat: 5, carbs: 55 }, substituteEn: "lentil pasta", substituteAr: "مكرونة العدس" },
 ];
 
 const cuisines = [
@@ -7480,6 +7495,7 @@ async function main() {
         substituteEn: ing.substituteEn,
         substituteAr: ing.substituteAr,
         allergens: ing.allergens ?? [],
+        goalSubstitutes: ing.goalSubstitutes ?? Prisma.JsonNull,
         ...perUnit,
       },
       create: {
@@ -7491,6 +7507,7 @@ async function main() {
         substituteEn: ing.substituteEn,
         substituteAr: ing.substituteAr,
         allergens: ing.allergens ?? [],
+        goalSubstitutes: ing.goalSubstitutes ?? Prisma.JsonNull,
         ...perUnit,
       },
     });
