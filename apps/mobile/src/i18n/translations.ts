@@ -36,6 +36,9 @@ const en = {
   "home.recentlyViewed": "Recently viewed",
   "home.planWeek": "📅 Plan my week",
   "home.pantryFinder": "🥫 What can I cook?",
+  "home.surpriseMe": "🎲 Surprise me",
+  "home.surprisingLoading": "🎲 Picking…",
+  "home.surpriseMeError": "Couldn't fetch a surprise recipe",
 
   "weekday.0": "Sunday",
   "weekday.1": "Monday",
@@ -256,6 +259,9 @@ const ar: Record<keyof typeof en, string> = {
   "home.recentlyViewed": "شوهد مؤخراً",
   "home.planWeek": "📅 خطّط أسبوعي",
   "home.pantryFinder": "🥫 ماذا أطبخ؟",
+  "home.surpriseMe": "🎲 فاجئني",
+  "home.surprisingLoading": "🎲 جارِ الاختيار…",
+  "home.surpriseMeError": "تعذّر جلب وصفة عشوائية",
 
   "weekday.0": "الأحد",
   "weekday.1": "الإثنين",

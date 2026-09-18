@@ -272,6 +272,37 @@ async function applyGoalSubstitutions<
   });
 }
 
+const randomQuerySchema = z.object({
+  cuisine: z.string().optional(),
+  tag: z.string().optional(),
+  dishType: z.string().optional(),
+});
+
+/** Picks one recipe at random, optionally narrowed by the same filters as GET /recipes. */
+recipesRouter.get("/recipes/random", async (req, res) => {
+  const parsed = randomQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { cuisine, tag, dishType } = parsed.data;
+
+  const candidates = await prisma.recipe.findMany({
+    where: {
+      cuisine: cuisine ? { slug: cuisine } : undefined,
+      dishType: dishType ? { equals: dishType, mode: "insensitive" } : undefined,
+      tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
+    },
+    select: { slug: true },
+  });
+  if (candidates.length === 0) {
+    res.status(404).json({ error: "No recipes match" });
+    return;
+  }
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  res.json({ slug: pick.slug });
+});
+
 recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   const lang = parseLang(req.query.lang);
   const goal = parseGoalSubstituteGoal(req.query.goal);

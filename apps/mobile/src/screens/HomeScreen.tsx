@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Alert, FlatList, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
@@ -9,7 +9,8 @@ import { useAuth } from "../context/AuthContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
-import { fetchCuisines, fetchRecipes, fetchRecommended } from "../api/endpoints";
+import { fetchCuisines, fetchRandomRecipe, fetchRecipes, fetchRecommended } from "../api/endpoints";
+import { apiErrorMessage } from "../api/client";
 import { rankRecipes } from "../utils/rank";
 import { RecipeCard } from "../components/RecipeCard";
 import { AnimatedPressable } from "../components/AnimatedPressable";
@@ -47,6 +48,7 @@ export function HomeScreen({ navigation }: Props) {
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [recommended, setRecommended] = useState<RecipeSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [surprising, setSurprising] = useState(false);
 
   const load = useCallback(async () => {
     const [cuisineList] = await Promise.all([fetchCuisines()]);
@@ -69,6 +71,18 @@ export function HomeScreen({ navigation }: Props) {
     setRefreshing(true);
     await load().catch(() => {});
     setRefreshing(false);
+  };
+
+  const handleSurpriseMe = async () => {
+    setSurprising(true);
+    try {
+      const { slug } = await fetchRandomRecipe();
+      navigation.navigate("RecipeDetail", { slug });
+    } catch (error) {
+      Alert.alert(t("home.surpriseMeError"), apiErrorMessage(error));
+    } finally {
+      setSurprising(false);
+    }
   };
 
   const greetingName = isAuthenticated ? user?.name.split(" ")[0] : undefined;
@@ -155,6 +169,17 @@ export function HomeScreen({ navigation }: Props) {
               >
                 <Text style={styles.quickChipText}>{t("home.pantryFinder")}</Text>
               </AnimatedPressable>
+              <AnimatedPressable
+                style={[styles.quickChip, styles.surpriseChip]}
+                pressScale={0.94}
+                onPress={handleSurpriseMe}
+                disabled={surprising}
+                accessibilityRole="button"
+              >
+                <Text style={styles.quickChipText}>
+                  {surprising ? t("home.surprisingLoading") : t("home.surpriseMe")}
+                </Text>
+              </AnimatedPressable>
             </View>
 
             {recentRecipes.length > 0 ? (
@@ -239,6 +264,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing(2),
     },
     quickChipText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+    surpriseChip: { backgroundColor: colors.primary },
     recentScroll: {},
     recentCard: {
       width: 110,
