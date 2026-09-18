@@ -1,12 +1,13 @@
 export type DietGoal = "NONE" | "FIT" | "INDULGENT" | "BALANCED";
 export type Difficulty = "EASY" | "MEDIUM" | "HARD";
 export type DishTag = "FIT" | "DESSERT" | "VEGETARIAN" | "QUICK" | "COMFORT" | "SPICY";
+export type Allergen = "GLUTEN" | "DAIRY" | "EGGS" | "NUTS" | "PEANUTS" | "SHELLFISH" | "FISH" | "SOY" | "SESAME";
 
 export type Preference = {
   id: string;
   dietGoal: DietGoal;
   favoriteCuisineSlugs: string[];
-  allergies: string[];
+  allergies: Allergen[];
 };
 
 export type User = {
@@ -38,6 +39,7 @@ export type RecipeSummary = {
   avgRating: number | null;
   ratingCount: number;
   costPerServing: number;
+  allergens: Allergen[];
   cuisine: { slug: string; name: string };
 };
 
@@ -47,6 +49,7 @@ export type RecipeIngredient = {
   unit: string;
   note: string | null;
   substitute: string | null;
+  allergens: Allergen[];
 };
 
 export type RecipeStep = {
@@ -106,4 +109,16 @@ export type ShoppingListResult = {
 export type NearbyStores = {
   mapsSearchUrl: string;
   deliveryPartners: DeliveryPartner[];
+};
+
+export type PantryIngredient = {
+  id: string;
+  name: string;
+  category: string;
+};
+
+export type PantryMatch = RecipeSummary & {
+  matchedIngredientCount: number;
+  totalIngredientCount: number;
+  missingIngredientNames: string[];
 };

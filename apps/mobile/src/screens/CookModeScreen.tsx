@@ -11,8 +11,11 @@ import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
+import { useAuth } from "../context/AuthContext";
 import { formatQuantity } from "../utils/units";
+import { intersectAllergens } from "../utils/allergens";
 import { radius, spacing, type ThemeColors } from "../theme";
+import type { TranslationKey } from "../i18n/translations";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CookMode">;
 
@@ -22,6 +25,7 @@ export function CookModeScreen({ route, navigation }: Props) {
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
+  const { user } = useAuth();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [index, setIndex] = useState(0);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
@@ -99,21 +103,31 @@ export function CookModeScreen({ route, navigation }: Props) {
               {t("cookMode.ingredients")} · {servings}
             </Text>
             <ScrollView style={styles.modalList}>
-              {ingredients.map((ing) => (
+              {ingredients.map((ing) => {
+                const ingredientConflicts = intersectAllergens(ing.allergens, user?.preference?.allergies ?? []);
+                return (
                 <View key={ing.name} style={styles.modalCell}>
                   <View style={styles.modalRow}>
-                    <Text style={styles.modalRowName}>{ing.name}</Text>
+                    <Text style={[styles.modalRowName, ingredientConflicts.length > 0 && styles.modalRowNameWarning]}>
+                      {ing.name}
+                    </Text>
                     <Text style={styles.modalRowQty}>
                       {formatQuantity(ing.quantity, ing.unit, unitSystem)}
                     </Text>
                   </View>
+                  {ingredientConflicts.length > 0 ? (
+                    <Text style={[styles.modalRowAllergenNote, { textAlign }]}>
+                      {ingredientConflicts.map((a) => t(`allergen.${a}` as TranslationKey)).join(", ")}
+                    </Text>
+                  ) : null}
                   {ing.substitute ? (
                     <Text style={[styles.modalRowSubstitute, { textAlign }]}>
                       {t("recipeDetail.substituteHint", { substitute: ing.substitute })}
                     </Text>
                   ) : null}
                 </View>
-              ))}
+                );
+              })}
             </ScrollView>
             <AnimatedPressable style={styles.modalClose} pressScale={0.96} onPress={() => setIngredientsVisible(false)}>
               <Text style={styles.modalCloseText}>{t("cookMode.close")}</Text>
@@ -207,8 +221,10 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: "space-between",
     },
     modalRowName: { color: colors.text, fontSize: 14 },
+    modalRowNameWarning: { color: colors.danger, fontWeight: "700" },
     modalRowQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
     modalRowSubstitute: { color: colors.primaryDark, fontSize: 11, marginTop: 2 },
+    modalRowAllergenNote: { color: colors.danger, fontSize: 11, fontWeight: "700", marginTop: 2 },
     modalClose: {
       backgroundColor: colors.chipBackground,
       borderRadius: radius.lg,

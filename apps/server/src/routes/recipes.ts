@@ -45,7 +45,12 @@ export function recipeSummarySelect() {
     tags: true,
     cuisine: { select: { slug: true, name: true, nameAr: true } },
     ratings: { select: { score: true } },
-    ingredients: { select: { quantity: true, ingredient: { select: { pricePerUnit: true } } } },
+    ingredients: {
+      select: {
+        quantity: true,
+        ingredient: { select: { id: true, name: true, nameAr: true, pricePerUnit: true, allergens: true } },
+      },
+    },
   } as const;
 }
 
@@ -55,6 +60,14 @@ function estimateCostPerServing(
 ): number {
   const totalCost = ingredients.reduce((sum, ri) => sum + ri.quantity * ri.ingredient.pricePerUnit, 0);
   return Math.round((totalCost / baseServings) * 100) / 100;
+}
+
+function collectAllergens(ingredients: { ingredient: { allergens: string[] } }[]): string[] {
+  const set = new Set<string>();
+  for (const ri of ingredients) {
+    for (const a of ri.ingredient.allergens) set.add(a);
+  }
+  return Array.from(set).sort();
 }
 
 export function localizeSummary(r: any, lang: Lang) {
@@ -78,6 +91,7 @@ export function localizeSummary(r: any, lang: Lang) {
     avgRating,
     ratingCount,
     costPerServing: estimateCostPerServing(r.ingredients, r.baseServings),
+    allergens: collectAllergens(r.ingredients),
     cuisine: {
       slug: r.cuisine.slug,
       name: lang === "ar" ? r.cuisine.nameAr ?? r.cuisine.name : r.cuisine.name,
@@ -190,6 +204,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     carbsGrams: Math.round((totals.carbs / recipe.baseServings) * 10) / 10,
   };
   const costPerServing = estimateCostPerServing(recipe.ingredients, recipe.baseServings);
+  const allergens = collectAllergens(recipe.ingredients);
 
   res.json({
     id: recipe.id,
@@ -212,12 +227,14 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     myRating,
     nutritionPerServing,
     costPerServing,
+    allergens,
     ingredients: recipe.ingredients.map((ri) => ({
       name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,
       unit: ri.displayUnit,
       note: ri.note,
       substitute: lang === "ar" ? ri.ingredient.substituteAr ?? ri.ingredient.substituteEn : ri.ingredient.substituteEn,
+      allergens: ri.ingredient.allergens,
     })),
     steps: recipe.steps.map((s) => ({
       order: s.order,

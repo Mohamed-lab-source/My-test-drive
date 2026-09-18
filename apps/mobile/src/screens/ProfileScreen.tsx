@@ -14,7 +14,9 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { spacing, type ThemeColors } from "../theme";
-import type { Cuisine, DietGoal } from "../api/types";
+import { ALL_ALLERGENS } from "../utils/allergens";
+import type { TranslationKey } from "../i18n/translations";
+import type { Allergen, Cuisine, DietGoal } from "../api/types";
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, "Profile">,
@@ -95,6 +97,7 @@ export function ProfileScreen({ navigation }: Props) {
 
   const dietGoal = user.preference?.dietGoal ?? "NONE";
   const favoriteCuisineSlugs = user.preference?.favoriteCuisineSlugs ?? [];
+  const allergies = user.preference?.allergies ?? [];
 
   const updateGoal = async (goal: DietGoal) => {
     setSaving(true);
@@ -114,6 +117,20 @@ export function ProfileScreen({ navigation }: Props) {
     setSaving(true);
     try {
       await savePreferences({ favoriteCuisineSlugs: next });
+    } catch (error) {
+      Alert.alert(t("profile.errorSave"), apiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleAllergy = async (allergen: Allergen) => {
+    const next = allergies.includes(allergen)
+      ? allergies.filter((a) => a !== allergen)
+      : [...allergies, allergen];
+    setSaving(true);
+    try {
+      await savePreferences({ allergies: next });
     } catch (error) {
       Alert.alert(t("profile.errorSave"), apiErrorMessage(error));
     } finally {
@@ -142,6 +159,18 @@ export function ProfileScreen({ navigation }: Props) {
               label={c.name}
               selected={favoriteCuisineSlugs.includes(c.slug)}
               onPress={() => toggleCuisine(c.slug)}
+            />
+          ))}
+        </View>
+
+        <Text style={styles.section}>{t("profile.allergies")}</Text>
+        <View style={styles.chipRow}>
+          {ALL_ALLERGENS.map((a) => (
+            <Chip
+              key={a}
+              label={t(`allergen.${a}` as TranslationKey)}
+              selected={allergies.includes(a)}
+              onPress={() => toggleAllergy(a)}
             />
           ))}
         </View>

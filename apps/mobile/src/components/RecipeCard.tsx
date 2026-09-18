@@ -5,9 +5,12 @@ import { FadeSlideIn } from "./FadeSlideIn";
 import { StarRating } from "./StarRating";
 import { useTheme } from "../theme/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { useAuth } from "../context/AuthContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
+import { intersectAllergens } from "../utils/allergens";
+import type { TranslationKey } from "../i18n/translations";
 import type { RecipeSummary } from "../api/types";
 
 type Props = {
@@ -22,8 +25,10 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useLocale();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { user } = useAuth();
   const favorited = isFavorite(recipe.slug);
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
+  const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
   return (
     <FadeSlideIn index={index}>
       <AnimatedPressable style={styles.card} onPress={onPress} pressScale={0.98} accessibilityRole="button">
@@ -55,6 +60,13 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
                 {recipe.avgRating.toFixed(1)} ({recipe.ratingCount})
               </Text>
             </View>
+          ) : null}
+          {conflictingAllergens.length > 0 ? (
+            <Text style={styles.allergenWarning} numberOfLines={1}>
+              {t("recipeCard.allergenWarning", {
+                allergens: conflictingAllergens.map((a) => t(`allergen.${a}` as TranslationKey)).join(", "),
+              })}
+            </Text>
           ) : null}
           <View style={styles.tagRow}>
             {recipe.tags.map((tag) => (
@@ -129,6 +141,12 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 11,
       color: colors.textMuted,
       marginStart: 4,
+    },
+    allergenWarning: {
+      fontSize: 11,
+      color: colors.danger,
+      fontWeight: "700",
+      marginTop: 4,
     },
     tagRow: {
       flexDirection: "row",

@@ -25,6 +25,7 @@ export type RootStackParamList = {
   Glossary: undefined;
   Search: undefined;
   MealPlanner: undefined;
+  PantryFinder: undefined;
 };
 
 declare global {

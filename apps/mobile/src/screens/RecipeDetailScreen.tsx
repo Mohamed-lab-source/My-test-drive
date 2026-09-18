@@ -19,7 +19,9 @@ import { useUnits } from "../context/UnitsContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useNotes } from "../context/NotesContext";
 import { formatQuantity } from "../utils/units";
+import { intersectAllergens } from "../utils/allergens";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
+import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { RecipeDetail } from "../api/types";
@@ -37,7 +39,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { unitSystem } = useUnits();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { addRecent } = useRecentlyViewed();
   const { getNote, setNote } = useNotes();
   const [noteText, setNoteText] = useState("");
@@ -86,6 +88,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const textAlign = isRTL ? "right" : "left";
+  const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
 
   const handleShare = async () => {
     setSharing(true);
@@ -139,6 +142,16 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             </AnimatedPressable>
           </View>
           <Text style={[styles.description, { textAlign }]}>{recipe.description}</Text>
+
+          {conflictingAllergens.length > 0 ? (
+            <View style={styles.allergenBanner}>
+              <Text style={[styles.allergenBannerText, { textAlign }]}>
+                {t("recipeDetail.allergenWarning", {
+                  allergens: conflictingAllergens.map((a) => t(`allergen.${a}` as TranslationKey)).join(", "),
+                })}
+              </Text>
+            </View>
+          ) : null}
 
           {recipe.ratingCount > 0 ? (
             <View style={styles.avgRatingRow}>
@@ -217,13 +230,22 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           <Text style={[styles.sectionTitle, { textAlign }]}>
             {t("recipeDetail.ingredientsFor", { count: servings })}
           </Text>
-          {scaledIngredients.map((ing, i) => (
+          {scaledIngredients.map((ing, i) => {
+            const ingredientConflicts = intersectAllergens(ing.allergens, user?.preference?.allergies ?? []);
+            return (
             <FadeSlideIn key={ing.name} index={i}>
               <View style={styles.ingredientCell}>
                 <View style={styles.ingredientRow}>
-                  <Text style={styles.ingredientName}>{ing.name}</Text>
+                  <Text style={[styles.ingredientName, ingredientConflicts.length > 0 && styles.ingredientNameWarning]}>
+                    {ing.name}
+                  </Text>
                   <Text style={styles.ingredientQty}>{formatQuantity(ing.quantity, ing.unit, unitSystem)}</Text>
                 </View>
+                {ingredientConflicts.length > 0 ? (
+                  <Text style={[styles.ingredientAllergenNote, { textAlign }]}>
+                    {ingredientConflicts.map((a) => t(`allergen.${a}` as TranslationKey)).join(", ")}
+                  </Text>
+                ) : null}
                 {ing.substitute ? (
                   <Text style={[styles.ingredientSubstitute, { textAlign }]}>
                     {t("recipeDetail.substituteHint", { substitute: ing.substitute })}
@@ -231,7 +253,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
                 ) : null}
               </View>
             </FadeSlideIn>
-          ))}
+            );
+          })}
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.steps")}</Text>
           {recipe.steps.map((step, i) => (
@@ -383,6 +406,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   favoriteIcon: { fontSize: 18 },
   description: { color: colors.textMuted, marginTop: spacing(1), lineHeight: 20 },
+  allergenBanner: {
+    backgroundColor: colors.danger + "22",
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.md,
+    padding: spacing(1.5),
+    marginTop: spacing(1.5),
+  },
+  allergenBannerText: { color: colors.danger, fontWeight: "700", fontSize: 13 },
   avgRatingRow: { flexDirection: "row", alignItems: "center", marginTop: spacing(1) },
   avgRatingText: { color: colors.textMuted, fontSize: 13, fontWeight: "600", marginStart: spacing(1) },
   rateRow: { flexDirection: "row", alignItems: "center" },
@@ -432,6 +464,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "space-between",
   },
   ingredientName: { color: colors.text, fontSize: 14 },
+  ingredientNameWarning: { color: colors.danger, fontWeight: "700" },
+  ingredientAllergenNote: { color: colors.danger, fontSize: 11, fontWeight: "700", marginTop: 2 },
   ingredientQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
   ingredientSubstitute: { color: colors.primaryDark, fontSize: 12, marginTop: 2 },
   stepperRow: { flexDirection: "row", alignItems: "center" },

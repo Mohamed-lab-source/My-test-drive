@@ -29,6 +29,18 @@ enum DishTag {
   SPICY
 }
 
+enum Allergen {
+  GLUTEN
+  DAIRY
+  EGGS
+  NUTS
+  PEANUTS
+  SHELLFISH
+  FISH
+  SOY
+  SESAME
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique
@@ -102,6 +114,7 @@ model Ingredient {
   // "1:1 plain yogurt". Null when there's no good common substitute (water, salt).
   substituteEn     String?
   substituteAr     String?
+  allergens        Allergen[]         @default([])
   recipeUses       RecipeIngredient[]
 }
 

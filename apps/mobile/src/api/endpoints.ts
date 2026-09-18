@@ -3,6 +3,8 @@ import type {
   Cuisine,
   DietGoal,
   NearbyStores,
+  PantryIngredient,
+  PantryMatch,
   Preference,
   RatingResult,
   RecipeDetail,
@@ -98,5 +100,15 @@ export async function removeFavorite(slug: string) {
 
 export async function rateRecipe(slug: string, score: number, comment?: string) {
   const { data } = await api.post<RatingResult>(`/recipes/${slug}/ratings`, { score, comment });
+  return data;
+}
+
+export async function fetchIngredients() {
+  const { data } = await api.get<PantryIngredient[]>("/ingredients");
+  return data;
+}
+
+export async function matchPantryRecipes(ingredientIds: string[]) {
+  const { data } = await api.post<PantryMatch[]>("/recipes/pantry-match", { ingredientIds });
   return data;
 }

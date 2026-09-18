@@ -139,6 +139,13 @@ export function HomeScreen({ navigation }: Props) {
               >
                 <Text style={styles.quickChipText}>{t("home.planWeek")}</Text>
               </AnimatedPressable>
+              <AnimatedPressable
+                style={styles.quickChip}
+                pressScale={0.94}
+                onPress={() => navigation.navigate("PantryFinder")}
+              >
+                <Text style={styles.quickChipText}>{t("home.pantryFinder")}</Text>
+              </AnimatedPressable>
             </View>
 
             {recentRecipes.length > 0 ? (
