@@ -1,5 +1,6 @@
 import { getState, addScorecardEntry, removeScorecardEntry } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
+import { hapticTap } from "../confetti.js";
 const RATING_LABEL = {
     "+": "Positive",
     "-": "Negative",
@@ -51,8 +52,8 @@ export function renderScorecard(container) {
               ${scorecard
             .slice()
             .reverse()
-            .map((e) => `
-                <li class="scorecard-item rating-${e.rating === "+" ? "plus" : e.rating === "-" ? "minus" : "equal"}">
+            .map((e, i) => `
+                <li class="scorecard-item stagger-in rating-${e.rating === "+" ? "plus" : e.rating === "-" ? "minus" : "equal"}" style="--stagger-index: ${i}">
                   <span class="scorecard-badge" title="${RATING_LABEL[e.rating]}">${e.rating}</span>
                   <span class="scorecard-activity">${escapeHtml(e.activity)}</span>
                   <button class="icon-btn" data-remove="${e.id}" aria-label="Remove">&times;</button>
@@ -70,7 +71,10 @@ export function renderScorecard(container) {
     }
     selectRating("=");
     ratingBtns.forEach((btn) => {
-        btn.addEventListener("click", () => selectRating(btn.dataset["rating"]));
+        btn.addEventListener("click", () => {
+            hapticTap();
+            selectRating(btn.dataset["rating"]);
+        });
     });
     form.addEventListener("submit", (e) => {
         e.preventDefault();

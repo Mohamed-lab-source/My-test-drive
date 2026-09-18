@@ -23,6 +23,14 @@ function render(): void {
   VIEW_RENDERERS[currentRoute()](appEl);
 }
 
+function renderWithTransition(): void {
+  if ("startViewTransition" in document) {
+    document.startViewTransition(render);
+  } else {
+    render();
+  }
+}
+
 async function main(): Promise<void> {
   const appEl = document.getElementById("app");
   if (appEl) appEl.innerHTML = `<div class="loading">Loading your habits…</div>`;
@@ -30,7 +38,7 @@ async function main(): Promise<void> {
   await loadAll();
   render();
   subscribe(render);
-  onRouteChange(render);
+  onRouteChange(renderWithTransition);
 }
 
 main();

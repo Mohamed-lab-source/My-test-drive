@@ -20,6 +20,28 @@ export function statTile(data: StatTileData): string {
   `;
 }
 
+export function activityRing(done: number, total: number): string {
+  const size = 88;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+  const ratio = total === 0 ? 0 : Math.min(1, done / total);
+  const offset = circumference * (1 - ratio);
+  const complete = total > 0 && done >= total;
+  const pct = Math.round(ratio * 100);
+
+  return `
+    <div class="activity-ring-svg-wrap">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${pct}% of today's habits done">
+        <circle class="activity-ring-track" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke-width="${stroke}" />
+        <circle class="activity-ring-fill ${complete ? "complete" : ""}" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none"
+          stroke-width="${stroke}" stroke-dasharray="${circumference.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" />
+      </svg>
+      <div class="activity-ring-label">${complete ? "🎉" : `${pct}%`}</div>
+    </div>
+  `;
+}
+
 export function sparklineSVG(values: number[], width = 96, height = 28): string {
   const max = Math.max(1, ...values);
   const step = width / (values.length - 1);

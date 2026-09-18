@@ -42,6 +42,7 @@ export async function listHabits(): Promise<Habit[]> {
 
 export interface NewHabitInput {
   name: string;
+  icon: string;
   identityId: string | null;
   frequency: Frequency;
   cue: string;

@@ -3,6 +3,8 @@ import { escapeHtml } from "../utils/html.js";
 import { todayISO, isDue } from "../utils/date.js";
 import { findCheckIn, isVote, computeCurrentStreak } from "../domain/analytics.js";
 import { icons } from "../icons.js";
+import { activityRing } from "../charts/svg.js";
+import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
 function orderDueHabits(due) {
     const dueIds = new Set(due.map((h) => h.id));
     const isRoot = (h) => !(h.stackAnchor.type === "habit" && dueIds.has(h.stackAnchor.habitId));
@@ -40,28 +42,40 @@ export function renderToday(container) {
         <h1>Today</h1>
         <p class="view-subtitle">
           ${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-          &middot; ${doneCount}/${dueToday.length} done
           ${notDueCount > 0 ? `&middot; ${notDueCount} not scheduled today` : ""}
         </p>
       </header>
+
+      ${dueToday.length > 0
+        ? `<div class="activity-ring-wrap">
+              ${activityRing(doneCount, dueToday.length)}
+              <div>
+                <div class="activity-ring-copy-title">${doneCount}/${dueToday.length} done</div>
+                <div class="activity-ring-copy-sub">${doneCount === dueToday.length
+            ? "Every habit voted for today. Nice."
+            : "Every vote counts toward who you're becoming."}</div>
+              </div>
+            </div>`
+        : ""}
 
       ${dueToday.length === 0
         ? `<div class="empty-state">Nothing scheduled today. Head to <a href="#/habits">Habits</a> to create one.</div>`
         : `<ul class="list-card today-list">
               ${dueToday
-            .map((habit) => {
+            .map((habit, i) => {
             const checkin = findCheckIn(checkins, habit.id, today);
             const state = checkin?.completedFull ? "full" : checkin?.usedTwoMinuteVersion ? "two-minute" : "none";
             const streak = computeCurrentStreak(habit, checkins);
             const idLabel = identityLabel(habit.identityId);
             const chained = habit.stackAnchor.type === "habit";
             return `
-                <li class="today-item state-${state} ${chained ? "chained" : ""}">
+                <li class="today-item state-${state} ${chained ? "chained" : ""} stagger-in" style="--stagger-index: ${i}">
                   <button class="today-check" data-checkin="${habit.id}" data-mode="full" aria-label="Mark done">
                     ${state === "full" ? icons.checkFilled : icons.circle}
                   </button>
                   <div class="today-item-main">
                     <div class="today-item-title">
+                      <span class="habit-icon">${escapeHtml(habit.icon || "⭐")}</span>
                       <span class="habit-name">${escapeHtml(habit.name)}</span>
                       ${streak > 0 ? `<span class="pill pill-streak">🔥 ${streak}</span>` : ""}
                     </div>
@@ -79,6 +93,13 @@ export function renderToday(container) {
             </ul>`}
     </section>
   `;
+    const prevDoneKey = `prev-done-${today}`;
+    const prevDone = Number(sessionStorage.getItem(prevDoneKey) ?? "0");
+    if (dueToday.length > 0 && doneCount === dueToday.length && prevDone < dueToday.length) {
+        hapticSuccess();
+        celebrate(container.querySelector(".activity-ring-svg-wrap") ?? undefined);
+    }
+    sessionStorage.setItem(prevDoneKey, String(doneCount));
     container.querySelectorAll("[data-checkin]").forEach((btn) => {
         btn.addEventListener("click", () => {
             const habitId = btn.dataset["checkin"];
@@ -88,6 +109,7 @@ export function renderToday(container) {
                 return;
             const checkin = findCheckIn(checkins, habitId, today);
             const currentState = checkin?.completedFull ? "full" : checkin?.usedTwoMinuteVersion ? "two-minute" : "none";
+            hapticTap();
             setCheckIn(habitId, today, currentState === mode ? "clear" : mode);
         });
     });

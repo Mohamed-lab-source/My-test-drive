@@ -3,7 +3,7 @@ import { escapeHtml } from "../utils/html.js";
 import { lastNDates } from "../utils/date.js";
 import { identityVoteCount, identityVoteSeries } from "../domain/analytics.js";
 import { sparklineSVG } from "../charts/svg.js";
-import { navigateTo } from "../router.js";
+import { openHabitWizard } from "./habitWizard.js";
 export function renderIdentities(container) {
     const { identities, habits, checkins } = getState();
     const active = identities.filter((i) => !i.archived);
@@ -32,13 +32,13 @@ export function renderIdentities(container) {
         ${active.length === 0
         ? `<div class="empty-state">No identities yet. Add one above — try something like "a runner" or "a writer".</div>`
         : active
-            .map((identity) => {
+            .map((identity, i) => {
             const habitCount = habits.filter((h) => h.identityId === identity.id && !h.archived).length;
             const totalVotes = identityVoteCount(identity.id, habits, checkins);
             const votes30 = identityVoteCount(identity.id, habits, checkins, last30);
             const series = identityVoteSeries(identity.id, habits, checkins, last30);
             return `
-                <div class="card identity-card">
+                <div class="card identity-card stagger-in" style="--stagger-index: ${i}">
                   <div class="identity-statement">I am <strong>${escapeHtml(identity.statement)}</strong></div>
                   <div class="identity-stats">
                     <div>
@@ -79,8 +79,7 @@ export function renderIdentities(container) {
     });
     container.querySelectorAll("[data-add-habit]").forEach((btn) => {
         btn.addEventListener("click", () => {
-            sessionStorage.setItem("prefill-identity", btn.dataset["addHabit"]);
-            navigateTo("habits");
+            openHabitWizard({ identityId: btn.dataset["addHabit"] });
         });
     });
 }

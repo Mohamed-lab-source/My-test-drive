@@ -21,6 +21,14 @@ function render() {
     renderNav(navEl);
     VIEW_RENDERERS[currentRoute()](appEl);
 }
+function renderWithTransition() {
+    if ("startViewTransition" in document) {
+        document.startViewTransition(render);
+    }
+    else {
+        render();
+    }
+}
 async function main() {
     const appEl = document.getElementById("app");
     if (appEl)
@@ -28,7 +36,7 @@ async function main() {
     await loadAll();
     render();
     subscribe(render);
-    onRouteChange(render);
+    onRouteChange(renderWithTransition);
 }
 main();
 //# sourceMappingURL=main.js.map

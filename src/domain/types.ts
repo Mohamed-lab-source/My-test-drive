@@ -26,6 +26,8 @@ export type StackAnchor =
 export interface Habit {
   id: string;
   name: string;
+  /** A single emoji representing the habit, shown throughout the UI. */
+  icon: string;
   identityId: string | null;
   frequency: Frequency;
 
