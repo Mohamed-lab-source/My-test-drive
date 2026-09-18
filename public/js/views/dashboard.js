@@ -1,8 +1,21 @@
 import { getState } from "../state/store.js";
 import { lastNDates } from "../utils/date.js";
 import { escapeHtml } from "../utils/html.js";
-import { computeCurrentStreak, computeLongestStreak, completionRate, dailyConsistency, identityVoteCount, identityVoteSeries, totalVotesAllTime, } from "../domain/analytics.js";
+import { computeCurrentStreak, computeLongestStreak, completionRate, dailyConsistency, identityVoteCount, identityVoteSeries, totalVotesAllTime, isVote, } from "../domain/analytics.js";
 import { statTile, heatmapSVG, barList } from "../charts/svg.js";
+function weeklyInsight(thisWeek, prevWeek) {
+    if (thisWeek === 0 && prevWeek === 0)
+        return null;
+    if (prevWeek === 0) {
+        return { icon: "🌱", text: `${thisWeek} vote${thisWeek === 1 ? "" : "s"} logged this week — a fresh start.` };
+    }
+    const change = Math.round(((thisWeek - prevWeek) / prevWeek) * 100);
+    if (change >= 10)
+        return { icon: "📈", text: `You're up ${change}% from last week. Keep it going.` };
+    if (change <= -10)
+        return { icon: "📉", text: `Down ${Math.abs(change)}% from last week — small steps still count.` };
+    return { icon: "⚖️", text: "Holding steady with last week." };
+}
 export function renderDashboard(container) {
     const { habits, checkins, identities } = getState();
     const activeHabits = habits.filter((h) => !h.archived);
@@ -19,12 +32,19 @@ export function renderDashboard(container) {
         value: completionRate(h, checkins, last30),
     }))
         .sort((a, b) => b.value - a.value);
+    const last7 = lastNDates(7);
+    const prev7 = lastNDates(14).slice(0, 7);
+    const votesThisWeek = checkins.filter((c) => isVote(c) && last7.includes(c.date)).length;
+    const votesPrevWeek = checkins.filter((c) => isVote(c) && prev7.includes(c.date)).length;
+    const insight = weeklyInsight(votesThisWeek, votesPrevWeek);
     container.innerHTML = `
     <section class="view">
       <header class="view-header">
         <h1>Dashboard</h1>
         <p class="view-subtitle">The data behind the 1% — small, consistent votes compounding over time.</p>
       </header>
+
+      ${insight ? `<div class="insight-card"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
 
       <div class="stat-tile-row">
         ${statTile({ label: "Votes cast", value: String(totalVotes), sublabel: "all time" })}

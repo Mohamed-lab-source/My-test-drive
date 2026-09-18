@@ -2,6 +2,8 @@ import { getState, archiveHabit } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { WEEKDAY_LABELS } from "../utils/date.js";
 import { openHabitWizard } from "./habitWizard.js";
+import { openHabitDetail } from "./habitDetail.js";
+import { enableSwipeToReveal } from "../swipe.js";
 import type { Habit, Frequency } from "../domain/types.js";
 
 function stackDescription(habit: Habit, allHabits: Habit[]): string | null {
@@ -35,25 +37,32 @@ function renderChainTree(
   const desc = stackDescription(habit, allHabits);
   return `
     <div class="habit-node" style="margin-left: ${depth * 22}px">
-      <div class="habit-card stagger-in" style="--stagger-index: ${index}">
-        <div class="habit-card-head">
-          <span class="habit-icon">${escapeHtml(habit.icon || "⭐")}</span>
-          <span class="habit-name">${depth > 0 ? "↳ " : ""}${escapeHtml(habit.name)}</span>
-          <span class="pill pill-identity">${escapeHtml(identityLabel(habit.identityId))}</span>
+      <div class="swipe-row stagger-in" style="--stagger-index: ${index}">
+        <div class="swipe-actions">
+          <button class="swipe-action swipe-action-archive" data-archive-habit="${habit.id}">Archive</button>
         </div>
-        ${desc ? `<div class="habit-stack-desc muted">${escapeHtml(desc)}</div>` : ""}
-        <div class="habit-four-laws">
-          <div><span class="law-tag">Obvious</span> ${escapeHtml(habit.cue) || "—"}</div>
-          <div><span class="law-tag">Attractive</span> ${escapeHtml(habit.craving) || "—"}</div>
-          <div><span class="law-tag">Easy</span> ${escapeHtml(habit.response) || "—"}</div>
-          <div><span class="law-tag">Satisfying</span> ${escapeHtml(habit.reward) || "—"}</div>
-        </div>
-        <div class="habit-card-foot">
-          <span class="muted">${frequencyLabel(habit.frequency)}</span>
-          ${habit.twoMinuteVersion ? `<span class="pill pill-two-min">2-min: ${escapeHtml(habit.twoMinuteVersion)}</span>` : ""}
-          <div class="identity-actions">
-            <button class="btn btn-plain" data-edit="${habit.id}">Edit</button>
-            <button class="btn btn-plain btn-danger" data-archive-habit="${habit.id}">Archive</button>
+        <div class="swipe-content">
+          <div class="habit-card" data-open-detail="${habit.id}">
+            <div class="habit-card-head">
+              <span class="habit-icon">${escapeHtml(habit.icon || "⭐")}</span>
+              <span class="habit-name">${depth > 0 ? "↳ " : ""}${escapeHtml(habit.name)}</span>
+              <span class="pill pill-identity">${escapeHtml(identityLabel(habit.identityId))}</span>
+            </div>
+            ${desc ? `<div class="habit-stack-desc muted">${escapeHtml(desc)}</div>` : ""}
+            <div class="habit-four-laws">
+              <div><span class="law-tag">Obvious</span> ${escapeHtml(habit.cue) || "—"}</div>
+              <div><span class="law-tag">Attractive</span> ${escapeHtml(habit.craving) || "—"}</div>
+              <div><span class="law-tag">Easy</span> ${escapeHtml(habit.response) || "—"}</div>
+              <div><span class="law-tag">Satisfying</span> ${escapeHtml(habit.reward) || "—"}</div>
+            </div>
+            <div class="habit-card-foot">
+              <span class="muted">${frequencyLabel(habit.frequency)}</span>
+              ${habit.twoMinuteVersion ? `<span class="pill pill-two-min">2-min: ${escapeHtml(habit.twoMinuteVersion)}</span>` : ""}
+              <div class="identity-actions">
+                <button class="btn btn-plain" data-edit="${habit.id}">Edit</button>
+                <button class="btn btn-plain btn-danger" data-archive-habit="${habit.id}">Archive</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -95,7 +104,10 @@ export function renderHabits(container: HTMLElement): void {
       <div class="habit-list">
         ${
           trueRoots.length === 0
-            ? `<div class="empty-state">No habits yet. Tap "Add a habit" above to create your first one.</div>`
+            ? `<div class="empty-state">
+                <div class="empty-illustration">🌱</div>
+                <p>No habits yet. Tap "Add a habit" above to plant your first one.</p>
+              </div>`
             : trueRoots.map((h, i) => renderChainTree(h, activeHabits, identityLabel, 0, i)).join("")
         }
       </div>
@@ -105,13 +117,26 @@ export function renderHabits(container: HTMLElement): void {
   container.querySelector("#open-add-habit")!.addEventListener("click", () => openHabitWizard());
 
   container.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const habit = habits.find((h) => h.id === btn.dataset["edit"]);
       if (habit) openHabitWizard({ editHabit: habit });
     });
   });
 
   container.querySelectorAll<HTMLButtonElement>("[data-archive-habit]").forEach((btn) => {
-    btn.addEventListener("click", () => archiveHabit(btn.dataset["archiveHabit"]!));
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      archiveHabit(btn.dataset["archiveHabit"]!);
+    });
   });
+
+  container.querySelectorAll<HTMLElement>("[data-open-detail]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const habit = habits.find((h) => h.id === el.dataset["openDetail"]);
+      if (habit) openHabitDetail(habit);
+    });
+  });
+
+  enableSwipeToReveal(container);
 }

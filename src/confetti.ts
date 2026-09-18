@@ -3,10 +3,27 @@
 
 const COLORS = ["#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#FFD60A"];
 
-export function celebrate(originEl?: HTMLElement): void {
-  const rect = originEl?.getBoundingClientRect();
-  const originX = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-  const originY = rect ? rect.top + rect.height / 2 : window.innerHeight / 3;
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * Accepts a live element (its current position is read at call time) or a
+ * plain {x, y} point — pass a point when the origin was captured earlier,
+ * e.g. before an `await` that might detach the original element from the DOM.
+ */
+export function celebrate(origin?: HTMLElement | Point): void {
+  let originX = window.innerWidth / 2;
+  let originY = window.innerHeight / 3;
+  if (origin instanceof HTMLElement) {
+    const rect = origin.getBoundingClientRect();
+    originX = rect.left + rect.width / 2;
+    originY = rect.top + rect.height / 2;
+  } else if (origin) {
+    originX = origin.x;
+    originY = origin.y;
+  }
 
   const layer = document.createElement("div");
   layer.className = "confetti-layer";

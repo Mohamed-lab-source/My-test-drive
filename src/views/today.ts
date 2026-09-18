@@ -1,11 +1,16 @@
-import { getState, setCheckIn } from "../state/store.js";
+import { getState, setCheckIn, archiveHabit } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { todayISO, isDue } from "../utils/date.js";
 import { findCheckIn, isVote, computeCurrentStreak } from "../domain/analytics.js";
 import { icons } from "../icons.js";
 import { activityRing } from "../charts/svg.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
+import { showToast } from "../toast.js";
+import { enableSwipeToReveal } from "../swipe.js";
+import { openHabitDetail } from "./habitDetail.js";
 import type { Habit } from "../domain/types.js";
+
+const STREAK_MILESTONES = [7, 14, 30, 50, 100, 200, 365];
 
 function orderDueHabits(due: Habit[]): Habit[] {
   const dueIds = new Set(due.map((h) => h.id));
@@ -72,7 +77,10 @@ export function renderToday(container: HTMLElement): void {
 
       ${
         dueToday.length === 0
-          ? `<div class="empty-state">Nothing scheduled today. Head to <a href="#/habits">Habits</a> to create one.</div>`
+          ? `<div class="empty-state">
+              <div class="empty-illustration">☀️</div>
+              <p>Nothing scheduled today. Head to <a href="#/habits">Habits</a> to create one.</p>
+            </div>`
           : `<ul class="list-card today-list">
               ${dueToday
                 .map((habit, i) => {
@@ -82,26 +90,31 @@ export function renderToday(container: HTMLElement): void {
                   const idLabel = identityLabel(habit.identityId);
                   const chained = habit.stackAnchor.type === "habit";
                   return `
-                <li class="today-item state-${state} ${chained ? "chained" : ""} stagger-in" style="--stagger-index: ${i}">
-                  <button class="today-check" data-checkin="${habit.id}" data-mode="full" aria-label="Mark done">
-                    ${state === "full" ? icons.checkFilled : icons.circle}
-                  </button>
-                  <div class="today-item-main">
-                    <div class="today-item-title">
-                      <span class="habit-icon">${escapeHtml(habit.icon || "⭐")}</span>
-                      <span class="habit-name">${escapeHtml(habit.name)}</span>
-                      ${streak > 0 ? `<span class="pill pill-streak">🔥 ${streak}</span>` : ""}
-                    </div>
-                    ${habit.response ? `<div class="today-item-response muted">${escapeHtml(habit.response)}</div>` : ""}
-                    ${idLabel ? `<div class="today-item-identity muted">Vote for: I am ${escapeHtml(idLabel)}</div>` : ""}
+                <li class="today-item swipe-row state-${state} ${chained ? "chained" : ""} stagger-in" style="--stagger-index: ${i}">
+                  <div class="swipe-actions">
+                    <button class="swipe-action swipe-action-archive" data-archive-habit="${habit.id}">Archive</button>
                   </div>
-                  ${
-                    habit.twoMinuteVersion
-                      ? `<button class="btn btn-plain btn-small today-two-min ${state === "two-minute" ? "active" : ""}" data-checkin="${habit.id}" data-mode="two-minute" title="${escapeHtml(habit.twoMinuteVersion)}">
-                          2-min
-                        </button>`
-                      : ""
-                  }
+                  <div class="swipe-content today-item-content">
+                    <button class="today-check" data-checkin="${habit.id}" data-mode="full" aria-label="Mark done">
+                      ${state === "full" ? icons.checkFilled : icons.circle}
+                    </button>
+                    <div class="today-item-main" data-open-detail="${habit.id}">
+                      <div class="today-item-title">
+                        <span class="habit-icon">${escapeHtml(habit.icon || "⭐")}</span>
+                        <span class="habit-name">${escapeHtml(habit.name)}</span>
+                        ${streak > 0 ? `<span class="pill pill-streak">🔥 ${streak}</span>` : ""}
+                      </div>
+                      ${habit.response ? `<div class="today-item-response muted">${escapeHtml(habit.response)}</div>` : ""}
+                      ${idLabel ? `<div class="today-item-identity muted">Vote for: I am ${escapeHtml(idLabel)}</div>` : ""}
+                    </div>
+                    ${
+                      habit.twoMinuteVersion
+                        ? `<button class="btn btn-plain btn-small today-two-min ${state === "two-minute" ? "active" : ""}" data-checkin="${habit.id}" data-mode="two-minute" title="${escapeHtml(habit.twoMinuteVersion)}">
+                            2-min
+                          </button>`
+                        : ""
+                    }
+                  </div>
                 </li>`;
                 })
                 .join("")}
@@ -119,15 +132,43 @@ export function renderToday(container: HTMLElement): void {
   sessionStorage.setItem(prevDoneKey, String(doneCount));
 
   container.querySelectorAll<HTMLButtonElement>("[data-checkin]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const habitId = btn.dataset["checkin"]!;
       const mode = btn.dataset["mode"] as "full" | "two-minute";
       const habit = activeHabits.find((h) => h.id === habitId);
       if (!habit) return;
       const checkin = findCheckIn(checkins, habitId, today);
       const currentState = checkin?.completedFull ? "full" : checkin?.usedTwoMinuteVersion ? "two-minute" : "none";
+      const nextMode = currentState === mode ? "clear" : mode;
+      const streakBefore = computeCurrentStreak(habit, checkins);
+      const btnRect = btn.getBoundingClientRect();
+      const origin = { x: btnRect.left + btnRect.width / 2, y: btnRect.top + btnRect.height / 2 };
+
       hapticTap();
-      setCheckIn(habitId, today, currentState === mode ? "clear" : mode);
+      await setCheckIn(habitId, today, nextMode);
+
+      if (nextMode !== "clear") {
+        const streakAfter = computeCurrentStreak(habit, getState().checkins);
+        const milestone = STREAK_MILESTONES.find((m) => streakBefore < m && streakAfter >= m);
+        if (milestone) {
+          hapticSuccess();
+          celebrate(origin);
+          showToast("🔥", `${milestone}-day streak on "${habit.name}"!`);
+        }
+      }
     });
   });
+
+  container.querySelectorAll<HTMLButtonElement>("[data-archive-habit]").forEach((btn) => {
+    btn.addEventListener("click", () => archiveHabit(btn.dataset["archiveHabit"]!));
+  });
+
+  container.querySelectorAll<HTMLElement>("[data-open-detail]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const habit = activeHabits.find((h) => h.id === el.dataset["openDetail"]);
+      if (habit) openHabitDetail(habit);
+    });
+  });
+
+  enableSwipeToReveal(container);
 }

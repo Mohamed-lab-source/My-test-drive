@@ -6,6 +6,7 @@ import { renderIdentities } from "./views/identities.js";
 import { renderHabits } from "./views/habits.js";
 import { renderToday } from "./views/today.js";
 import { renderDashboard } from "./views/dashboard.js";
+import { shouldShowOnboarding, renderOnboarding } from "./views/onboarding.js";
 
 const VIEW_RENDERERS: Record<Route, (el: HTMLElement) => void> = {
   today: renderToday,
@@ -36,9 +37,18 @@ async function main(): Promise<void> {
   if (appEl) appEl.innerHTML = `<div class="loading">Loading your habits…</div>`;
 
   await loadAll();
-  render();
-  subscribe(render);
-  onRouteChange(renderWithTransition);
+
+  const start = () => {
+    render();
+    subscribe(render);
+    onRouteChange(renderWithTransition);
+  };
+
+  if (shouldShowOnboarding()) {
+    renderOnboarding(start);
+  } else {
+    start();
+  }
 }
 
 main();

@@ -33,7 +33,10 @@ export function renderIdentities(container: HTMLElement): void {
       <div class="card-grid">
         ${
           active.length === 0
-            ? `<div class="empty-state">No identities yet. Add one above — try something like "a runner" or "a writer".</div>`
+            ? `<div class="empty-state">
+                <div class="empty-illustration">🧭</div>
+                <p>No identities yet. Add one above — try something like "a runner" or "a writer".</p>
+              </div>`
             : active
                 .map((identity, i) => {
                   const habitCount = habits.filter(

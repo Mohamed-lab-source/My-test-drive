@@ -52,7 +52,10 @@ export function renderScorecard(container: HTMLElement): void {
 
       ${
         scorecard.length === 0
-          ? `<div class="empty-state">No entries yet — add your first routine behavior above.</div>`
+          ? `<div class="empty-state">
+              <div class="empty-illustration">📝</div>
+              <p>No entries yet — add your first routine behavior above.</p>
+            </div>`
           : `<ul class="list-card">
               ${scorecard
                 .slice()
