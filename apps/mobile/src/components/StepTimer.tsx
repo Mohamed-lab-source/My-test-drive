@@ -8,6 +8,7 @@ import { useLocale } from "../i18n/LocaleContext";
 
 type Props = {
   minutes: number;
+  onFinish?: () => void;
 };
 
 function formatTime(totalSeconds: number): string {
@@ -16,7 +17,7 @@ function formatTime(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function StepTimer({ minutes }: Props) {
+export function StepTimer({ minutes, onFinish }: Props) {
   const { colors } = useTheme();
   const { t } = useLocale();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -25,6 +26,8 @@ export function StepTimer({ minutes }: Props) {
   const [isRunning, setIsRunning] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onFinishRef = useRef(onFinish);
+  onFinishRef.current = onFinish;
 
   useEffect(() => {
     // Reset whenever the underlying step (and thus `minutes`) changes.
@@ -43,6 +46,7 @@ export function StepTimer({ minutes }: Props) {
           setIsDone(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}), 400);
+          onFinishRef.current?.();
           return 0;
         }
         return prev - 1;

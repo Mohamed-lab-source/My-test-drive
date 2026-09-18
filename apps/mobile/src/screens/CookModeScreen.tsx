@@ -132,7 +132,17 @@ export function CookModeScreen({ route, navigation }: Props) {
             <Text style={styles.badgeText}>{step.order}</Text>
           </View>
           <Text style={[styles.instruction, { textAlign }]}>{step.instruction}</Text>
-          {step.timerMinutes ? <StepTimer minutes={step.timerMinutes} /> : null}
+          {step.timerMinutes ? (
+            <StepTimer
+              minutes={step.timerMinutes}
+              onFinish={() => {
+                if (voiceEnabled) {
+                  Speech.stop();
+                  Speech.speak(t("cookMode.timeUp"), { language: isRTL ? "ar" : "en-US" });
+                }
+              }}
+            />
+          ) : null}
         </FadeSlideIn>
       </ScrollView>
 
