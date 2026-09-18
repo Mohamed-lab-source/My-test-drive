@@ -1,8 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Linking,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,9 +13,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Location from "expo-location";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { fetchRecipeDetail, fetchRecipes } from "../api/endpoints";
+import { fetchDeliveryPartners, fetchNearbyStores, fetchRecipeDetail, fetchRecipes } from "../api/endpoints";
+import { apiErrorMessage } from "../api/client";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -24,7 +29,7 @@ import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { radius, spacing, type ThemeColors } from "../theme";
-import type { RecipeSummary } from "../api/types";
+import type { DeliveryPartner, RecipeSummary } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "MealPlanner">;
 
@@ -54,6 +59,32 @@ export function MealPlannerScreen({ navigation }: Props) {
   const [generating, setGenerating] = useState(false);
   const [aggregated, setAggregated] = useState<AggregatedItem[] | null>(null);
   const [totalCost, setTotalCost] = useState(0);
+  const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
+  const [mapsUrl, setMapsUrl] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    fetchDeliveryPartners().then(setDeliveryPartners).catch(() => {});
+  }, []);
+
+  const findNearbyStores = async () => {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const { mapsSearchUrl } = await fetchNearbyStores();
+        setMapsUrl(mapsSearchUrl);
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const { mapsSearchUrl } = await fetchNearbyStores(position.coords.latitude, position.coords.longitude);
+      setMapsUrl(mapsSearchUrl);
+    } catch (error) {
+      Alert.alert(t("shoppingList.errorLocation"), apiErrorMessage(error));
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const weekdayLabel = (offset: number, dateKey: string) => {
     if (offset === 0) return t("mealPlanner.today");
@@ -191,6 +222,35 @@ export function MealPlannerScreen({ navigation }: Props) {
                 <Text style={styles.itemQty}>{formatQuantity(item.quantity, item.unit, unitSystem)}</Text>
               </View>
             ))}
+
+            <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
+            <View style={styles.partnerRow}>
+              {deliveryPartners.map((partner) => (
+                <AnimatedPressable
+                  key={partner.id}
+                  style={styles.partnerCard}
+                  pressScale={0.94}
+                  onPress={() => Linking.openURL(partner.websiteUrl)}
+                >
+                  <Text style={styles.partnerEmoji}>{partner.logoEmoji}</Text>
+                  <Text style={styles.partnerName}>{partner.name}</Text>
+                </AnimatedPressable>
+              ))}
+            </View>
+
+            <View style={styles.nearbyButton}>
+              <PrimaryButton
+                label={t("shoppingList.findNearby")}
+                variant="outline"
+                onPress={findNearbyStores}
+                loading={locating}
+              />
+            </View>
+            {mapsUrl ? (
+              <Pressable onPress={() => Linking.openURL(mapsUrl)}>
+                <Text style={styles.mapsLink}>{t("shoppingList.openMaps")}</Text>
+              </Pressable>
+            ) : null}
           </FadeSlideIn>
         ) : null}
       </ScrollView>
@@ -287,6 +347,21 @@ const createStyles = (colors: ThemeColors) =>
     },
     itemName: { color: colors.text, fontSize: 14, flex: 1 },
     itemQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    partnerRow: { flexDirection: "row" },
+    partnerCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      paddingVertical: spacing(2),
+      marginEnd: spacing(1),
+    },
+    partnerEmoji: { fontSize: 26 },
+    partnerName: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: 4 },
+    nearbyButton: { marginTop: spacing(2) },
+    mapsLink: { color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: spacing(1.5) },
     modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
     modalSheet: {
       backgroundColor: colors.background,

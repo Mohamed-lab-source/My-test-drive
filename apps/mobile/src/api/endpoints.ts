@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type {
   Cuisine,
+  DeliveryPartner,
   DietGoal,
   NearbyStores,
   PantryIngredient,
@@ -68,6 +69,11 @@ export async function fetchRandomRecipe(params?: { cuisine?: string; tag?: strin
 export async function fetchRecipeDetail(slug: string, goal?: DietGoal) {
   const params = goal && goal !== "NONE" ? { goal } : undefined;
   const { data } = await api.get<RecipeDetail>(`/recipes/${slug}`, { params });
+  return data;
+}
+
+export async function fetchDeliveryPartners() {
+  const { data } = await api.get<DeliveryPartner[]>("/delivery-partners");
   return data;
 }
 
