@@ -40,8 +40,8 @@ function renderChainTree(habit, allHabits, identityLabel, depth) {
           <span class="muted">${frequencyLabel(habit.frequency)}</span>
           ${habit.twoMinuteVersion ? `<span class="pill pill-two-min">2-min: ${escapeHtml(habit.twoMinuteVersion)}</span>` : ""}
           <div class="identity-actions">
-            <button class="btn btn-link" data-edit="${habit.id}">edit</button>
-            <button class="btn btn-link btn-danger" data-archive-habit="${habit.id}">archive</button>
+            <button class="btn btn-plain" data-edit="${habit.id}">Edit</button>
+            <button class="btn btn-plain btn-danger" data-archive-habit="${habit.id}">Archive</button>
           </div>
         </div>
       </div>
@@ -77,71 +77,81 @@ export function renderHabits(container) {
         <p class="view-subtitle">Design each habit with the Four Laws, scale it down with the 2-minute rule, and stack it onto something you already do.</p>
       </header>
 
-      <form id="habit-form" class="card habit-form">
+      <form id="habit-form" class="form-card">
         <input type="hidden" name="editingId" value="" />
 
-        <div class="form-row">
-          <label>Habit name
-            <input type="text" name="name" required maxlength="80" placeholder="Read before bed" />
-          </label>
-          <label>Identity vote
-            <select name="identityId">
-              <option value="">No identity</option>
-              ${activeIdentities
+        <div class="form-card-row">
+          <span class="row-label">Habit name</span>
+          <input type="text" name="name" class="plain-input" required maxlength="80" placeholder="Read before bed" />
+        </div>
+        <div class="form-card-row">
+          <span class="row-label">Identity vote</span>
+          <select name="identityId" class="plain-select">
+            <option value="">No identity</option>
+            ${activeIdentities
         .map((i) => `<option value="${i.id}" ${prefillIdentity === i.id ? "selected" : ""}>I am ${escapeHtml(i.statement)}</option>`)
         .join("")}
-            </select>
-          </label>
+          </select>
         </div>
 
-        <fieldset class="form-row">
-          <legend>Frequency</legend>
-          <label class="radio-label"><input type="radio" name="freqType" value="daily" checked /> Every day</label>
-          <label class="radio-label"><input type="radio" name="freqType" value="weekdays" /> Specific days</label>
-          <div id="weekday-picker" class="weekday-picker hidden">
-            ${WEEKDAY_LABELS.map((label, i) => `
-              <label class="weekday-chip">
-                <input type="checkbox" name="weekday" value="${i}" /> ${label}
-              </label>`).join("")}
+        <div class="form-section-label">Frequency</div>
+        <div class="form-card-row segmented-row">
+          <div class="segmented-control">
+            <input type="radio" id="freq-daily" name="freqType" value="daily" checked class="segmented-input" />
+            <label for="freq-daily" class="segmented-label">Every day</label>
+            <input type="radio" id="freq-weekdays" name="freqType" value="weekdays" class="segmented-input" />
+            <label for="freq-weekdays" class="segmented-label">Specific days</label>
           </div>
-        </fieldset>
-
-        <div class="form-row four-laws-grid">
-          <label>1. Make it Obvious — cue
-            <input type="text" name="cue" placeholder="My phone is on the nightstand at 9pm" />
-          </label>
-          <label>2. Make it Attractive — craving
-            <input type="text" name="craving" placeholder="I get to unwind before sleep" />
-          </label>
-          <label>3. Make it Easy — response
-            <input type="text" name="response" placeholder="Read one page" />
-          </label>
-          <label>4. Make it Satisfying — reward
-            <input type="text" name="reward" placeholder="Check it off, feel proud" />
-          </label>
+        </div>
+        <div id="weekday-picker" class="form-card-row weekday-picker hidden">
+          ${WEEKDAY_LABELS.map((label, i) => `
+            <input type="checkbox" id="weekday-${i}" name="weekday" value="${i}" class="chip-input" />
+            <label for="weekday-${i}" class="weekday-chip">${label}</label>`).join("")}
         </div>
 
-        <div class="form-row">
-          <label>2-minute version (Law 3, taken further)
-            <input type="text" name="twoMinuteVersion" placeholder="Read one sentence" />
-          </label>
+        <div class="form-section-label">The Four Laws</div>
+        <div class="form-card-row">
+          <span class="row-label">1. Make it Obvious — cue</span>
+          <input type="text" name="cue" class="plain-input" placeholder="My phone is on the nightstand at 9pm" />
+        </div>
+        <div class="form-card-row">
+          <span class="row-label">2. Make it Attractive — craving</span>
+          <input type="text" name="craving" class="plain-input" placeholder="I get to unwind before sleep" />
+        </div>
+        <div class="form-card-row">
+          <span class="row-label">3. Make it Easy — response</span>
+          <input type="text" name="response" class="plain-input" placeholder="Read one page" />
+        </div>
+        <div class="form-card-row">
+          <span class="row-label">4. Make it Satisfying — reward</span>
+          <input type="text" name="reward" class="plain-input" placeholder="Check it off, feel proud" />
+        </div>
+        <div class="form-card-row">
+          <span class="row-label">2-minute version (Law 3, taken further)</span>
+          <input type="text" name="twoMinuteVersion" class="plain-input" placeholder="Read one sentence" />
         </div>
 
-        <fieldset class="form-row">
-          <legend>Habit stacking — "After [ANCHOR], I will [this habit]."</legend>
-          <label class="radio-label"><input type="radio" name="stackType" value="none" checked /> No anchor</label>
-          <label class="radio-label"><input type="radio" name="stackType" value="habit" /> After an existing habit</label>
-          <label class="radio-label"><input type="radio" name="stackType" value="custom" /> After something custom</label>
-
-          <select id="stack-habit-select" name="stackHabitId" class="hidden">
+        <div class="form-section-label">Habit stacking — "After [ANCHOR], I will [this habit]."</div>
+        <div class="form-card-row segmented-row">
+          <div class="segmented-control segmented-control-3">
+            <input type="radio" id="stack-none" name="stackType" value="none" checked class="segmented-input" />
+            <label for="stack-none" class="segmented-label">None</label>
+            <input type="radio" id="stack-habit" name="stackType" value="habit" class="segmented-input" />
+            <label for="stack-habit" class="segmented-label">A habit</label>
+            <input type="radio" id="stack-custom" name="stackType" value="custom" class="segmented-input" />
+            <label for="stack-custom" class="segmented-label">Custom</label>
+          </div>
+        </div>
+        <div id="stack-detail-row" class="form-card-row hidden">
+          <select id="stack-habit-select" name="stackHabitId" class="plain-select hidden">
             ${activeHabits.map((h) => `<option value="${h.id}">${escapeHtml(h.name)}</option>`).join("")}
           </select>
-          <input id="stack-custom-input" type="text" name="stackCustom" class="hidden" placeholder="I pour my morning coffee" />
-        </fieldset>
+          <input id="stack-custom-input" type="text" name="stackCustom" class="plain-input hidden" placeholder="I pour my morning coffee" />
+        </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary" id="habit-submit-btn">Add habit</button>
-          <button type="button" class="btn btn-link hidden" id="habit-cancel-edit">Cancel edit</button>
+        <div class="form-card-row form-actions">
+          <button type="submit" class="btn btn-primary btn-block" id="habit-submit-btn">Add habit</button>
+          <button type="button" class="btn btn-plain hidden" id="habit-cancel-edit">Cancel edit</button>
         </div>
       </form>
 
@@ -157,6 +167,7 @@ export function renderHabits(container) {
 function wireHabitForm(container, allHabits) {
     const form = container.querySelector("#habit-form");
     const weekdayPicker = container.querySelector("#weekday-picker");
+    const stackDetailRow = container.querySelector("#stack-detail-row");
     const stackHabitSelect = container.querySelector("#stack-habit-select");
     const stackCustomInput = container.querySelector("#stack-custom-input");
     const submitBtn = container.querySelector("#habit-submit-btn");
@@ -171,12 +182,14 @@ function wireHabitForm(container, allHabits) {
         radio.addEventListener("change", () => {
             stackHabitSelect.classList.toggle("hidden", !(radio.value === "habit" && radio.checked));
             stackCustomInput.classList.toggle("hidden", !(radio.value === "custom" && radio.checked));
+            stackDetailRow.classList.toggle("hidden", radio.value === "none" || !radio.checked);
         });
     });
     function resetForm() {
         form.reset();
         editingIdInput.value = "";
         weekdayPicker.classList.add("hidden");
+        stackDetailRow.classList.add("hidden");
         stackHabitSelect.classList.add("hidden");
         stackCustomInput.classList.add("hidden");
         submitBtn.textContent = "Add habit";
@@ -206,6 +219,7 @@ function wireHabitForm(container, allHabits) {
             stackRadio.checked = true;
         stackHabitSelect.classList.toggle("hidden", habit.stackAnchor.type !== "habit");
         stackCustomInput.classList.toggle("hidden", habit.stackAnchor.type !== "custom");
+        stackDetailRow.classList.toggle("hidden", habit.stackAnchor.type === "none");
         if (habit.stackAnchor.type === "habit")
             stackHabitSelect.value = habit.stackAnchor.habitId;
         if (habit.stackAnchor.type === "custom")

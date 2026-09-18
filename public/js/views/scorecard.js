@@ -21,15 +21,22 @@ export function renderScorecard(container) {
         </p>
       </header>
 
-      <form id="scorecard-form" class="card form-inline">
-        <input type="text" name="activity" placeholder="e.g. Check phone right after waking up" required maxlength="140" />
-        <div class="rating-picker">
-          <button type="button" class="rating-btn rating-plus" data-rating="+">+</button>
-          <button type="button" class="rating-btn rating-equal" data-rating="=">=</button>
-          <button type="button" class="rating-btn rating-minus" data-rating="-">-</button>
+      <form id="scorecard-form" class="form-card">
+        <div class="form-card-row">
+          <input type="text" name="activity" class="plain-input" placeholder="e.g. Check phone right after waking up" required maxlength="140" />
+        </div>
+        <div class="form-card-row rating-row">
+          <span class="row-label">Rating</span>
+          <div class="rating-picker">
+            <button type="button" class="rating-btn rating-minus" data-rating="-">&minus;</button>
+            <button type="button" class="rating-btn rating-equal" data-rating="=">=</button>
+            <button type="button" class="rating-btn rating-plus" data-rating="+">+</button>
+          </div>
         </div>
         <input type="hidden" name="rating" value="=" />
-        <button type="submit" class="btn btn-primary">Add</button>
+        <div class="form-card-row">
+          <button type="submit" class="btn btn-primary btn-block">Add to scorecard</button>
+        </div>
       </form>
 
       <div class="summary-row">
@@ -38,18 +45,20 @@ export function renderScorecard(container) {
         <span class="pill pill-minus">${counts["-"]} negative</span>
       </div>
 
-      <ul class="scorecard-list">
-        ${scorecard
-        .slice()
-        .reverse()
-        .map((e) => `
-          <li class="scorecard-item rating-${e.rating === "+" ? "plus" : e.rating === "-" ? "minus" : "equal"}">
-            <span class="scorecard-badge" title="${RATING_LABEL[e.rating]}">${e.rating}</span>
-            <span class="scorecard-activity">${escapeHtml(e.activity)}</span>
-            <button class="icon-btn" data-remove="${e.id}" aria-label="Remove">&times;</button>
-          </li>`)
-        .join("") || `<li class="empty-state">No entries yet — add your first routine behavior above.</li>`}
-      </ul>
+      ${scorecard.length === 0
+        ? `<div class="empty-state">No entries yet — add your first routine behavior above.</div>`
+        : `<ul class="list-card">
+              ${scorecard
+            .slice()
+            .reverse()
+            .map((e) => `
+                <li class="scorecard-item rating-${e.rating === "+" ? "plus" : e.rating === "-" ? "minus" : "equal"}">
+                  <span class="scorecard-badge" title="${RATING_LABEL[e.rating]}">${e.rating}</span>
+                  <span class="scorecard-activity">${escapeHtml(e.activity)}</span>
+                  <button class="icon-btn" data-remove="${e.id}" aria-label="Remove">&times;</button>
+                </li>`)
+            .join("")}
+            </ul>`}
     </section>
   `;
     const form = container.querySelector("#scorecard-form");

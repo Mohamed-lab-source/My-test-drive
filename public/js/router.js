@@ -1,9 +1,9 @@
 export const ROUTES = [
-    { route: "today", label: "Today", icon: "✓" },
-    { route: "habits", label: "Habits", icon: "⚡" },
-    { route: "identities", label: "Identities", icon: "★" },
-    { route: "scorecard", label: "Scorecard", icon: "≡" },
-    { route: "dashboard", label: "Dashboard", icon: "▦" },
+    { route: "today", label: "Today" },
+    { route: "habits", label: "Habits" },
+    { route: "identities", label: "Identities" },
+    { route: "scorecard", label: "Scorecard" },
+    { route: "dashboard", label: "Dashboard" },
 ];
 const VALID = new Set(ROUTES.map((r) => r.route));
 export function currentRoute() {

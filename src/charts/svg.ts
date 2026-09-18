@@ -102,36 +102,22 @@ export interface BarDatum {
   detail?: string;
 }
 
-/** Horizontal bar chart, one hue, sorted low->high by the caller if desired. */
-export function horizontalBarChartSVG(data: BarDatum[], width = 480): string {
+/**
+ * Horizontal bar list, one hue. Built with HTML/CSS (not SVG) so text stays
+ * crisp and the bars reflow to any container width instead of overflowing it.
+ */
+export function barList(data: BarDatum[]): string {
   if (data.length === 0) return "";
-  const rowHeight = 32;
-  const barHeight = 16;
-  const labelWidth = 140;
-  const trackWidth = width - labelWidth - 48;
-  const height = data.length * rowHeight + 8;
-
-  const rows = data.map((d, i) => {
-    const y = i * rowHeight + 8;
-    const barW = Math.max(2, d.value * trackWidth);
+  const rows = data.map((d) => {
     const pct = Math.round(d.value * 100);
     const title = d.detail ?? `${d.label}: ${pct}%`;
     return `
-      <g>
-        <title>${escapeHtml(title)}</title>
-        <text x="${labelWidth - 8}" y="${y + barHeight / 2}" text-anchor="end" dominant-baseline="middle" class="viz-label">${escapeHtml(
-      d.label
-    )}</text>
-        <rect x="${labelWidth}" y="${y}" width="${trackWidth}" height="${barHeight}" rx="4" fill="var(--gridline)" />
-        <rect x="${labelWidth}" y="${y}" width="${barW}" height="${barHeight}" rx="4" fill="var(--series-1)" />
-        <text x="${labelWidth + trackWidth + 8}" y="${y + barHeight / 2}" dominant-baseline="middle" class="viz-value">${pct}%</text>
-      </g>
+      <div class="bar-row" title="${escapeHtml(title)}">
+        <span class="bar-row-label">${escapeHtml(d.label)}</span>
+        <span class="bar-row-track"><span class="bar-row-fill" style="width:${Math.max(2, pct)}%"></span></span>
+        <span class="bar-row-value">${pct}%</span>
+      </div>
     `;
   });
-
-  return `
-    <svg class="viz-root" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Completion rate by habit">
-      ${rows.join("")}
-    </svg>
-  `;
+  return `<div class="bar-list" role="img" aria-label="Completion rate by habit">${rows.join("")}</div>`;
 }

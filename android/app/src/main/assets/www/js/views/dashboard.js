@@ -2,7 +2,7 @@ import { getState } from "../state/store.js";
 import { lastNDates } from "../utils/date.js";
 import { escapeHtml } from "../utils/html.js";
 import { computeCurrentStreak, computeLongestStreak, completionRate, dailyConsistency, identityVoteCount, identityVoteSeries, totalVotesAllTime, } from "../domain/analytics.js";
-import { statTile, heatmapSVG, horizontalBarChartSVG } from "../charts/svg.js";
+import { statTile, heatmapSVG, barList } from "../charts/svg.js";
 export function renderDashboard(container) {
     const { habits, checkins, identities } = getState();
     const activeHabits = habits.filter((h) => !h.archived);
@@ -45,7 +45,7 @@ export function renderDashboard(container) {
         <h2 class="card-title">Completion rate — last 30 days</h2>
         ${barData.length === 0
         ? `<div class="empty-state">No habits yet.</div>`
-        : horizontalBarChartSVG(barData)}
+        : barList(barData)}
       </div>
 
       <div class="card">

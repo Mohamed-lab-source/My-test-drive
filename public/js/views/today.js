@@ -2,6 +2,7 @@ import { getState, setCheckIn } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { todayISO, isDue } from "../utils/date.js";
 import { findCheckIn, isVote, computeCurrentStreak } from "../domain/analytics.js";
+import { icons } from "../icons.js";
 function orderDueHabits(due) {
     const dueIds = new Set(due.map((h) => h.id));
     const isRoot = (h) => !(h.stackAnchor.type === "habit" && dueIds.has(h.stackAnchor.habitId));
@@ -44,10 +45,10 @@ export function renderToday(container) {
         </p>
       </header>
 
-      <div class="today-list">
-        ${dueToday.length === 0
+      ${dueToday.length === 0
         ? `<div class="empty-state">Nothing scheduled today. Head to <a href="#/habits">Habits</a> to create one.</div>`
-        : dueToday
+        : `<ul class="list-card today-list">
+              ${dueToday
             .map((habit) => {
             const checkin = findCheckIn(checkins, habit.id, today);
             const state = checkin?.completedFull ? "full" : checkin?.usedTwoMinuteVersion ? "two-minute" : "none";
@@ -55,29 +56,27 @@ export function renderToday(container) {
             const idLabel = identityLabel(habit.identityId);
             const chained = habit.stackAnchor.type === "habit";
             return `
-                <div class="today-item state-${state} ${chained ? "chained" : ""}">
+                <li class="today-item state-${state} ${chained ? "chained" : ""}">
+                  <button class="today-check" data-checkin="${habit.id}" data-mode="full" aria-label="Mark done">
+                    ${state === "full" ? icons.checkFilled : icons.circle}
+                  </button>
                   <div class="today-item-main">
                     <div class="today-item-title">
-                      <span class="habit-name">${chained ? "↳ " : ""}${escapeHtml(habit.name)}</span>
+                      <span class="habit-name">${escapeHtml(habit.name)}</span>
                       ${streak > 0 ? `<span class="pill pill-streak">🔥 ${streak}</span>` : ""}
                     </div>
                     ${habit.response ? `<div class="today-item-response muted">${escapeHtml(habit.response)}</div>` : ""}
-                    ${idLabel ? `<div class="today-item-identity muted">vote for: I am ${escapeHtml(idLabel)}</div>` : ""}
+                    ${idLabel ? `<div class="today-item-identity muted">Vote for: I am ${escapeHtml(idLabel)}</div>` : ""}
                   </div>
-                  <div class="today-item-actions">
-                    <button class="btn ${state === "full" ? "btn-success" : "btn-outline"}" data-checkin="${habit.id}" data-mode="full">
-                      ${state === "full" ? "✓ Done" : "Done"}
-                    </button>
-                    ${habit.twoMinuteVersion
-                ? `<button class="btn ${state === "two-minute" ? "btn-success" : "btn-outline"} btn-small" data-checkin="${habit.id}" data-mode="two-minute" title="${escapeHtml(habit.twoMinuteVersion)}">
-                            ${state === "two-minute" ? "✓ 2-min" : "2-min"}
-                          </button>`
+                  ${habit.twoMinuteVersion
+                ? `<button class="btn btn-plain btn-small today-two-min ${state === "two-minute" ? "active" : ""}" data-checkin="${habit.id}" data-mode="two-minute" title="${escapeHtml(habit.twoMinuteVersion)}">
+                          2-min
+                        </button>`
                 : ""}
-                  </div>
-                </div>`;
+                </li>`;
         })
             .join("")}
-      </div>
+            </ul>`}
     </section>
   `;
     container.querySelectorAll("[data-checkin]").forEach((btn) => {

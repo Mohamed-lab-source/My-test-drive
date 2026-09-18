@@ -20,10 +20,14 @@ export function renderIdentities(container: HTMLElement): void {
         </p>
       </header>
 
-      <form id="identity-form" class="card form-inline">
-        <span class="form-prefix">I am</span>
-        <input type="text" name="statement" placeholder="a healthy person" required maxlength="80" />
-        <button type="submit" class="btn btn-primary">Add identity</button>
+      <form id="identity-form" class="form-card">
+        <div class="form-card-row prefix-row">
+          <span class="row-label">I am</span>
+          <input type="text" name="statement" class="plain-input" placeholder="a healthy person" required maxlength="80" />
+        </div>
+        <div class="form-card-row">
+          <button type="submit" class="btn btn-primary btn-block">Add identity</button>
+        </div>
       </form>
 
       <div class="card-grid">
@@ -55,8 +59,8 @@ export function renderIdentities(container: HTMLElement): void {
                   <div class="identity-footer">
                     <span class="muted">${habitCount} habit${habitCount === 1 ? "" : "s"} linked</span>
                     <div class="identity-actions">
-                      <button class="btn btn-link" data-add-habit="${identity.id}">+ habit</button>
-                      <button class="btn btn-link btn-danger" data-archive="${identity.id}">archive</button>
+                      <button class="btn btn-plain" data-add-habit="${identity.id}">+ Habit</button>
+                      <button class="btn btn-plain btn-danger" data-archive="${identity.id}">Archive</button>
                     </div>
                   </div>
                 </div>`;

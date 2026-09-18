@@ -10,7 +10,7 @@ import {
   identityVoteSeries,
   totalVotesAllTime,
 } from "../domain/analytics.js";
-import { statTile, heatmapSVG, horizontalBarChartSVG } from "../charts/svg.js";
+import { statTile, heatmapSVG, barList } from "../charts/svg.js";
 
 export function renderDashboard(container: HTMLElement): void {
   const { habits, checkins, identities } = getState();
@@ -68,7 +68,7 @@ export function renderDashboard(container: HTMLElement): void {
         ${
           barData.length === 0
             ? `<div class="empty-state">No habits yet.</div>`
-            : horizontalBarChartSVG(barData)
+            : barList(barData)
         }
       </div>
 

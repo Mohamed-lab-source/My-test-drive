@@ -1,6 +1,7 @@
 <resources>
     <style name="Theme.AtomicHabits" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:statusBarColor">#2A78D6</item>
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">#F2F2F7</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">#F2F2F7</item>
     </style>
 </resources>

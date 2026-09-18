@@ -1,17 +1,21 @@
 import { ROUTES, currentRoute } from "../router.js";
+import { icons } from "../icons.js";
+
+const ICON_MAP: Record<string, string> = {
+  today: icons.today,
+  habits: icons.habits,
+  identities: icons.identities,
+  scorecard: icons.scorecard,
+  dashboard: icons.dashboard,
+};
 
 export function renderNav(container: HTMLElement): void {
   const active = currentRoute();
-  container.innerHTML = `
-    <div class="nav-brand">Atomic</div>
-    <div class="nav-links">
-      ${ROUTES.map(
-        (r) => `
-        <a class="nav-link ${r.route === active ? "active" : ""}" href="#/${r.route}">
-          <span class="nav-icon" aria-hidden="true">${r.icon}</span>
-          <span>${r.label}</span>
-        </a>`
-      ).join("")}
-    </div>
-  `;
+  container.innerHTML = ROUTES.map(
+    (r) => `
+      <a class="tab-item ${r.route === active ? "active" : ""}" href="#/${r.route}">
+        <span class="tab-icon">${ICON_MAP[r.route]}</span>
+        <span class="tab-label">${r.label}</span>
+      </a>`
+  ).join("");
 }
