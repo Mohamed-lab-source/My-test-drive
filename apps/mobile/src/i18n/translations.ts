@@ -41,6 +41,8 @@ const en = {
   "home.leftoversMarkEaten": "Mark as eaten",
   "home.planWeek": "📅 Plan my week",
   "home.pantryFinder": "🥫 What can I cook?",
+  "home.budgetPicks": "💰 Budget picks",
+  "home.budgetTitle": "Budget picks",
   "home.surpriseMe": "🎲 Surprise me",
   "home.surprisingLoading": "🎲 Picking…",
   "home.surpriseMeError": "Couldn't fetch a surprise recipe",
@@ -81,6 +83,7 @@ const en = {
   "recipeList.filter.dessert": "Dessert",
   "recipeList.filter.vegetarian": "Vegetarian",
   "recipeList.filter.quick": "Quick",
+  "recipeList.filter.cheapestFirst": "💰 Cheapest first",
   "recipeList.empty": "No recipes match these filters yet.",
 
   "recipeDetail.nutrition": "Nutrition (per serving)",
@@ -276,6 +279,8 @@ const ar: Record<keyof typeof en, string> = {
   "home.leftoversMarkEaten": "تحديد كمُستهلكة",
   "home.planWeek": "📅 خطّط أسبوعي",
   "home.pantryFinder": "🥫 ماذا أطبخ؟",
+  "home.budgetPicks": "💰 أقل تكلفة",
+  "home.budgetTitle": "أطباق اقتصادية",
   "home.surpriseMe": "🎲 فاجئني",
   "home.surprisingLoading": "🎲 جارِ الاختيار…",
   "home.surpriseMeError": "تعذّر جلب وصفة عشوائية",
@@ -316,6 +321,7 @@ const ar: Record<keyof typeof en, string> = {
   "recipeList.filter.dessert": "حلويات",
   "recipeList.filter.vegetarian": "نباتي",
   "recipeList.filter.quick": "سريع",
+  "recipeList.filter.cheapestFirst": "💰 الأقل تكلفة أولاً",
   "recipeList.empty": "لا توجد وصفات تطابق هذه الفلاتر بعد.",
 
   "recipeDetail.nutrition": "القيمة الغذائية (لكل حصة)",

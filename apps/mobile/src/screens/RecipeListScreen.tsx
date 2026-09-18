@@ -14,13 +14,18 @@ import type { DishTag, RecipeSummary } from "../api/types";
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
 export function RecipeListScreen({ route, navigation }: Props) {
-  const { cuisineSlug, tag: initialTag, title } = route.params;
+  const { cuisineSlug, tag: initialTag, title, sortByCost } = route.params;
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTag, setActiveTag] = useState<DishTag | undefined>(initialTag as DishTag | undefined);
+  const [cheapestFirst, setCheapestFirst] = useState(Boolean(sortByCost));
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const displayRecipes = cheapestFirst
+    ? [...recipes].sort((a, b) => a.costPerServing - b.costPerServing)
+    : recipes;
 
   const TAG_FILTERS: { value: DishTag | undefined; label: string }[] = [
     { value: undefined, label: t("recipeList.filter.all") },
@@ -48,8 +53,15 @@ export function RecipeListScreen({ route, navigation }: Props) {
           <Chip key={f.label} label={f.label} selected={activeTag === f.value} onPress={() => setActiveTag(f.value)} />
         ))}
       </View>
+      <View style={styles.filterRowSecondary}>
+        <Chip
+          label={t("recipeList.filter.cheapestFirst")}
+          selected={cheapestFirst}
+          onPress={() => setCheapestFirst((v) => !v)}
+        />
+      </View>
       <FlatList
-        data={recipes}
+        data={displayRecipes}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item, index }) => (
@@ -69,6 +81,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     filterRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: spacing(3), paddingTop: spacing(2) },
+    filterRowSecondary: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: spacing(3) },
     listContent: { padding: spacing(3), paddingTop: spacing(1) },
     empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
   });
