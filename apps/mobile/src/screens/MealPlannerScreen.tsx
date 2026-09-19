@@ -17,14 +17,23 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { fetchDeliveryPartners, fetchNearbyStores, fetchRecipeDetail, fetchRecipes } from "../api/endpoints";
+import {
+  fetchDeliveryPartners,
+  fetchNearbyStores,
+  fetchRecipeDetail,
+  fetchRecipes,
+  fetchRecommended,
+} from "../api/endpoints";
 import { apiErrorMessage } from "../api/client";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { useAuth } from "../context/AuthContext";
+import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
 import { formatQuantity } from "../utils/units";
+import { rankRecipes } from "../utils/rank";
 import { useLocale } from "../i18n/LocaleContext";
 import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
@@ -51,6 +60,8 @@ export function MealPlannerScreen({ navigation }: Props) {
   const { unitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { plan, setPlan } = useMealPlan();
+  const { isAuthenticated } = useAuth();
+  const { preference } = useLocalPreference();
   const textAlign = isRTL ? "right" : "left";
 
   const [pickerDate, setPickerDate] = useState<string | null>(null);
@@ -58,6 +69,7 @@ export function MealPlannerScreen({ navigation }: Props) {
   const [results, setResults] = useState<RecipeSummary[]>([]);
   const [searching, setSearching] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
   const [aggregated, setAggregated] = useState<AggregatedItem[] | null>(null);
   const [totalCost, setTotalCost] = useState(0);
   const [haveAlready, setHaveAlready] = useState<Set<string>>(new Set());
@@ -163,8 +175,32 @@ export function MealPlannerScreen({ navigation }: Props) {
             Math.round(
               (plannedEntries.reduce((sum, [, r]) => sum + r.proteinPerServing, 0) / plannedEntries.length) * 10
             ) / 10,
+          estimatedCost: Math.round(
+            plannedEntries.reduce((sum, [, r]) => sum + r.costPerServing * r.baseServings, 0)
+          ),
         }
       : null;
+
+  const autoFillWeek = async () => {
+    const emptyDateKeys = visibleDateKeys.filter((dateKey) => !plan[dateKey]);
+    if (emptyDateKeys.length === 0) return;
+    setAutoFilling(true);
+    try {
+      const candidates = isAuthenticated
+        ? await fetchRecommended()
+        : rankRecipes(await fetchRecipes({}), preference.dietGoal, preference.favoriteCuisineSlugs);
+      const alreadyPlannedSlugs = new Set(plannedEntries.map(([, r]) => r.slug));
+      const pool = candidates.filter((r) => !alreadyPlannedSlugs.has(r.slug));
+      emptyDateKeys.forEach((dateKey, i) => {
+        if (pool.length === 0) return;
+        setPlan(dateKey, pool[i % pool.length]);
+      });
+    } catch (error) {
+      Alert.alert(t("mealPlanner.autoFillError"), apiErrorMessage(error));
+    } finally {
+      setAutoFilling(false);
+    }
+  };
 
   const generateShoppingList = async () => {
     if (plannedEntries.length === 0) return;
@@ -203,6 +239,17 @@ export function MealPlannerScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.subtitle, { textAlign }]}>{t("mealPlanner.subtitle")}</Text>
 
+        {visibleDateKeys.some((dateKey) => !plan[dateKey]) ? (
+          <View style={styles.autoFillButton}>
+            <PrimaryButton
+              label={t("mealPlanner.autoFillWeek")}
+              variant="outline"
+              onPress={autoFillWeek}
+              loading={autoFilling}
+            />
+          </View>
+        ) : null}
+
         {weeklyNutrition ? (
           <View style={styles.nutritionRow}>
             <View style={styles.nutritionStat}>
@@ -218,6 +265,12 @@ export function MealPlannerScreen({ navigation }: Props) {
             <View style={styles.nutritionStat}>
               <Text style={styles.nutritionValue}>{weeklyNutrition.avgProtein}g</Text>
               <Text style={styles.nutritionLabel}>{t("mealPlanner.avgProtein")}</Text>
+            </View>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>
+                {t("mealPlanner.estimatedWeekCostValue", { amount: weeklyNutrition.estimatedCost })}
+              </Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.estimatedWeekCost")}</Text>
             </View>
           </View>
         ) : null}
@@ -384,6 +437,7 @@ const createStyles = (colors: ThemeColors) =>
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing(3), paddingBottom: spacing(6) },
     subtitle: { color: colors.textMuted, marginBottom: spacing(2), lineHeight: 20 },
+    autoFillButton: { marginBottom: spacing(2) },
     nutritionRow: {
       flexDirection: "row",
       backgroundColor: colors.chipBackground,

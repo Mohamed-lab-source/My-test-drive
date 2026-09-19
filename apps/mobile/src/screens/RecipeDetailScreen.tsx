@@ -5,7 +5,7 @@ import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { fetchRecipeDetail, rateRecipe } from "../api/endpoints";
+import { fetchRecipeDetail, fetchRecipes, rateRecipe } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
@@ -15,6 +15,7 @@ import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { StarRating } from "../components/StarRating";
 import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "../context/AuthContext";
+import { useCookStreak } from "../context/CookStreakContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
@@ -27,7 +28,7 @@ import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
-import type { DietGoal, RecipeDetail } from "../api/types";
+import type { DietGoal, RecipeDetail, RecipeSummary } from "../api/types";
 
 const BODY_GOALS: DietGoal[] = ["LOSE_WEIGHT", "BUILD_MUSCLE", "GAIN_WEIGHT"];
 const SERVINGS_PRESETS = [2, 4, 6, 8];
@@ -56,6 +57,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { preference: localPreference } = useLocalPreference();
   const { addRecent } = useRecentlyViewed();
   const { plan, setPlan } = useMealPlan();
+  const { cookCountFor } = useCookStreak();
   const { getNote, setNote } = useNotes();
   const [noteText, setNoteText] = useState("");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
@@ -65,6 +67,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [myRating, setMyRating] = useState<number | null>(null);
   const [rating, setRating] = useState(false);
   const [reviewText, setReviewText] = useState("");
+  const [similarRecipes, setSimilarRecipes] = useState<RecipeSummary[]>([]);
   const shareCardRef = useRef<View>(null);
 
   const myGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : localPreference.dietGoal;
@@ -89,6 +92,14 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
+  useEffect(() => {
+    if (!recipe) return;
+    fetchRecipes({ cuisine: recipe.cuisine.slug })
+      .then((data) => setSimilarRecipes(data.filter((r) => r.slug !== recipe.slug).slice(0, 6)))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe?.slug, locale]);
+
   const scaledIngredients = useMemo(() => {
     if (!recipe) return [];
     const scale = servings / recipe.baseServings;
@@ -109,6 +120,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const textAlign = isRTL ? "right" : "left";
   const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
+  const cookCount = cookCountFor(recipe.slug);
 
   const handleShare = async () => {
     setSharing(true);
@@ -198,6 +210,9 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               label={t("recipeCard.costPerServing", { cost: Math.round(recipe.costPerServing) })}
               styles={styles}
             />
+            {cookCount > 0 ? (
+              <MetaPill label={t("recipeDetail.cookedCount", { count: cookCount })} styles={styles} />
+            ) : null}
           </View>
 
           {hasBodyGoal ? (
@@ -324,6 +339,28 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               </View>
             </FadeSlideIn>
           ))}
+
+          {similarRecipes.length > 0 ? (
+            <>
+              <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.similarRecipes")}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.similarScroll}>
+                {similarRecipes.map((r, i) => (
+                  <FadeSlideIn key={r.slug} index={i}>
+                    <AnimatedPressable
+                      style={styles.similarCard}
+                      pressScale={0.96}
+                      onPress={() => navigation.push("RecipeDetail", { slug: r.slug })}
+                    >
+                      <Text style={styles.similarEmoji}>{CUISINE_EMOJI[r.cuisine.slug] ?? "🍽️"}</Text>
+                      <Text style={styles.similarTitle} numberOfLines={2}>
+                        {r.title}
+                      </Text>
+                    </AnimatedPressable>
+                  </FadeSlideIn>
+                ))}
+              </ScrollView>
+            </>
+          ) : null}
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.addToMealPlan")}</Text>
           <View style={styles.mealPlanDayRow}>
@@ -582,6 +619,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   adaptTitle: { marginBottom: spacing(1) },
   chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
   mealPlanDayRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1) },
+  similarScroll: {},
+  similarCard: {
+    width: 110,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(1.5),
+    marginEnd: spacing(1.5),
+    alignItems: "center",
+  },
+  similarEmoji: { fontSize: 28 },
+  similarTitle: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: spacing(1), textAlign: "center" },
   stepperRow: { flexDirection: "row", alignItems: "center" },
   servingsPresetRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(1.5) },
   stepperButton: {

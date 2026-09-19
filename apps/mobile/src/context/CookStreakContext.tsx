@@ -8,6 +8,7 @@ type StreakState = {
   longestStreak: number;
   totalCooked: number;
   lastCookedDate: string | null; // YYYY-MM-DD
+  cookCounts: Record<string, number>;
 };
 
 const DEFAULT_STATE: StreakState = {
@@ -15,6 +16,7 @@ const DEFAULT_STATE: StreakState = {
   longestStreak: 0,
   totalCooked: 0,
   lastCookedDate: null,
+  cookCounts: {},
 };
 
 function todayKey(): string {
@@ -37,8 +39,9 @@ type CookStreakContextValue = {
   longestStreak: number;
   totalCooked: number;
   cookedToday: boolean;
-  /** Records today's cook, updating the streak. Safe to call more than once in a day. Returns the resulting streak length. */
-  recordCooked: () => number;
+  /** Records today's cook, updating the streak and the per-recipe cook count. Safe to call more than once in a day. Returns the resulting streak length. */
+  recordCooked: (slug: string) => number;
+  cookCountFor: (slug: string) => number;
 };
 
 const CookStreakContext = createContext<CookStreakContextValue | undefined>(undefined);
@@ -58,13 +61,16 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
     })();
   }, []);
 
-  const recordCooked = useCallback(() => {
+  const recordCooked = useCallback((slug: string) => {
     const today = todayKey();
     let resultStreak = state.currentStreak;
     setState((prev) => {
+      const nextCookCounts = { ...prev.cookCounts, [slug]: (prev.cookCounts[slug] ?? 0) + 1 };
       if (prev.lastCookedDate === today) {
         resultStreak = prev.currentStreak;
-        return prev;
+        const next: StreakState = { ...prev, cookCounts: nextCookCounts };
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+        return next;
       }
       const gap = prev.lastCookedDate ? daysBetween(prev.lastCookedDate, today) : null;
       const nextStreak = gap === 1 ? prev.currentStreak + 1 : 1;
@@ -73,6 +79,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
         longestStreak: Math.max(prev.longestStreak, nextStreak),
         totalCooked: prev.totalCooked + 1,
         lastCookedDate: today,
+        cookCounts: nextCookCounts,
       };
       resultStreak = nextStreak;
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
@@ -80,6 +87,8 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
     });
     return resultStreak;
   }, [state.currentStreak]);
+
+  const cookCountFor = useCallback((slug: string) => state.cookCounts[slug] ?? 0, [state.cookCounts]);
 
   const today = todayKey();
   const gapFromToday = state.lastCookedDate ? daysBetween(state.lastCookedDate, today) : null;
@@ -94,8 +103,9 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       totalCooked: state.totalCooked,
       cookedToday,
       recordCooked,
+      cookCountFor,
     }),
-    [isLoading, displayStreak, state.longestStreak, state.totalCooked, cookedToday, recordCooked]
+    [isLoading, displayStreak, state.longestStreak, state.totalCooked, cookedToday, recordCooked, cookCountFor]
   );
 
   return <CookStreakContext.Provider value={value}>{children}</CookStreakContext.Provider>;

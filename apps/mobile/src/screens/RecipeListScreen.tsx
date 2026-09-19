@@ -11,7 +11,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { intersectAllergens } from "../utils/allergens";
 import { spacing, type ThemeColors } from "../theme";
-import type { DishTag, RecipeSummary } from "../api/types";
+import type { Difficulty, DishTag, RecipeSummary } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
@@ -26,13 +26,17 @@ export function RecipeListScreen({ route, navigation }: Props) {
     sortByRating ? "topRated" : sortByCost ? "cheapest" : "none"
   );
   const [hideAllergens, setHideAllergens] = useState(false);
+  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | undefined>(undefined);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   const myAllergies = user?.preference?.allergies ?? [];
-  const filteredRecipes = hideAllergens
+  const allergenFiltered = hideAllergens
     ? recipes.filter((r) => intersectAllergens(r.allergens, myAllergies).length === 0)
     : recipes;
+  const filteredRecipes = difficultyFilter
+    ? allergenFiltered.filter((r) => r.difficulty === difficultyFilter)
+    : allergenFiltered;
 
   const displayRecipes =
     sortMode === "cheapest"
@@ -44,6 +48,13 @@ export function RecipeListScreen({ route, navigation }: Props) {
               (a, b) => a.prepMinutes + a.cookMinutes - (b.prepMinutes + b.cookMinutes)
             )
           : filteredRecipes;
+
+  const DIFFICULTY_FILTERS: { value: Difficulty | undefined; label: string }[] = [
+    { value: undefined, label: t("recipeList.filter.all") },
+    { value: "EASY", label: t("difficulty.EASY") },
+    { value: "MEDIUM", label: t("difficulty.MEDIUM") },
+    { value: "HARD", label: t("difficulty.HARD") },
+  ];
 
   const TAG_FILTERS: { value: DishTag | undefined; label: string }[] = [
     { value: undefined, label: t("recipeList.filter.all") },
@@ -96,6 +107,16 @@ export function RecipeListScreen({ route, navigation }: Props) {
             onPress={() => setHideAllergens((v) => !v)}
           />
         ) : null}
+      </View>
+      <View style={styles.filterRowSecondary}>
+        {DIFFICULTY_FILTERS.map((f) => (
+          <Chip
+            key={f.label}
+            label={f.label}
+            selected={difficultyFilter === f.value}
+            onPress={() => setDifficultyFilter(f.value)}
+          />
+        ))}
       </View>
       <FlatList
         data={displayRecipes}

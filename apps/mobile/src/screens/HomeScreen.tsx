@@ -60,7 +60,7 @@ export function HomeScreen({ navigation }: Props) {
   const { leftovers, removeLeftover } = useLeftovers();
   const { plan } = useMealPlan();
   const { preference } = useLocalPreference();
-  const { recentRecipes, clearRecent } = useRecentlyViewed();
+  const { recentRecipes, removeRecent, clearRecent } = useRecentlyViewed();
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -387,6 +387,14 @@ export function HomeScreen({ navigation }: Props) {
                         onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
                       >
                         <AnimatedPressable
+                          style={styles.recentRemoveButton}
+                          pressScale={0.85}
+                          onPress={() => removeRecent(r.slug)}
+                          accessibilityLabel={t("home.removeFromRecent")}
+                        >
+                          <Text style={styles.recentRemoveIcon}>✕</Text>
+                        </AnimatedPressable>
+                        <AnimatedPressable
                           style={styles.cookAgainButton}
                           pressScale={0.85}
                           onPress={() => handleCookAgain(r)}
@@ -573,5 +581,18 @@ const createStyles = (colors: ThemeColors) =>
       zIndex: 1,
     },
     cookAgainIcon: { color: "#fff", fontSize: 10 },
+    recentRemoveButton: {
+      position: "absolute",
+      top: spacing(0.75),
+      start: spacing(0.75),
+      width: 20,
+      height: 20,
+      borderRadius: radius.pill,
+      backgroundColor: colors.chipBackground,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1,
+    },
+    recentRemoveIcon: { color: colors.textMuted, fontSize: 10, fontWeight: "800" },
     recommendedItem: {},
   });

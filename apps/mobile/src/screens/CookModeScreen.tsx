@@ -36,6 +36,16 @@ export function CookModeScreen({ route, navigation }: Props) {
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [gathered, setGathered] = useState<Set<string>>(new Set());
+
+  const toggleGathered = (name: string) => {
+    setGathered((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const step = steps[index];
   const isLast = index === steps.length - 1;
@@ -80,7 +90,7 @@ export function CookModeScreen({ route, navigation }: Props) {
 
   const goNext = () => {
     if (isLast) {
-      const streak = recordCooked();
+      const streak = recordCooked(slug);
       const message = streak > 1 ? t("cookMode.doneMessageStreak", { streak }) : t("cookMode.doneMessage");
       Alert.alert(t("cookMode.doneTitle"), message, [
         {
@@ -170,13 +180,32 @@ export function CookModeScreen({ route, navigation }: Props) {
             <ScrollView style={styles.modalList}>
               {ingredients.map((ing) => {
                 const ingredientConflicts = intersectAllergens(ing.allergens, user?.preference?.allergies ?? []);
+                const isGathered = gathered.has(ing.name);
                 return (
-                <View key={ing.name} style={styles.modalCell}>
+                <AnimatedPressable
+                  key={ing.name}
+                  style={styles.modalCell}
+                  pressScale={0.99}
+                  onPress={() => toggleGathered(ing.name)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isGathered }}
+                >
                   <View style={styles.modalRow}>
-                    <Text style={[styles.modalRowName, ingredientConflicts.length > 0 && styles.modalRowNameWarning]}>
-                      {ing.name}
-                    </Text>
-                    <Text style={styles.modalRowQty}>
+                    <View style={styles.modalRowNameGroup}>
+                      <View style={[styles.modalCheckbox, isGathered && styles.modalCheckboxChecked]}>
+                        {isGathered ? <Text style={styles.modalCheckboxMark}>✓</Text> : null}
+                      </View>
+                      <Text
+                        style={[
+                          styles.modalRowName,
+                          ingredientConflicts.length > 0 && styles.modalRowNameWarning,
+                          isGathered && styles.modalRowNameGathered,
+                        ]}
+                      >
+                        {ing.name}
+                      </Text>
+                    </View>
+                    <Text style={[styles.modalRowQty, isGathered && styles.modalRowNameGathered]}>
                       {formatQuantity(ing.quantity, ing.unit, unitSystem)}
                     </Text>
                   </View>
@@ -190,7 +219,7 @@ export function CookModeScreen({ route, navigation }: Props) {
                       {t("recipeDetail.substituteHint", { substitute: ing.substitute })}
                     </Text>
                   ) : null}
-                </View>
+                </AnimatedPressable>
                 );
               })}
             </ScrollView>
@@ -287,9 +316,24 @@ const createStyles = (colors: ThemeColors) =>
     modalRow: {
       flexDirection: "row",
       justifyContent: "space-between",
+      alignItems: "center",
     },
+    modalRowNameGroup: { flexDirection: "row", alignItems: "center", flex: 1 },
+    modalCheckbox: {
+      width: 18,
+      height: 18,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginEnd: spacing(1),
+    },
+    modalCheckboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+    modalCheckboxMark: { color: "#fff", fontSize: 11, fontWeight: "800" },
     modalRowName: { color: colors.text, fontSize: 14 },
     modalRowNameWarning: { color: colors.danger, fontWeight: "700" },
+    modalRowNameGathered: { color: colors.textMuted, textDecorationLine: "line-through" },
     modalRowQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
     modalRowSubstitute: { color: colors.primaryDark, fontSize: 11, marginTop: 2 },
     modalRowAllergenNote: { color: colors.danger, fontSize: 11, fontWeight: "700", marginTop: 2 },
