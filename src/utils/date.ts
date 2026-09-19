@@ -41,6 +41,32 @@ export function lastNDates(n: number, endingIso: ISODate = todayISO()): ISODate[
   return dates;
 }
 
+export function startOfMonth(iso: ISODate): ISODate {
+  const d = parseISODate(iso);
+  return toISODate(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+/** Adds whole calendar months, clamping the day if the target month is shorter. */
+export function addMonths(iso: ISODate, delta: number): ISODate {
+  const d = parseISODate(iso);
+  const day = d.getDate();
+  const target = new Date(d.getFullYear(), d.getMonth() + delta, 1);
+  const daysInTarget = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(day, daysInTarget));
+  return toISODate(target);
+}
+
+/** All dates from startIso to endIso, inclusive, oldest first. */
+export function datesInRange(startIso: ISODate, endIso: ISODate): ISODate[] {
+  const dates: ISODate[] = [];
+  let cursor = startIso;
+  while (cursor <= endIso) {
+    dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+  return dates;
+}
+
 export function formatDisplay(iso: ISODate): string {
   const d = parseISODate(iso);
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });

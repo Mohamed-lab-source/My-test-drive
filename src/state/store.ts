@@ -100,7 +100,7 @@ export async function archiveHabit(id: string): Promise<void> {
 
 // ---- Check-ins ----
 
-export type CheckInMode = "full" | "two-minute" | "clear";
+export type CheckInMode = "full" | "two-minute" | "skip" | "clear";
 
 export async function setCheckIn(
   habitId: string,
@@ -111,10 +111,19 @@ export async function setCheckIn(
     mode === "clear"
       ? null
       : mode === "full"
-      ? { completedFull: true, usedTwoMinuteVersion: false }
-      : { completedFull: false, usedTwoMinuteVersion: true };
+      ? { completedFull: true, usedTwoMinuteVersion: false, skipped: false }
+      : mode === "two-minute"
+      ? { completedFull: false, usedTwoMinuteVersion: true, skipped: false }
+      : { completedFull: false, usedTwoMinuteVersion: false, skipped: true };
 
   await repo.setCheckIn(habitId, date, state.checkins, patch);
+  state.checkins = await repo.listCheckIns();
+  notify();
+}
+
+/** Upserts a journal note for a day without touching completion/skip state. */
+export async function setCheckInNote(habitId: string, date: string, note: string): Promise<void> {
+  await repo.setCheckIn(habitId, date, state.checkins, { note: note.trim() });
   state.checkins = await repo.listCheckIns();
   notify();
 }

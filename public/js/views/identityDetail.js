@@ -45,9 +45,17 @@ export function openIdentityDetail(identity) {
             ? `<div class="form-card-row prefix-row" style="justify-content:center;">
                     <span class="row-label">I am</span>
                     <input type="text" id="identity-edit-input" class="plain-input" maxlength="80" value="${escapeHtml(current.statement)}" />
-                  </div>`
+                  </div>
+                  <textarea id="identity-why-input" class="backup-textarea identity-why-input" rows="2" maxlength="400" placeholder="Why does this matter to you? (optional)">${escapeHtml(current.why)}</textarea>`
             : `<div class="detail-hero-name">I am ${escapeHtml(current.statement)}</div>`}
           </div>
+
+          ${!editing && current.why.trim()
+            ? `<div class="card">
+                  <h2 class="card-title">Why this matters</h2>
+                  <p class="identity-why-text">${escapeHtml(current.why)}</p>
+                </div>`
+            : ""}
 
           <div class="stat-tile-row detail-stats">
             ${[
@@ -121,11 +129,12 @@ export function openIdentityDetail(identity) {
                 input.focus();
                 input.select();
             });
+            const whyInput = container.querySelector("#identity-why-input");
             container.querySelector("#identity-save").addEventListener("click", async () => {
                 const value = input.value.trim();
                 if (!value)
                     return;
-                await updateIdentity({ ...current, statement: value });
+                await updateIdentity({ ...current, statement: value, why: whyInput.value.trim() });
                 hapticSuccess();
                 editing = false;
                 render();

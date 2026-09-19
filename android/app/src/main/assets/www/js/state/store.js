@@ -68,9 +68,17 @@ export async function setCheckIn(habitId, date, mode) {
     const patch = mode === "clear"
         ? null
         : mode === "full"
-            ? { completedFull: true, usedTwoMinuteVersion: false }
-            : { completedFull: false, usedTwoMinuteVersion: true };
+            ? { completedFull: true, usedTwoMinuteVersion: false, skipped: false }
+            : mode === "two-minute"
+                ? { completedFull: false, usedTwoMinuteVersion: true, skipped: false }
+                : { completedFull: false, usedTwoMinuteVersion: false, skipped: true };
     await repo.setCheckIn(habitId, date, state.checkins, patch);
+    state.checkins = await repo.listCheckIns();
+    notify();
+}
+/** Upserts a journal note for a day without touching completion/skip state. */
+export async function setCheckInNote(habitId, date, note) {
+    await repo.setCheckIn(habitId, date, state.checkins, { note: note.trim() });
     state.checkins = await repo.listCheckIns();
     notify();
 }

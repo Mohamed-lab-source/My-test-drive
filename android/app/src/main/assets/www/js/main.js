@@ -1,4 +1,5 @@
 import { loadAll, subscribe } from "./state/store.js";
+import { applyTheme } from "./prefs.js";
 import { currentRoute, onRouteChange } from "./router.js";
 import { renderNav } from "./views/nav.js";
 import { renderScorecard } from "./views/scorecard.js";
@@ -31,6 +32,7 @@ function renderWithTransition() {
     }
 }
 async function main() {
+    applyTheme();
     const appEl = document.getElementById("app");
     if (appEl)
         appEl.innerHTML = `<div class="loading">Loading your habits…</div>`;

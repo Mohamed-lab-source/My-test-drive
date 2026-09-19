@@ -2,12 +2,14 @@ import { getAll, put, remove, clearStore, putAll, STORES } from "./idb.js";
 import { newId } from "../utils/id.js";
 // ---- Identities ----
 export async function listIdentities() {
-    return getAll("identities");
+    const identities = await getAll("identities");
+    return identities.map((i) => ({ ...i, why: i.why ?? "" }));
 }
 export async function createIdentity(statement) {
     const identity = {
         id: newId(),
         statement: statement.trim(),
+        why: "",
         createdAt: new Date().toISOString(),
         archived: false,
     };
@@ -27,12 +29,19 @@ export async function updateIdentity(identity) {
 // ---- Habits ----
 export async function listHabits() {
     const habits = await getAll("habits");
-    // Backfill fields added after some habits were created.
-    return habits.map((h) => ({ ...h, timeOfDay: h.timeOfDay ?? "anytime" }));
+    // Backfill fields added after some habits were created. sortOrder falls
+    // back to creation time so pre-existing habits keep their original order.
+    return habits.map((h) => ({
+        ...h,
+        timeOfDay: h.timeOfDay ?? "anytime",
+        sortOrder: h.sortOrder ?? Date.parse(h.createdAt),
+        tags: h.tags ?? [],
+    }));
 }
 export async function createHabit(input) {
     const habit = {
         id: newId(),
+        sortOrder: Date.now(),
         createdAt: new Date().toISOString(),
         archived: false,
         ...input,
@@ -52,7 +61,9 @@ export async function archiveHabit(id) {
 }
 // ---- Check-ins ----
 export async function listCheckIns() {
-    return getAll("checkins");
+    const checkins = await getAll("checkins");
+    // Backfill fields added after some check-ins were created.
+    return checkins.map((c) => ({ ...c, skipped: c.skipped ?? false, note: c.note ?? "" }));
 }
 /** Sets (or clears) the check-in for a habit on a given date. */
 export async function setCheckIn(habitId, date, existing, patch) {
@@ -70,6 +81,8 @@ export async function setCheckIn(habitId, date, existing, patch) {
             date,
             completedFull: false,
             usedTwoMinuteVersion: false,
+            skipped: false,
+            note: "",
             createdAt: new Date().toISOString(),
             ...patch,
         };

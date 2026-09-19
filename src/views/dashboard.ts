@@ -1,5 +1,5 @@
 import { getState } from "../state/store.js";
-import { lastNDates } from "../utils/date.js";
+import { lastNDates, todayISO, startOfMonth, addMonths, datesInRange } from "../utils/date.js";
 import { escapeHtml } from "../utils/html.js";
 import {
   computeCurrentStreak,
@@ -81,6 +81,19 @@ export function renderDashboard(container: HTMLElement): void {
   const badges = computeBadges(habits, checkins);
   const earnedCount = badges.filter((b) => b.earned).length;
 
+  const today = todayISO();
+  const thisMonthDates = datesInRange(startOfMonth(today), today);
+  const prevMonthAnchor = addMonths(today, -1);
+  const prevMonthDates = datesInRange(startOfMonth(prevMonthAnchor), prevMonthAnchor);
+  const votesThisMonth = checkins.filter((c) => isVote(c) && thisMonthDates.includes(c.date)).length;
+  const votesPrevMonth = checkins.filter((c) => isVote(c) && prevMonthDates.includes(c.date)).length;
+  const perfectDaysThisMonth = dailyConsistency(activeHabits, checkins, thisMonthDates).filter(
+    (c) => c.due > 0 && c.ratio === 1
+  ).length;
+  const monthChange =
+    votesPrevMonth === 0 ? null : Math.round(((votesThisMonth - votesPrevMonth) / votesPrevMonth) * 100);
+  const monthName = new Date().toLocaleDateString(undefined, { month: "long" });
+
   container.innerHTML = `
     <section class="view">
       <header class="view-header view-header-with-action">
@@ -104,6 +117,25 @@ export function renderDashboard(container: HTMLElement): void {
       </button>
 
       ${insight ? `<div class="insight-card ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
+
+      <div class="card">
+        <h2 class="card-title">${escapeHtml(monthName)} so far</h2>
+        <div class="stat-tile-row">
+          ${statTile({ label: "Votes this month", value: String(votesThisMonth) })}
+          ${statTile({ label: "Perfect days", value: String(perfectDaysThisMonth) })}
+        </div>
+        <p class="muted month-compare">
+          ${
+            monthChange === null
+              ? `${votesThisMonth} vote${votesThisMonth === 1 ? "" : "s"} so far — no data from the same point last month to compare.`
+              : monthChange > 0
+              ? `Up ${monthChange}% from the same point last month.`
+              : monthChange < 0
+              ? `Down ${Math.abs(monthChange)}% from the same point last month.`
+              : `Matching the same point last month.`
+          }
+        </p>
+      </div>
 
       <div class="stat-tile-row">
         ${statTile({ label: "Votes cast", value: String(totalVotes), sublabel: "all time" })}

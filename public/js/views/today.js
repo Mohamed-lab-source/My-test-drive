@@ -1,7 +1,7 @@
 import { getState, setCheckIn } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { todayISO, isDue } from "../utils/date.js";
-import { findCheckIn, isVote, computeCurrentStreak } from "../domain/analytics.js";
+import { findCheckIn, isVote, isSkipped, computeCurrentStreak } from "../domain/analytics.js";
 import { icons } from "../icons.js";
 import { activityRing } from "../charts/svg.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
@@ -38,13 +38,20 @@ function orderDueHabits(due) {
 }
 function renderTodayItem(habit, index, checkins, today, identityLabel) {
     const checkin = findCheckIn(checkins, habit.id, today);
-    const state = checkin?.completedFull ? "full" : checkin?.usedTwoMinuteVersion ? "two-minute" : "none";
+    const state = checkin?.completedFull
+        ? "full"
+        : checkin?.usedTwoMinuteVersion
+            ? "two-minute"
+            : isSkipped(checkin)
+                ? "skipped"
+                : "none";
     const streak = computeCurrentStreak(habit, checkins);
     const idLabel = identityLabel(habit.identityId);
     const chained = habit.stackAnchor.type === "habit";
     return `
     <li class="today-item swipe-row state-${state} ${chained ? "chained" : ""} stagger-in" style="--stagger-index: ${index}">
       <div class="swipe-actions">
+        <button class="swipe-action swipe-action-skip" data-skip-habit="${habit.id}">${state === "skipped" ? "Unskip" : "Skip"}</button>
         <button class="swipe-action swipe-action-archive" data-archive-habit="${habit.id}">Archive</button>
       </div>
       <div class="swipe-content today-item-content">
@@ -56,6 +63,7 @@ function renderTodayItem(habit, index, checkins, today, identityLabel) {
             <span class="habit-icon">${escapeHtml(habit.icon || "⭐")}</span>
             <span class="habit-name">${escapeHtml(habit.name)}</span>
             ${streak > 0 ? `<span class="pill pill-streak">🔥 ${streak}</span>` : ""}
+            ${state === "skipped" ? `<span class="pill pill-skipped">⏭️ Skipped</span>` : ""}
           </div>
           ${habit.response ? `<div class="today-item-response muted">${escapeHtml(habit.response)}</div>` : ""}
           ${idLabel ? `<div class="today-item-identity muted">Vote for: I am ${escapeHtml(idLabel)}</div>` : ""}
@@ -74,7 +82,10 @@ export function renderToday(container) {
     const activeHabits = habits.filter((h) => !h.archived);
     const dueToday = orderDueHabits(activeHabits.filter((h) => isDue(h.frequency, today)));
     const notDueCount = activeHabits.length - dueToday.length;
-    const doneCount = dueToday.filter((h) => isVote(findCheckIn(checkins, h.id, today))).length;
+    // Skipped-today habits are excused from the ring — they neither count as
+    // done nor drag the total down.
+    const ringHabits = dueToday.filter((h) => !isSkipped(findCheckIn(checkins, h.id, today)));
+    const doneCount = ringHabits.filter((h) => isVote(findCheckIn(checkins, h.id, today))).length;
     const quote = quoteOfTheDay();
     const identityLabel = (id) => {
         if (!id)
@@ -117,12 +128,12 @@ export function renderToday(container) {
         <p class="quote-attribution">— ${escapeHtml(quote.attribution)}</p>
       </div>
 
-      ${dueToday.length > 0
+      ${ringHabits.length > 0
         ? `<div class="activity-ring-wrap">
-              ${activityRing(doneCount, dueToday.length)}
+              ${activityRing(doneCount, ringHabits.length)}
               <div>
-                <div class="activity-ring-copy-title">${doneCount}/${dueToday.length} done</div>
-                <div class="activity-ring-copy-sub">${doneCount === dueToday.length
+                <div class="activity-ring-copy-title">${doneCount}/${ringHabits.length} done</div>
+                <div class="activity-ring-copy-sub">${doneCount === ringHabits.length
             ? "Every habit voted for today. Nice."
             : "Every vote counts toward who you're becoming."}</div>
               </div>
@@ -139,7 +150,7 @@ export function renderToday(container) {
   `;
     const prevDoneKey = `prev-done-${today}`;
     const prevDone = Number(sessionStorage.getItem(prevDoneKey) ?? "0");
-    if (dueToday.length > 0 && doneCount === dueToday.length && prevDone < dueToday.length) {
+    if (ringHabits.length > 0 && doneCount === ringHabits.length && prevDone < ringHabits.length) {
         hapticSuccess();
         celebrate(container.querySelector(".activity-ring-svg-wrap") ?? undefined);
     }
@@ -176,6 +187,14 @@ export function renderToday(container) {
             const habit = activeHabits.find((h) => h.id === btn.dataset["archiveHabit"]);
             if (habit)
                 undoableArchive(habit);
+        });
+    });
+    container.querySelectorAll("[data-skip-habit]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            const habitId = btn.dataset["skipHabit"];
+            const checkin = findCheckIn(checkins, habitId, today);
+            hapticTap();
+            await setCheckIn(habitId, today, isSkipped(checkin) ? "clear" : "skip");
         });
     });
     container.querySelectorAll("[data-open-detail]").forEach((el) => {

@@ -1,8 +1,9 @@
 import { getState, exportAllData, isValidBackup, restoreFromBackup, resetAllData } from "../state/store.js";
 import { hapticSuccess, hapticTap } from "../confetti.js";
-import { getPrefs, setPref } from "../prefs.js";
+import { getPrefs, setPref, type Theme } from "../prefs.js";
 import { checkinsToCsv } from "../csv.js";
 import { showToast } from "../toast.js";
+import { positionSegmentedThumb } from "../segmented.js";
 import type { BackupFile } from "../db/repo.js";
 
 let root: HTMLElement | null = null;
@@ -61,6 +62,18 @@ export function openSettings(): void {
 
           <div class="card">
             <h2 class="card-title">Preferences</h2>
+            <div class="form-section-label">Appearance</div>
+            <div class="form-card-row segmented-row">
+              <div class="segmented-control segmented-control-3" id="pref-theme-control">
+                ${(["system", "light", "dark"] as Theme[])
+                  .map(
+                    (t) => `
+                  <input type="radio" id="pref-theme-${t}" name="pref-theme" value="${t}" ${getPrefs().theme === t ? "checked" : ""} class="segmented-input" />
+                  <label for="pref-theme-${t}" class="segmented-label">${t[0]!.toUpperCase()}${t.slice(1)}</label>`
+                  )
+                  .join("")}
+              </div>
+            </div>
             <div class="form-card-row toggle-row">
               <span class="row-label">Sound</span>
               <label class="switch">
@@ -125,6 +138,15 @@ export function openSettings(): void {
     container.querySelector(".modal-backdrop")!.addEventListener("click", close);
 
     // ---- Preferences ----
+    const themeControl = container.querySelector<HTMLElement>("#pref-theme-control")!;
+    positionSegmentedThumb(themeControl);
+    container.querySelectorAll<HTMLInputElement>('input[name="pref-theme"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        setPref("theme", radio.value as Theme);
+        positionSegmentedThumb(themeControl);
+        hapticTap();
+      });
+    });
     container.querySelector<HTMLInputElement>("#pref-sound")!.addEventListener("change", (e) => {
       setPref("sound", (e.target as HTMLInputElement).checked);
       hapticTap();

@@ -14,13 +14,15 @@ import type {
 // ---- Identities ----
 
 export async function listIdentities(): Promise<Identity[]> {
-  return getAll<Identity>("identities");
+  const identities = await getAll<Identity>("identities");
+  return identities.map((i) => ({ ...i, why: i.why ?? "" }));
 }
 
 export async function createIdentity(statement: string): Promise<Identity> {
   const identity: Identity = {
     id: newId(),
     statement: statement.trim(),
+    why: "",
     createdAt: new Date().toISOString(),
     archived: false,
   };
@@ -43,8 +45,14 @@ export async function updateIdentity(identity: Identity): Promise<void> {
 
 export async function listHabits(): Promise<Habit[]> {
   const habits = await getAll<Habit>("habits");
-  // Backfill fields added after some habits were created.
-  return habits.map((h) => ({ ...h, timeOfDay: h.timeOfDay ?? ("anytime" as TimeOfDay) }));
+  // Backfill fields added after some habits were created. sortOrder falls
+  // back to creation time so pre-existing habits keep their original order.
+  return habits.map((h) => ({
+    ...h,
+    timeOfDay: h.timeOfDay ?? ("anytime" as TimeOfDay),
+    sortOrder: h.sortOrder ?? Date.parse(h.createdAt),
+    tags: h.tags ?? [],
+  }));
 }
 
 export interface NewHabitInput {
@@ -59,11 +67,13 @@ export interface NewHabitInput {
   reward: string;
   twoMinuteVersion: string;
   stackAnchor: StackAnchor;
+  tags: string[];
 }
 
 export async function createHabit(input: NewHabitInput): Promise<Habit> {
   const habit: Habit = {
     id: newId(),
+    sortOrder: Date.now(),
     createdAt: new Date().toISOString(),
     archived: false,
     ...input,
@@ -86,7 +96,9 @@ export async function archiveHabit(id: string): Promise<void> {
 // ---- Check-ins ----
 
 export async function listCheckIns(): Promise<CheckIn[]> {
-  return getAll<CheckIn>("checkins");
+  const checkins = await getAll<CheckIn>("checkins");
+  // Backfill fields added after some check-ins were created.
+  return checkins.map((c) => ({ ...c, skipped: c.skipped ?? false, note: c.note ?? "" }));
 }
 
 /** Sets (or clears) the check-in for a habit on a given date. */
@@ -94,7 +106,7 @@ export async function setCheckIn(
   habitId: string,
   date: string,
   existing: CheckIn[],
-  patch: { completedFull?: boolean; usedTwoMinuteVersion?: boolean } | null
+  patch: { completedFull?: boolean; usedTwoMinuteVersion?: boolean; skipped?: boolean; note?: string } | null
 ): Promise<void> {
   const current = existing.find((c) => c.habitId === habitId && c.date === date);
 
@@ -111,6 +123,8 @@ export async function setCheckIn(
         date,
         completedFull: false,
         usedTwoMinuteVersion: false,
+        skipped: false,
+        note: "",
         createdAt: new Date().toISOString(),
         ...patch,
       };

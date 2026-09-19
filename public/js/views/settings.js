@@ -3,6 +3,7 @@ import { hapticSuccess, hapticTap } from "../confetti.js";
 import { getPrefs, setPref } from "../prefs.js";
 import { checkinsToCsv } from "../csv.js";
 import { showToast } from "../toast.js";
+import { positionSegmentedThumb } from "../segmented.js";
 let root = null;
 function getRoot() {
     if (!root) {
@@ -52,6 +53,16 @@ export function openSettings() {
 
           <div class="card">
             <h2 class="card-title">Preferences</h2>
+            <div class="form-section-label">Appearance</div>
+            <div class="form-card-row segmented-row">
+              <div class="segmented-control segmented-control-3" id="pref-theme-control">
+                ${["system", "light", "dark"]
+            .map((t) => `
+                  <input type="radio" id="pref-theme-${t}" name="pref-theme" value="${t}" ${getPrefs().theme === t ? "checked" : ""} class="segmented-input" />
+                  <label for="pref-theme-${t}" class="segmented-label">${t[0].toUpperCase()}${t.slice(1)}</label>`)
+            .join("")}
+              </div>
+            </div>
             <div class="form-card-row toggle-row">
               <span class="row-label">Sound</span>
               <label class="switch">
@@ -114,6 +125,15 @@ export function openSettings() {
         container.querySelector("#settings-close").addEventListener("click", close);
         container.querySelector(".modal-backdrop").addEventListener("click", close);
         // ---- Preferences ----
+        const themeControl = container.querySelector("#pref-theme-control");
+        positionSegmentedThumb(themeControl);
+        container.querySelectorAll('input[name="pref-theme"]').forEach((radio) => {
+            radio.addEventListener("change", () => {
+                setPref("theme", radio.value);
+                positionSegmentedThumb(themeControl);
+                hapticTap();
+            });
+        });
         container.querySelector("#pref-sound").addEventListener("change", (e) => {
             setPref("sound", e.target.checked);
             hapticTap();

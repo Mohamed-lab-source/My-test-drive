@@ -1,9 +1,9 @@
-import { getState, archiveHabit, setCheckIn } from "../state/store.js";
+import { getState, archiveHabit, setCheckIn, setCheckInNote } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
-import { lastNDates, todayISO, WEEKDAY_LABELS } from "../utils/date.js";
+import { lastNDates, todayISO, formatDisplay, WEEKDAY_LABELS } from "../utils/date.js";
 import { computeCurrentStreak, computeLongestStreak, dailyConsistency, findCheckIn, identityVoteCount, isVote } from "../domain/analytics.js";
 import { heatmapSVG } from "../charts/svg.js";
-import { hapticTap } from "../confetti.js";
+import { hapticTap, hapticSuccess } from "../confetti.js";
 import { showToast } from "../toast.js";
 import { openHabitWizard } from "./habitWizard.js";
 function frequencyLabel(f) {
@@ -37,6 +37,11 @@ export function openHabitDetail(habit) {
         const longest = computeLongestStreak(current, checkins);
         const votes = current.identityId ? identityVoteCount(current.identityId, habits, checkins) : 0;
         const cells = dailyConsistency([current], checkins, lastNDates(84));
+        const today = todayISO();
+        const todayNote = findCheckIn(checkins, current.id, today)?.note ?? "";
+        const pastNotes = checkins
+            .filter((c) => c.habitId === current.id && c.date !== today && c.note.trim())
+            .sort((a, b) => b.date.localeCompare(a.date));
         container.innerHTML = `
       <div class="modal-backdrop"></div>
       <div class="modal-sheet" role="dialog" aria-modal="true">
@@ -86,6 +91,23 @@ export function openHabitDetail(habit) {
             ${current.twoMinuteVersion ? `<div class="pill pill-two-min detail-two-min">2-min: ${escapeHtml(current.twoMinuteVersion)}</div>` : ""}
           </div>
 
+          <div class="card">
+            <h2 class="card-title">Journal</h2>
+            <textarea id="journal-note" class="backup-textarea journal-textarea" rows="2" maxlength="500" placeholder="How did it go today?">${escapeHtml(todayNote)}</textarea>
+            <button type="button" class="btn btn-outline btn-block" id="journal-save">Save today's note</button>
+            ${pastNotes.length > 0
+            ? `<div class="journal-history">
+                    ${pastNotes
+                .map((c) => `
+                      <div class="journal-entry">
+                        <div class="journal-entry-date muted">${formatDisplay(c.date)}</div>
+                        <div class="journal-entry-text">${escapeHtml(c.note)}</div>
+                      </div>`)
+                .join("")}
+                  </div>`
+            : ""}
+          </div>
+
           <div class="wizard-nav detail-nav-row">
             <button type="button" class="btn btn-plain btn-danger" id="detail-archive">Archive habit</button>
             <button type="button" class="btn btn-plain" id="detail-duplicate">Duplicate</button>
@@ -96,7 +118,13 @@ export function openHabitDetail(habit) {
     `;
         container.querySelector("#detail-close").addEventListener("click", close);
         container.querySelector(".modal-backdrop").addEventListener("click", close);
-        const today = todayISO();
+        container.querySelector("#journal-save").addEventListener("click", async () => {
+            const textarea = container.querySelector("#journal-note");
+            await setCheckInNote(current.id, today, textarea.value);
+            hapticSuccess();
+            showToast("📝", "Note saved.");
+            render();
+        });
         container.querySelectorAll(".heat-cell-tappable").forEach((rect) => {
             const date = rect.dataset["date"];
             if (date >= today)

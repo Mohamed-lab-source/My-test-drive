@@ -1,7 +1,7 @@
 // Local-only user preferences, persisted to localStorage. No store/IndexedDB
 // involvement since these are device-level UI settings, not app data.
 const KEY = "atomic-prefs";
-const DEFAULTS = { sound: true, haptics: true };
+const DEFAULTS = { sound: true, haptics: true, theme: "system" };
 let cached = null;
 export function getPrefs() {
     if (cached)
@@ -28,6 +28,18 @@ export function setPref(key, value) {
     }
     catch {
         // ignore — pref just won't persist across sessions
+    }
+    if (key === "theme")
+        applyTheme();
+}
+/** Reflects the theme preference onto <html data-theme>, read by CSS overrides. */
+export function applyTheme() {
+    const theme = getPrefs().theme;
+    if (theme === "system") {
+        document.documentElement.removeAttribute("data-theme");
+    }
+    else {
+        document.documentElement.setAttribute("data-theme", theme);
     }
 }
 let audioCtx = null;

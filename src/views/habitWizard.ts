@@ -21,6 +21,7 @@ interface WizardState {
   stackType: "none" | "habit" | "custom";
   stackHabitId: string;
   stackCustom: string;
+  tags: string;
 }
 
 function blankState(): WizardState {
@@ -39,6 +40,7 @@ function blankState(): WizardState {
     stackType: "none",
     stackHabitId: "",
     stackCustom: "",
+    tags: "",
   };
 }
 
@@ -79,6 +81,7 @@ function stateFromHabit(habit: Habit): WizardState {
     stackType: habit.stackAnchor.type,
     stackHabitId: habit.stackAnchor.type === "habit" ? habit.stackAnchor.habitId : "",
     stackCustom: habit.stackAnchor.type === "custom" ? habit.stackAnchor.text : "",
+    tags: habit.tags.join(", "),
   };
 }
 
@@ -420,6 +423,10 @@ export function openHabitWizard(options: WizardOptions = {}): void {
           <span class="row-label">2-minute version</span>
           <input type="text" id="w-two-min" class="plain-input" placeholder="Read one sentence" value="${escapeHtml(state.twoMinuteVersion)}" />
         </div>
+        <div class="form-card-row">
+          <span class="row-label">Tags</span>
+          <input type="text" id="w-tags" class="plain-input" placeholder="health, morning" value="${escapeHtml(state.tags)}" />
+        </div>
       </div>
 
       ${wizardNav({ canBack: true, nextLabel: "Review", nextEnabled: true })}
@@ -435,6 +442,7 @@ export function openHabitWizard(options: WizardOptions = {}): void {
     bind("w-response", "response");
     bind("w-reward", "reward");
     bind("w-two-min", "twoMinuteVersion");
+    bind("w-tags", "tags");
     wireNav(body, () => true);
   }
 
@@ -467,6 +475,16 @@ export function openHabitWizard(options: WizardOptions = {}): void {
         <div class="review-line">${freqLabel}${state.timeOfDay !== "anytime" ? ` · ${state.timeOfDay[0]!.toUpperCase()}${state.timeOfDay.slice(1)}` : ""}</div>
         ${anchorLabel ? `<div class="review-line muted">${escapeHtml(anchorLabel)}</div>` : ""}
         ${state.twoMinuteVersion ? `<div class="pill pill-two-min">2-min: ${escapeHtml(state.twoMinuteVersion)}</div>` : ""}
+        ${
+          state.tags.trim()
+            ? `<div class="review-tags">${state.tags
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean)
+                .map((t) => `<span class="pill pill-tag">${escapeHtml(t)}</span>`)
+                .join("")}</div>`
+            : ""
+        }
       </div>
       ${wizardNav({ canBack: true, nextLabel: editing ? "Save Changes" : "Create Habit", nextEnabled: true, primary: true })}
     `;
@@ -485,6 +503,10 @@ export function openHabitWizard(options: WizardOptions = {}): void {
         reward: state.reward.trim(),
         twoMinuteVersion: state.twoMinuteVersion.trim(),
         stackAnchor: stackAnchor(),
+        tags: state.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       };
       if (editing && editHabit) {
         await saveHabit({ ...editHabit, ...input });

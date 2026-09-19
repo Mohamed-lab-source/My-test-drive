@@ -7,6 +7,8 @@ export interface Identity {
   id: string;
   /** e.g. "a healthy person", "a writer" — stored without the leading "I am". */
   statement: string;
+  /** Optional deeper motivation — why this identity matters. */
+  why: string;
   createdAt: string;
   archived: boolean;
 }
@@ -45,6 +47,12 @@ export interface Habit {
 
   stackAnchor: StackAnchor;
 
+  /** Manual sort position among root-level (non-stacked) habits — lower sorts first. */
+  sortOrder: number;
+
+  /** Free-form labels for filtering, e.g. "health", "morning". */
+  tags: string[];
+
   createdAt: string;
   archived: boolean;
 }
@@ -56,6 +64,10 @@ export interface CheckIn {
   /** true if the full habit was done; if false but usedTwoMinuteVersion, the starter version counts as a vote. */
   completedFull: boolean;
   usedTwoMinuteVersion: boolean;
+  /** Excused — doesn't count as a vote, but doesn't break a streak either. */
+  skipped: boolean;
+  /** Optional free-text journal entry for that day. */
+  note: string;
   createdAt: string;
 }
 

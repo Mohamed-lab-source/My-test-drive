@@ -6,8 +6,8 @@
 //   <div class="swipe-content">...</div>
 // </div>
 
-const REVEAL_WIDTH = 84;
-const OPEN_THRESHOLD = REVEAL_WIDTH * 0.4;
+const DEFAULT_REVEAL_WIDTH = 84;
+const OPEN_RATIO = 0.4;
 
 let openRow: HTMLElement | null = null;
 let globalListenerInstalled = false;
@@ -39,6 +39,11 @@ export function enableSwipeToReveal(container: HTMLElement): void {
   container.querySelectorAll<HTMLElement>(".swipe-row").forEach((row) => {
     const content = row.querySelector<HTMLElement>(".swipe-content");
     if (!content) return;
+    // Measured per-row so a row with two actions (e.g. Skip + Archive)
+    // reveals further than a row with just one.
+    const actions = row.querySelector<HTMLElement>(".swipe-actions");
+    const revealWidth = actions?.offsetWidth || DEFAULT_REVEAL_WIDTH;
+    const openThreshold = revealWidth * OPEN_RATIO;
 
     let startX = 0;
     let startY = 0;
@@ -70,8 +75,8 @@ export function enableSwipeToReveal(container: HTMLElement): void {
       if (!horizontal) return;
 
       e.preventDefault();
-      const base = row.classList.contains("swipe-open") ? -REVEAL_WIDTH : 0;
-      const next = Math.min(0, Math.max(-REVEAL_WIDTH, base + dx));
+      const base = row.classList.contains("swipe-open") ? -revealWidth : 0;
+      const next = Math.min(0, Math.max(-revealWidth, base + dx));
       content.style.transform = `translateX(${next}px)`;
     });
 
@@ -82,8 +87,8 @@ export function enableSwipeToReveal(container: HTMLElement): void {
       if (!horizontal) return;
 
       const current = new DOMMatrixReadOnly(getComputedStyle(content).transform).m41;
-      if (current <= -OPEN_THRESHOLD) {
-        content.style.transform = `translateX(${-REVEAL_WIDTH}px)`;
+      if (current <= -openThreshold) {
+        content.style.transform = `translateX(${-revealWidth}px)`;
         row.classList.add("swipe-open");
         openRow = row;
       } else {

@@ -1,14 +1,17 @@
 // Local-only user preferences, persisted to localStorage. No store/IndexedDB
 // involvement since these are device-level UI settings, not app data.
 
+export type Theme = "system" | "light" | "dark";
+
 export interface Prefs {
   sound: boolean;
   haptics: boolean;
+  theme: Theme;
 }
 
 const KEY = "atomic-prefs";
 
-const DEFAULTS: Prefs = { sound: true, haptics: true };
+const DEFAULTS: Prefs = { sound: true, haptics: true, theme: "system" };
 
 let cached: Prefs | null = null;
 
@@ -35,6 +38,17 @@ export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]): void {
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
     // ignore — pref just won't persist across sessions
+  }
+  if (key === "theme") applyTheme();
+}
+
+/** Reflects the theme preference onto <html data-theme>, read by CSS overrides. */
+export function applyTheme(): void {
+  const theme = getPrefs().theme;
+  if (theme === "system") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", theme);
   }
 }
 
