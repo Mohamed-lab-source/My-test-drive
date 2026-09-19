@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "./types";
 import { MainTabs } from "./MainTabs";
 import { OnboardingScreen } from "../screens/OnboardingScreen";
+import { FeatureTourScreen } from "../screens/FeatureTourScreen";
 import { RecipeListScreen } from "../screens/RecipeListScreen";
 import { RecipeDetailScreen } from "../screens/RecipeDetailScreen";
 import { ShoppingListScreen } from "../screens/ShoppingListScreen";
@@ -62,6 +63,7 @@ export function RootNavigator() {
         }}
       >
         <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="FeatureTour" component={FeatureTourScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="RecipeList" component={RecipeListScreen} options={{ title: t("recipeList.title") }} />
         <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: "" }} />

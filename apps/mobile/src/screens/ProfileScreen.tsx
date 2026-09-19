@@ -102,6 +102,13 @@ export function ProfileScreen({ navigation }: Props) {
           <View style={styles.buttonSpacing}>
             <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
           </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("profile.appTour")}
+              variant="outline"
+              onPress={() => navigation.navigate("FeatureTour", { onFinishGoBack: true })}
+            />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -213,6 +220,13 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
         <View style={styles.buttonSpacing}>
           <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("profile.appTour")}
+            variant="outline"
+            onPress={() => navigation.navigate("FeatureTour", { onFinishGoBack: true })}
+          />
         </View>
 
         {saving ? <Text style={styles.saving}>{t("profile.saving")}</Text> : null}

@@ -9,6 +9,7 @@ export type MainTabParamList = {
 
 export type RootStackParamList = {
   Onboarding: undefined;
+  FeatureTour: { onFinishGoBack?: boolean } | undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
   RecipeList: {
     cuisineSlug?: string;

@@ -40,7 +40,7 @@ export function OnboardingScreen({ navigation }: Props) {
 
   const finish = async () => {
     await setPreference({ dietGoal, favoriteCuisineSlugs: selectedCuisines, onboarded: true });
-    navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+    navigation.replace("FeatureTour");
   };
 
   const textAlign = isRTL ? "right" : "left";
