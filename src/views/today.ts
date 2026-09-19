@@ -5,10 +5,12 @@ import { findCheckIn, isVote, computeCurrentStreak } from "../domain/analytics.j
 import { icons } from "../icons.js";
 import { activityRing } from "../charts/svg.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
+import { playChime } from "../prefs.js";
 import { showToast } from "../toast.js";
 import { enableSwipeToReveal } from "../swipe.js";
 import { openHabitDetail } from "./habitDetail.js";
 import { undoableArchive } from "./undoArchive.js";
+import { quoteOfTheDay } from "../domain/quotes.js";
 import type { Habit, TimeOfDay } from "../domain/types.js";
 
 const STREAK_MILESTONES = [7, 14, 30, 50, 100, 200, 365];
@@ -91,6 +93,7 @@ export function renderToday(container: HTMLElement): void {
   const notDueCount = activeHabits.length - dueToday.length;
 
   const doneCount = dueToday.filter((h) => isVote(findCheckIn(checkins, h.id, today))).length;
+  const quote = quoteOfTheDay();
 
   const identityLabel = (id: string | null): string | null => {
     if (!id) return null;
@@ -130,6 +133,12 @@ export function renderToday(container: HTMLElement): void {
           ${notDueCount > 0 ? `&middot; ${notDueCount} not scheduled today` : ""}
         </p>
       </header>
+
+      <div class="quote-card">
+        <div class="quote-mark">&ldquo;</div>
+        <p class="quote-text">${escapeHtml(quote.text)}</p>
+        <p class="quote-attribution">— ${escapeHtml(quote.attribution)}</p>
+      </div>
 
       ${
         dueToday.length > 0
@@ -183,6 +192,7 @@ export function renderToday(container: HTMLElement): void {
       await setCheckIn(habitId, today, nextMode);
 
       if (nextMode !== "clear") {
+        playChime();
         const streakAfter = computeCurrentStreak(habit, getState().checkins);
         const milestone = STREAK_MILESTONES.find((m) => streakBefore < m && streakAfter >= m);
         if (milestone) {

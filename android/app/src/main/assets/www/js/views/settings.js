@@ -1,5 +1,7 @@
 import { getState, exportAllData, isValidBackup, restoreFromBackup, resetAllData } from "../state/store.js";
 import { hapticSuccess, hapticTap } from "../confetti.js";
+import { getPrefs, setPref } from "../prefs.js";
+import { checkinsToCsv } from "../csv.js";
 import { showToast } from "../toast.js";
 let root = null;
 function getRoot() {
@@ -49,10 +51,35 @@ export function openSettings() {
           </div>
 
           <div class="card">
+            <h2 class="card-title">Preferences</h2>
+            <div class="form-card-row toggle-row">
+              <span class="row-label">Sound</span>
+              <label class="switch">
+                <input type="checkbox" id="pref-sound" ${getPrefs().sound ? "checked" : ""} />
+                <span class="switch-track"></span>
+              </label>
+            </div>
+            <div class="form-card-row toggle-row">
+              <span class="row-label">Haptics</span>
+              <label class="switch">
+                <input type="checkbox" id="pref-haptics" ${getPrefs().haptics ? "checked" : ""} />
+                <span class="switch-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
             <h2 class="card-title">Back up your data</h2>
             <p class="wizard-subtitle">Everything is stored only on this device. Copy this text somewhere safe (Notes, email, a cloud doc) — paste it back in anytime to restore.</p>
             <textarea id="export-text" class="backup-textarea" readonly rows="4"></textarea>
             <button type="button" class="btn btn-primary btn-block" id="copy-export-btn">Copy to clipboard</button>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Export check-ins as CSV</h2>
+            <p class="wizard-subtitle">A spreadsheet-friendly log of every check-in, for your own analysis elsewhere.</p>
+            <textarea id="csv-text" class="backup-textarea" readonly rows="4"></textarea>
+            <button type="button" class="btn btn-outline btn-block" id="copy-csv-btn">Copy CSV to clipboard</button>
           </div>
 
           <div class="card">
@@ -86,6 +113,17 @@ export function openSettings() {
     `;
         container.querySelector("#settings-close").addEventListener("click", close);
         container.querySelector(".modal-backdrop").addEventListener("click", close);
+        // ---- Preferences ----
+        container.querySelector("#pref-sound").addEventListener("change", (e) => {
+            setPref("sound", e.target.checked);
+            hapticTap();
+        });
+        container.querySelector("#pref-haptics").addEventListener("change", (e) => {
+            const checked = e.target.checked;
+            setPref("haptics", checked);
+            if (checked)
+                hapticTap();
+        });
         // ---- Export ----
         exportAllData().then((backup) => {
             const textarea = container.querySelector("#export-text");
@@ -104,6 +142,23 @@ export function openSettings() {
             catch {
                 textarea.focus();
                 textarea.select();
+                showToast("📋", "Couldn't auto-copy — text is selected, copy it manually.");
+            }
+        });
+        // ---- CSV export ----
+        const csvTextarea = container.querySelector("#csv-text");
+        csvTextarea.value = checkinsToCsv(habits, checkins);
+        container.querySelector("#copy-csv-btn").addEventListener("click", async () => {
+            const btn = container.querySelector("#copy-csv-btn");
+            try {
+                await navigator.clipboard.writeText(csvTextarea.value);
+                hapticSuccess();
+                btn.textContent = "Copied ✓";
+                setTimeout(() => (btn.textContent = "Copy CSV to clipboard"), 1800);
+            }
+            catch {
+                csvTextarea.focus();
+                csvTextarea.select();
                 showToast("📋", "Couldn't auto-copy — text is selected, copy it manually.");
             }
         });

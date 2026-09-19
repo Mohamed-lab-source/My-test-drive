@@ -35,6 +35,10 @@ export async function archiveIdentity(id: string): Promise<void> {
   await put("identities", { ...found, archived: true });
 }
 
+export async function updateIdentity(identity: Identity): Promise<void> {
+  await put("identities", identity);
+}
+
 // ---- Habits ----
 
 export async function listHabits(): Promise<Habit[]> {

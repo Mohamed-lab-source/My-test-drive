@@ -42,6 +42,27 @@ function blankState(): WizardState {
   };
 }
 
+/**
+ * Would setting `anchorId` as the stack anchor for `editingId` create a
+ * cycle (A after B, B after A, or a longer loop)? Walks up the chain of
+ * anchors starting at `anchorId`; if it ever reaches `editingId`, stacking
+ * there would close a loop. New habits (no `editingId` yet) can never be
+ * part of an existing chain, so they're always safe.
+ */
+function wouldCreateCycle(anchorId: string, editingId: string | undefined, habits: Habit[]): boolean {
+  if (!editingId) return false;
+  let cursor: string | undefined = anchorId;
+  const seen = new Set<string>();
+  while (cursor) {
+    if (cursor === editingId) return true;
+    if (seen.has(cursor)) return false;
+    seen.add(cursor);
+    const h = habits.find((x) => x.id === cursor);
+    cursor = h && h.stackAnchor.type === "habit" ? h.stackAnchor.habitId : undefined;
+  }
+  return false;
+}
+
 function stateFromHabit(habit: Habit): WizardState {
   return {
     name: habit.name,
@@ -78,15 +99,22 @@ function getRoot(): HTMLElement {
 export interface WizardOptions {
   editHabit?: Habit;
   identityId?: string;
+  /** Prefill from this habit but create a brand new one — used by the "Duplicate" action. */
+  duplicateFrom?: Habit;
 }
 
 export function openHabitWizard(options: WizardOptions = {}): void {
-  const { editHabit, identityId } = options;
+  const { editHabit, identityId, duplicateFrom } = options;
   const container = getRoot();
   const editing = !!editHabit;
-  const state = editing ? stateFromHabit(editHabit) : blankState();
+  const state = editing
+    ? stateFromHabit(editHabit)
+    : duplicateFrom
+    ? { ...stateFromHabit(duplicateFrom), name: `${duplicateFrom.name} copy` }
+    : blankState();
   if (!editing && identityId) state.identityId = identityId;
-  const steps = editing ? ["name", "when", "stick", "review"] : ["template", "name", "when", "stick", "review"];
+  const skipTemplate = editing || !!duplicateFrom;
+  const steps = skipTemplate ? ["name", "when", "stick", "review"] : ["template", "name", "when", "stick", "review"];
   let step = 0;
 
   function close(): void {
@@ -235,6 +263,12 @@ export function openHabitWizard(options: WizardOptions = {}): void {
     const { identities, habits } = getState();
     const activeIdentities = identities.filter((i) => !i.archived);
     const otherHabits = habits.filter((h) => !h.archived && h.id !== editHabit?.id);
+    const stackableHabits = otherHabits.filter((h) => !wouldCreateCycle(h.id, editHabit?.id, habits));
+    // If the currently-set anchor would now be invalid (e.g. reachable state
+    // from data made before cycle prevention existed), don't silently keep it.
+    if (state.stackType === "habit" && state.stackHabitId && !stackableHabits.some((h) => h.id === state.stackHabitId)) {
+      state.stackHabitId = "";
+    }
 
     body.innerHTML = `
       <h2 class="wizard-title">When & why</h2>
@@ -293,8 +327,13 @@ export function openHabitWizard(options: WizardOptions = {}): void {
           </div>
         </div>
         <div id="wizard-stack-detail" class="form-card-row ${state.stackType === "none" ? "hidden" : ""}">
-          <select id="wizard-stack-habit" class="plain-select ${state.stackType === "habit" ? "" : "hidden"}">
-            ${otherHabits.map((h) => `<option value="${h.id}" ${h.id === state.stackHabitId ? "selected" : ""}>${escapeHtml(h.icon)} ${escapeHtml(h.name)}</option>`).join("")}
+          ${
+            stackableHabits.length === 0
+              ? `<p class="muted stack-empty-note ${state.stackType === "habit" ? "" : "hidden"}" id="wizard-stack-empty">No other habits available to stack after${otherHabits.length > 0 ? " without creating a loop" : ""}.</p>`
+              : ""
+          }
+          <select id="wizard-stack-habit" class="plain-select ${state.stackType === "habit" && stackableHabits.length > 0 ? "" : "hidden"}">
+            ${stackableHabits.map((h) => `<option value="${h.id}" ${h.id === state.stackHabitId ? "selected" : ""}>${escapeHtml(h.icon)} ${escapeHtml(h.name)}</option>`).join("")}
           </select>
           <input id="wizard-stack-custom" type="text" class="plain-input ${state.stackType === "custom" ? "" : "hidden"}" placeholder="I pour my morning coffee" value="${escapeHtml(state.stackCustom)}" />
         </div>
@@ -333,12 +372,14 @@ export function openHabitWizard(options: WizardOptions = {}): void {
     const stackHabitSelect = body.querySelector<HTMLSelectElement>("#wizard-stack-habit")!;
     const stackCustomInput = body.querySelector<HTMLInputElement>("#wizard-stack-custom")!;
     const stackDetailRow = body.querySelector<HTMLElement>("#wizard-stack-detail")!;
+    const stackEmptyNote = body.querySelector<HTMLElement>("#wizard-stack-empty");
     body.querySelectorAll<HTMLInputElement>('input[name="w-stack"]').forEach((radio) => {
       radio.addEventListener("change", () => {
         state.stackType = radio.value as "none" | "habit" | "custom";
         stackDetailRow.classList.toggle("hidden", state.stackType === "none");
-        stackHabitSelect.classList.toggle("hidden", state.stackType !== "habit");
+        stackHabitSelect.classList.toggle("hidden", state.stackType !== "habit" || stackableHabits.length === 0);
         stackCustomInput.classList.toggle("hidden", state.stackType !== "custom");
+        stackEmptyNote?.classList.toggle("hidden", state.stackType !== "habit");
         positionSegmentedThumb(body.querySelector("#wizard-stack-control")!);
       });
     });

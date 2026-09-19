@@ -35,10 +35,15 @@ function renderChainTree(
   visibleHabits: Habit[],
   identityLabel: (id: string | null) => string,
   depth: number,
-  index: number
+  index: number,
+  seen: Set<string>
 ): string {
+  seen.add(habit.id);
+  // Excluding already-seen ids protects against a stacking cycle (A after B,
+  // B after A) turning this recursion into infinite regress — each habit
+  // renders exactly once, wherever it's first reached.
   const children = visibleHabits.filter(
-    (h) => h.stackAnchor.type === "habit" && h.stackAnchor.habitId === habit.id
+    (h) => h.stackAnchor.type === "habit" && h.stackAnchor.habitId === habit.id && !seen.has(h.id)
   );
   const desc = stackDescription(habit, visibleHabits);
   return `
@@ -72,7 +77,7 @@ function renderChainTree(
           </div>
         </div>
       </div>
-      ${children.map((c, i) => renderChainTree(c, visibleHabits, identityLabel, depth + 1, index + i + 1)).join("")}
+      ${children.map((c, i) => renderChainTree(c, visibleHabits, identityLabel, depth + 1, index + i + 1, seen)).join("")}
     </div>
   `;
 }
@@ -80,6 +85,19 @@ function renderChainTree(
 function buildListHtml(activeHabits: Habit[], identityLabel: (id: string | null) => string): string {
   const query = searchQuery.trim().toLowerCase();
   const visible = query ? activeHabits.filter((h) => h.name.toLowerCase().includes(query)) : activeHabits;
+
+  if (visible.length === 0 && query) {
+    return `<div class="empty-state">
+      <div class="empty-illustration">🔍</div>
+      <p>No habits match "${escapeHtml(searchQuery.trim())}".</p>
+    </div>`;
+  }
+  if (visible.length === 0) {
+    return `<div class="empty-state">
+      <div class="empty-illustration">🌱</div>
+      <p>No habits yet. Tap "Add a habit" above to plant your first one.</p>
+    </div>`;
+  }
 
   // Roots = habits not chained after another *visible* habit (so a chain
   // renders as a tree; if the anchor isn't visible - archived, or filtered
@@ -90,19 +108,21 @@ function buildListHtml(activeHabits: Habit[], identityLabel: (id: string | null)
     return !visible.some((p) => p.id === anchor.habitId);
   });
 
-  if (roots.length === 0 && query) {
-    return `<div class="empty-state">
-      <div class="empty-illustration">🔍</div>
-      <p>No habits match "${escapeHtml(searchQuery.trim())}".</p>
-    </div>`;
-  }
-  if (roots.length === 0) {
-    return `<div class="empty-state">
-      <div class="empty-illustration">🌱</div>
-      <p>No habits yet. Tap "Add a habit" above to plant your first one.</p>
-    </div>`;
-  }
-  return roots.map((h, i) => renderChainTree(h, visible, identityLabel, 0, i)).join("");
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  let index = 0;
+  roots.forEach((h) => {
+    if (seen.has(h.id)) return;
+    parts.push(renderChainTree(h, visible, identityLabel, 0, index++, seen));
+  });
+  // Safety net: a stacking cycle (A after B, B after A) leaves no root among
+  // its members — render any such leftover habit as its own root rather than
+  // silently dropping it from the list.
+  visible.forEach((h) => {
+    if (seen.has(h.id)) return;
+    parts.push(renderChainTree(h, visible, identityLabel, 0, index++, seen));
+  });
+  return parts.join("");
 }
 
 export function renderHabits(container: HTMLElement): void {

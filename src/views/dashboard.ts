@@ -14,10 +14,20 @@ import {
 import { statTile, heatmapSVG, barList } from "../charts/svg.js";
 import { positionSegmentedThumb } from "../segmented.js";
 import { openSettings } from "./settings.js";
+import { openAchievements } from "./achievements.js";
+import { computeBadges } from "../domain/achievements.js";
 
 let heatmapDays: 84 | 364 = 84;
 
-function weeklyInsight(thisWeek: number, prevWeek: number): { icon: string; text: string } | null {
+function weeklyInsight(
+  thisWeek: number,
+  prevWeek: number,
+  perfectWeek: boolean,
+  perfectToday: boolean
+): { icon: string; text: string } | null {
+  if (perfectWeek) {
+    return { icon: "🏅", text: "Perfect week — every due habit, every day. Incredible consistency." };
+  }
   if (thisWeek === 0 && prevWeek === 0) return null;
   if (prevWeek === 0) {
     return { icon: "🌱", text: `${thisWeek} vote${thisWeek === 1 ? "" : "s"} logged this week — a fresh start.` };
@@ -25,6 +35,7 @@ function weeklyInsight(thisWeek: number, prevWeek: number): { icon: string; text
   const change = Math.round(((thisWeek - prevWeek) / prevWeek) * 100);
   if (change >= 10) return { icon: "📈", text: `You're up ${change}% from last week. Keep it going.` };
   if (change <= -10) return { icon: "📉", text: `Down ${Math.abs(change)}% from last week — small steps still count.` };
+  if (perfectToday) return { icon: "✨", text: "Perfect day today — every due habit done." };
   return { icon: "⚖️", text: "Holding steady with last week." };
 }
 
@@ -59,7 +70,16 @@ export function renderDashboard(container: HTMLElement): void {
   const prev7 = lastNDates(14).slice(0, 7);
   const votesThisWeek = checkins.filter((c) => isVote(c) && last7.includes(c.date)).length;
   const votesPrevWeek = checkins.filter((c) => isVote(c) && prev7.includes(c.date)).length;
-  const insight = weeklyInsight(votesThisWeek, votesPrevWeek);
+
+  const week7Full = dailyConsistency(activeHabits, checkins, last7);
+  const week7Due = week7Full.filter((c) => c.due > 0);
+  const perfectWeek = week7Due.length > 0 && week7Due.every((c) => c.ratio === 1);
+  const todayCell = week7Full[week7Full.length - 1];
+  const perfectToday = !!todayCell && todayCell.due > 0 && todayCell.ratio === 1;
+
+  const insight = weeklyInsight(votesThisWeek, votesPrevWeek, perfectWeek, perfectToday);
+  const badges = computeBadges(habits, checkins);
+  const earnedCount = badges.filter((b) => b.earned).length;
 
   container.innerHTML = `
     <section class="view">
@@ -68,10 +88,22 @@ export function renderDashboard(container: HTMLElement): void {
           <h1>Dashboard</h1>
           <p class="view-subtitle">The data behind the 1% — small, consistent votes compounding over time.</p>
         </div>
-        <button type="button" class="icon-btn settings-gear" id="open-settings" aria-label="Settings">⚙️</button>
+        <div class="header-action-group">
+          <button type="button" class="icon-btn" id="open-achievements" aria-label="Achievements">🏆</button>
+          <button type="button" class="icon-btn settings-gear" id="open-settings" aria-label="Settings">⚙️</button>
+        </div>
       </header>
 
-      ${insight ? `<div class="insight-card"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
+      <button type="button" class="card achievements-teaser" id="open-achievements-card">
+        <span class="achievements-teaser-icon">🏆</span>
+        <div class="achievements-teaser-copy">
+          <div class="achievements-teaser-title">Achievements</div>
+          <div class="achievements-teaser-sub muted">${earnedCount} of ${badges.length} badges earned</div>
+        </div>
+        <span class="achievements-teaser-chevron">›</span>
+      </button>
+
+      ${insight ? `<div class="insight-card ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
 
       <div class="stat-tile-row">
         ${statTile({ label: "Votes cast", value: String(totalVotes), sublabel: "all time" })}
@@ -130,6 +162,8 @@ export function renderDashboard(container: HTMLElement): void {
   `;
 
   container.querySelector("#open-settings")!.addEventListener("click", () => openSettings());
+  container.querySelector("#open-achievements")!.addEventListener("click", () => openAchievements());
+  container.querySelector("#open-achievements-card")!.addEventListener("click", () => openAchievements());
 
   const rangeControl = container.querySelector<HTMLElement>("#heatmap-range-control");
   positionSegmentedThumb(rangeControl);

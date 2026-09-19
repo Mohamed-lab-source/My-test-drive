@@ -4,6 +4,7 @@ import { lastNDates } from "../utils/date.js";
 import { identityVoteCount, identityVoteSeries } from "../domain/analytics.js";
 import { sparklineSVG } from "../charts/svg.js";
 import { openHabitWizard } from "./habitWizard.js";
+import { openIdentityDetail } from "./identityDetail.js";
 
 export function renderIdentities(container: HTMLElement): void {
   const { identities, habits, checkins } = getState();
@@ -47,17 +48,19 @@ export function renderIdentities(container: HTMLElement): void {
                   const series = identityVoteSeries(identity.id, habits, checkins, last30);
                   return `
                 <div class="card identity-card stagger-in" style="--stagger-index: ${i}">
-                  <div class="identity-statement">I am <strong>${escapeHtml(identity.statement)}</strong></div>
-                  <div class="identity-stats">
-                    <div>
-                      <div class="stat-tile-value">${totalVotes}</div>
-                      <div class="stat-tile-label">votes cast</div>
+                  <div class="identity-card-main" data-open-identity="${identity.id}">
+                    <div class="identity-statement">I am <strong>${escapeHtml(identity.statement)}</strong></div>
+                    <div class="identity-stats">
+                      <div>
+                        <div class="stat-tile-value">${totalVotes}</div>
+                        <div class="stat-tile-label">votes cast</div>
+                      </div>
+                      <div>
+                        <div class="stat-tile-value">${votes30}</div>
+                        <div class="stat-tile-label">last 30 days</div>
+                      </div>
+                      <div class="identity-sparkline">${sparklineSVG(series)}</div>
                     </div>
-                    <div>
-                      <div class="stat-tile-value">${votes30}</div>
-                      <div class="stat-tile-label">last 30 days</div>
-                    </div>
-                    <div class="identity-sparkline">${sparklineSVG(series)}</div>
                   </div>
                   <div class="identity-footer">
                     <span class="muted">${habitCount} habit${habitCount === 1 ? "" : "s"} linked</span>
@@ -82,6 +85,13 @@ export function renderIdentities(container: HTMLElement): void {
     if (!value) return;
     addIdentity(value);
     form.reset();
+  });
+
+  container.querySelectorAll<HTMLElement>("[data-open-identity]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const identity = active.find((i) => i.id === el.dataset["openIdentity"]);
+      if (identity) openIdentityDetail(identity);
+    });
   });
 
   container.querySelectorAll<HTMLButtonElement>("[data-archive]").forEach((btn) => {

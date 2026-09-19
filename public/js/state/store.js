@@ -43,6 +43,11 @@ export async function archiveIdentity(id) {
     state.identities = state.identities.map((i) => i.id === id ? { ...i, archived: true } : i);
     notify();
 }
+export async function updateIdentity(identity) {
+    await repo.updateIdentity(identity);
+    state.identities = state.identities.map((i) => (i.id === identity.id ? identity : i));
+    notify();
+}
 // ---- Habits ----
 export async function addHabit(input) {
     const habit = await repo.createHabit(input);

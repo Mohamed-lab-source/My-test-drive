@@ -1,8 +1,10 @@
-import { getState, archiveHabit } from "../state/store.js";
+import { getState, archiveHabit, setCheckIn } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
-import { lastNDates, WEEKDAY_LABELS } from "../utils/date.js";
-import { computeCurrentStreak, computeLongestStreak, dailyConsistency, identityVoteCount } from "../domain/analytics.js";
+import { lastNDates, todayISO, WEEKDAY_LABELS } from "../utils/date.js";
+import { computeCurrentStreak, computeLongestStreak, dailyConsistency, findCheckIn, identityVoteCount, isVote } from "../domain/analytics.js";
 import { heatmapSVG } from "../charts/svg.js";
+import { hapticTap } from "../confetti.js";
+import { showToast } from "../toast.js";
 import { openHabitWizard } from "./habitWizard.js";
 import type { Habit, Frequency } from "../domain/types.js";
 
@@ -76,7 +78,8 @@ export function openHabitDetail(habit: Habit): void {
 
           <div class="card">
             <h2 class="card-title">Last 12 weeks</h2>
-            <div class="heatmap-wrap">${heatmapSVG(cells)}</div>
+            <div class="heatmap-wrap">${heatmapSVG(cells, true)}</div>
+            <p class="muted heatmap-hint">Tap a past day to log or clear a check-in.</p>
           </div>
 
           <div class="card">
@@ -90,8 +93,9 @@ export function openHabitDetail(habit: Habit): void {
             ${current.twoMinuteVersion ? `<div class="pill pill-two-min detail-two-min">2-min: ${escapeHtml(current.twoMinuteVersion)}</div>` : ""}
           </div>
 
-          <div class="wizard-nav">
+          <div class="wizard-nav detail-nav-row">
             <button type="button" class="btn btn-plain btn-danger" id="detail-archive">Archive habit</button>
+            <button type="button" class="btn btn-plain" id="detail-duplicate">Duplicate</button>
             <button type="button" class="btn btn-primary" id="detail-edit">Edit</button>
           </div>
         </div>
@@ -100,9 +104,27 @@ export function openHabitDetail(habit: Habit): void {
 
     container.querySelector("#detail-close")!.addEventListener("click", close);
     container.querySelector(".modal-backdrop")!.addEventListener("click", close);
+
+    const today = todayISO();
+    container.querySelectorAll<SVGRectElement>(".heat-cell-tappable").forEach((rect) => {
+      const date = rect.dataset["date"]!;
+      if (date >= today) return; // today is handled from the Today tab; future days aren't loggable
+      rect.addEventListener("click", async () => {
+        const wasVote = isVote(findCheckIn(getState().checkins, current.id, date));
+        hapticTap();
+        await setCheckIn(current.id, date, wasVote ? "clear" : "full");
+        showToast(wasVote ? "↩️" : "✅", wasVote ? "Check-in cleared." : "Logged for that day.");
+        render();
+      });
+    });
+
     container.querySelector("#detail-edit")!.addEventListener("click", () => {
       close();
       openHabitWizard({ editHabit: current });
+    });
+    container.querySelector("#detail-duplicate")!.addEventListener("click", () => {
+      close();
+      openHabitWizard({ duplicateFrom: current });
     });
     container.querySelector("#detail-archive")!.addEventListener("click", () => {
       archiveHabit(current.id);

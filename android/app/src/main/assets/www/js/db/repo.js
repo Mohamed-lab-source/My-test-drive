@@ -21,6 +21,9 @@ export async function archiveIdentity(id) {
         return;
     await put("identities", { ...found, archived: true });
 }
+export async function updateIdentity(identity) {
+    await put("identities", identity);
+}
 // ---- Habits ----
 export async function listHabits() {
     const habits = await getAll("habits");

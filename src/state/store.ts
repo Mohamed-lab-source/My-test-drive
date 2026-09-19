@@ -70,6 +70,12 @@ export async function archiveIdentity(id: string): Promise<void> {
   notify();
 }
 
+export async function updateIdentity(identity: Identity): Promise<void> {
+  await repo.updateIdentity(identity);
+  state.identities = state.identities.map((i) => (i.id === identity.id ? identity : i));
+  notify();
+}
+
 // ---- Habits ----
 
 export async function addHabit(input: NewHabitInput): Promise<void> {

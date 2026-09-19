@@ -594,6 +594,36 @@ svg {
   margin-left: auto;
 }
 
+.identity-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.identity-linked-habit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 4px;
+  background: none;
+  border: none;
+  border-bottom: 0.5px solid var(--separator);
+  font: inherit;
+  color: var(--label);
+  text-align: left;
+  cursor: pointer;
+}
+
+.identity-linked-habit:last-child {
+  border-bottom: none;
+}
+
+.identity-add-habit-btn {
+  margin-top: 12px;
+}
+
 .identity-footer {
   display: flex;
   align-items: center;
@@ -816,6 +846,15 @@ svg {
 }
 
 .heatmap-legend {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.heat-cell-tappable {
+  cursor: pointer;
+}
+
+.heatmap-hint {
   margin-top: 8px;
   font-size: 12px;
 }
@@ -1072,6 +1111,15 @@ body.modal-open {
 .wizard-nav .btn-primary {
   flex: 1;
   margin-left: 12px;
+}
+
+.detail-nav-row {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detail-nav-row .btn-plain {
+  flex-shrink: 0;
 }
 
 .wizard-nav .btn-primary:disabled {
@@ -1550,6 +1598,49 @@ body.modal-open {
   flex-shrink: 0;
 }
 
+.insight-card-perfect {
+  background: color-mix(in srgb, var(--green) 16%, var(--bg-surface));
+}
+
+/* ---- Today: quote of the day ---- */
+
+.quote-card {
+  position: relative;
+  background: var(--bg-surface);
+  border-radius: var(--radius-row);
+  padding: 16px 18px 14px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.quote-mark {
+  position: absolute;
+  top: -6px;
+  left: 10px;
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--accent);
+  opacity: 0.14;
+  line-height: 1;
+  font-family: Georgia, serif;
+}
+
+.quote-text {
+  position: relative;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--label);
+  margin: 0 0 4px;
+}
+
+.quote-attribution {
+  position: relative;
+  font-size: 12px;
+  color: var(--label-secondary);
+  margin: 0;
+}
+
 /* ---- Today: time-of-day sections ---- */
 
 .today-section {
@@ -1699,6 +1790,113 @@ body.modal-open {
   margin-top: 2px;
 }
 
+.header-action-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.header-action-group .icon-btn {
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+.achievements-teaser {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.achievements-teaser-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.achievements-teaser-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.achievements-teaser-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.achievements-teaser-sub {
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.achievements-teaser-chevron {
+  font-size: 20px;
+  color: var(--label-tertiary);
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.badge-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-row);
+  padding: 14px 8px 12px;
+}
+
+.badge-tile.locked {
+  opacity: 0.55;
+}
+
+.badge-icon {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.badge-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.badge-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gridline);
+  overflow: hidden;
+}
+
+.badge-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.badge-earned-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--green);
+  text-transform: uppercase;
+}
+
+.achievements-tally {
+  margin-bottom: 14px;
+}
+
 .wizard-header-title {
   font-weight: 600;
   font-size: 15px;
@@ -1745,4 +1943,56 @@ body.modal-open {
   background: transparent;
   color: var(--accent);
   border: 1.5px solid var(--accent);
+}
+
+.toggle-row {
+  align-items: center;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--fill-secondary, var(--gridline));
+  border-radius: 999px;
+  transition: background 0.18s ease;
+  pointer-events: none;
+}
+
+.switch-track::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.18s ease;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--green);
+}
+
+.switch input:checked + .switch-track::before {
+  transform: translateX(18px);
 }

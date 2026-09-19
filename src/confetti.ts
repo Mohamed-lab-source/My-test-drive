@@ -1,6 +1,8 @@
 // Lightweight CSS-driven confetti burst — no canvas, no deps. A handful of
 // colored divs animated with a CSS keyframe, removed once they finish.
 
+import { getPrefs } from "./prefs.js";
+
 const COLORS = ["#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE", "#FFD60A"];
 
 export interface Point {
@@ -50,6 +52,7 @@ export function celebrate(origin?: HTMLElement | Point): void {
 }
 
 export function hapticTap(): void {
+  if (!getPrefs().haptics) return;
   try {
     navigator.vibrate?.(10);
   } catch {
@@ -58,6 +61,7 @@ export function hapticTap(): void {
 }
 
 export function hapticSuccess(): void {
+  if (!getPrefs().haptics) return;
   try {
     navigator.vibrate?.([10, 40, 20]);
   } catch {

@@ -62,8 +62,12 @@ function heatColorVar(cell) {
         return `var(${HEAT_BUCKETS[3]})`;
     return `var(${HEAT_BUCKETS[4]})`;
 }
-/** GitHub-style contribution heatmap: weeks as columns, Sun-Sat as rows. */
-export function heatmapSVG(cells) {
+/**
+ * GitHub-style contribution heatmap: weeks as columns, Sun-Sat as rows.
+ * When `interactive` is set, due-but-not-today cells get a `data-date` and a
+ * tappable class so a caller can wire up backdating past check-ins.
+ */
+export function heatmapSVG(cells, interactive = false) {
     if (cells.length === 0)
         return "";
     const size = 11;
@@ -85,7 +89,8 @@ export function heatmapSVG(cells) {
         const title = cell.due === 0
             ? `${formatDisplay(cell.date)}: no habits due`
             : `${formatDisplay(cell.date)}: ${cell.done}/${cell.due} done (${pct}%)`;
-        rects.push(`<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="2" fill="${heatColorVar(cell)}"><title>${escapeHtml(title)}</title></rect>`);
+        const tappable = interactive && cell.due > 0;
+        rects.push(`<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="2" fill="${heatColorVar(cell)}"${tappable ? ` class="heat-cell-tappable" data-date="${cell.date}"` : ""}><title>${escapeHtml(title)}</title></rect>`);
     });
     return `
     <svg class="viz-root" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Daily consistency heatmap">
