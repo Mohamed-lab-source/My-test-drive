@@ -77,12 +77,19 @@ export type NutritionPerServing = {
   carbsGrams: number;
 };
 
+export type Review = {
+  name: string;
+  score: number;
+  comment: string;
+};
+
 export type RecipeDetail = RecipeSummary & {
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
   nutritionPerServing: NutritionPerServing;
   myRating: number | null;
   adaptedForGoal: DietGoal | null;
+  reviews: Review[];
 };
 
 export type RatingResult = {

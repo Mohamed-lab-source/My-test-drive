@@ -19,6 +19,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { daysUntil, useLeftovers } from "../context/LeftoversContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
+import { useMealPlan } from "../context/MealPlanContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { fetchCuisines, fetchRandomRecipe, fetchRecipeDetail, fetchRecipes, fetchRecommended } from "../api/endpoints";
@@ -39,6 +40,15 @@ const RECOMMENDED_TITLE_KEY: Record<string, TranslationKey> = {
   GAIN_WEIGHT: "home.recommendedGainWeight",
 };
 
+const MEAL_TYPES: { dishType: string; emoji: string; labelKey: TranslationKey }[] = [
+  { dishType: "Breakfast", emoji: "🍳", labelKey: "home.mealType.breakfast" },
+  { dishType: "Appetizer", emoji: "🥗", labelKey: "home.mealType.appetizer" },
+  { dishType: "Main Course", emoji: "🍽️", labelKey: "home.mealType.mainCourse" },
+  { dishType: "Soup", emoji: "🍲", labelKey: "home.mealType.soup" },
+  { dishType: "Side Dish", emoji: "🥔", labelKey: "home.mealType.sideDish" },
+  { dishType: "Dessert", emoji: "🍰", labelKey: "home.mealType.dessert" },
+];
+
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, "Home">,
   NativeStackScreenProps<RootStackParamList>
@@ -48,8 +58,9 @@ export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
   const { displayStreak } = useCookStreak();
   const { leftovers, removeLeftover } = useLeftovers();
+  const { plan } = useMealPlan();
   const { preference } = useLocalPreference();
-  const { recentRecipes } = useRecentlyViewed();
+  const { recentRecipes, clearRecent } = useRecentlyViewed();
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -128,9 +139,25 @@ export function HomeScreen({ navigation }: Props) {
     }
   };
 
+  const handleClearRecent = () => {
+    Alert.alert(t("home.clearRecentlyViewedConfirmTitle"), t("home.clearRecentlyViewedConfirmMessage"), [
+      { text: t("home.cancel"), style: "cancel" },
+      { text: t("home.clearRecentlyViewed"), style: "destructive", onPress: clearRecent },
+    ]);
+  };
+
   const greetingName = isAuthenticated ? user?.name.split(" ")[0] : undefined;
   const dietGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : preference.dietGoal;
+  const todaysPlanRecipe = plan[new Date().toISOString().slice(0, 10)];
   const recommendedTitle = t(RECOMMENDED_TITLE_KEY[dietGoal] ?? "home.recommended");
+  const favoriteCuisineSlugs = isAuthenticated
+    ? user?.preference?.favoriteCuisineSlugs ?? []
+    : preference.favoriteCuisineSlugs;
+  const orderedCuisines = useMemo(() => {
+    if (favoriteCuisineSlugs.length === 0) return cuisines;
+    const favSet = new Set(favoriteCuisineSlugs);
+    return [...cuisines].sort((a, b) => Number(favSet.has(b.slug)) - Number(favSet.has(a.slug)));
+  }, [cuisines, favoriteCuisineSlugs]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -154,6 +181,33 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.headline}>{t("home.headline")}</Text>
             </View>
 
+            {todaysPlanRecipe ? (
+              <AnimatedPressable
+                style={styles.todaysPlanCard}
+                pressScale={0.98}
+                onPress={() => navigation.navigate("RecipeDetail", { slug: todaysPlanRecipe.slug })}
+              >
+                <View style={styles.todaysPlanTextCol}>
+                  <Text style={styles.todaysPlanLabel}>{t("home.todaysPlanLabel")}</Text>
+                  <Text style={styles.todaysPlanTitle} numberOfLines={1}>
+                    {todaysPlanRecipe.title}
+                  </Text>
+                </View>
+                <AnimatedPressable
+                  style={styles.todaysPlanButton}
+                  pressScale={0.9}
+                  onPress={() => handleCookAgain(todaysPlanRecipe)}
+                  disabled={cookingSlug !== null}
+                >
+                  {cookingSlug === todaysPlanRecipe.slug ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.todaysPlanButtonText}>{t("home.startCooking")}</Text>
+                  )}
+                </AnimatedPressable>
+              </AnimatedPressable>
+            ) : null}
+
             <AnimatedPressable
               style={styles.searchBar}
               pressScale={0.98}
@@ -176,7 +230,7 @@ export function HomeScreen({ navigation }: Props) {
 
             <Text style={styles.sectionTitle}>{t("home.browseByCuisine")}</Text>
             <View style={styles.cuisineWrap}>
-              {cuisines.map((c, i) => (
+              {orderedCuisines.map((c, i) => (
                 <FadeSlideIn key={c.id} index={i}>
                   <AnimatedPressable
                     style={[styles.cuisineCard, { width: cuisineCardWidth, height: cuisineCardWidth }]}
@@ -192,6 +246,22 @@ export function HomeScreen({ navigation }: Props) {
                 </FadeSlideIn>
               ))}
             </View>
+
+            <Text style={styles.sectionTitle}>{t("home.browseByMealType")}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeScroll}>
+              {MEAL_TYPES.map((m, i) => (
+                <FadeSlideIn key={m.dishType} index={i}>
+                  <AnimatedPressable
+                    style={styles.mealTypeChip}
+                    pressScale={0.94}
+                    onPress={() => navigation.navigate("RecipeList", { dishType: m.dishType, title: t(m.labelKey) })}
+                  >
+                    <Text style={styles.mealTypeEmoji}>{m.emoji}</Text>
+                    <Text style={styles.mealTypeLabel}>{t(m.labelKey)}</Text>
+                  </AnimatedPressable>
+                </FadeSlideIn>
+              ))}
+            </ScrollView>
 
             <View style={styles.quickRow}>
               <AnimatedPressable
@@ -302,7 +372,12 @@ export function HomeScreen({ navigation }: Props) {
 
             {recentRecipes.length > 0 ? (
               <>
-                <Text style={styles.sectionTitle}>{t("home.recentlyViewed")}</Text>
+                <View style={styles.recentHeaderRow}>
+                  <Text style={[styles.sectionTitle, styles.recentHeaderTitle]}>{t("home.recentlyViewed")}</Text>
+                  <AnimatedPressable pressScale={0.92} onPress={handleClearRecent}>
+                    <Text style={styles.clearLink}>{t("home.clearRecentlyViewed")}</Text>
+                  </AnimatedPressable>
+                </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentScroll}>
                   {recentRecipes.map((r, i) => (
                     <FadeSlideIn key={r.slug} index={i}>
@@ -368,6 +443,25 @@ const createStyles = (colors: ThemeColors) =>
     },
     streakBadgeText: { fontSize: 12, fontWeight: "800", color: colors.primaryDark },
     headline: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 4 },
+    todaysPlanCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.primary,
+      borderRadius: radius.md,
+      padding: spacing(1.75),
+      marginTop: spacing(2),
+    },
+    todaysPlanTextCol: { flex: 1 },
+    todaysPlanLabel: { color: "#ffffffcc", fontSize: 11, fontWeight: "700" },
+    todaysPlanTitle: { color: "#fff", fontSize: 15, fontWeight: "800", marginTop: 2 },
+    todaysPlanButton: {
+      backgroundColor: "rgba(255,255,255,0.25)",
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing(1.75),
+      paddingVertical: spacing(1),
+      marginStart: spacing(1),
+    },
+    todaysPlanButtonText: { color: "#fff", fontWeight: "700", fontSize: 12 },
     searchBar: {
       flexDirection: "row",
       alignItems: "center",
@@ -430,6 +524,28 @@ const createStyles = (colors: ThemeColors) =>
       marginStart: spacing(1),
     },
     leftoverDoneText: { color: colors.primaryDark, fontWeight: "800", fontSize: 15 },
+    mealTypeScroll: {},
+    mealTypeChip: {
+      width: 84,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: spacing(1.5),
+      marginEnd: spacing(1.25),
+      alignItems: "center",
+    },
+    mealTypeEmoji: { fontSize: 24 },
+    mealTypeLabel: { fontSize: 11, fontWeight: "700", color: colors.text, marginTop: 4, textAlign: "center" },
+    recentHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: spacing(3),
+      marginBottom: spacing(1.5),
+    },
+    recentHeaderTitle: { marginTop: 0, marginBottom: 0 },
+    clearLink: { color: colors.primaryDark, fontWeight: "700", fontSize: 12 },
     recentScroll: {},
     recentCard: {
       width: 110,

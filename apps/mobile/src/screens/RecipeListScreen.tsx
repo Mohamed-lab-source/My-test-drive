@@ -6,31 +6,44 @@ import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipes } from "../api/endpoints";
 import { RecipeCard } from "../components/RecipeCard";
 import { Chip } from "../components/Chip";
+import { useAuth } from "../context/AuthContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
+import { intersectAllergens } from "../utils/allergens";
 import { spacing, type ThemeColors } from "../theme";
 import type { DishTag, RecipeSummary } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
 export function RecipeListScreen({ route, navigation }: Props) {
-  const { cuisineSlug, tag: initialTag, title, sortByCost, sortByRating } = route.params;
+  const { cuisineSlug, tag: initialTag, dishType, title, sortByCost, sortByRating } = route.params;
   const { t, locale } = useLocale();
   const { colors } = useTheme();
+  const { user } = useAuth();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTag, setActiveTag] = useState<DishTag | undefined>(initialTag as DishTag | undefined);
-  const [sortMode, setSortMode] = useState<"none" | "cheapest" | "topRated">(
+  const [sortMode, setSortMode] = useState<"none" | "cheapest" | "topRated" | "fastest">(
     sortByRating ? "topRated" : sortByCost ? "cheapest" : "none"
   );
+  const [hideAllergens, setHideAllergens] = useState(false);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const myAllergies = user?.preference?.allergies ?? [];
+  const filteredRecipes = hideAllergens
+    ? recipes.filter((r) => intersectAllergens(r.allergens, myAllergies).length === 0)
+    : recipes;
+
   const displayRecipes =
     sortMode === "cheapest"
-      ? [...recipes].sort((a, b) => a.costPerServing - b.costPerServing)
+      ? [...filteredRecipes].sort((a, b) => a.costPerServing - b.costPerServing)
       : sortMode === "topRated"
-        ? [...recipes].sort((a, b) => (b.avgRating ?? -1) - (a.avgRating ?? -1))
-        : recipes;
+        ? [...filteredRecipes].sort((a, b) => (b.avgRating ?? -1) - (a.avgRating ?? -1))
+        : sortMode === "fastest"
+          ? [...filteredRecipes].sort(
+              (a, b) => a.prepMinutes + a.cookMinutes - (b.prepMinutes + b.cookMinutes)
+            )
+          : filteredRecipes;
 
   const TAG_FILTERS: { value: DishTag | undefined; label: string }[] = [
     { value: undefined, label: t("recipeList.filter.all") },
@@ -38,6 +51,8 @@ export function RecipeListScreen({ route, navigation }: Props) {
     { value: "DESSERT", label: t("recipeList.filter.dessert") },
     { value: "VEGETARIAN", label: t("recipeList.filter.vegetarian") },
     { value: "QUICK", label: t("recipeList.filter.quick") },
+    { value: "SPICY", label: t("recipeList.filter.spicy") },
+    { value: "COMFORT", label: t("recipeList.filter.comfort") },
   ];
 
   useEffect(() => {
@@ -46,10 +61,10 @@ export function RecipeListScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     setLoading(true);
-    fetchRecipes({ cuisine: cuisineSlug, tag: activeTag })
+    fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType })
       .then(setRecipes)
       .finally(() => setLoading(false));
-  }, [cuisineSlug, activeTag, locale]);
+  }, [cuisineSlug, activeTag, dishType, locale]);
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -69,6 +84,18 @@ export function RecipeListScreen({ route, navigation }: Props) {
           selected={sortMode === "topRated"}
           onPress={() => setSortMode((m) => (m === "topRated" ? "none" : "topRated"))}
         />
+        <Chip
+          label={t("recipeList.filter.fastestFirst")}
+          selected={sortMode === "fastest"}
+          onPress={() => setSortMode((m) => (m === "fastest" ? "none" : "fastest"))}
+        />
+        {myAllergies.length > 0 ? (
+          <Chip
+            label={t("recipeList.filter.hideAllergens")}
+            selected={hideAllergens}
+            onPress={() => setHideAllergens((v) => !v)}
+          />
+        ) : null}
       </View>
       <FlatList
         data={displayRecipes}

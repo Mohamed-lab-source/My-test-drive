@@ -51,7 +51,7 @@ export async function fetchCuisines() {
   return data;
 }
 
-export async function fetchRecipes(params: { cuisine?: string; tag?: string; q?: string }) {
+export async function fetchRecipes(params: { cuisine?: string; tag?: string; dishType?: string; q?: string }) {
   const { data } = await api.get<RecipeSummary[]>("/recipes", { params });
   return data;
 }

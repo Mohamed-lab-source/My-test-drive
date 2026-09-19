@@ -10,7 +10,14 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   Onboarding: undefined;
   Main: NavigatorScreenParams<MainTabParamList>;
-  RecipeList: { cuisineSlug?: string; tag?: string; title: string; sortByCost?: boolean; sortByRating?: boolean };
+  RecipeList: {
+    cuisineSlug?: string;
+    tag?: string;
+    dishType?: string;
+    title: string;
+    sortByCost?: boolean;
+    sortByRating?: boolean;
+  };
   RecipeDetail: { slug: string };
   ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
   CookMode: {

@@ -9,6 +9,8 @@ type RecentlyViewedContextValue = {
   recentRecipes: RecipeSummary[];
   isLoading: boolean;
   addRecent: (recipe: RecipeSummary) => void;
+  removeRecent: (slug: string) => void;
+  clearRecent: () => void;
 };
 
 const RecentlyViewedContext = createContext<RecentlyViewedContextValue | undefined>(undefined);
@@ -36,9 +38,22 @@ export function RecentlyViewedProvider({ children }: { children: React.ReactNode
     });
   }, []);
 
+  const removeRecent = useCallback((slug: string) => {
+    setRecentRecipes((prev) => {
+      const next = prev.filter((r) => r.slug !== slug);
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const clearRecent = useCallback(() => {
+    setRecentRecipes([]);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([])).catch(() => {});
+  }, []);
+
   const value = useMemo(
-    () => ({ recentRecipes, isLoading, addRecent }),
-    [recentRecipes, isLoading, addRecent]
+    () => ({ recentRecipes, isLoading, addRecent, removeRecent, clearRecent }),
+    [recentRecipes, isLoading, addRecent, removeRecent, clearRecent]
   );
 
   return <RecentlyViewedContext.Provider value={value}>{children}</RecentlyViewedContext.Provider>;

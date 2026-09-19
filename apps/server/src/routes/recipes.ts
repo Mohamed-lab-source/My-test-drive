@@ -149,7 +149,14 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
       cuisine: cuisine ? { slug: cuisine } : undefined,
       dishType: dishType ? { equals: dishType, mode: "insensitive" } : undefined,
       tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
-      title: q ? { contains: q, mode: "insensitive" } : undefined,
+      OR: q
+        ? [
+            { title: { contains: q, mode: "insensitive" } },
+            { titleAr: { contains: q, mode: "insensitive" } },
+            { ingredients: { some: { ingredient: { name: { contains: q, mode: "insensitive" } } } } },
+            { ingredients: { some: { ingredient: { nameAr: { contains: q, mode: "insensitive" } } } } },
+          ]
+        : undefined,
     },
     select: recipeSummarySelect(),
     orderBy: { title: "asc" },
@@ -330,7 +337,9 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
         include: { ingredient: true },
       },
       steps: { orderBy: { order: "asc" } },
-      ratings: { select: { userId: true, score: true } },
+      ratings: {
+        select: { userId: true, score: true, comment: true, createdAt: true, user: { select: { name: true } } },
+      },
     },
   });
   if (!recipe) {
@@ -342,6 +351,10 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   const avgRating =
     ratingCount > 0 ? Math.round((recipe.ratings.reduce((sum, r) => sum + r.score, 0) / ratingCount) * 10) / 10 : null;
   const myRating = req.userId ? recipe.ratings.find((r) => r.userId === req.userId)?.score ?? null : null;
+  const reviews = recipe.ratings
+    .filter((r) => r.comment && r.comment.trim().length > 0)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .map((r) => ({ name: r.user.name, score: r.score, comment: r.comment as string }));
 
   const adapted = await applyGoalSubstitutions(recipe.ingredients, goal);
   const effectiveIngredients = adapted.map((a) => a.ri);
@@ -384,6 +397,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     avgRating,
     ratingCount,
     myRating,
+    reviews,
     nutritionPerServing,
     costPerServing,
     allergens,

@@ -17,6 +17,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
+import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useNotes } from "../context/NotesContext";
@@ -30,11 +31,18 @@ import type { DietGoal, RecipeDetail } from "../api/types";
 
 const BODY_GOALS: DietGoal[] = ["LOSE_WEIGHT", "BUILD_MUSCLE", "GAIN_WEIGHT"];
 const SERVINGS_PRESETS = [2, 4, 6, 8];
+const MEAL_PLAN_DAYS_AHEAD = 7;
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeDetail">;
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+function dateKeyFor(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
 }
 
 export function RecipeDetailScreen({ route, navigation }: Props) {
@@ -47,6 +55,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { isAuthenticated, user } = useAuth();
   const { preference: localPreference } = useLocalPreference();
   const { addRecent } = useRecentlyViewed();
+  const { plan, setPlan } = useMealPlan();
   const { getNote, setNote } = useNotes();
   const [noteText, setNoteText] = useState("");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
@@ -55,6 +64,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [sharing, setSharing] = useState(false);
   const [myRating, setMyRating] = useState<number | null>(null);
   const [rating, setRating] = useState(false);
+  const [reviewText, setReviewText] = useState("");
   const shareCardRef = useRef<View>(null);
 
   const myGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : localPreference.dietGoal;
@@ -122,8 +132,14 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     setMyRating(score);
     setRating(true);
     try {
-      const result = await rateRecipe(recipe.slug, score);
-      setRecipe((prev) => (prev ? { ...prev, avgRating: result.average, ratingCount: result.count } : prev));
+      const trimmedComment = reviewText.trim();
+      const result = await rateRecipe(recipe.slug, score, trimmedComment || undefined);
+      setRecipe((prev) => {
+        if (!prev) return prev;
+        const others = prev.reviews.filter((r) => r.name !== user?.name);
+        const reviews = trimmedComment ? [{ name: user?.name ?? "", score, comment: trimmedComment }, ...others] : others;
+        return { ...prev, avgRating: result.average, ratingCount: result.count, reviews };
+      });
     } catch {
       setMyRating(previous);
       Alert.alert(t("recipeDetail.rateError"));
@@ -309,15 +325,64 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             </FadeSlideIn>
           ))}
 
+          <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.addToMealPlan")}</Text>
+          <View style={styles.mealPlanDayRow}>
+            {Array.from({ length: MEAL_PLAN_DAYS_AHEAD }, (_, offset) => {
+              const dateKey = dateKeyFor(offset);
+              const isPlanned = plan[dateKey]?.slug === recipe.slug;
+              const label =
+                offset === 0
+                  ? t("mealPlanner.today")
+                  : offset === 1
+                    ? t("mealPlanner.tomorrow")
+                    : t(`weekday.${new Date(dateKey + "T00:00:00").getDay()}` as TranslationKey);
+              return (
+                <Chip
+                  key={dateKey}
+                  label={isPlanned ? `✓ ${label}` : label}
+                  selected={isPlanned}
+                  onPress={() => setPlan(dateKey, isPlanned ? null : recipe)}
+                />
+              );
+            })}
+          </View>
+
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.rateThis")}</Text>
           {isAuthenticated ? (
-            <View style={styles.rateRow}>
-              <StarRating value={myRating ?? 0} onChange={handleRate} size={30} />
-              {rating ? <ActivityIndicator size="small" color={colors.primary} style={styles.rateSpinner} /> : null}
-            </View>
+            <>
+              <TextInput
+                style={[styles.notesInput, { textAlign }]}
+                placeholder={t("recipeDetail.reviewPlaceholder")}
+                placeholderTextColor={colors.textMuted}
+                value={reviewText}
+                onChangeText={setReviewText}
+                multiline
+              />
+              <View style={styles.rateRow}>
+                <StarRating value={myRating ?? 0} onChange={handleRate} size={30} />
+                {rating ? <ActivityIndicator size="small" color={colors.primary} style={styles.rateSpinner} /> : null}
+              </View>
+            </>
           ) : (
             <Text style={[styles.rateLoginHint, { textAlign }]}>{t("recipeDetail.rateLoginHint")}</Text>
           )}
+
+          {recipe.reviews.length > 0 ? (
+            <>
+              <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.reviews")}</Text>
+              {recipe.reviews.map((review, i) => (
+                <FadeSlideIn key={`${review.name}-${i}`} index={i}>
+                  <View style={styles.reviewCard}>
+                    <View style={styles.reviewHeader}>
+                      <Text style={styles.reviewName}>{review.name}</Text>
+                      <StarRating value={review.score} size={12} />
+                    </View>
+                    <Text style={[styles.reviewComment, { textAlign }]}>{review.comment}</Text>
+                  </View>
+                </FadeSlideIn>
+              ))}
+            </>
+          ) : null}
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.myNotes")}</Text>
           <TextInput
@@ -453,6 +518,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   rateRow: { flexDirection: "row", alignItems: "center" },
   rateSpinner: { marginStart: spacing(1.5) },
   rateLoginHint: { color: colors.textMuted, fontSize: 13 },
+  reviewCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(1.5),
+    marginBottom: spacing(1),
+  },
+  reviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  reviewName: { fontSize: 13, fontWeight: "700", color: colors.text },
+  reviewComment: { fontSize: 13, color: colors.textMuted, marginTop: spacing(0.75), lineHeight: 18 },
   notesInput: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -505,6 +581,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   adaptRow: { marginTop: spacing(1) },
   adaptTitle: { marginBottom: spacing(1) },
   chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
+  mealPlanDayRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1) },
   stepperRow: { flexDirection: "row", alignItems: "center" },
   servingsPresetRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(1.5) },
   stepperButton: {
