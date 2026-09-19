@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Cookmate",
+    "slug": "cookmate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "cookmate",
+    "ios": {
+      "bundleIdentifier": "com.cookmate.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Cookmate uses your location to suggest nearby supermarkets for your shopping list."
+      }
+    },
+    "android": {
+      "package": "com.cookmate.app",
+      "predictiveBackGestureEnabled": false,
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Cookmate uses your location to suggest nearby supermarkets for your shopping list."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "86c24a4d-08da-4648-870b-d4619c15479d"
+      }
+    },
+    "owner": "toukhys-team"
+  }
+}
