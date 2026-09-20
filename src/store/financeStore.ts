@@ -9,6 +9,7 @@ import type {
 } from '../db/types';
 import * as repo from '../db/repositories/finance';
 import { seedDefaultsIfEmpty } from '../db/seed';
+import { refreshMoneyWidget } from '../widgets/refresh';
 
 interface FinanceState {
   loaded: boolean;
@@ -79,8 +80,14 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   },
 
   refreshTransactions: async () => set({ transactions: await repo.listTransactions(200) }),
-  refreshAccounts: async () => set({ accounts: await repo.listAccounts() }),
-  refreshRecurring: async () => set({ recurringRules: await repo.listRecurringRules() }),
+  refreshAccounts: async () => {
+    set({ accounts: await repo.listAccounts() });
+    refreshMoneyWidget();
+  },
+  refreshRecurring: async () => {
+    set({ recurringRules: await repo.listRecurringRules() });
+    refreshMoneyWidget();
+  },
   refreshDebts: async () => set({ debts: await repo.listDebts() }),
   refreshSavings: async () => set({ savingsGoals: await repo.listSavingsGoals() }),
   refreshCategories: async () => set({ categories: await repo.listCategories() }),

@@ -23,6 +23,11 @@ Everything lives on-device in SQLite — no account, no server, no network depen
 - Daily 5-prayer tracker with streaks
 - Wishlist / ideas board with priority and price
 
+**Home-screen widgets (Android)**
+- Prayers — today's 5 prayers with streak, tap a prayer to mark it done right from the widget
+- Today — your tasks scheduled for today
+- Net worth — current net worth and next upcoming bill
+
 **Settings**
 - Light/Dark/System appearance
 - Currency selection

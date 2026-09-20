@@ -3,6 +3,7 @@ import { todayKey } from '../db/client';
 import type { Prayer, PrayerLog, WishlistItem } from '../db/types';
 import { PRAYERS } from '../db/types';
 import * as repo from '../db/repositories/life';
+import { refreshPrayerWidget } from '../widgets/refresh';
 
 interface LifeState {
   loaded: boolean;
@@ -41,6 +42,7 @@ export const useLifeStore = create<LifeState>((set, get) => ({
       repo.computePrayerStreak(),
     ]);
     set({ todayPrayerLogs, prayerStreak });
+    refreshPrayerWidget();
   },
 
   addWishlistItem: async (input) => {

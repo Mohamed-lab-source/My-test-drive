@@ -39,6 +39,37 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "PrayerWidget",
+              "label": "Anchor · Prayers",
+              "description": "Today's 5 prayers with your streak — tap a prayer to mark it done",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "TasksWidget",
+              "label": "Anchor · Today",
+              "description": "Your tasks scheduled for today",
+              "minWidth": "250dp",
+              "minHeight": "180dp",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "MoneyWidget",
+              "label": "Anchor · Net Worth",
+              "description": "Net worth and your next upcoming bill",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "experiments": {

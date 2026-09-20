@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Meeting, Project, Task } from '../db/types';
 import * as repo from '../db/repositories/productivity';
+import { refreshTasksWidget } from '../widgets/refresh';
 
 interface ProductivityState {
   loaded: boolean;
@@ -40,7 +41,10 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
     ]);
     set({ projects, tasks, meetings, loaded: true });
   },
-  refreshTasks: async () => set({ tasks: await repo.listTasks() }),
+  refreshTasks: async () => {
+    set({ tasks: await repo.listTasks() });
+    refreshTasksWidget();
+  },
   refreshProjects: async () => set({ projects: await repo.listProjects() }),
   refreshMeetings: async () => set({ meetings: await repo.listMeetings() }),
 
