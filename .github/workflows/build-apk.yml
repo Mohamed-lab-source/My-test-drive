@@ -50,6 +50,27 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      # Kotlin compiles in its OWN out-of-process daemon, separate from the
+      # main Gradle JVM — GRADLE_OPTS only raises the latter's heap, so it
+      # never actually reached the process that OOMs. Confirmed from a real
+      # run's logs: expo-constants/expo-log-box compileReleaseKotlin FAILED,
+      # then "OutOfMemoryError: Metaspace" repeating for a bit before the
+      # daemon just went silent — the job stayed "in_progress" for another
+      # 45+ minutes doing nothing, never surfacing as a failure.
+      # kotlin.daemon.jvmargs in gradle.properties is the documented way to
+      # size that daemon's JVM. A previous attempt to add it broke an
+      # unrelated Node-based autolinking step at Gradle configuration time —
+      # almost certainly because a plain `cat >>` heredoc appended directly
+      # onto the last line of the generated file with no leading newline,
+      # merging it with whatever key came last (e.g. reactNativeArchitectures)
+      # into one corrupt line. Guarantee a newline first this time so the
+      # append can't merge with existing content.
+      - name: Raise Kotlin daemon memory
+        run: |
+          printf '\n' >> android/gradle.properties
+          printf 'kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=1536m\n' >> android/gradle.properties
+          cat android/gradle.properties
+
       # Debug builds don't embed the JS bundle — they expect a Metro dev
       # server running on the same network, so a sideloaded debug APK hangs
       # forever on the splash screen waiting for a bundle that never arrives.
@@ -57,16 +78,6 @@ jobs:
       # fully standalone. The generated project signs the release build type
       # with the same debug keystore (see android/app/build.gradle), so this
       # still needs no real signing setup for personal sideloading.
-      #
-      # GRADLE_OPTS raises the JVM heap/Metaspace: the default 512m Metaspace
-      # cap isn't enough to compile expo-modules-core's release Kotlin (it
-      # aggregates generated bindings for every installed Expo package), and
-      # that OOM left the out-of-process Kotlin daemon stuck repeating the
-      # same error for hours instead of failing fast. Set via the standard
-      # GRADLE_OPTS env var rather than editing gradle.properties — appending
-      # kotlin.* tuning properties there broke an unrelated Node-based
-      # autolinking step during Gradle configuration (see commit history);
-      # this achieves the same memory fix without touching that file.
       - name: Build release APK
         working-directory: android
         env:
