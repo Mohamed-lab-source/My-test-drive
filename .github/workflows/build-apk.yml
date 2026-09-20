@@ -50,14 +50,21 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK
+      # Debug builds don't embed the JS bundle — they expect a Metro dev
+      # server running on the same network, so a sideloaded debug APK hangs
+      # forever on the splash screen waiting for a bundle that never arrives.
+      # Release builds embed the JS bundle into the APK's assets, making it
+      # fully standalone. The generated project signs the release build type
+      # with the same debug keystore (see android/app/build.gradle), so this
+      # still needs no real signing setup for personal sideloading.
+      - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
         run: |
           mkdir -p dist
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist/anchor-debug.apk
+          cp android/app/build/outputs/apk/release/app-release.apk dist/anchor-debug.apk
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -76,6 +83,8 @@ jobs:
             Download `anchor-debug.apk` below, then on your Android phone open
             it (or transfer it and open it) to install — you'll need to allow
             "install unknown apps" for the browser/file app you use. This is a
-            debug-signed build for personal sideloading.
+            release build (JS bundle embedded, so it works without a dev
+            server) signed with the default debug keystore, for personal
+            sideloading only.
           files: dist/anchor-debug.apk
           make_latest: true
