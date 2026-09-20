@@ -52,11 +52,18 @@ jobs:
 
       # Kotlin compiles in its OWN out-of-process daemon, separate from the
       # main Gradle JVM — GRADLE_OPTS only raises the latter's heap, so it
-      # never actually reached the process that OOMs. Confirmed from a real
-      # run's logs: expo-constants/expo-log-box compileReleaseKotlin FAILED,
-      # then "OutOfMemoryError: Metaspace" repeating for a bit before the
-      # daemon just went silent — the job stayed "in_progress" for another
-      # 45+ minutes doing nothing, never surfacing as a failure.
+      # never actually reached the process that OOMs. Confirmed from real
+      # run logs, twice: first expo-constants/expo-log-box's compileRelease-
+      # Kotlin FAILED with Metaspace OOM at 1536m; after raising that, the
+      # SAME failure recurred later on react-native-reanimated's compile
+      # (much heavier: worklets + JNI codegen), which apparently needs
+      # substantially more headroom than the smaller expo-* modules did.
+      # Each time, the daemon didn't just fail the task — it sat there
+      # repeating "OutOfMemoryError: Metaspace" for 2+ hours with the job
+      # still reporting "in_progress" the whole time, never surfacing as a
+      # failure. Sized generously here (4096m) to clear whatever the
+      # heaviest module in this dependency set needs, since under-sizing
+      # has cost hours per attempt rather than just failing fast.
       # kotlin.daemon.jvmargs in gradle.properties is the documented way to
       # size that daemon's JVM. A previous attempt to add it broke an
       # unrelated Node-based autolinking step at Gradle configuration time —
@@ -68,7 +75,7 @@ jobs:
       - name: Raise Kotlin daemon memory
         run: |
           printf '\n' >> android/gradle.properties
-          printf 'kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=1536m\n' >> android/gradle.properties
+          printf 'kotlin.daemon.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=4096m\n' >> android/gradle.properties
           cat android/gradle.properties
 
       # Debug builds don't embed the JS bundle — they expect a Metro dev
