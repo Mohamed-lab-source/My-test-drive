@@ -1,5 +1,5 @@
 import { getState } from "../state/store.js";
-import { lastNDates, todayISO, startOfMonth, addMonths, datesInRange } from "../utils/date.js";
+import { lastNDates, todayISO, isDue, startOfMonth, addMonths, datesInRange } from "../utils/date.js";
 import { escapeHtml } from "../utils/html.js";
 import { computeCurrentStreak, computeLongestStreak, completionRate, dailyConsistency, identityVoteCount, identityVoteSeries, totalVotesAllTime, isVote, } from "../domain/analytics.js";
 import { statTile, heatmapSVG, barList } from "../charts/svg.js";
@@ -7,6 +7,8 @@ import { positionSegmentedThumb } from "../segmented.js";
 import { openSettings } from "./settings.js";
 import { openAchievements } from "./achievements.js";
 import { computeBadges } from "../domain/achievements.js";
+import { computeXP, levelForXP } from "../domain/gamification.js";
+import { computeCorrelationInsight } from "../domain/insights.js";
 let heatmapDays = 84;
 function weeklyInsight(thisWeek, prevWeek, perfectWeek, perfectToday) {
     if (perfectWeek) {
@@ -52,8 +54,20 @@ export function renderDashboard(container) {
     const todayCell = week7Full[week7Full.length - 1];
     const perfectToday = !!todayCell && todayCell.due > 0 && todayCell.ratio === 1;
     const insight = weeklyInsight(votesThisWeek, votesPrevWeek, perfectWeek, perfectToday);
+    const mvpCandidates = activeHabits
+        .map((h) => ({ habit: h, dueCount: last7.filter((d) => isDue(h.frequency, d)).length, rate: completionRate(h, checkins, last7) }))
+        .filter((c) => c.dueCount >= 3)
+        .sort((a, b) => b.rate - a.rate);
+    const mvpHabit = mvpCandidates[0] ?? null;
+    const mvpIdentityCandidates = activeIdentities
+        .map((i) => ({ identity: i, votes: identityVoteCount(i.id, habits, checkins, last7) }))
+        .filter((c) => c.votes > 0)
+        .sort((a, b) => b.votes - a.votes);
+    const mvpIdentity = mvpIdentityCandidates[0] ?? null;
+    const correlation = computeCorrelationInsight(habits, checkins);
     const badges = computeBadges(habits, checkins);
     const earnedCount = badges.filter((b) => b.earned).length;
+    const levelInfo = levelForXP(computeXP(checkins));
     const today = todayISO();
     const thisMonthDates = datesInRange(startOfMonth(today), today);
     const prevMonthAnchor = addMonths(today, -1);
@@ -76,6 +90,15 @@ export function renderDashboard(container) {
         </div>
       </header>
 
+      <div class="card level-card">
+        <div class="level-badge">${levelInfo.level}</div>
+        <div class="level-copy">
+          <div class="level-title">Level ${levelInfo.level} · ${escapeHtml(levelInfo.title)}</div>
+          <div class="level-progress-track"><div class="level-progress-fill" style="width:${Math.round(levelInfo.progress * 100)}%"></div></div>
+          <div class="level-sub muted">${levelInfo.xpIntoLevel} / ${levelInfo.xpForNextLevel} XP to next level</div>
+        </div>
+      </div>
+
       <button type="button" class="card achievements-teaser" id="open-achievements-card">
         <span class="achievements-teaser-icon">🏆</span>
         <div class="achievements-teaser-copy">
@@ -86,6 +109,25 @@ export function renderDashboard(container) {
       </button>
 
       ${insight ? `<div class="insight-card ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
+
+      ${correlation
+        ? `<div class="coaching-tip-card">
+              <span class="coaching-tip-icon">🔗</span>
+              <span>Smart insight: on days you do <strong>${escapeHtml(correlation.a.name)}</strong>, you complete <strong>${escapeHtml(correlation.b.name)}</strong> ${Math.round(correlation.withRate * 100)}% of the time — vs ${Math.round(correlation.withoutRate * 100)}% otherwise. Consider stacking "${escapeHtml(correlation.b.name)}" right after "${escapeHtml(correlation.a.name)}".</span>
+            </div>`
+        : ""}
+
+      ${mvpHabit || mvpIdentity
+        ? `<div class="card">
+              <h2 class="card-title">This week's spotlight</h2>
+              ${mvpHabit
+            ? `<div class="spotlight-row"><span class="spotlight-icon">⭐</span><span>MVP habit: <strong>${escapeHtml(mvpHabit.habit.name)}</strong> — ${Math.round(mvpHabit.rate * 100)}% completion</span></div>`
+            : ""}
+              ${mvpIdentity
+            ? `<div class="spotlight-row"><span class="spotlight-icon">🧭</span><span>Identity in focus: <strong>I am ${escapeHtml(mvpIdentity.identity.statement)}</strong> — ${mvpIdentity.votes} vote${mvpIdentity.votes === 1 ? "" : "s"} this week</span></div>`
+            : ""}
+            </div>`
+        : ""}
 
       <div class="card">
         <h2 class="card-title">${escapeHtml(monthName)} so far</h2>

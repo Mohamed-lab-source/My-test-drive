@@ -66,6 +66,8 @@ export interface CheckIn {
   usedTwoMinuteVersion: boolean;
   /** Excused — doesn't count as a vote, but doesn't break a streak either. */
   skipped: boolean;
+  /** Protected by a spent streak-freeze token — same streak effect as skipped. */
+  frozen: boolean;
   /** Optional free-text journal entry for that day. */
   note: string;
   createdAt: string;

@@ -63,7 +63,7 @@ export async function archiveHabit(id) {
 export async function listCheckIns() {
     const checkins = await getAll("checkins");
     // Backfill fields added after some check-ins were created.
-    return checkins.map((c) => ({ ...c, skipped: c.skipped ?? false, note: c.note ?? "" }));
+    return checkins.map((c) => ({ ...c, skipped: c.skipped ?? false, frozen: c.frozen ?? false, note: c.note ?? "" }));
 }
 /** Sets (or clears) the check-in for a habit on a given date. */
 export async function setCheckIn(habitId, date, existing, patch) {
@@ -82,6 +82,7 @@ export async function setCheckIn(habitId, date, existing, patch) {
             completedFull: false,
             usedTwoMinuteVersion: false,
             skipped: false,
+            frozen: false,
             note: "",
             createdAt: new Date().toISOString(),
             ...patch,

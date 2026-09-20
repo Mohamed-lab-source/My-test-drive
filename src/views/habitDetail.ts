@@ -1,17 +1,56 @@
 import { getState, archiveHabit, setCheckIn, setCheckInNote } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
-import { lastNDates, todayISO, formatDisplay, WEEKDAY_LABELS } from "../utils/date.js";
-import { computeCurrentStreak, computeLongestStreak, dailyConsistency, findCheckIn, identityVoteCount, isVote } from "../domain/analytics.js";
+import { lastNDates, todayISO, addDays, isDue, formatDisplay, WEEKDAY_LABELS } from "../utils/date.js";
+import {
+  computeCurrentStreak,
+  computeLongestStreak,
+  dailyConsistency,
+  findCheckIn,
+  identityVoteCount,
+  isVote,
+  isNeutralized,
+  weekdayBreakdown,
+} from "../domain/analytics.js";
+import { freezeTokenBalance } from "../domain/gamification.js";
 import { heatmapSVG } from "../charts/svg.js";
 import { hapticTap, hapticSuccess } from "../confetti.js";
 import { showToast } from "../toast.js";
 import { openHabitWizard } from "./habitWizard.js";
-import type { Habit, Frequency } from "../domain/types.js";
+import type { Habit, Frequency, CheckIn } from "../domain/types.js";
 
 function frequencyLabel(f: Frequency): string {
   if (f.type === "daily") return "Every day";
   if (f.days.length === 0) return "No days selected";
   return f.days.map((d) => WEEKDAY_LABELS[d]).join(", ");
+}
+
+/**
+ * A coaching tip comparing the habit's best vs worst weekday, when there's
+ * enough history to trust the comparison and the gap is large enough to be
+ * worth mentioning rather than noise.
+ */
+function weekdayTip(habit: Habit, checkins: CheckIn[]): string | null {
+  const stats = weekdayBreakdown(habit, checkins).filter((s) => s.dueCount >= 3);
+  if (stats.length < 2) return null;
+  const best = stats.reduce((a, b) => (b.rate > a.rate ? b : a));
+  const worst = stats.reduce((a, b) => (b.rate < a.rate ? b : a));
+  if (best.weekday === worst.weekday || best.rate - worst.rate < 0.3) return null;
+  return `You're most consistent on ${WEEKDAY_LABELS[best.weekday]}s (${Math.round(best.rate * 100)}%) and least on ${WEEKDAY_LABELS[worst.weekday]}s (${Math.round(worst.rate * 100)}%). A stronger cue on ${WEEKDAY_LABELS[worst.weekday]}s could help.`;
+}
+
+/** Most recent due day, before today, with no vote and no excuse — a true gap. */
+function findMostRecentMiss(habit: Habit, checkins: CheckIn[], today: string): string | null {
+  const createdDate = habit.createdAt.slice(0, 10);
+  let cursor = addDays(today, -1);
+  for (let i = 0; i < 84; i++) {
+    if (cursor < createdDate) break;
+    if (isDue(habit.frequency, cursor)) {
+      const checkin = findCheckIn(checkins, habit.id, cursor);
+      if (!isVote(checkin) && !isNeutralized(checkin)) return cursor;
+    }
+    cursor = addDays(cursor, -1);
+  }
+  return null;
 }
 
 function getRoot(): HTMLElement {
@@ -46,6 +85,9 @@ export function openHabitDetail(habit: Habit): void {
     const pastNotes = checkins
       .filter((c) => c.habitId === current.id && c.date !== today && c.note.trim())
       .sort((a, b) => b.date.localeCompare(a.date));
+    const freezeBalance = freezeTokenBalance(checkins);
+    const mostRecentMiss = findMostRecentMiss(current, checkins, today);
+    const tip = weekdayTip(current, checkins);
 
     container.innerHTML = `
       <div class="modal-backdrop"></div>
@@ -98,6 +140,28 @@ export function openHabitDetail(habit: Habit): void {
             ${current.twoMinuteVersion ? `<div class="pill pill-two-min detail-two-min">2-min: ${escapeHtml(current.twoMinuteVersion)}</div>` : ""}
           </div>
 
+          ${
+            tip
+              ? `<div class="coaching-tip-card">
+                  <span class="coaching-tip-icon">🧠</span>
+                  <span>${escapeHtml(tip)}</span>
+                </div>`
+              : ""
+          }
+
+          <div class="card">
+            <h2 class="card-title">Streak Freezes</h2>
+            <p class="wizard-subtitle">Earn one every 20 votes cast, across all habits. Use one to protect a streak on a day you missed.</p>
+            <div class="freeze-balance">❄️ ${freezeBalance} available</div>
+            ${
+              mostRecentMiss
+                ? `<button type="button" class="btn btn-outline btn-block" id="apply-freeze-btn" ${freezeBalance === 0 ? "disabled" : ""}>
+                    Protect ${escapeHtml(formatDisplay(mostRecentMiss))}
+                  </button>`
+                : `<p class="muted">No missed days to protect right now.</p>`
+            }
+          </div>
+
           <div class="card">
             <h2 class="card-title">Journal</h2>
             <textarea id="journal-note" class="backup-textarea journal-textarea" rows="2" maxlength="500" placeholder="How did it go today?">${escapeHtml(todayNote)}</textarea>
@@ -130,6 +194,14 @@ export function openHabitDetail(habit: Habit): void {
 
     container.querySelector("#detail-close")!.addEventListener("click", close);
     container.querySelector(".modal-backdrop")!.addEventListener("click", close);
+
+    container.querySelector("#apply-freeze-btn")?.addEventListener("click", async () => {
+      if (!mostRecentMiss) return;
+      hapticSuccess();
+      await setCheckIn(current.id, mostRecentMiss, "freeze");
+      showToast("❄️", `Streak protected for ${formatDisplay(mostRecentMiss)}.`);
+      render();
+    });
 
     container.querySelector("#journal-save")!.addEventListener("click", async () => {
       const textarea = container.querySelector<HTMLTextAreaElement>("#journal-note")!;

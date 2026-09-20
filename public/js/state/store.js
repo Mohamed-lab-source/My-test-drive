@@ -68,10 +68,12 @@ export async function setCheckIn(habitId, date, mode) {
     const patch = mode === "clear"
         ? null
         : mode === "full"
-            ? { completedFull: true, usedTwoMinuteVersion: false, skipped: false }
+            ? { completedFull: true, usedTwoMinuteVersion: false, skipped: false, frozen: false }
             : mode === "two-minute"
-                ? { completedFull: false, usedTwoMinuteVersion: true, skipped: false }
-                : { completedFull: false, usedTwoMinuteVersion: false, skipped: true };
+                ? { completedFull: false, usedTwoMinuteVersion: true, skipped: false, frozen: false }
+                : mode === "skip"
+                    ? { completedFull: false, usedTwoMinuteVersion: false, skipped: true, frozen: false }
+                    : { completedFull: false, usedTwoMinuteVersion: false, skipped: false, frozen: true };
     await repo.setCheckIn(habitId, date, state.checkins, patch);
     state.checkins = await repo.listCheckIns();
     notify();

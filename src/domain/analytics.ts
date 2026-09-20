@@ -1,5 +1,5 @@
-import type { CheckIn, Habit } from "./types.js";
-import { addDays, isDue, todayISO } from "../utils/date.js";
+import type { CheckIn, Habit, Weekday } from "./types.js";
+import { addDays, isDue, todayISO, weekdayOf } from "../utils/date.js";
 
 export function findCheckIn(
   checkins: CheckIn[],
@@ -17,6 +17,15 @@ export function isSkipped(checkin: CheckIn | undefined): boolean {
   return !!checkin && checkin.skipped;
 }
 
+export function isFrozen(checkin: CheckIn | undefined): boolean {
+  return !!checkin && checkin.frozen;
+}
+
+/** Skipped or frozen — either way, neutral: doesn't count as a vote, doesn't break a streak. */
+export function isNeutralized(checkin: CheckIn | undefined): boolean {
+  return isSkipped(checkin) || isFrozen(checkin);
+}
+
 const MAX_LOOKBACK_DAYS = 3 * 365;
 
 /** Current consecutive streak of votes on due days, counting back from today. */
@@ -32,8 +41,8 @@ export function computeCurrentStreak(habit: Habit, checkins: CheckIn[]): number 
       const checkin = findCheckIn(checkins, habit.id, cursor);
       if (isVote(checkin)) {
         streak++;
-      } else if (isSkipped(checkin)) {
-        // excused — doesn't extend the streak, but doesn't break it either
+      } else if (isNeutralized(checkin)) {
+        // excused or frozen — doesn't extend the streak, but doesn't break it either
       } else if (cursor === today) {
         // today not done yet doesn't break an existing streak from yesterday
       } else {
@@ -59,7 +68,7 @@ export function computeLongestStreak(habit: Habit, checkins: CheckIn[]): number 
       if (isVote(checkin)) {
         current++;
         longest = Math.max(longest, current);
-      } else if (!isSkipped(checkin)) {
+      } else if (!isNeutralized(checkin)) {
         current = 0;
       }
     }
@@ -121,11 +130,11 @@ export function dailyConsistency(
 ): { date: string; ratio: number; due: number; done: number }[] {
   const active = habits.filter((h) => !h.archived);
   return dates.map((date) => {
-    // A skipped (excused) day is left out of both sides of the ratio, so it
+    // A skipped or frozen day is left out of both sides of the ratio, so it
     // neither drags the day down nor is required to hit 100%.
     const due = active
       .filter((h) => isDue(h.frequency, date))
-      .filter((h) => !isSkipped(findCheckIn(checkins, h.id, date)));
+      .filter((h) => !isNeutralized(findCheckIn(checkins, h.id, date)));
     const done = due.filter((h) => isVote(findCheckIn(checkins, h.id, date)));
     return {
       date,
@@ -138,4 +147,37 @@ export function dailyConsistency(
 
 export function totalVotesAllTime(checkins: CheckIn[]): number {
   return checkins.filter(isVote).length;
+}
+
+export interface WeekdayStat {
+  weekday: Weekday;
+  dueCount: number;
+  doneCount: number;
+  rate: number;
+}
+
+/** Completion rate broken down by weekday, over the habit's full history. */
+export function weekdayBreakdown(habit: Habit, checkins: CheckIn[]): WeekdayStat[] {
+  const today = todayISO();
+  const createdDate = habit.createdAt.slice(0, 10);
+  const stats: WeekdayStat[] = Array.from({ length: 7 }, (_, weekday) => ({
+    weekday: weekday as Weekday,
+    dueCount: 0,
+    doneCount: 0,
+    rate: 0,
+  }));
+
+  let cursor = createdDate;
+  while (cursor <= today) {
+    if (isDue(habit.frequency, cursor)) {
+      const stat = stats[weekdayOf(cursor)]!;
+      stat.dueCount++;
+      if (isVote(findCheckIn(checkins, habit.id, cursor))) stat.doneCount++;
+    }
+    cursor = addDays(cursor, 1);
+  }
+  for (const stat of stats) {
+    stat.rate = stat.dueCount === 0 ? 0 : stat.doneCount / stat.dueCount;
+  }
+  return stats;
 }

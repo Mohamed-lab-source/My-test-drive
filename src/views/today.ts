@@ -1,7 +1,15 @@
 import { getState, setCheckIn } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
-import { todayISO, isDue } from "../utils/date.js";
-import { findCheckIn, isVote, isSkipped, computeCurrentStreak } from "../domain/analytics.js";
+import { todayISO, isDue, lastNDates } from "../utils/date.js";
+import {
+  findCheckIn,
+  isVote,
+  isSkipped,
+  isNeutralized,
+  computeCurrentStreak,
+  computeLongestStreak,
+  completionRate,
+} from "../domain/analytics.js";
 import { icons } from "../icons.js";
 import { activityRing } from "../charts/svg.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
@@ -11,6 +19,7 @@ import { enableSwipeToReveal } from "../swipe.js";
 import { openHabitDetail } from "./habitDetail.js";
 import { undoableArchive } from "./undoArchive.js";
 import { quoteOfTheDay } from "../domain/quotes.js";
+import { challengeOfTheDay } from "../domain/challenges.js";
 import type { Habit, TimeOfDay } from "../domain/types.js";
 
 const STREAK_MILESTONES = [7, 14, 30, 50, 100, 200, 365];
@@ -42,6 +51,35 @@ function orderDueHabits(due: Habit[]): Habit[] {
   due.filter(isRoot).forEach(visit);
   due.forEach(visit); // safety net for any cycles/orphans
   return ordered;
+}
+
+/**
+ * Picks the single due-not-done habit worth calling out today: the one
+ * you've historically struggled with most, so the nudge is grounded in your
+ * own data rather than an arbitrary pick. Returns null when nothing clears
+ * the noise threshold (too little history, or nothing's actually struggling).
+ */
+function pickFocusHabit(
+  due: Habit[],
+  checkins: ReturnType<typeof getState>["checkins"],
+  today: string
+): { habit: Habit; rate: number } | null {
+  const last30 = lastNDates(30);
+  const notDoneToday = due.filter((h) => {
+    const checkin = findCheckIn(checkins, h.id, today);
+    return !isVote(checkin) && !isNeutralized(checkin);
+  });
+  const candidates = notDoneToday
+    .map((h) => ({
+      habit: h,
+      dueCount: last30.filter((d) => isDue(h.frequency, d)).length,
+      rate: completionRate(h, checkins, last30),
+    }))
+    .filter((c) => c.dueCount >= 3 && c.rate < 0.7);
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => a.rate - b.rate);
+  const top = candidates[0]!;
+  return { habit: top.habit, rate: top.rate };
 }
 
 function renderTodayItem(
@@ -105,6 +143,8 @@ export function renderToday(container: HTMLElement): void {
   const ringHabits = dueToday.filter((h) => !isSkipped(findCheckIn(checkins, h.id, today)));
   const doneCount = ringHabits.filter((h) => isVote(findCheckIn(checkins, h.id, today))).length;
   const quote = quoteOfTheDay();
+  const focus = pickFocusHabit(dueToday, checkins, today);
+  const challenge = challengeOfTheDay();
 
   const identityLabel = (id: string | null): string | null => {
     if (!id) return null;
@@ -151,6 +191,25 @@ export function renderToday(container: HTMLElement): void {
         <p class="quote-attribution">— ${escapeHtml(quote.attribution)}</p>
       </div>
 
+      <div class="challenge-card">
+        <span class="challenge-icon">${challenge.icon}</span>
+        <span class="challenge-text">${escapeHtml(challenge.text)}</span>
+      </div>
+
+      ${
+        focus
+          ? `<div class="focus-card" data-open-detail="${focus.habit.id}">
+              <span class="focus-icon">🎯</span>
+              <div class="focus-copy">
+                <div class="focus-title">Focus today: ${escapeHtml(focus.habit.name)}</div>
+                <div class="focus-sub muted">Only ${Math.round(focus.rate * 100)}% completion this month — small steps count.${
+              focus.habit.twoMinuteVersion ? ` Try: ${escapeHtml(focus.habit.twoMinuteVersion)}` : ""
+            }</div>
+              </div>
+            </div>`
+          : ""
+      }
+
       ${
         ringHabits.length > 0
           ? `<div class="activity-ring-wrap">
@@ -196,6 +255,7 @@ export function renderToday(container: HTMLElement): void {
       const currentState = checkin?.completedFull ? "full" : checkin?.usedTwoMinuteVersion ? "two-minute" : "none";
       const nextMode = currentState === mode ? "clear" : mode;
       const streakBefore = computeCurrentStreak(habit, checkins);
+      const longestBefore = computeLongestStreak(habit, checkins);
       const btnRect = btn.getBoundingClientRect();
       const origin = { x: btnRect.left + btnRect.width / 2, y: btnRect.top + btnRect.height / 2 };
 
@@ -205,8 +265,13 @@ export function renderToday(container: HTMLElement): void {
       if (nextMode !== "clear") {
         playChime();
         const streakAfter = computeCurrentStreak(habit, getState().checkins);
+        const isNewPersonalBest = streakAfter > longestBefore && streakAfter > 1;
         const milestone = STREAK_MILESTONES.find((m) => streakBefore < m && streakAfter >= m);
-        if (milestone) {
+        if (isNewPersonalBest) {
+          hapticSuccess();
+          celebrate(origin);
+          showToast("🏆", `New personal best on "${habit.name}" — ${streakAfter} days!`);
+        } else if (milestone) {
           hapticSuccess();
           celebrate(origin);
           showToast("🔥", `${milestone}-day streak on "${habit.name}"!`);
