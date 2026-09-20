@@ -15,8 +15,6 @@ export function buildTasksWidget({ tasks }: TasksWidgetData, scheme: 'light' | '
 
   return (
     <FlexWidget
-      clickAction="OPEN_URI"
-      clickActionData={{ uri: 'anchor://tasks' }}
       style={{
         height: 'match_parent',
         width: 'match_parent',
@@ -26,10 +24,34 @@ export function buildTasksWidget({ tasks }: TasksWidgetData, scheme: 'light' | '
         flexDirection: 'column',
       }}
     >
-      <TextWidget
-        text="Today"
-        style={{ fontSize: 15, fontWeight: '600', color: c.label, marginBottom: 8 }}
-      />
+      <FlexWidget
+        clickAction="OPEN_URI"
+        clickActionData={{ uri: 'anchor://tasks' }}
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: 'match_parent',
+          marginBottom: 8,
+        }}
+      >
+        <TextWidget text="Today" style={{ fontSize: 15, fontWeight: '600', color: c.label }} />
+        <FlexWidget
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'anchor://tasks?action=add' }}
+          accessibilityLabel="Add task"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: c.blue,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <TextWidget text="+" style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }} />
+        </FlexWidget>
+      </FlexWidget>
       {shown.length === 0 ? (
         <TextWidget
           text="Nothing scheduled today"
@@ -48,9 +70,19 @@ export function buildTasksWidget({ tasks }: TasksWidgetData, scheme: 'light' | '
               }}
             >
               <FlexWidget
-                style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.gray3, marginRight: 8 }}
+                clickAction="TOGGLE_TASK"
+                clickActionData={{ taskId: t.id }}
+                accessibilityLabel={`Mark "${t.title}" done`}
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  borderWidth: 1.5,
+                  borderColor: c.gray3,
+                  marginRight: 8,
+                }}
               />
-              <FlexWidget style={{ flex: 1 }}>
+              <FlexWidget style={{ flex: 1 }} clickAction="OPEN_URI" clickActionData={{ uri: 'anchor://tasks' }}>
                 <TextWidget
                   text={t.title}
                   truncate="END"

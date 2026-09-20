@@ -102,6 +102,7 @@ export async function deleteTransaction(id: string): Promise<void> {
 
 // ---------- Recurring rules (subscriptions & recurring expenses/income) ----------
 export const listRecurringRules = () => allRows<RecurringRule>('recurring_rules', 'next_due_date ASC');
+export const getRecurringRule = (id: string) => getRow<RecurringRule>('recurring_rules', id);
 
 export async function createRecurringRule(
   input: Omit<RecurringRule, 'id' | 'created_at' | 'is_active'>

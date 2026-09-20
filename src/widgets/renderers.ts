@@ -54,6 +54,7 @@ export async function renderMoneyWidget(scheme: 'light' | 'dark') {
     .sort((a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime())[0];
   const nextBill = nextRule
     ? {
+        ruleId: nextRule.id,
         name: nextRule.name,
         amountMinor: nextRule.amount,
         currency: nextRule.currency,

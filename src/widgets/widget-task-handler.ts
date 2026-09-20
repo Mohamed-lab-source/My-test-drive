@@ -1,6 +1,8 @@
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { todayKey } from '../db/client';
 import * as lifeRepo from '../db/repositories/life';
+import * as productivityRepo from '../db/repositories/productivity';
+import * as financeRepo from '../db/repositories/finance';
 import type { Prayer } from '../db/types';
 import { renderBothSchemes } from './renderers';
 
@@ -12,13 +14,28 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
   if (widgetAction === 'WIDGET_DELETED') return;
 
-  if (widgetAction === 'WIDGET_CLICK' && clickAction === 'TOGGLE_PRAYER') {
-    const prayer = clickActionData?.prayer as Prayer | undefined;
-    if (prayer) {
-      const key = todayKey();
-      const logs = await lifeRepo.listPrayerLogsForDate(key);
-      const wasDone = logs.some((l) => l.prayer === prayer && l.completed === 1);
-      await lifeRepo.setPrayerLog(key, prayer, !wasDone);
+  if (widgetAction === 'WIDGET_CLICK') {
+    if (clickAction === 'TOGGLE_PRAYER') {
+      const prayer = clickActionData?.prayer as Prayer | undefined;
+      if (prayer) {
+        const key = todayKey();
+        const logs = await lifeRepo.listPrayerLogsForDate(key);
+        const wasDone = logs.some((l) => l.prayer === prayer && l.completed === 1);
+        await lifeRepo.setPrayerLog(key, prayer, !wasDone);
+      }
+    } else if (clickAction === 'TOGGLE_TASK') {
+      const taskId = clickActionData?.taskId as string | undefined;
+      if (taskId) {
+        await productivityRepo.toggleTaskDone(taskId, true);
+      }
+    } else if (clickAction === 'PAY_BILL') {
+      const ruleId = clickActionData?.ruleId as string | undefined;
+      if (ruleId) {
+        const rule = await financeRepo.getRecurringRule(ruleId);
+        if (rule) {
+          await financeRepo.postRecurringRule(rule);
+        }
+      }
     }
   }
 

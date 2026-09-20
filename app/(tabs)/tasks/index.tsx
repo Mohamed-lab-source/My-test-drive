@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
@@ -21,9 +21,15 @@ export default function TasksScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { action } = useLocalSearchParams<{ action?: string }>();
   const { tasks, meetings } = useProductivityStore();
   const [segment, setSegment] = useState(0);
   const [addVisible, setAddVisible] = useState(false);
+
+  // Opened via the Today widget's "+" button (anchor://tasks?action=add).
+  useEffect(() => {
+    if (action === 'add') setAddVisible(true);
+  }, [action]);
 
   const todayStr = todayKey();
   const upcomingMeetings = useMemo(

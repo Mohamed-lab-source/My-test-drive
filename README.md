@@ -25,8 +25,8 @@ Everything lives on-device in SQLite — no account, no server, no network depen
 
 **Home-screen widgets (Android)**
 - Prayers — today's 5 prayers with streak, tap a prayer to mark it done right from the widget
-- Today — your tasks scheduled for today
-- Net worth — current net worth and next upcoming bill
+- Today — your tasks scheduled for today; tap the circle to mark a task done, tap + to add one
+- Net worth — current net worth and next upcoming bill; tap + to log an expense, tap Pay to post the bill
 
 **Settings**
 - Light/Dark/System appearance

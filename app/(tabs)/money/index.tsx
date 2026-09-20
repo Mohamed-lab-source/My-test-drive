@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -38,9 +38,15 @@ export default function MoneyScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { action } = useLocalSearchParams<{ action?: string }>();
   const currency = useSettingsStore((s) => s.currency);
   const { accounts, transactions } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
+
+  // Opened via the Net worth widget's "+" button (anchor://money?action=add-expense).
+  useEffect(() => {
+    if (action === 'add-expense') setAddVisible(true);
+  }, [action]);
 
   const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
 

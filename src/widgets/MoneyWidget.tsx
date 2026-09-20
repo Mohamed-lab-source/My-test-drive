@@ -5,6 +5,7 @@ import { widgetColors } from './theme';
 import { formatMoney } from '../utils/money';
 
 export interface MoneyWidgetBill {
+  ruleId: string;
   name: string;
   amountMinor: number;
   currency: string;
@@ -25,8 +26,6 @@ export function buildMoneyWidget(
 
   return (
     <FlexWidget
-      clickAction="OPEN_URI"
-      clickActionData={{ uri: 'anchor://money' }}
       style={{
         height: 'match_parent',
         width: 'match_parent',
@@ -37,12 +36,33 @@ export function buildMoneyWidget(
         justifyContent: 'space-between',
       }}
     >
-      <FlexWidget style={{ flexDirection: 'column' }}>
-        <TextWidget text="Net worth" style={{ fontSize: 13, color: c.secondaryLabel }} />
-        <TextWidget
-          text={formatMoney(netWorthMinor, currency)}
-          style={{ fontSize: 24, fontWeight: '700', color: c.label, marginTop: 2 }}
-        />
+      <FlexWidget
+        clickAction="OPEN_URI"
+        clickActionData={{ uri: 'anchor://money' }}
+        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: 'match_parent' }}
+      >
+        <FlexWidget style={{ flexDirection: 'column', flex: 1 }}>
+          <TextWidget text="Net worth" style={{ fontSize: 13, color: c.secondaryLabel }} />
+          <TextWidget
+            text={formatMoney(netWorthMinor, currency)}
+            style={{ fontSize: 24, fontWeight: '700', color: c.label, marginTop: 2 }}
+          />
+        </FlexWidget>
+        <FlexWidget
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'anchor://money?action=add-expense' }}
+          accessibilityLabel="Add expense"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: c.red,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <TextWidget text="+" style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF' }} />
+        </FlexWidget>
       </FlexWidget>
       {nextBill ? (
         <FlexWidget
@@ -53,18 +73,32 @@ export function buildMoneyWidget(
             width: 'match_parent',
           }}
         >
-          <FlexWidget style={{ flex: 1 }}>
+          <FlexWidget
+            clickAction="OPEN_URI"
+            clickActionData={{ uri: 'anchor://money/subscriptions' }}
+            style={{ flex: 1 }}
+          >
             <TextWidget
-              text={`${nextBill.name} · ${nextBill.dueLabel}`}
+              text={`${nextBill.name} · ${nextBill.dueLabel} · ${formatMoney(nextBill.amountMinor, nextBill.currency)}`}
               truncate="END"
               maxLines={1}
               style={{ fontSize: 12, color: c.secondaryLabel, width: 'match_parent' }}
             />
           </FlexWidget>
-          <TextWidget
-            text={formatMoney(nextBill.amountMinor, nextBill.currency)}
-            style={{ fontSize: 12, fontWeight: '600', color: c.label }}
-          />
+          <FlexWidget
+            clickAction="PAY_BILL"
+            clickActionData={{ ruleId: nextBill.ruleId }}
+            accessibilityLabel={`Pay ${nextBill.name} now`}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 12,
+              backgroundColor: c.blue,
+              marginLeft: 8,
+            }}
+          >
+            <TextWidget text="Pay" style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }} />
+          </FlexWidget>
         </FlexWidget>
       ) : null}
     </FlexWidget>
