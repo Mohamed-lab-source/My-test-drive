@@ -63,7 +63,9 @@ jobs:
       # still reporting "in_progress" the whole time, never surfacing as a
       # failure. Sized generously here (4096m) to clear whatever the
       # heaviest module in this dependency set needs, since under-sizing
-      # has cost hours per attempt rather than just failing fast.
+      # has cost hours per attempt rather than just failing fast. This
+      # setting fixed Kotlin compilation for good — a later run compiled
+      # every module (including reanimated) successfully.
       # kotlin.daemon.jvmargs in gradle.properties is the documented way to
       # size that daemon's JVM. A previous attempt to add it broke an
       # unrelated Node-based autolinking step at Gradle configuration time —
@@ -85,11 +87,19 @@ jobs:
       # fully standalone. The generated project signs the release build type
       # with the same debug keystore (see android/app/build.gradle), so this
       # still needs no real signing setup for personal sideloading.
+      #
+      # -x lintVitalRelease: with Kotlin compilation fixed, the SAME
+      # Metaspace OOM pattern (task FAILED, then hours of silent looping
+      # with the job stuck "in_progress") recurred on lintVitalAnalyzeRelease
+      # — Android Lint's own release check runs in yet another separate JVM.
+      # Lint is a quality gate, not something a personal sideload APK needs;
+      # skipping it entirely avoids chasing per-process memory limits for
+      # every JVM AGP happens to spawn during a release build.
       - name: Build release APK
         working-directory: android
         env:
           GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1024m
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease -x lintVitalRelease --no-daemon
 
       - name: Rename APK
         run: |
