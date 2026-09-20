@@ -53,16 +53,18 @@ jobs:
       # out-of-process Kotlin daemon then got stuck repeating the same
       # OutOfMemoryError for hours instead of failing fast. Raise the JVM
       # memory and run Kotlin compilation in-process (no separate daemon) so
-      # a failure surfaces immediately instead of hanging. Also restrict to
-      # arm64-v8a, which covers virtually all real Android devices, instead
-      # of building all 4 ABIs — cuts native compile time substantially.
-      - name: Tune JVM memory and target architecture
+      # a failure surfaces immediately instead of hanging.
+      #
+      # (Tried also restricting reactNativeArchitectures to arm64-v8a only,
+      # to cut native compile time, but with New Architecture enabled that
+      # broke a Node-based codegen step during Gradle configuration — see
+      # commit history. Reverted; build all 4 ABIs for now.)
+      - name: Tune JVM memory
         run: |
           cat >> android/gradle.properties <<'EOF'
           org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError
           kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=1024m
           kotlin.compiler.execution.strategy=in-process
-          reactNativeArchitectures=arm64-v8a
           EOF
 
       - name: Make gradlew executable
