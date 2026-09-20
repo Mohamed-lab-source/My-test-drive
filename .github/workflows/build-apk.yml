@@ -47,26 +47,6 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android
 
-      # The default 512m Metaspace cap isn't enough to compile
-      # expo-modules-core's release Kotlin (it aggregates generated bindings
-      # for every installed Expo package) — it ran out of memory, and the
-      # out-of-process Kotlin daemon then got stuck repeating the same
-      # OutOfMemoryError for hours instead of failing fast. Raise the JVM
-      # memory and run Kotlin compilation in-process (no separate daemon) so
-      # a failure surfaces immediately instead of hanging.
-      #
-      # (Tried also restricting reactNativeArchitectures to arm64-v8a only,
-      # to cut native compile time, but with New Architecture enabled that
-      # broke a Node-based codegen step during Gradle configuration — see
-      # commit history. Reverted; build all 4 ABIs for now.)
-      - name: Tune JVM memory
-        run: |
-          cat >> android/gradle.properties <<'EOF'
-          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError
-          kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=1024m
-          kotlin.compiler.execution.strategy=in-process
-          EOF
-
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
@@ -77,8 +57,20 @@ jobs:
       # fully standalone. The generated project signs the release build type
       # with the same debug keystore (see android/app/build.gradle), so this
       # still needs no real signing setup for personal sideloading.
+      #
+      # GRADLE_OPTS raises the JVM heap/Metaspace: the default 512m Metaspace
+      # cap isn't enough to compile expo-modules-core's release Kotlin (it
+      # aggregates generated bindings for every installed Expo package), and
+      # that OOM left the out-of-process Kotlin daemon stuck repeating the
+      # same error for hours instead of failing fast. Set via the standard
+      # GRADLE_OPTS env var rather than editing gradle.properties — appending
+      # kotlin.* tuning properties there broke an unrelated Node-based
+      # autolinking step during Gradle configuration (see commit history);
+      # this achieves the same memory fix without touching that file.
       - name: Build release APK
         working-directory: android
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1024m
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
