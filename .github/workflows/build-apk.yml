@@ -47,6 +47,24 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android
 
+      # The default 512m Metaspace cap isn't enough to compile
+      # expo-modules-core's release Kotlin (it aggregates generated bindings
+      # for every installed Expo package) — it ran out of memory, and the
+      # out-of-process Kotlin daemon then got stuck repeating the same
+      # OutOfMemoryError for hours instead of failing fast. Raise the JVM
+      # memory and run Kotlin compilation in-process (no separate daemon) so
+      # a failure surfaces immediately instead of hanging. Also restrict to
+      # arm64-v8a, which covers virtually all real Android devices, instead
+      # of building all 4 ABIs — cuts native compile time substantially.
+      - name: Tune JVM memory and target architecture
+        run: |
+          cat >> android/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError
+          kotlin.daemon.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=1024m
+          kotlin.compiler.execution.strategy=in-process
+          reactNativeArchitectures=arm64-v8a
+          EOF
+
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
