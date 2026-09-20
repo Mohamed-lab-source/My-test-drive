@@ -136,7 +136,7 @@ export function CookModeScreen({ route, navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <FadeSlideIn key={step.order}>
+        <FadeSlideIn key={step.order} style={styles.stepContent}>
           <Text style={styles.emoji}>{CUISINE_EMOJI[cuisineSlug] ?? "🍽️"}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{step.order}</Text>
@@ -266,6 +266,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     progressFill: { height: "100%", backgroundColor: colors.primary },
     content: { flexGrow: 1, alignItems: "center", padding: spacing(3), paddingTop: spacing(4) },
+    stepContent: { width: "100%", alignItems: "center" },
     emoji: { fontSize: 56, marginBottom: spacing(2) },
     badge: {
       width: 36,

@@ -75,7 +75,7 @@ export function FeatureTourScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.content}>
-        <FadeSlideIn key={step.titleKey}>
+        <FadeSlideIn key={step.titleKey} style={styles.stepContent}>
           <Text style={styles.emoji}>{step.icon}</Text>
           <Text style={[styles.title, { textAlign }]}>{t(step.titleKey)}</Text>
           <Text style={[styles.body, { textAlign }]}>{t(step.bodyKey)}</Text>
@@ -117,6 +117,7 @@ const createStyles = (colors: ThemeColors) =>
     dotActive: { backgroundColor: colors.primary, width: 18 },
     skip: { color: colors.textMuted, fontWeight: "700", fontSize: 13 },
     content: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing(4) },
+    stepContent: { width: "100%", alignItems: "center" },
     emoji: { fontSize: 64, marginBottom: spacing(3) },
     title: { fontSize: 24, fontWeight: "800", color: colors.text, width: "100%" },
     body: { fontSize: 15, color: colors.textMuted, marginTop: spacing(1.5), lineHeight: 22, width: "100%" },
