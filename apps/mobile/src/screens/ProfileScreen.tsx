@@ -109,6 +109,13 @@ export function ProfileScreen({ navigation }: Props) {
               onPress={() => navigation.navigate("FeatureTour", { onFinishGoBack: true })}
             />
           </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("customizeHome.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("CustomizeHome")}
+            />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -226,6 +233,13 @@ export function ProfileScreen({ navigation }: Props) {
             label={t("profile.appTour")}
             variant="outline"
             onPress={() => navigation.navigate("FeatureTour", { onFinishGoBack: true })}
+          />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("customizeHome.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("CustomizeHome")}
           />
         </View>
 

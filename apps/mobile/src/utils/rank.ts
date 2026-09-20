@@ -42,3 +42,31 @@ export function rankRecipes(
     .sort((a, b) => b.score - a.score)
     .map((s) => s.recipe);
 }
+
+/**
+ * Re-orders an already-ranked list to surface recipes from cuisines the
+ * user actually cooks, using the per-slug cook counts CookStreakContext
+ * already tracks. `knownRecipes` (recently viewed + favorites is plenty)
+ * supplies the slug -> cuisine lookup since cook counts alone don't carry
+ * cuisine info. A stable sort on cook-affinity alone, with no affinity
+ * data leaving every item at boost 0, keeps the incoming order (diet-goal
+ * score or the server's /recommended order) as the tiebreaker.
+ */
+export function boostByCookHistory<T extends RecipeSummary>(
+  recipes: T[],
+  cookCounts: Record<string, number>,
+  knownRecipes: RecipeSummary[]
+): T[] {
+  const cuisineBySlug = new Map(knownRecipes.map((r) => [r.slug, r.cuisine.slug]));
+  const cuisineCookCounts = new Map<string, number>();
+  for (const [slug, count] of Object.entries(cookCounts)) {
+    const cuisineSlug = cuisineBySlug.get(slug);
+    if (!cuisineSlug) continue;
+    cuisineCookCounts.set(cuisineSlug, (cuisineCookCounts.get(cuisineSlug) ?? 0) + count);
+  }
+  if (cuisineCookCounts.size === 0) return recipes;
+
+  return [...recipes].sort(
+    (a, b) => (cuisineCookCounts.get(b.cuisine.slug) ?? 0) - (cuisineCookCounts.get(a.cuisine.slug) ?? 0)
+  );
+}

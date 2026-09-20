@@ -42,6 +42,7 @@ type CookStreakContextValue = {
   /** Records today's cook, updating the streak and the per-recipe cook count. Safe to call more than once in a day. Returns the resulting streak length. */
   recordCooked: (slug: string) => number;
   cookCountFor: (slug: string) => number;
+  cookCounts: Record<string, number>;
 };
 
 const CookStreakContext = createContext<CookStreakContextValue | undefined>(undefined);
@@ -104,8 +105,18 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       cookedToday,
       recordCooked,
       cookCountFor,
+      cookCounts: state.cookCounts,
     }),
-    [isLoading, displayStreak, state.longestStreak, state.totalCooked, cookedToday, recordCooked, cookCountFor]
+    [
+      isLoading,
+      displayStreak,
+      state.longestStreak,
+      state.totalCooked,
+      state.cookCounts,
+      cookedToday,
+      recordCooked,
+      cookCountFor,
+    ]
   );
 
   return <CookStreakContext.Provider value={value}>{children}</CookStreakContext.Provider>;

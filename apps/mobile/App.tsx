@@ -10,6 +10,7 @@ import { NotesProvider } from "./src/context/NotesContext";
 import { MealPlanProvider } from "./src/context/MealPlanContext";
 import { CookStreakProvider } from "./src/context/CookStreakContext";
 import { LeftoversProvider } from "./src/context/LeftoversContext";
+import { HomeLayoutProvider } from "./src/context/HomeLayoutContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -38,7 +39,9 @@ export default function App() {
                       <MealPlanProvider>
                         <CookStreakProvider>
                           <LeftoversProvider>
-                            <AppShell />
+                            <HomeLayoutProvider>
+                              <AppShell />
+                            </HomeLayoutProvider>
                           </LeftoversProvider>
                         </CookStreakProvider>
                       </MealPlanProvider>

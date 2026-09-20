@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
@@ -68,6 +79,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [rating, setRating] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [similarRecipes, setSimilarRecipes] = useState<RecipeSummary[]>([]);
+  const [heroImageFailed, setHeroImageFailed] = useState(false);
   const shareCardRef = useRef<View>(null);
 
   const myGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : localPreference.dietGoal;
@@ -89,6 +101,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     setNoteText(getNote(slug));
+    setHeroImageFailed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
@@ -164,9 +177,18 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView>
         <View style={styles.hero}>
-          <FadeSlideIn>
-            <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
-          </FadeSlideIn>
+          {recipe.heroImageUrl && !heroImageFailed ? (
+            <Image
+              source={{ uri: recipe.heroImageUrl }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+              onError={() => setHeroImageFailed(true)}
+            />
+          ) : (
+            <FadeSlideIn>
+              <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+            </FadeSlideIn>
+          )}
         </View>
         <View style={styles.content}>
           <View style={styles.titleRow}>

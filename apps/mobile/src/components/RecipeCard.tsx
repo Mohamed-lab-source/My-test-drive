@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { AnimatedPressable } from "./AnimatedPressable";
 import { FadeSlideIn } from "./FadeSlideIn";
 import { StarRating } from "./StarRating";
@@ -26,6 +26,7 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const { t } = useLocale();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { user } = useAuth();
+  const [imageFailed, setImageFailed] = useState(false);
   const favorited = isFavorite(recipe.slug);
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
@@ -33,7 +34,16 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
     <FadeSlideIn index={index}>
       <AnimatedPressable style={styles.card} onPress={onPress} pressScale={0.98} accessibilityRole="button">
         <View style={styles.imagePlaceholder}>
-          <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+          {recipe.heroImageUrl && !imageFailed ? (
+            <Image
+              source={{ uri: recipe.heroImageUrl }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+          )}
           <AnimatedPressable
             style={styles.favoriteButton}
             pressScale={0.85}

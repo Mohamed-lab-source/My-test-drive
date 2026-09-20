@@ -17,6 +17,8 @@ import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { useHomeLayout } from "../context/HomeLayoutContext";
 import { daysUntil, useLeftovers } from "../context/LeftoversContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
@@ -24,7 +26,7 @@ import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { fetchCuisines, fetchRandomRecipe, fetchRecipeDetail, fetchRecipes, fetchRecommended } from "../api/endpoints";
 import { apiErrorMessage } from "../api/client";
-import { rankRecipes } from "../utils/rank";
+import { boostByCookHistory, rankRecipes } from "../utils/rank";
 import { RecipeCard } from "../components/RecipeCard";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
@@ -56,7 +58,9 @@ type Props = CompositeScreenProps<
 
 export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
-  const { displayStreak } = useCookStreak();
+  const { displayStreak, cookCounts } = useCookStreak();
+  const { favoriteRecipes } = useFavorites();
+  const { isVisible: isSectionVisible } = useHomeLayout();
   const { leftovers, removeLeftover } = useLeftovers();
   const { plan } = useMealPlan();
   const { preference } = useLocalPreference();
@@ -70,6 +74,7 @@ export function HomeScreen({ navigation }: Props) {
   // 3 columns, accounting for the screen's horizontal padding and the two
   // gaps between columns.
   const cuisineCardWidth = (windowWidth - spacing(3) * 2 - spacing(1.5) * 2) / 3;
+  const actionTileWidth = (windowWidth - spacing(3) * 2 - spacing(1.5) * 3) / 4;
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [recommended, setRecommended] = useState<RecipeSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,12 +94,16 @@ export function HomeScreen({ navigation }: Props) {
     const [cuisineList] = await Promise.all([fetchCuisines()]);
     setCuisines(cuisineList);
 
+    const knownRecipes = [...recentRecipes, ...favoriteRecipes];
     if (isAuthenticated) {
-      setRecommended(await fetchRecommended());
+      const base = await fetchRecommended();
+      setRecommended(boostByCookHistory(base, cookCounts, knownRecipes));
     } else {
       const all = await fetchRecipes({});
-      setRecommended(rankRecipes(all, preference.dietGoal, preference.favoriteCuisineSlugs).slice(0, 6));
+      const ranked = rankRecipes(all, preference.dietGoal, preference.favoriteCuisineSlugs).slice(0, 6);
+      setRecommended(boostByCookHistory(ranked, cookCounts, knownRecipes));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, preference]);
 
   useEffect(() => {
@@ -218,7 +227,7 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.searchPlaceholder}>{t("search.placeholder")}</Text>
             </AnimatedPressable>
 
-            {dailyRecipe ? (
+            {dailyRecipe && isSectionVisible("recipeOfDay") ? (
               <>
                 <Text style={styles.sectionTitle}>{t("home.recipeOfTheDay")}</Text>
                 <RecipeCard
@@ -247,86 +256,87 @@ export function HomeScreen({ navigation }: Props) {
               ))}
             </View>
 
-            <Text style={styles.sectionTitle}>{t("home.browseByMealType")}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeScroll}>
-              {MEAL_TYPES.map((m, i) => (
-                <FadeSlideIn key={m.dishType} index={i}>
+            {isSectionVisible("browseByMealType") ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.browseByMealType")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeScroll}>
+                  {MEAL_TYPES.map((m, i) => (
+                    <FadeSlideIn key={m.dishType} index={i}>
+                      <AnimatedPressable
+                        style={styles.mealTypeChip}
+                        pressScale={0.94}
+                        onPress={() =>
+                          navigation.navigate("RecipeList", { dishType: m.dishType, title: t(m.labelKey) })
+                        }
+                      >
+                        <Text style={styles.mealTypeEmoji}>{m.emoji}</Text>
+                        <Text style={styles.mealTypeLabel}>{t(m.labelKey)}</Text>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
+
+            <Text style={styles.sectionTitle}>{t("home.quickActionsTitle")}</Text>
+            <View style={styles.actionsGrid}>
+              {[
+                {
+                  key: "desserts",
+                  label: t("home.desserts"),
+                  onPress: () => navigation.navigate("RecipeList", { tag: "DESSERT", title: t("home.dessertsTitle") }),
+                },
+                {
+                  key: "fit",
+                  label: t("home.fit"),
+                  onPress: () => navigation.navigate("RecipeList", { tag: "FIT", title: t("home.fitTitle") }),
+                },
+                {
+                  key: "quick",
+                  label: t("home.quick"),
+                  onPress: () => navigation.navigate("RecipeList", { tag: "QUICK", title: t("home.quickTitle") }),
+                },
+                { key: "planWeek", label: t("home.planWeek"), onPress: () => navigation.navigate("MealPlanner") },
+                {
+                  key: "pantryFinder",
+                  label: t("home.pantryFinder"),
+                  onPress: () => navigation.navigate("PantryFinder"),
+                },
+                {
+                  key: "budgetPicks",
+                  label: t("home.budgetPicks"),
+                  onPress: () => navigation.navigate("RecipeList", { title: t("home.budgetTitle"), sortByCost: true }),
+                },
+                {
+                  key: "topRated",
+                  label: t("home.topRated"),
+                  onPress: () =>
+                    navigation.navigate("RecipeList", { title: t("home.topRatedTitle"), sortByRating: true }),
+                },
+                {
+                  key: "surpriseMe",
+                  label: surprising ? t("home.surprisingLoading") : t("home.surpriseMe"),
+                  onPress: handleSurpriseMe,
+                  disabled: surprising,
+                },
+              ].map((action, i) => (
+                <FadeSlideIn key={action.key} index={i}>
                   <AnimatedPressable
-                    style={styles.mealTypeChip}
-                    pressScale={0.94}
-                    onPress={() => navigation.navigate("RecipeList", { dishType: m.dishType, title: t(m.labelKey) })}
+                    style={[styles.actionTile, { width: actionTileWidth }]}
+                    pressScale={0.92}
+                    onPress={action.onPress}
+                    disabled={action.disabled}
+                    accessibilityRole="button"
                   >
-                    <Text style={styles.mealTypeEmoji}>{m.emoji}</Text>
-                    <Text style={styles.mealTypeLabel}>{t(m.labelKey)}</Text>
+                    <Text style={styles.actionTileText} numberOfLines={2}>
+                      {action.label}
+                    </Text>
                   </AnimatedPressable>
                 </FadeSlideIn>
               ))}
-            </ScrollView>
-
-            <View style={styles.quickRow}>
-              <AnimatedPressable
-                style={styles.quickChip}
-                pressScale={0.94}
-                onPress={() => navigation.navigate("RecipeList", { tag: "DESSERT", title: t("home.dessertsTitle") })}
-              >
-                <Text style={styles.quickChipText}>{t("home.desserts")}</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={styles.quickChip}
-                pressScale={0.94}
-                onPress={() => navigation.navigate("RecipeList", { tag: "FIT", title: t("home.fitTitle") })}
-              >
-                <Text style={styles.quickChipText}>{t("home.fit")}</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={styles.quickChip}
-                pressScale={0.94}
-                onPress={() => navigation.navigate("RecipeList", { tag: "QUICK", title: t("home.quickTitle") })}
-              >
-                <Text style={styles.quickChipText}>{t("home.quick")}</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={styles.quickChip}
-                pressScale={0.94}
-                onPress={() => navigation.navigate("MealPlanner")}
-              >
-                <Text style={styles.quickChipText}>{t("home.planWeek")}</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={styles.quickChip}
-                pressScale={0.94}
-                onPress={() => navigation.navigate("PantryFinder")}
-              >
-                <Text style={styles.quickChipText}>{t("home.pantryFinder")}</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={styles.quickChip}
-                pressScale={0.94}
-                onPress={() => navigation.navigate("RecipeList", { title: t("home.budgetTitle"), sortByCost: true })}
-              >
-                <Text style={styles.quickChipText}>{t("home.budgetPicks")}</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={styles.quickChip}
-                pressScale={0.94}
-                onPress={() => navigation.navigate("RecipeList", { title: t("home.topRatedTitle"), sortByRating: true })}
-              >
-                <Text style={styles.quickChipText}>{t("home.topRated")}</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={[styles.quickChip, styles.surpriseChip]}
-                pressScale={0.94}
-                onPress={handleSurpriseMe}
-                disabled={surprising}
-                accessibilityRole="button"
-              >
-                <Text style={styles.quickChipText}>
-                  {surprising ? t("home.surprisingLoading") : t("home.surpriseMe")}
-                </Text>
-              </AnimatedPressable>
             </View>
 
-            {leftovers.length > 0 ? (
+            {leftovers.length > 0 && isSectionVisible("leftovers") ? (
               <>
                 <Text style={styles.sectionTitle}>{t("home.leftoversTitle")}</Text>
                 {leftovers.map((item, i) => {
@@ -370,7 +380,7 @@ export function HomeScreen({ navigation }: Props) {
               </>
             ) : null}
 
-            {recentRecipes.length > 0 ? (
+            {recentRecipes.length > 0 && isSectionVisible("recentlyViewed") ? (
               <>
                 <View style={styles.recentHeaderRow}>
                   <Text style={[styles.sectionTitle, styles.recentHeaderTitle]}>{t("home.recentlyViewed")}</Text>
@@ -497,15 +507,18 @@ const createStyles = (colors: ThemeColors) =>
     cuisineEmoji: { fontSize: 26 },
     cuisineName: { fontWeight: "700", color: colors.text, marginTop: 6, fontSize: 12, textAlign: "center" },
     cuisineCount: { color: colors.textMuted, fontSize: 10, marginTop: 2 },
-    quickRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginTop: spacing(2), gap: spacing(1) },
-    quickChip: {
-      backgroundColor: colors.secondary,
-      borderRadius: radius.pill,
-      paddingVertical: spacing(1),
-      paddingHorizontal: spacing(2),
+    actionsGrid: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1.5) },
+    actionTile: {
+      aspectRatio: 1,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing(1),
     },
-    quickChipText: { color: "#fff", fontWeight: "700", fontSize: 12 },
-    surpriseChip: { backgroundColor: colors.primary },
+    actionTileText: { color: colors.text, fontWeight: "700", fontSize: 12, textAlign: "center" },
     leftoverRow: {
       flexDirection: "row",
       alignItems: "center",

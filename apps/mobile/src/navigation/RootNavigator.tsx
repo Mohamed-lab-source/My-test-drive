@@ -18,6 +18,7 @@ import { NotesListScreen } from "../screens/NotesListScreen";
 import { SearchScreen } from "../screens/SearchScreen";
 import { MealPlannerScreen } from "../screens/MealPlannerScreen";
 import { PantryFinderScreen } from "../screens/PantryFinderScreen";
+import { CustomizeHomeScreen } from "../screens/CustomizeHomeScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -99,6 +100,11 @@ export function RootNavigator() {
           name="PantryFinder"
           component={PantryFinderScreen}
           options={{ title: t("pantryFinder.title") }}
+        />
+        <Stack.Screen
+          name="CustomizeHome"
+          component={CustomizeHomeScreen}
+          options={{ title: t("customizeHome.title") }}
         />
       </Stack.Navigator>
     </NavigationContainer>
