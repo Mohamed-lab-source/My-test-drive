@@ -4,6 +4,7 @@ import { WEEKDAY_LABELS } from "../utils/date.js";
 import { HABIT_TEMPLATES, ICON_CHOICES } from "../domain/templates.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
 import { positionSegmentedThumb } from "../segmented.js";
+import { animateModalClose } from "../modal.js";
 import type { Habit, Frequency, StackAnchor, Weekday, TimeOfDay } from "../domain/types.js";
 
 interface WizardState {
@@ -121,8 +122,10 @@ export function openHabitWizard(options: WizardOptions = {}): void {
   let step = 0;
 
   function close(): void {
-    container.innerHTML = "";
-    document.body.classList.remove("modal-open");
+    animateModalClose(container, () => {
+      container.innerHTML = "";
+      document.body.classList.remove("modal-open");
+    });
   }
 
   function frequency(): Frequency {

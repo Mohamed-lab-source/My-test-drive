@@ -9,6 +9,7 @@ import { openAchievements } from "./achievements.js";
 import { computeBadges } from "../domain/achievements.js";
 import { computeXP, levelForXP } from "../domain/gamification.js";
 import { computeCorrelationInsight } from "../domain/insights.js";
+import { initScrollReveal } from "../scrollReveal.js";
 let heatmapDays = 84;
 function weeklyInsight(thisWeek, prevWeek, perfectWeek, perfectToday) {
     if (perfectWeek) {
@@ -90,7 +91,7 @@ export function renderDashboard(container) {
         </div>
       </header>
 
-      <div class="card level-card">
+      <div class="card level-card scroll-reveal">
         <div class="level-badge">${levelInfo.level}</div>
         <div class="level-copy">
           <div class="level-title">Level ${levelInfo.level} · ${escapeHtml(levelInfo.title)}</div>
@@ -99,7 +100,7 @@ export function renderDashboard(container) {
         </div>
       </div>
 
-      <button type="button" class="card achievements-teaser" id="open-achievements-card">
+      <button type="button" class="card achievements-teaser scroll-reveal" id="open-achievements-card">
         <span class="achievements-teaser-icon">🏆</span>
         <div class="achievements-teaser-copy">
           <div class="achievements-teaser-title">Achievements</div>
@@ -108,17 +109,17 @@ export function renderDashboard(container) {
         <span class="achievements-teaser-chevron">›</span>
       </button>
 
-      ${insight ? `<div class="insight-card ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
+      ${insight ? `<div class="insight-card scroll-reveal ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
 
       ${correlation
-        ? `<div class="coaching-tip-card">
+        ? `<div class="coaching-tip-card scroll-reveal">
               <span class="coaching-tip-icon">🔗</span>
               <span>Smart insight: on days you do <strong>${escapeHtml(correlation.a.name)}</strong>, you complete <strong>${escapeHtml(correlation.b.name)}</strong> ${Math.round(correlation.withRate * 100)}% of the time — vs ${Math.round(correlation.withoutRate * 100)}% otherwise. Consider stacking "${escapeHtml(correlation.b.name)}" right after "${escapeHtml(correlation.a.name)}".</span>
             </div>`
         : ""}
 
       ${mvpHabit || mvpIdentity
-        ? `<div class="card">
+        ? `<div class="card scroll-reveal">
               <h2 class="card-title">This week's spotlight</h2>
               ${mvpHabit
             ? `<div class="spotlight-row"><span class="spotlight-icon">⭐</span><span>MVP habit: <strong>${escapeHtml(mvpHabit.habit.name)}</strong> — ${Math.round(mvpHabit.rate * 100)}% completion</span></div>`
@@ -129,7 +130,7 @@ export function renderDashboard(container) {
             </div>`
         : ""}
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">${escapeHtml(monthName)} so far</h2>
         <div class="stat-tile-row">
           ${statTile({ label: "Votes this month", value: String(votesThisMonth) })}
@@ -153,7 +154,7 @@ export function renderDashboard(container) {
         ${statTile({ label: "Habits tracked", value: String(activeHabits.length) })}
       </div>
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">Consistency</h2>
         <div class="segmented-control segmented-control-2" id="heatmap-range-control">
           <input type="radio" id="range-12w" name="range" value="84" ${heatmapDays === 84 ? "checked" : ""} class="segmented-input" />
@@ -168,14 +169,14 @@ export function renderDashboard(container) {
                <div class="heatmap-legend muted">Each square = one day. More filled = more of that day's habits done.</div>`}
       </div>
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">Completion rate — last 30 days</h2>
         ${barData.length === 0
         ? `<div class="empty-state">No habits yet.</div>`
         : barList(barData)}
       </div>
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">Identity votes</h2>
         ${activeIdentities.length === 0
         ? `<div class="empty-state">No identities yet — see the Identities tab.</div>`
@@ -206,5 +207,6 @@ export function renderDashboard(container) {
             renderDashboard(container);
         });
     });
+    initScrollReveal(container);
 }
 //# sourceMappingURL=dashboard.js.map

@@ -1051,6 +1051,32 @@ body.modal-open {
   }
 }
 
+.modal-backdrop.modal-closing {
+  animation: backdrop-out 0.2s ease both;
+}
+
+@keyframes backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.modal-sheet.modal-closing {
+  animation: sheet-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes sheet-out {
+  from {
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    transform: translateX(-50%) translateY(100%);
+  }
+}
+
 .modal-sheet-handle {
   width: 36px;
   height: 5px;
@@ -1330,18 +1356,8 @@ body.modal-open {
   height: 8px;
   border-radius: 2px;
   margin: -4px 0 0 -4px;
-  animation: confetti-burst 0.85s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
-}
-
-@keyframes confetti-burst {
-  0% {
-    transform: translate(0, 0) rotate(0deg) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--dx), calc(var(--dy) + 140px)) rotate(var(--rot)) scale(0.6);
-    opacity: 0;
-  }
+  /* Animated per-piece via the Web Animations API (src/confetti.ts) rather
+     than a shared CSS keyframe, so each piece gets its own timing. */
 }
 
 /* ---- Activity ring ---- */
@@ -1638,6 +1654,53 @@ body.modal-open {
 
 .empty-state p {
   margin: 0;
+}
+
+/* ---- Scroll reveal ---- */
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    transition: none;
+  }
+}
+
+/* ---- Offline banner ---- */
+
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 68;
+  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  background: var(--gray);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  transform: translateY(-100%);
+  transition: transform 0.25s ease;
+}
+
+.offline-banner.visible {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offline-banner {
+    transition: none;
+  }
 }
 
 /* ---- Milestone toast ---- */

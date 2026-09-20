@@ -1,6 +1,7 @@
 import { getState } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { computeBadges } from "../domain/achievements.js";
+import { animateModalClose } from "../modal.js";
 
 function getRoot(): HTMLElement {
   let root = document.getElementById("modal-root");
@@ -16,8 +17,10 @@ export function openAchievements(): void {
   const container = getRoot();
 
   function close(): void {
-    container.innerHTML = "";
-    document.body.classList.remove("modal-open");
+    animateModalClose(container, () => {
+      container.innerHTML = "";
+      document.body.classList.remove("modal-open");
+    });
   }
 
   const { habits, checkins } = getState();

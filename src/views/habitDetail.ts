@@ -16,6 +16,7 @@ import { heatmapSVG } from "../charts/svg.js";
 import { hapticTap, hapticSuccess } from "../confetti.js";
 import { showToast } from "../toast.js";
 import { openHabitWizard } from "./habitWizard.js";
+import { animateModalClose } from "../modal.js";
 import type { Habit, Frequency, CheckIn } from "../domain/types.js";
 
 function frequencyLabel(f: Frequency): string {
@@ -67,8 +68,10 @@ export function openHabitDetail(habit: Habit): void {
   const container = getRoot();
 
   function close(): void {
-    container.innerHTML = "";
-    document.body.classList.remove("modal-open");
+    animateModalClose(container, () => {
+      container.innerHTML = "";
+      document.body.classList.remove("modal-open");
+    });
   }
 
   function render(): void {

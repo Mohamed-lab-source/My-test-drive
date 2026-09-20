@@ -6,6 +6,7 @@ import { heatmapSVG } from "../charts/svg.js";
 import { hapticSuccess } from "../confetti.js";
 import { openHabitDetail } from "./habitDetail.js";
 import { openHabitWizard } from "./habitWizard.js";
+import { animateModalClose } from "../modal.js";
 function getRoot() {
     let root = document.getElementById("modal-root");
     if (!root) {
@@ -19,8 +20,10 @@ export function openIdentityDetail(identity) {
     const container = getRoot();
     let editing = false;
     function close() {
-        container.innerHTML = "";
-        document.body.classList.remove("modal-open");
+        animateModalClose(container, () => {
+            container.innerHTML = "";
+            document.body.classList.remove("modal-open");
+        });
     }
     function render() {
         const { identities, habits, checkins } = getState();

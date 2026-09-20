@@ -1,6 +1,7 @@
 import { getState } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { computeBadges } from "../domain/achievements.js";
+import { animateModalClose } from "../modal.js";
 function getRoot() {
     let root = document.getElementById("modal-root");
     if (!root) {
@@ -13,8 +14,10 @@ function getRoot() {
 export function openAchievements() {
     const container = getRoot();
     function close() {
-        container.innerHTML = "";
-        document.body.classList.remove("modal-open");
+        animateModalClose(container, () => {
+            container.innerHTML = "";
+            document.body.classList.remove("modal-open");
+        });
     }
     const { habits, checkins } = getState();
     const badges = computeBadges(habits, checkins);

@@ -1,6 +1,23 @@
 import { addDays, isDue, todayISO, weekdayOf } from "../utils/date.js";
+// findCheckIn is called very heavily — once per (habit, date) pair, often in
+// nested loops across streaks/consistency/correlation — so a linear .find()
+// rescan of the whole array on every call gets expensive as history grows.
+// Keyed by array *reference*, so it stays correct: a new checkins array
+// (which the store always produces on mutation) simply builds a fresh index,
+// while repeated calls within the same render pass reuse the one already built.
+const checkinIndexCache = new WeakMap();
+function getCheckinIndex(checkins) {
+    let index = checkinIndexCache.get(checkins);
+    if (!index) {
+        index = new Map();
+        for (const c of checkins)
+            index.set(`${c.habitId}|${c.date}`, c);
+        checkinIndexCache.set(checkins, index);
+    }
+    return index;
+}
 export function findCheckIn(checkins, habitId, date) {
-    return checkins.find((c) => c.habitId === habitId && c.date === date);
+    return getCheckinIndex(checkins).get(`${habitId}|${date}`);
 }
 export function isVote(checkin) {
     return !!checkin && (checkin.completedFull || checkin.usedTwoMinuteVersion);

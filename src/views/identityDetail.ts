@@ -6,6 +6,7 @@ import { heatmapSVG } from "../charts/svg.js";
 import { hapticSuccess } from "../confetti.js";
 import { openHabitDetail } from "./habitDetail.js";
 import { openHabitWizard } from "./habitWizard.js";
+import { animateModalClose } from "../modal.js";
 import type { Identity } from "../domain/types.js";
 
 function getRoot(): HTMLElement {
@@ -23,8 +24,10 @@ export function openIdentityDetail(identity: Identity): void {
   let editing = false;
 
   function close(): void {
-    container.innerHTML = "";
-    document.body.classList.remove("modal-open");
+    animateModalClose(container, () => {
+      container.innerHTML = "";
+      document.body.classList.remove("modal-open");
+    });
   }
 
   function render(): void {

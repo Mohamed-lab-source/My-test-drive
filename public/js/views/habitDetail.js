@@ -7,6 +7,7 @@ import { heatmapSVG } from "../charts/svg.js";
 import { hapticTap, hapticSuccess } from "../confetti.js";
 import { showToast } from "../toast.js";
 import { openHabitWizard } from "./habitWizard.js";
+import { animateModalClose } from "../modal.js";
 function frequencyLabel(f) {
     if (f.type === "daily")
         return "Every day";
@@ -57,8 +58,10 @@ function getRoot() {
 export function openHabitDetail(habit) {
     const container = getRoot();
     function close() {
-        container.innerHTML = "";
-        document.body.classList.remove("modal-open");
+        animateModalClose(container, () => {
+            container.innerHTML = "";
+            document.body.classList.remove("modal-open");
+        });
     }
     function render() {
         const { checkins, identities, habits } = getState();

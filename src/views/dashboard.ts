@@ -18,6 +18,7 @@ import { openAchievements } from "./achievements.js";
 import { computeBadges } from "../domain/achievements.js";
 import { computeXP, levelForXP } from "../domain/gamification.js";
 import { computeCorrelationInsight } from "../domain/insights.js";
+import { initScrollReveal } from "../scrollReveal.js";
 
 let heatmapDays: 84 | 364 = 84;
 
@@ -124,7 +125,7 @@ export function renderDashboard(container: HTMLElement): void {
         </div>
       </header>
 
-      <div class="card level-card">
+      <div class="card level-card scroll-reveal">
         <div class="level-badge">${levelInfo.level}</div>
         <div class="level-copy">
           <div class="level-title">Level ${levelInfo.level} · ${escapeHtml(levelInfo.title)}</div>
@@ -133,7 +134,7 @@ export function renderDashboard(container: HTMLElement): void {
         </div>
       </div>
 
-      <button type="button" class="card achievements-teaser" id="open-achievements-card">
+      <button type="button" class="card achievements-teaser scroll-reveal" id="open-achievements-card">
         <span class="achievements-teaser-icon">🏆</span>
         <div class="achievements-teaser-copy">
           <div class="achievements-teaser-title">Achievements</div>
@@ -142,11 +143,11 @@ export function renderDashboard(container: HTMLElement): void {
         <span class="achievements-teaser-chevron">›</span>
       </button>
 
-      ${insight ? `<div class="insight-card ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
+      ${insight ? `<div class="insight-card scroll-reveal ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
 
       ${
         correlation
-          ? `<div class="coaching-tip-card">
+          ? `<div class="coaching-tip-card scroll-reveal">
               <span class="coaching-tip-icon">🔗</span>
               <span>Smart insight: on days you do <strong>${escapeHtml(correlation.a.name)}</strong>, you complete <strong>${escapeHtml(correlation.b.name)}</strong> ${Math.round(correlation.withRate * 100)}% of the time — vs ${Math.round(correlation.withoutRate * 100)}% otherwise. Consider stacking "${escapeHtml(correlation.b.name)}" right after "${escapeHtml(correlation.a.name)}".</span>
             </div>`
@@ -155,7 +156,7 @@ export function renderDashboard(container: HTMLElement): void {
 
       ${
         mvpHabit || mvpIdentity
-          ? `<div class="card">
+          ? `<div class="card scroll-reveal">
               <h2 class="card-title">This week's spotlight</h2>
               ${
                 mvpHabit
@@ -171,7 +172,7 @@ export function renderDashboard(container: HTMLElement): void {
           : ""
       }
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">${escapeHtml(monthName)} so far</h2>
         <div class="stat-tile-row">
           ${statTile({ label: "Votes this month", value: String(votesThisMonth) })}
@@ -197,7 +198,7 @@ export function renderDashboard(container: HTMLElement): void {
         ${statTile({ label: "Habits tracked", value: String(activeHabits.length) })}
       </div>
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">Consistency</h2>
         <div class="segmented-control segmented-control-2" id="heatmap-range-control">
           <input type="radio" id="range-12w" name="range" value="84" ${heatmapDays === 84 ? "checked" : ""} class="segmented-input" />
@@ -214,7 +215,7 @@ export function renderDashboard(container: HTMLElement): void {
         }
       </div>
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">Completion rate — last 30 days</h2>
         ${
           barData.length === 0
@@ -223,7 +224,7 @@ export function renderDashboard(container: HTMLElement): void {
         }
       </div>
 
-      <div class="card">
+      <div class="card scroll-reveal">
         <h2 class="card-title">Identity votes</h2>
         ${
           activeIdentities.length === 0
@@ -258,4 +259,6 @@ export function renderDashboard(container: HTMLElement): void {
       renderDashboard(container);
     });
   });
+
+  initScrollReveal(container);
 }

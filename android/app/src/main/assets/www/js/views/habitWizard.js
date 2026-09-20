@@ -4,6 +4,7 @@ import { WEEKDAY_LABELS } from "../utils/date.js";
 import { HABIT_TEMPLATES, ICON_CHOICES } from "../domain/templates.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
 import { positionSegmentedThumb } from "../segmented.js";
+import { animateModalClose } from "../modal.js";
 function blankState() {
     return {
         name: "",
@@ -92,8 +93,10 @@ export function openHabitWizard(options = {}) {
     const steps = skipTemplate ? ["name", "when", "stick", "review"] : ["template", "name", "when", "stick", "review"];
     let step = 0;
     function close() {
-        container.innerHTML = "";
-        document.body.classList.remove("modal-open");
+        animateModalClose(container, () => {
+            container.innerHTML = "";
+            document.body.classList.remove("modal-open");
+        });
     }
     function frequency() {
         return state.freqType === "weekdays"

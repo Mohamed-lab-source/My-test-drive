@@ -4,6 +4,9 @@ import { getPrefs, setPref, type Theme } from "../prefs.js";
 import { checkinsToCsv } from "../csv.js";
 import { showToast } from "../toast.js";
 import { positionSegmentedThumb } from "../segmented.js";
+import { isInstallAvailable, promptInstall, onInstallAvailabilityChange } from "../pwa.js";
+import { buildProgressSummary } from "../domain/summary.js";
+import { animateModalClose } from "../modal.js";
 import type { BackupFile } from "../db/repo.js";
 
 let root: HTMLElement | null = null;
@@ -22,10 +25,14 @@ function getRoot(): HTMLElement {
 
 export function openSettings(): void {
   const container = getRoot();
+  const unsubscribeInstall = onInstallAvailabilityChange(() => render());
 
   function close(): void {
-    container.innerHTML = "";
-    document.body.classList.remove("modal-open");
+    unsubscribeInstall();
+    animateModalClose(container, () => {
+      container.innerHTML = "";
+      document.body.classList.remove("modal-open");
+    });
   }
 
   function render(): void {
@@ -88,6 +95,16 @@ export function openSettings(): void {
                 <span class="switch-track"></span>
               </label>
             </div>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">App</h2>
+            ${
+              isInstallAvailable()
+                ? `<button type="button" class="btn btn-outline btn-block" id="install-app-btn">📲 Install app</button>`
+                : ""
+            }
+            <button type="button" class="btn btn-outline btn-block" id="share-progress-btn">Share my progress</button>
           </div>
 
           <div class="card">
@@ -155,6 +172,34 @@ export function openSettings(): void {
       const checked = (e.target as HTMLInputElement).checked;
       setPref("haptics", checked);
       if (checked) hapticTap();
+    });
+
+    // ---- App: install + share ----
+    container.querySelector("#install-app-btn")?.addEventListener("click", async () => {
+      hapticTap();
+      const accepted = await promptInstall();
+      if (accepted) showToast("📲", "Installing…");
+      render();
+    });
+
+    container.querySelector("#share-progress-btn")!.addEventListener("click", async () => {
+      const text = buildProgressSummary(habits, checkins);
+      if (navigator.share) {
+        try {
+          await navigator.share({ text, title: "My Atomic progress" });
+          hapticSuccess();
+        } catch {
+          // User cancelled the share sheet — not an error.
+        }
+      } else {
+        try {
+          await navigator.clipboard.writeText(text);
+          hapticSuccess();
+          showToast("📋", "Progress copied to clipboard.");
+        } catch {
+          showToast("📋", "Couldn't share or copy — try again.");
+        }
+      }
     });
 
     // ---- Export ----

@@ -77,6 +77,10 @@ export async function createHabit(input: NewHabitInput): Promise<Habit> {
     createdAt: new Date().toISOString(),
     archived: false,
     ...input,
+    // Defends against a caller (or stale cached JS) omitting a field added
+    // after this input shape existed — habits.ts calls .length/.map on this
+    // unconditionally, so a missing array here would crash the whole view.
+    tags: input.tags ?? [],
   };
   await put("habits", habit);
   return habit;

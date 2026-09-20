@@ -1,5 +1,7 @@
 import { loadAll, subscribe } from "./state/store.js";
 import { applyTheme } from "./prefs.js";
+import { registerServiceWorker, listenForInstallPrompt } from "./pwa.js";
+import { initOfflineBanner } from "./offlineBanner.js";
 import { currentRoute, onRouteChange, type Route } from "./router.js";
 import { renderNav } from "./views/nav.js";
 import { renderScorecard } from "./views/scorecard.js";
@@ -35,6 +37,9 @@ function renderWithTransition(): void {
 
 async function main(): Promise<void> {
   applyTheme();
+  registerServiceWorker();
+  listenForInstallPrompt();
+  initOfflineBanner();
   const appEl = document.getElementById("app");
   if (appEl) appEl.innerHTML = `<div class="loading">Loading your habits…</div>`;
 
