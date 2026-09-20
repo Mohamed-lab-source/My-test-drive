@@ -164,22 +164,62 @@ CREATE TABLE IF NOT EXISTS meetings (
 
 CREATE INDEX IF NOT EXISTS idx_meetings_start ON meetings(start_at);
 
-CREATE TABLE IF NOT EXISTS habits (
+-- Atomic Habits methodology: identities you're building, habits designed
+-- around the Four Laws, daily check-ins with a streak-freeze economy, and a
+-- habits scorecard. Ported from the standalone "Atomic" app.
+
+CREATE TABLE IF NOT EXISTS identities (
   id TEXT PRIMARY KEY NOT NULL,
-  name TEXT NOT NULL,
-  icon TEXT NOT NULL,
-  color TEXT NOT NULL,
+  statement TEXT NOT NULL,
+  why TEXT,
   is_archived INTEGER NOT NULL DEFAULT 0,
-  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS habit_logs (
+CREATE TABLE IF NOT EXISTS atomic_habits (
   id TEXT PRIMARY KEY NOT NULL,
-  habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  identity_id TEXT REFERENCES identities(id) ON DELETE SET NULL,
+  frequency_type TEXT NOT NULL CHECK (frequency_type IN ('daily', 'weekdays')),
+  frequency_days TEXT,
+  time_of_day TEXT NOT NULL CHECK (time_of_day IN ('anytime', 'morning', 'afternoon', 'evening')) DEFAULT 'anytime',
+  cue TEXT NOT NULL DEFAULT '',
+  craving TEXT NOT NULL DEFAULT '',
+  response TEXT NOT NULL DEFAULT '',
+  reward TEXT NOT NULL DEFAULT '',
+  two_minute_version TEXT NOT NULL DEFAULT '',
+  stack_anchor_type TEXT NOT NULL CHECK (stack_anchor_type IN ('none', 'habit', 'custom')) DEFAULT 'none',
+  stack_anchor_habit_id TEXT REFERENCES atomic_habits(id) ON DELETE SET NULL,
+  stack_anchor_text TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  tags TEXT NOT NULL DEFAULT '[]',
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS checkins (
+  id TEXT PRIMARY KEY NOT NULL,
+  habit_id TEXT NOT NULL REFERENCES atomic_habits(id) ON DELETE CASCADE,
   date TEXT NOT NULL,
-  completed INTEGER NOT NULL DEFAULT 1,
+  completed_full INTEGER NOT NULL DEFAULT 0,
+  used_two_minute_version INTEGER NOT NULL DEFAULT 0,
+  skipped INTEGER NOT NULL DEFAULT 0,
+  frozen INTEGER NOT NULL DEFAULT 0,
+  note TEXT,
+  created_at TEXT NOT NULL,
   UNIQUE(habit_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_checkins_habit ON checkins(habit_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_date ON checkins(date);
+
+CREATE TABLE IF NOT EXISTS scorecard_entries (
+  id TEXT PRIMARY KEY NOT NULL,
+  activity TEXT NOT NULL,
+  rating TEXT NOT NULL CHECK (rating IN ('+', '-', '=')),
+  note TEXT,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS prayer_logs (

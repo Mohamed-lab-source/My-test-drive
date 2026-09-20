@@ -1,6 +1,6 @@
 import { getDb, newId, nowIso, todayKey } from '../client';
 import { allRows, deleteRow, insertRow, updateRow, whereRows } from '../helpers';
-import type { Habit, HabitLog, Prayer, PrayerLog, WishlistItem } from '../types';
+import type { Prayer, PrayerLog, WishlistItem } from '../types';
 import { PRAYERS } from '../types';
 
 // ---------- Wishlist / ideas ----------
@@ -14,33 +14,6 @@ export async function createWishlistItem(input: Omit<WishlistItem, 'id' | 'creat
 export const updateWishlistItem = (id: string, patch: Partial<WishlistItem>) =>
   updateRow('wishlist_items', id, patch);
 export const deleteWishlistItem = (id: string) => deleteRow('wishlist_items', id);
-
-// ---------- Habits ----------
-export const listHabits = () => allRows<Habit>('habits', 'sort_order ASC');
-
-export async function createHabit(input: Omit<Habit, 'id' | 'created_at' | 'is_archived'>) {
-  const id = newId();
-  await insertRow('habits', { id, ...input, is_archived: 0, created_at: nowIso() });
-  return id;
-}
-export const updateHabit = (id: string, patch: Partial<Habit>) => updateRow('habits', id, patch);
-export const deleteHabit = (id: string) => deleteRow('habits', id);
-
-export const listHabitLogsForDate = (date: string) =>
-  whereRows<HabitLog>('habit_logs', 'date = ?', [date]);
-
-export const listHabitLogsForHabit = (habitId: string, sinceDate: string) =>
-  whereRows<HabitLog>('habit_logs', 'habit_id = ? AND date >= ?', [habitId, sinceDate], 'date ASC');
-
-export async function setHabitLog(habitId: string, date: string, completed: boolean) {
-  const db = await getDb();
-  await db.runAsync(
-    `INSERT INTO habit_logs (id, habit_id, date, completed)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(habit_id, date) DO UPDATE SET completed = excluded.completed`,
-    [newId(), habitId, date, completed ? 1 : 0]
-  );
-}
 
 // ---------- Prayer tracker ----------
 export const listPrayerLogsForDate = (date: string) =>

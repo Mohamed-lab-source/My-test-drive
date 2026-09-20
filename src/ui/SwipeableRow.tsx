@@ -21,7 +21,7 @@ const ACTION_WIDTH = 76;
 export function SwipeableRow({ children, actions }: SwipeableRowProps) {
   const translateX = useSharedValue(0);
   const maxSwipe = -ACTION_WIDTH * actions.length;
-  const { typography } = useTheme();
+  const { typography, colors } = useTheme();
 
   const close = () => {
     translateX.value = withTiming(0, { duration: 200 });
@@ -60,7 +60,9 @@ export function SwipeableRow({ children, actions }: SwipeableRowProps) {
         ))}
       </View>
       <GestureDetector gesture={pan}>
-        <Animated.View style={rowStyle}>{children}</Animated.View>
+        <Animated.View style={[styles.rowForeground, { backgroundColor: colors.secondarySystemGroupedBackground }, rowStyle]}>
+          {children}
+        </Animated.View>
       </GestureDetector>
     </View>
   );
@@ -68,6 +70,10 @@ export function SwipeableRow({ children, actions }: SwipeableRowProps) {
 
 const styles = StyleSheet.create({
   container: { position: 'relative', overflow: 'hidden' },
+  // Explicit position + an opaque background ensure this paints above the
+  // absolutely-positioned actions: on web, CSS always stacks positioned
+  // elements above static siblings regardless of DOM order.
+  rowForeground: { position: 'relative', zIndex: 1 },
   actions: {
     position: 'absolute',
     right: 0,

@@ -1,31 +1,43 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useLifeStore } from '../../../src/store/lifeStore';
+import { useHabitsStore } from '../../../src/store/habitsStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
 import { Card } from '../../../src/ui/Card';
 import { ProgressRing } from '../../../src/ui/ProgressRing';
-import { IconCircle } from '../../../src/ui/IconCircle';
-import { EmptyState } from '../../../src/ui/EmptyState';
 import { Icon } from '../../../src/ui/Icon';
 import { PrayerTracker } from '../../../src/features/life/PrayerTracker';
 import { WishlistRow } from '../../../src/features/life/WishlistRow';
-import { AddHabitSheet } from '../../../src/features/life/AddHabitSheet';
+import { EmptyState } from '../../../src/ui/EmptyState';
 import { formatMoney } from '../../../src/utils/money';
+import { isDue, todayISO } from '../../../src/domain/habits/dateUtils';
+import { computeCurrentStreak, findCheckIn, isVote } from '../../../src/domain/habits/analytics';
+import { levelForXP, computeXP } from '../../../src/domain/habits/gamification';
 
 export default function LifeScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { savingsGoals } = useFinanceStore();
-  const { wishlist, habits, todayHabitLogs, toggleHabitToday } = useLifeStore();
-  const [habitVisible, setHabitVisible] = useState(false);
+  const { wishlist } = useLifeStore();
+  const { habits, checkins } = useHabitsStore();
 
   const topGoal = savingsGoals.find((g) => !g.is_completed) ?? savingsGoals[0];
   const activeIdeas = wishlist.filter((w) => w.status !== 'purchased' && w.status !== 'dropped');
+
+  const today = todayISO();
+  const activeHabits = habits.filter((h) => !h.archived);
+  const dueToday = activeHabits.filter((h) => isDue(h.frequency, today));
+  const doneToday = dueToday.filter((h) => isVote(findCheckIn(checkins, h.id, today)));
+  const bestStreak = useMemo(
+    () => activeHabits.reduce((max, h) => Math.max(max, computeCurrentStreak(h, checkins)), 0),
+    [activeHabits, checkins]
+  );
+  const level = useMemo(() => levelForXP(computeXP(checkins)), [checkins]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -61,38 +73,42 @@ export default function LifeScreen() {
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <Text style={[typography.title3, { color: colors.label }]}>Habits</Text>
-            <Pressable onPress={() => setHabitVisible(true)}>
-              <Text style={[typography.subhead, { color: colors.blue }]}>Add</Text>
+            <Pressable onPress={() => router.push('/life/habits')}>
+              <Text style={[typography.subhead, { color: colors.blue }]}>Open</Text>
             </Pressable>
           </View>
-          {habits.length === 0 ? (
-            <Card>
-              <EmptyState icon="sparkles" title="No habits yet" message="Track daily routines beyond prayer." />
-            </Card>
-          ) : (
-            <Card padded={false}>
-              {habits.map((habit, i, arr) => {
-                const done = todayHabitLogs.some((l) => l.habit_id === habit.id && l.completed === 1);
-                return (
-                  <Pressable
-                    key={habit.id}
-                    onPress={() => toggleHabitToday(habit.id, !done)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      padding: spacing.md,
-                      borderBottomWidth: i === arr.length - 1 ? 0 : 0.5,
-                      borderBottomColor: colors.separator,
-                    }}
-                  >
-                    <IconCircle name={habit.icon} color={habit.color} />
-                    <Text style={[typography.body, { color: colors.label, flex: 1, marginLeft: spacing.sm }]}>{habit.name}</Text>
-                    <Icon name={done ? 'checkmark.circle.fill' : 'circle'} size={22} color={done ? colors.green : colors.gray3} />
-                  </Pressable>
-                );
-              })}
-            </Card>
-          )}
+          <Pressable onPress={() => router.push('/life/habits')}>
+            {activeHabits.length === 0 ? (
+              <Card>
+                <EmptyState
+                  icon="sparkles"
+                  title="Build your identity, one habit at a time"
+                  message="Design habits around the Four Laws, stack them, and track streaks — powered by Atomic."
+                />
+              </Card>
+            ) : (
+              <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ProgressRing
+                  progress={dueToday.length === 0 ? 0 : doneToday.length / dueToday.length}
+                  color={colors.indigo}
+                  size={56}
+                  label={`${doneToday.length}/${dueToday.length}`}
+                />
+                <View style={{ marginLeft: spacing.md, flex: 1 }}>
+                  <Text style={[typography.headline, { color: colors.label }]}>
+                    Level {level.level} · {level.title}
+                  </Text>
+                  <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                    {doneToday.length} of {dueToday.length} done today
+                  </Text>
+                  {bestStreak > 0 ? (
+                    <Text style={[typography.caption1, { color: colors.orange, marginTop: 2 }]}>🔥 {bestStreak}-day streak</Text>
+                  ) : null}
+                </View>
+                <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
+              </Card>
+            )}
+          </Pressable>
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
@@ -119,7 +135,6 @@ export default function LifeScreen() {
           )}
         </View>
       </ScrollView>
-      <AddHabitSheet visible={habitVisible} onClose={() => setHabitVisible(false)} />
     </View>
   );
 }

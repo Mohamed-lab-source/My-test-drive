@@ -8,6 +8,7 @@ import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 import { useFinanceStore } from '../src/store/financeStore';
 import { useProductivityStore } from '../src/store/productivityStore';
 import { useLifeStore } from '../src/store/lifeStore';
+import { useHabitsStore } from '../src/store/habitsStore';
 
 function AppShell() {
   const { colors, scheme } = useTheme();
@@ -16,9 +17,10 @@ function AppShell() {
   const hydrateFinance = useFinanceStore((s) => s.hydrate);
   const hydrateProductivity = useProductivityStore((s) => s.hydrate);
   const hydrateLife = useLifeStore((s) => s.hydrate);
+  const hydrateHabits = useHabitsStore((s) => s.hydrate);
 
   useEffect(() => {
-    Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife()])
+    Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()])
       .then(() => setReady(true))
       .catch((e) => {
         console.error('Failed to hydrate app state', e);

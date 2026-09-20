@@ -8,6 +8,7 @@ export default function LifeLayout() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="wishlist" />
+      <Stack.Screen name="habits" />
     </Stack>
   );
 }

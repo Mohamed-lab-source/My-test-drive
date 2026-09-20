@@ -30,7 +30,7 @@ export function ProgressRing({ progress, size = 72, strokeWidth = 8, color, labe
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size}>
+      <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -49,8 +49,6 @@ export function ProgressRing({ progress, size = 72, strokeWidth = 8, color, labe
           fill="none"
           strokeDasharray={`${circumference} ${circumference}`}
           animatedProps={animatedProps}
-          rotation={-90}
-          origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
       {label ? (
