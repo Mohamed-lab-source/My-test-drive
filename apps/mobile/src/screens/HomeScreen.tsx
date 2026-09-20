@@ -30,9 +30,10 @@ import { boostByCookHistory, rankRecipes } from "../utils/rank";
 import { RecipeCard } from "../components/RecipeCard";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
+import { Pulse } from "../components/Pulse";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useTheme } from "../theme/ThemeContext";
-import { radius, spacing, type ThemeColors } from "../theme";
+import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
 import type { Cuisine, RecipeSummary } from "../api/types";
 
@@ -156,6 +157,11 @@ export function HomeScreen({ navigation }: Props) {
   };
 
   const greetingName = isAuthenticated ? user?.name.split(" ")[0] : undefined;
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const greetingKey: TranslationKey = greetingName
+    ? (`home.greeting.${timeOfDay}` as TranslationKey)
+    : (`home.greeting.${timeOfDay}Generic` as TranslationKey);
   const dietGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : preference.dietGoal;
   const todaysPlanRecipe = plan[new Date().toISOString().slice(0, 10)];
   const recommendedTitle = t(RECOMMENDED_TITLE_KEY[dietGoal] ?? "home.recommended");
@@ -179,12 +185,12 @@ export function HomeScreen({ navigation }: Props) {
             <View style={styles.header}>
               <View style={styles.greetingRow}>
                 <Text style={styles.greeting}>
-                  {greetingName ? t("home.greeting", { name: greetingName }) : t("home.greetingGeneric")}
+                  {greetingName ? t(greetingKey, { name: greetingName }) : t(greetingKey)}
                 </Text>
                 {displayStreak > 0 ? (
-                  <View style={styles.streakBadge}>
+                  <Pulse style={styles.streakBadge}>
                     <Text style={styles.streakBadgeText}>🔥 {displayStreak}</Text>
-                  </View>
+                  </Pulse>
                 ) : null}
               </View>
               <Text style={styles.headline}>{t("home.headline")}</Text>
@@ -226,6 +232,38 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.searchIcon}>🔍</Text>
               <Text style={styles.searchPlaceholder}>{t("search.placeholder")}</Text>
             </AnimatedPressable>
+
+            <Text style={styles.sectionTitle}>{t("home.moodTitle")}</Text>
+            <View style={styles.moodRow}>
+              {[
+                {
+                  key: "spicy",
+                  label: t("home.moodSpicy"),
+                  onPress: () => navigation.navigate("RecipeList", { tag: "SPICY", title: t("home.spicyTitle") }),
+                },
+                {
+                  key: "comfort",
+                  label: t("home.moodComfort"),
+                  onPress: () => navigation.navigate("RecipeList", { tag: "COMFORT", title: t("home.comfortTitle") }),
+                },
+                {
+                  key: "quick",
+                  label: t("home.moodQuick"),
+                  onPress: () => navigation.navigate("RecipeList", { tag: "QUICK", title: t("home.quickTitle") }),
+                },
+                {
+                  key: "light",
+                  label: t("home.moodLight"),
+                  onPress: () => navigation.navigate("RecipeList", { title: t("home.lightTitle"), lightOnly: true }),
+                },
+              ].map((mood, i) => (
+                <FadeSlideIn key={mood.key} index={i}>
+                  <AnimatedPressable style={styles.moodTile} pressScale={0.92} onPress={mood.onPress}>
+                    <Text style={styles.moodTileText}>{mood.label}</Text>
+                  </AnimatedPressable>
+                </FadeSlideIn>
+              ))}
+            </View>
 
             {dailyRecipe && isSectionVisible("recipeOfDay") ? (
               <>
@@ -468,6 +506,8 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.md,
       padding: spacing(1.75),
       marginTop: spacing(2),
+      ...shadow.floating,
+      shadowColor: colors.primary,
     },
     todaysPlanTextCol: { flex: 1 },
     todaysPlanLabel: { color: "#ffffffcc", fontSize: 11, fontWeight: "700" },
@@ -494,6 +534,14 @@ const createStyles = (colors: ThemeColors) =>
     searchIcon: { fontSize: 15, marginEnd: spacing(1) },
     searchPlaceholder: { color: colors.textMuted, fontSize: 14 },
     sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
+    moodRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1) },
+    moodTile: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing(2),
+      paddingVertical: spacing(1.25),
+    },
+    moodTileText: { color: colors.primaryDark, fontWeight: "700", fontSize: 13 },
     cuisineWrap: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1.5) },
     cuisineCard: {
       backgroundColor: colors.surface,
@@ -503,6 +551,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: "center",
       borderWidth: 1,
       borderColor: colors.border,
+      ...shadow.card,
     },
     cuisineEmoji: { fontSize: 26 },
     cuisineName: { fontWeight: "700", color: colors.text, marginTop: 6, fontSize: 12, textAlign: "center" },
@@ -517,6 +566,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: "center",
       justifyContent: "center",
       padding: spacing(1),
+      ...shadow.card,
     },
     actionTileText: { color: colors.text, fontWeight: "700", fontSize: 12, textAlign: "center" },
     leftoverRow: {

@@ -7,7 +7,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../context/AuthContext";
 import { useLocale } from "../i18n/LocaleContext";
-import { radius, spacing, type ThemeColors } from "../theme";
+import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { intersectAllergens } from "../utils/allergens";
 import type { TranslationKey } from "../i18n/translations";
@@ -95,6 +95,7 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: spacing(2),
       borderWidth: 1,
       borderColor: colors.border,
+      ...shadow.card,
     },
     imagePlaceholder: {
       width: "100%",

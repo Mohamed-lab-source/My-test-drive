@@ -3,12 +3,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "cookmate.cookStreak";
 
+const COOK_LOG_MAX_DAYS = 90;
+
 type StreakState = {
   currentStreak: number;
   longestStreak: number;
   totalCooked: number;
   lastCookedDate: string | null; // YYYY-MM-DD
   cookCounts: Record<string, number>;
+  /** Unique YYYY-MM-DD days cooked, ascending, capped to the last COOK_LOG_MAX_DAYS entries. */
+  cookLog: string[];
 };
 
 const DEFAULT_STATE: StreakState = {
@@ -17,6 +21,7 @@ const DEFAULT_STATE: StreakState = {
   totalCooked: 0,
   lastCookedDate: null,
   cookCounts: {},
+  cookLog: [],
 };
 
 function todayKey(): string {
@@ -43,6 +48,7 @@ type CookStreakContextValue = {
   recordCooked: (slug: string) => number;
   cookCountFor: (slug: string) => number;
   cookCounts: Record<string, number>;
+  cookLog: string[];
 };
 
 const CookStreakContext = createContext<CookStreakContextValue | undefined>(undefined);
@@ -67,9 +73,12 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
     let resultStreak = state.currentStreak;
     setState((prev) => {
       const nextCookCounts = { ...prev.cookCounts, [slug]: (prev.cookCounts[slug] ?? 0) + 1 };
+      const nextCookLog = prev.cookLog.includes(today)
+        ? prev.cookLog
+        : [...prev.cookLog, today].slice(-COOK_LOG_MAX_DAYS);
       if (prev.lastCookedDate === today) {
         resultStreak = prev.currentStreak;
-        const next: StreakState = { ...prev, cookCounts: nextCookCounts };
+        const next: StreakState = { ...prev, cookCounts: nextCookCounts, cookLog: nextCookLog };
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
         return next;
       }
@@ -81,6 +90,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
         totalCooked: prev.totalCooked + 1,
         lastCookedDate: today,
         cookCounts: nextCookCounts,
+        cookLog: nextCookLog,
       };
       resultStreak = nextStreak;
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
@@ -106,6 +116,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       recordCooked,
       cookCountFor,
       cookCounts: state.cookCounts,
+      cookLog: state.cookLog,
     }),
     [
       isLoading,
@@ -113,6 +124,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       state.longestStreak,
       state.totalCooked,
       state.cookCounts,
+      state.cookLog,
       cookedToday,
       recordCooked,
       cookCountFor,

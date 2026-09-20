@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipes } from "../api/endpoints";
 import { RecipeCard } from "../components/RecipeCard";
+import { RecipeCardSkeleton } from "../components/Skeleton";
 import { Chip } from "../components/Chip";
 import { useAuth } from "../context/AuthContext";
 import { useLocale } from "../i18n/LocaleContext";
@@ -15,8 +16,11 @@ import type { Difficulty, DishTag, RecipeSummary } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
+const LIGHT_CALORIE_THRESHOLD = 400;
+
 export function RecipeListScreen({ route, navigation }: Props) {
-  const { cuisineSlug, tag: initialTag, dishType, title, sortByCost, sortByRating } = route.params;
+  const { cuisineSlug, tag: initialTag, dishType, title, sortByCost, sortByRating, lightOnly: initialLightOnly } =
+    route.params;
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -27,6 +31,7 @@ export function RecipeListScreen({ route, navigation }: Props) {
   );
   const [hideAllergens, setHideAllergens] = useState(false);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | undefined>(undefined);
+  const [lightOnly, setLightOnly] = useState(!!initialLightOnly);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,9 +39,12 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const allergenFiltered = hideAllergens
     ? recipes.filter((r) => intersectAllergens(r.allergens, myAllergies).length === 0)
     : recipes;
-  const filteredRecipes = difficultyFilter
+  const difficultyFiltered = difficultyFilter
     ? allergenFiltered.filter((r) => r.difficulty === difficultyFilter)
     : allergenFiltered;
+  const filteredRecipes = lightOnly
+    ? difficultyFiltered.filter((r) => r.caloriesPerServing <= LIGHT_CALORIE_THRESHOLD)
+    : difficultyFiltered;
 
   const displayRecipes =
     sortMode === "cheapest"
@@ -117,20 +125,33 @@ export function RecipeListScreen({ route, navigation }: Props) {
             onPress={() => setDifficultyFilter(f.value)}
           />
         ))}
+        <Chip
+          label={t("recipeList.filter.lightOnly")}
+          selected={lightOnly}
+          onPress={() => setLightOnly((v) => !v)}
+        />
       </View>
-      <FlatList
-        data={displayRecipes}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item, index }) => (
-          <RecipeCard
-            recipe={item}
-            index={index}
-            onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })}
-          />
-        )}
-        ListEmptyComponent={!loading ? <Text style={styles.empty}>{t("recipeList.empty")}</Text> : null}
-      />
+      {loading ? (
+        <View style={styles.listContent}>
+          {[0, 1, 2].map((i) => (
+            <RecipeCardSkeleton key={i} />
+          ))}
+        </View>
+      ) : (
+        <FlatList
+          data={displayRecipes}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item, index }) => (
+            <RecipeCard
+              recipe={item}
+              index={index}
+              onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })}
+            />
+          )}
+          ListEmptyComponent={<Text style={styles.empty}>{t("recipeList.empty")}</Text>}
+        />
+      )}
     </SafeAreaView>
   );
 }

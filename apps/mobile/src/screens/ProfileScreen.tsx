@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { apiErrorMessage } from "../api/client";
 import { fetchCuisines } from "../api/endpoints";
+import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useLocale } from "../i18n/LocaleContext";
@@ -73,13 +74,15 @@ export function ProfileScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.loggedOut}>
           <Text style={styles.headline}>{t("profile.saveTitle")}</Text>
           <Text style={styles.subtitle}>{t("profile.saveSubtitle")}</Text>
-          <StreakStats
-            displayStreak={displayStreak}
-            longestStreak={longestStreak}
-            totalCooked={totalCooked}
-            t={t}
-            styles={styles}
-          />
+          <AnimatedPressable pressScale={0.98} onPress={() => navigation.navigate("CookingStats")}>
+            <StreakStats
+              displayStreak={displayStreak}
+              longestStreak={longestStreak}
+              totalCooked={totalCooked}
+              t={t}
+              styles={styles}
+            />
+          </AnimatedPressable>
           <View style={styles.buttonSpacing}>
             <PrimaryButton label={t("profile.login")} onPress={() => navigation.navigate("Login")} />
           </View>
@@ -170,13 +173,15 @@ export function ProfileScreen({ navigation }: Props) {
         <Text style={styles.headline}>{user.name}</Text>
         <Text style={styles.subtitle}>{user.email}</Text>
 
-        <StreakStats
-          displayStreak={displayStreak}
-          longestStreak={longestStreak}
-          totalCooked={totalCooked}
-          t={t}
-          styles={styles}
-        />
+        <AnimatedPressable pressScale={0.98} onPress={() => navigation.navigate("CookingStats")}>
+          <StreakStats
+            displayStreak={displayStreak}
+            longestStreak={longestStreak}
+            totalCooked={totalCooked}
+            t={t}
+            styles={styles}
+          />
+        </AnimatedPressable>
 
         <Text style={styles.section}>{t("profile.dietGoal")}</Text>
         <View style={styles.chipRow}>

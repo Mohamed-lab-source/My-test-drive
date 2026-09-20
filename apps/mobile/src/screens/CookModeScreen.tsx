@@ -8,6 +8,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { StepTimer } from "../components/StepTimer";
+import { StreakCelebration } from "../components/StreakCelebration";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -21,6 +22,8 @@ import { radius, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CookMode">;
+
+const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 200, 365];
 
 export function CookModeScreen({ route, navigation }: Props) {
   useKeepAwake();
@@ -37,6 +40,7 @@ export function CookModeScreen({ route, navigation }: Props) {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [gathered, setGathered] = useState<Set<string>>(new Set());
+  const [celebrationStreak, setCelebrationStreak] = useState<number | null>(null);
 
   const toggleGathered = (name: string) => {
     setGathered((prev) => {
@@ -88,20 +92,28 @@ export function CookModeScreen({ route, navigation }: Props) {
     ]);
   };
 
+  const showDoneAlert = (streak: number) => {
+    const message = streak > 1 ? t("cookMode.doneMessageStreak", { streak }) : t("cookMode.doneMessage");
+    Alert.alert(t("cookMode.doneTitle"), message, [
+      {
+        text: t("cookMode.saveLeftovers"),
+        onPress: () => {
+          addLeftover({ slug, title, cuisineSlug }, servings);
+          navigation.goBack();
+        },
+      },
+      { text: t("cookMode.doneButton"), onPress: () => navigation.goBack() },
+    ]);
+  };
+
   const goNext = () => {
     if (isLast) {
       const streak = recordCooked(slug);
-      const message = streak > 1 ? t("cookMode.doneMessageStreak", { streak }) : t("cookMode.doneMessage");
-      Alert.alert(t("cookMode.doneTitle"), message, [
-        {
-          text: t("cookMode.saveLeftovers"),
-          onPress: () => {
-            addLeftover({ slug, title, cuisineSlug }, servings);
-            navigation.goBack();
-          },
-        },
-        { text: t("cookMode.doneButton"), onPress: () => navigation.goBack() },
-      ]);
+      if (STREAK_MILESTONES.includes(streak)) {
+        setCelebrationStreak(streak);
+      } else {
+        showDoneAlert(streak);
+      }
       return;
     }
     setIndex((i) => Math.min(steps.length - 1, i + 1));
@@ -229,6 +241,19 @@ export function CookModeScreen({ route, navigation }: Props) {
           </View>
         </View>
       </Modal>
+
+      <StreakCelebration
+        visible={celebrationStreak !== null}
+        streak={celebrationStreak ?? 0}
+        title={t("cookMode.milestoneTitle", { streak: celebrationStreak ?? 0 })}
+        subtitle={t("cookMode.milestoneSubtitle")}
+        buttonLabel={t("cookMode.milestoneContinue")}
+        onDismiss={() => {
+          const streak = celebrationStreak;
+          setCelebrationStreak(null);
+          if (streak !== null) showDoneAlert(streak);
+        }}
+      />
     </SafeAreaView>
   );
 }

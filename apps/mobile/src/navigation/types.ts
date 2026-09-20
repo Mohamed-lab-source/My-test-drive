@@ -18,6 +18,7 @@ export type RootStackParamList = {
     title: string;
     sortByCost?: boolean;
     sortByRating?: boolean;
+    lightOnly?: boolean;
   };
   RecipeDetail: { slug: string };
   ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   MealPlanner: undefined;
   PantryFinder: undefined;
   CustomizeHome: undefined;
+  CookingStats: undefined;
 };
 
 declare global {

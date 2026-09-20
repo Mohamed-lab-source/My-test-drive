@@ -11,6 +11,7 @@ import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
+import { SkeletonBlock } from "../components/Skeleton";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { StarRating } from "../components/StarRating";
 import { useLocale } from "../i18n/LocaleContext";
@@ -111,8 +112,22 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
   if (loading || !recipe) {
     return (
-      <SafeAreaView style={styles.loadingSafe}>
-        <ActivityIndicator color={colors.primary} size="large" />
+      <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        <ScrollView>
+          <SkeletonBlock style={styles.hero} />
+          <View style={styles.content}>
+            <SkeletonBlock style={styles.skeletonTitle} />
+            <SkeletonBlock style={styles.skeletonDescription} />
+            <View style={styles.metaRow}>
+              {[0, 1, 2, 3].map((i) => (
+                <SkeletonBlock key={i} style={styles.skeletonPill} />
+              ))}
+            </View>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <SkeletonBlock key={i} style={styles.skeletonLine} />
+            ))}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -517,7 +532,10 @@ function MetaPill({ label, styles }: { label: string; styles: Styles }) {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  loadingSafe: { flex: 1, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" },
+  skeletonTitle: { height: 24, width: "60%", marginTop: spacing(1), borderRadius: 6 },
+  skeletonDescription: { height: 14, width: "90%", marginTop: spacing(1.5), borderRadius: 6 },
+  skeletonPill: { height: 26, width: 70, borderRadius: radius.pill, marginEnd: spacing(1), marginBottom: spacing(1) },
+  skeletonLine: { height: 14, width: "100%", marginTop: spacing(1.5), borderRadius: 6 },
   hero: {
     width: "100%",
     height: 200,

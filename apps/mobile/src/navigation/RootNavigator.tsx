@@ -19,6 +19,7 @@ import { SearchScreen } from "../screens/SearchScreen";
 import { MealPlannerScreen } from "../screens/MealPlannerScreen";
 import { PantryFinderScreen } from "../screens/PantryFinderScreen";
 import { CustomizeHomeScreen } from "../screens/CustomizeHomeScreen";
+import { CookingStatsScreen } from "../screens/CookingStatsScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -105,6 +106,11 @@ export function RootNavigator() {
           name="CustomizeHome"
           component={CustomizeHomeScreen}
           options={{ title: t("customizeHome.title") }}
+        />
+        <Stack.Screen
+          name="CookingStats"
+          component={CookingStatsScreen}
+          options={{ title: t("cookingStats.title") }}
         />
       </Stack.Navigator>
     </NavigationContainer>
