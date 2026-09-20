@@ -1,0 +1,81 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - claude/finance-task-management-app-6lz29i
+    paths:
+      - "app/**"
+      - "src/**"
+      - "assets/**"
+      - "app.json"
+      - "package.json"
+      - "package-lock.json"
+      - "babel.config.js"
+      - "metro.config.js"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/anchor-debug.apk
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anchor-debug-apk
+          path: dist/anchor-debug.apk
+
+      - name: Publish to "latest APK" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: anchor-apk-latest
+          name: Anchor — latest APK
+          body: |
+            Auto-built from commit ${{ github.sha }} on `${{ github.ref_name }}`.
+
+            Download `anchor-debug.apk` below, then on your Android phone open
+            it (or transfer it and open it) to install — you'll need to allow
+            "install unknown apps" for the browser/file app you use. This is a
+            debug-signed build for personal sideloading.
+          files: dist/anchor-debug.apk
+          make_latest: true
