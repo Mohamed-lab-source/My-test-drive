@@ -1,4 +1,4 @@
-# Amanah
+# Anchor
 
 A local-first personal finance and life-organization app, built with Expo (React Native) and an Apple-inspired design system.
 
@@ -21,7 +21,6 @@ Everything lives on-device in SQLite — no account, no server, no network depen
 
 **Life**
 - Daily 5-prayer tracker with streaks
-- General habit tracking
 - Wishlist / ideas board with priority and price
 
 **Settings**

@@ -52,7 +52,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md }}>
           <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>{greeting()}</Text>
-          <Text style={[typography.largeTitle, { color: colors.label }]}>Amanah</Text>
+          <Text style={[typography.largeTitle, { color: colors.label }]}>Anchor</Text>
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

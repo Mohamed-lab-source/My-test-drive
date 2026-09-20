@@ -37,7 +37,7 @@ export default function SettingsScreen() {
 
   const handleExport = async () => {
     const json = await exportAllData();
-    await Share.share({ message: json, title: 'Amanah backup' });
+    await Share.share({ message: json, title: 'Anchor backup' });
   };
 
   const handleImport = async () => {
@@ -49,7 +49,7 @@ export default function SettingsScreen() {
       setImportVisible(false);
       Alert.alert('Import complete', 'Your data has been restored.');
     } catch (e) {
-      Alert.alert('Import failed', 'That did not look like a valid Amanah backup.');
+      Alert.alert('Import failed', 'That did not look like a valid Anchor backup.');
     } finally {
       setBusy(false);
     }
@@ -141,7 +141,7 @@ export default function SettingsScreen() {
 
         <View style={{ paddingHorizontal: spacing.lg }}>
           <Text style={[typography.caption1, { color: colors.tertiaryLabel, textAlign: 'center' }]}>
-            Amanah · everything stays on this device
+            Anchor · everything stays on this device
           </Text>
         </View>
       </ScrollView>

@@ -13,10 +13,6 @@ const TABLES = [
   'projects',
   'tasks',
   'meetings',
-  'identities',
-  'atomic_habits',
-  'checkins',
-  'scorecard_entries',
   'prayer_logs',
 ];
 

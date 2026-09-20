@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Amanah",
-    "slug": "amanah",
-    "scheme": "amanah",
+    "name": "Anchor",
+    "slug": "anchor",
+    "scheme": "anchor",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.amanah.app"
+      "bundleIdentifier": "com.anchor.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +20,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.amanah.app"
+      "package": "com.anchor.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",

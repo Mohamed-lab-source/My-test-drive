@@ -156,59 +156,6 @@ export interface Meeting {
   created_at: string;
 }
 
-// Atomic Habits row shapes (raw SQLite rows — JSON-encoded columns are
-// serialized/parsed to the rich domain types in src/domain/habits).
-export interface IdentityRow {
-  id: string;
-  statement: string;
-  why: string | null;
-  is_archived: number;
-  created_at: string;
-}
-
-export interface AtomicHabitRow {
-  id: string;
-  name: string;
-  icon: string;
-  identity_id: string | null;
-  frequency_type: 'daily' | 'weekdays';
-  frequency_days: string | null; // JSON number[]
-  time_of_day: 'anytime' | 'morning' | 'afternoon' | 'evening';
-  cue: string;
-  craving: string;
-  response: string;
-  reward: string;
-  two_minute_version: string;
-  stack_anchor_type: 'none' | 'habit' | 'custom';
-  stack_anchor_habit_id: string | null;
-  stack_anchor_text: string | null;
-  sort_order: number;
-  tags: string; // JSON string[]
-  is_archived: number;
-  created_at: string;
-}
-
-export interface CheckInRow {
-  id: string;
-  habit_id: string;
-  date: string;
-  completed_full: number;
-  used_two_minute_version: number;
-  skipped: number;
-  frozen: number;
-  note: string | null;
-  created_at: string;
-}
-
-export type ScorecardRating = '+' | '-' | '=';
-export interface ScorecardEntryRow {
-  id: string;
-  activity: string;
-  rating: ScorecardRating;
-  note: string | null;
-  created_at: string;
-}
-
 export type Prayer = 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha';
 export interface PrayerLog {
   id: string;

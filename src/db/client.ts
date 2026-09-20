@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { CREATE_TABLES_SQL } from './schema';
 
-const DB_NAME = 'amanah.db';
+const DB_NAME = 'anchor.db';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 

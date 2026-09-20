@@ -28,7 +28,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDefaultAccountId: (id) => set({ defaultAccountId: id }),
     }),
     {
-      name: 'amanah-settings',
+      name: 'anchor-settings',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )
