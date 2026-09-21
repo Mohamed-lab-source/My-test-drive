@@ -16,6 +16,7 @@ import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { Sheet } from '../../../src/ui/Sheet';
 import { Button } from '../../../src/ui/Button';
 import { exportAllData, importAllData, resetAllData } from '../../../src/db/backup';
+import { useAuth } from '../../../src/auth/AuthProvider';
 
 const APPEARANCE_OPTIONS: Appearance[] = ['system', 'light', 'dark'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'EGP', 'MAD', 'TRY'];
@@ -25,6 +26,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { appearance, setAppearance, currency, setCurrency } = useSettingsStore();
+  const { user, signOut } = useAuth();
   const hydrateFinance = useFinanceStore((s) => s.hydrate);
   const hydrateProductivity = useProductivityStore((s) => s.hydrate);
   const hydrateLife = useLifeStore((s) => s.hydrate);
@@ -73,6 +75,20 @@ export default function SettingsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
         <ScreenHeader title="Settings" />
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs, textTransform: 'uppercase' }]}>
+            Account
+          </Text>
+          <Card padded={false}>
+            <ListRow
+              title={user?.name || 'Anchor account'}
+              subtitle={user?.email}
+              leading={<IconCircle name="person.fill" color={colors.indigo} size={32} />}
+            />
+            <ListRow title="Sign out" destructive isLast onPress={signOut} />
+          </Card>
+        </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs, textTransform: 'uppercase' }]}>

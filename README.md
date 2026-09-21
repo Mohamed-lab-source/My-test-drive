@@ -1,8 +1,18 @@
 # Anchor
 
-A local-first personal finance and life-organization app, built with Expo (React Native) and an Apple-inspired design system.
+A personal finance and life-organization app, built with Expo (React Native) and an Apple-inspired design system.
 
-Everything lives on-device in SQLite — no account, no server, no network dependency.
+Your Money/Tasks/Life data lives on-device in SQLite. Opening the app requires an account (see **Account** below) — currently backed by a local placeholder while a real Firebase project is being connected.
+
+## Account
+
+Anchor opens to a sign-in flow before showing any of your data:
+
+- **Welcome** — Sign In or Create Account
+- **Create Account** — a short, animated wizard: name → email → password → done
+- **Sign In** — email + password
+
+This is designed against a swappable `AuthBackend` interface (`src/auth/backend.ts`). Right now it's backed by `src/auth/localAuthBackend.ts`, which stores accounts in on-device AsyncStorage as a **temporary stand-in** — it is not secure and not meant to ship as-is. Once a Firebase project is connected (Authentication + Firestore), a `firebaseAuthBackend.ts` replaces it behind that same interface, and the plan is for Money/Tasks/Life data to sync to Firestore under the signed-in account rather than staying purely local.
 
 ## Features
 
@@ -53,10 +63,13 @@ Scan the QR code with Expo Go (iOS/Android), or press `i` / `a` for a simulator,
 ## Project structure
 
 ```
-app/                  expo-router screens (tabs: Home, Money, Tasks, Life, Settings)
+app/(auth)/           sign-in / create-account flow (gates the tabs below)
+app/(tabs)/           expo-router screens (tabs: Home, Money, Tasks, Life, Settings)
+src/auth/             AuthProvider + swappable AuthBackend (local placeholder for now)
 src/db/               SQLite schema, client, repositories, backup/restore
 src/store/            zustand stores (finance, productivity, life, settings)
 src/theme/            colors, typography, spacing, ThemeProvider
 src/ui/               reusable design-system components
 src/features/         feature-specific components (add sheets, rows) grouped by domain
+src/widgets/          Android home-screen widgets (Prayers, Today, Net worth)
 ```
