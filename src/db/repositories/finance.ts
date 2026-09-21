@@ -1,4 +1,4 @@
-import { getDb, newId, nowIso } from '../client';
+import { newId, nowIso } from '../client';
 import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
 import type {
   Account,
@@ -47,8 +47,9 @@ export const deleteAccount = (id: string) => deleteRow('accounts', id);
 
 async function adjustAccountBalance(accountId: string | null, delta: number) {
   if (!accountId) return;
-  const db = await getDb();
-  await db.runAsync('UPDATE accounts SET balance = balance + ? WHERE id = ?', [delta, accountId]);
+  const account = await getRow<Account>('accounts', accountId);
+  if (!account) return;
+  await updateRow('accounts', accountId, { balance: account.balance + delta });
 }
 
 // ---------- Transactions ----------

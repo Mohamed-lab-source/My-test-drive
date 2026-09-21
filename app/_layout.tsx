@@ -9,6 +9,7 @@ import { useFinanceStore } from '../src/store/financeStore';
 import { useProductivityStore } from '../src/store/productivityStore';
 import { useLifeStore } from '../src/store/lifeStore';
 import { AuthProvider, useAuth, type AuthStatus } from '../src/auth/AuthProvider';
+import { pullAllFromCloud } from '../src/sync/firestoreSync';
 
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();
@@ -28,7 +29,7 @@ function useProtectedRoute(status: AuthStatus) {
 
 function AppShell() {
   const { colors, scheme } = useTheme();
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const [dataReady, setDataReady] = useState(false);
 
   const hydrateFinance = useFinanceStore((s) => s.hydrate);
@@ -45,6 +46,15 @@ function AppShell() {
         setDataReady(true);
       });
   }, []);
+
+  // Once signed in, pull any data synced from other devices down into local
+  // SQLite, then re-hydrate the stores so the UI reflects the merged data.
+  useEffect(() => {
+    if (status !== 'signedIn' || !user) return;
+    pullAllFromCloud()
+      .then(() => Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife()]))
+      .catch((e) => console.error('Cloud sync failed', e));
+  }, [status, user?.uid]);
 
   if (status === 'loading' || !dataReady) {
     return (

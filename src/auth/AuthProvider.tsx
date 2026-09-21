@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { authBackend } from './backend';
+import { setSyncUser } from '../sync/firestoreSync';
 import { AuthError, type AuthUser } from './types';
 
 export type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return authBackend.onAuthStateChanged((u) => {
       setUser(u);
       setStatus(u ? 'signedIn' : 'signedOut');
+      setSyncUser(u ? u.uid : null);
     });
   }, []);
 

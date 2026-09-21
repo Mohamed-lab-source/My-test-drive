@@ -20,7 +20,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anchor.app"
+      "package": "com.anchor.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -30,6 +31,7 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
+      "@react-native-firebase/app",
       [
         "expo-splash-screen",
         {

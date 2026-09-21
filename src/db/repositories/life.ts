@@ -23,13 +23,19 @@ export const listPrayerLogsSince = (sinceDate: string) =>
   whereRows<PrayerLog>('prayer_logs', 'date >= ?', [sinceDate], 'date ASC');
 
 export async function setPrayerLog(date: string, prayer: Prayer, completed: boolean) {
-  const db = await getDb();
-  await db.runAsync(
-    `INSERT INTO prayer_logs (id, date, prayer, completed, completed_at)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(date, prayer) DO UPDATE SET completed = excluded.completed, completed_at = excluded.completed_at`,
-    [newId(), date, prayer, completed ? 1 : 0, completed ? nowIso() : null]
-  );
+  const existing = await whereRows<PrayerLog>('prayer_logs', 'date = ? AND prayer = ?', [date, prayer]);
+  const completedAt = completed ? nowIso() : null;
+  if (existing.length > 0) {
+    await updateRow('prayer_logs', existing[0].id, { completed: completed ? 1 : 0, completed_at: completedAt });
+  } else {
+    await insertRow('prayer_logs', {
+      id: newId(),
+      date,
+      prayer,
+      completed: completed ? 1 : 0,
+      completed_at: completedAt,
+    });
+  }
 }
 
 export async function computePrayerStreak(): Promise<number> {

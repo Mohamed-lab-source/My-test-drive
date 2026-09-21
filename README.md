@@ -2,7 +2,7 @@
 
 A personal finance and life-organization app, built with Expo (React Native) and an Apple-inspired design system.
 
-Your Money/Tasks/Life data lives on-device in SQLite. Opening the app requires an account (see **Account** below) — currently backed by a local placeholder while a real Firebase project is being connected.
+Your Money/Tasks/Life data lives on-device in SQLite and is the source of truth the app reads from — opening the app requires a real account (see **Account** below), and that account's data also syncs to Firestore in the background.
 
 ## Account
 
@@ -12,7 +12,13 @@ Anchor opens to a sign-in flow before showing any of your data:
 - **Create Account** — a short, animated wizard: name → email → password → done
 - **Sign In** — email + password
 
-This is designed against a swappable `AuthBackend` interface (`src/auth/backend.ts`). Right now it's backed by `src/auth/localAuthBackend.ts`, which stores accounts in on-device AsyncStorage as a **temporary stand-in** — it is not secure and not meant to ship as-is. Once a Firebase project is connected (Authentication + Firestore), a `firebaseAuthBackend.ts` replaces it behind that same interface, and the plan is for Money/Tasks/Life data to sync to Firestore under the signed-in account rather than staying purely local.
+This is designed against a swappable `AuthBackend` interface (`src/auth/backend.ts`), currently backed by `src/auth/firebaseAuthBackend.ts` (Firebase Authentication, email/password).
+
+## Cloud sync
+
+Once signed in, every write to the local SQLite tables (`src/db/helpers.ts`'s `insertRow`/`updateRow`/`deleteRow`) is mirrored in the background to Firestore under `users/{uid}/{table}/{id}` (`src/sync/firestoreSync.ts`). Local SQLite stays the source of truth the UI reads from — Firestore's native offline persistence queues writes made while offline and flushes them automatically on reconnect. On sign-in, `pullAllFromCloud()` fetches every synced table from Firestore and merges it into local SQLite, so a returning account picks its data back up on a new device.
+
+Firestore access is locked down by `firestore.rules` at the repo root: a user may only read/write documents under their own `users/{uid}` subtree. Deploy it with `firebase deploy --only firestore:rules` (or paste it into the Firebase console's Rules tab) once the project is set up.
 
 ## Features
 
@@ -47,6 +53,7 @@ This is designed against a swappable `AuthBackend` interface (`src/auth/backend.
 
 - Expo SDK 57 (React Native 0.86, React 19), TypeScript, Expo Router
 - SQLite via `expo-sqlite`, hand-rolled repositories (no ORM)
+- Firebase Authentication + Firestore via `@react-native-firebase/*` (native SDK, offline-first)
 - Zustand for app state
 - `react-native-reanimated` + `react-native-gesture-handler` for animations (sheets, swipe actions, spring transitions)
 - Custom iOS-styled design system (colors, typography, spacing) in `src/theme`
@@ -65,8 +72,9 @@ Scan the QR code with Expo Go (iOS/Android), or press `i` / `a` for a simulator,
 ```
 app/(auth)/           sign-in / create-account flow (gates the tabs below)
 app/(tabs)/           expo-router screens (tabs: Home, Money, Tasks, Life, Settings)
-src/auth/             AuthProvider + swappable AuthBackend (local placeholder for now)
+src/auth/             AuthProvider + swappable AuthBackend (Firebase Authentication)
 src/db/               SQLite schema, client, repositories, backup/restore
+src/sync/             Firestore cloud sync layer (users/{uid}/{table}/{id})
 src/store/            zustand stores (finance, productivity, life, settings)
 src/theme/            colors, typography, spacing, ThemeProvider
 src/ui/               reusable design-system components
