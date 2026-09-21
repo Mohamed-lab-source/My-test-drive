@@ -20,6 +20,7 @@ import { MealPlannerScreen } from "../screens/MealPlannerScreen";
 import { PantryFinderScreen } from "../screens/PantryFinderScreen";
 import { CustomizeHomeScreen } from "../screens/CustomizeHomeScreen";
 import { CookingStatsScreen } from "../screens/CookingStatsScreen";
+import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -111,6 +112,11 @@ export function RootNavigator() {
           name="CookingStats"
           component={CookingStatsScreen}
           options={{ title: t("cookingStats.title") }}
+        />
+        <Stack.Screen
+          name="LeanMuscleMode"
+          component={LeanMuscleModeScreen}
+          options={{ title: t("leanMuscle.title") }}
         />
       </Stack.Navigator>
     </NavigationContainer>

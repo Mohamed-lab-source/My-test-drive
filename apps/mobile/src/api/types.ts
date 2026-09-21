@@ -49,6 +49,7 @@ export type RecipeSummary = {
   allergens: Allergen[];
   caloriesPerServing: number;
   proteinPerServing: number;
+  fatPerServing: number;
   cuisine: { slug: string; name: string };
 };
 

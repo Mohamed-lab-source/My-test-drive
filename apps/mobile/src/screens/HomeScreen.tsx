@@ -336,6 +336,11 @@ export function HomeScreen({ navigation }: Props) {
                 },
                 { key: "planWeek", label: t("home.planWeek"), onPress: () => navigation.navigate("MealPlanner") },
                 {
+                  key: "leanMuscle",
+                  label: t("home.leanMuscle"),
+                  onPress: () => navigation.navigate("LeanMuscleMode"),
+                },
+                {
                   key: "pantryFinder",
                   label: t("home.pantryFinder"),
                   onPress: () => navigation.navigate("PantryFinder"),

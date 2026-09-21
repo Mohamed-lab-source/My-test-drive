@@ -57,6 +57,7 @@ export function recipeSummarySelect() {
             allergens: true,
             caloriesPerUnit: true,
             proteinPerUnit: true,
+            fatPerUnit: true,
           },
         },
       },
@@ -73,19 +74,24 @@ function estimateCostPerServing(
 }
 
 function estimateNutritionSummary(
-  ingredients: { quantity: number; ingredient: { caloriesPerUnit: number; proteinPerUnit: number } }[],
+  ingredients: {
+    quantity: number;
+    ingredient: { caloriesPerUnit: number; proteinPerUnit: number; fatPerUnit: number };
+  }[],
   baseServings: number
-): { caloriesPerServing: number; proteinPerServing: number } {
+): { caloriesPerServing: number; proteinPerServing: number; fatPerServing: number } {
   const totals = ingredients.reduce(
     (acc, ri) => ({
       kcal: acc.kcal + ri.quantity * ri.ingredient.caloriesPerUnit,
       protein: acc.protein + ri.quantity * ri.ingredient.proteinPerUnit,
+      fat: acc.fat + ri.quantity * ri.ingredient.fatPerUnit,
     }),
-    { kcal: 0, protein: 0 }
+    { kcal: 0, protein: 0, fat: 0 }
   );
   return {
     caloriesPerServing: Math.round(totals.kcal / baseServings),
     proteinPerServing: Math.round((totals.protein / baseServings) * 10) / 10,
+    fatPerServing: Math.round((totals.fat / baseServings) * 10) / 10,
   };
 }
 

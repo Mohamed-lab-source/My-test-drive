@@ -249,6 +249,13 @@ export function MealPlannerScreen({ navigation }: Props) {
             />
           </View>
         ) : null}
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
+            label={t("leanMuscle.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("LeanMuscleMode")}
+          />
+        </View>
 
         {weeklyNutrition ? (
           <View style={styles.nutritionRow}>

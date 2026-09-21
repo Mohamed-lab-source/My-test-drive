@@ -39,6 +39,7 @@ export type RootStackParamList = {
   PantryFinder: undefined;
   CustomizeHome: undefined;
   CookingStats: undefined;
+  LeanMuscleMode: undefined;
 };
 
 declare global {
