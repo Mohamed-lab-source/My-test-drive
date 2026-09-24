@@ -44,6 +44,20 @@ export async function toggleTaskDone(id: string, isDone: boolean) {
   });
 }
 
+// A task scheduled for a past day that's still open (not done, not already
+// backlog) missed its day — send it to the backlog instead of leaving it
+// stuck showing as "today" forever.
+export async function rolloverStaleTasks(todayStr: string): Promise<void> {
+  const stale = await whereRows<Task>(
+    'tasks',
+    "status IN ('todo', 'in_progress') AND scheduled_date IS NOT NULL AND scheduled_date < ?",
+    [todayStr]
+  );
+  for (const task of stale) {
+    await updateTask(task.id, { status: 'backlog' });
+  }
+}
+
 // ---------- Meetings ----------
 export const listMeetings = () => allRows<Meeting>('meetings', 'start_at ASC');
 export const listUpcomingMeetings = (fromIso: string) =>

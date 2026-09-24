@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Meeting, Project, Task } from '../db/types';
 import * as repo from '../db/repositories/productivity';
+import { todayKey } from '../db/client';
 import { refreshTasksWidget } from '../widgets/refresh';
 
 interface ProductivityState {
@@ -34,6 +35,7 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
   meetings: [],
 
   hydrate: async () => {
+    await repo.rolloverStaleTasks(todayKey());
     const [projects, tasks, meetings] = await Promise.all([
       repo.listProjects(),
       repo.listTasks(),
