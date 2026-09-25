@@ -46,6 +46,17 @@ export async function deleteRow(table: string, id: string): Promise<void> {
   syncHooks?.onWrite(table, id, null, true);
 }
 
+// Swaps two rows' sort_order, used for simple up/down reordering lists
+// (tasks, projects, habits) without a drag gesture library.
+export async function swapSortOrder(
+  table: string,
+  a: { id: string; sort_order: number },
+  b: { id: string; sort_order: number }
+): Promise<void> {
+  await updateRow(table, a.id, { sort_order: b.sort_order });
+  await updateRow(table, b.id, { sort_order: a.sort_order });
+}
+
 // Insert-or-replace used only when pulling rows down from the cloud, so it
 // deliberately does NOT fire syncHooks — that would just push straight back
 // the data we just pulled.

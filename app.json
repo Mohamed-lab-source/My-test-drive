@@ -32,6 +32,8 @@
       "expo-router",
       "expo-sqlite",
       "@react-native-firebase/app",
+      "expo-notifications",
+      "expo-local-authentication",
       [
         "expo-splash-screen",
         {

@@ -16,6 +16,8 @@ export default function MoneyLayout() {
       <Stack.Screen name="subscriptions" options={{ presentation: 'card' }} />
       <Stack.Screen name="savings" options={{ presentation: 'card' }} />
       <Stack.Screen name="transactions" options={{ presentation: 'card' }} />
+      <Stack.Screen name="budgets" options={{ presentation: 'card' }} />
+      <Stack.Screen name="analytics" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

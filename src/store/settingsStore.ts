@@ -9,10 +9,12 @@ interface SettingsState {
   currency: string;
   hasOnboarded: boolean;
   defaultAccountId: string | null;
+  notificationsEnabled: boolean;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
   setDefaultAccountId: (id: string | null) => void;
+  setNotificationsEnabled: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -22,10 +24,12 @@ export const useSettingsStore = create<SettingsState>()(
       currency: 'USD',
       hasOnboarded: false,
       defaultAccountId: null,
+      notificationsEnabled: false,
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),
       setDefaultAccountId: (id) => set({ defaultAccountId: id }),
+      setNotificationsEnabled: (v) => set({ notificationsEnabled: v }),
     }),
     {
       name: 'anchor-settings',

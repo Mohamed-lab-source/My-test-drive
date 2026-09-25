@@ -1,14 +1,24 @@
 import * as SQLite from 'expo-sqlite';
-import { CREATE_TABLES_SQL } from './schema';
+import { CREATE_TABLES_SQL, COLUMN_MIGRATIONS } from './schema';
 
 const DB_NAME = 'anchor.db';
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
+async function migrateColumns(db: SQLite.SQLiteDatabase): Promise<void> {
+  for (const { table, column, ddl } of COLUMN_MIGRATIONS) {
+    const existingCols = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+    if (!existingCols.some((c) => c.name === column)) {
+      await db.execAsync(ddl);
+    }
+  }
+}
+
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = SQLite.openDatabaseAsync(DB_NAME).then(async (db) => {
       await db.execAsync(CREATE_TABLES_SQL);
+      await migrateColumns(db);
       return db;
     });
   }

@@ -8,8 +8,12 @@ import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 import { useFinanceStore } from '../src/store/financeStore';
 import { useProductivityStore } from '../src/store/productivityStore';
 import { useLifeStore } from '../src/store/lifeStore';
+import { useHabitsStore } from '../src/store/habitsStore';
 import { AuthProvider, useAuth, type AuthStatus } from '../src/auth/AuthProvider';
 import { pullAllFromCloud } from '../src/sync/firestoreSync';
+import { UndoSnackbar } from '../src/ui/UndoSnackbar';
+import { initNotifications } from '../src/notifications/scheduler';
+import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();
@@ -35,11 +39,13 @@ function AppShell() {
   const hydrateFinance = useFinanceStore((s) => s.hydrate);
   const hydrateProductivity = useProductivityStore((s) => s.hydrate);
   const hydrateLife = useLifeStore((s) => s.hydrate);
+  const hydrateHabits = useHabitsStore((s) => s.hydrate);
 
   useProtectedRoute(status);
 
   useEffect(() => {
-    Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife()])
+    initNotifications();
+    Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()])
       .then(() => setDataReady(true))
       .catch((e) => {
         console.error('Failed to hydrate app state', e);
@@ -52,7 +58,7 @@ function AppShell() {
   useEffect(() => {
     if (status !== 'signedIn' || !user) return;
     pullAllFromCloud()
-      .then(() => Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife()]))
+      .then(() => Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()]))
       .catch((e) => console.error('Cloud sync failed', e));
   }, [status, user?.uid]);
 
@@ -64,13 +70,21 @@ function AppShell() {
     );
   }
 
-  return (
+  const content = (
     <>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="search" options={{ presentation: 'modal' }} />
       </Stack>
+      <UndoSnackbar />
+    </>
+  );
+
+  return (
+    <>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {status === 'signedIn' ? <BiometricLockGate>{content}</BiometricLockGate> : content}
     </>
   );
 }

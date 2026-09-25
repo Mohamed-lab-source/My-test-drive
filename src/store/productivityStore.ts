@@ -3,6 +3,7 @@ import type { Meeting, Project, Task } from '../db/types';
 import * as repo from '../db/repositories/productivity';
 import { todayKey } from '../db/client';
 import { refreshTasksWidget } from '../widgets/refresh';
+import { cancelMeetingReminder, scheduleMeetingReminder } from '../notifications/scheduler';
 
 interface ProductivityState {
   loaded: boolean;
@@ -22,6 +23,8 @@ interface ProductivityState {
 
   addProject: (input: Parameters<typeof repo.createProject>[0]) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
+  moveProject: (id: string, direction: 'up' | 'down') => Promise<void>;
+  moveTask: (id: string, direction: 'up' | 'down') => Promise<void>;
 
   addMeeting: (input: Parameters<typeof repo.createMeeting>[0]) => Promise<void>;
   updateMeeting: (id: string, patch: Partial<Meeting>) => Promise<void>;
@@ -75,17 +78,38 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
     await repo.deleteProject(id);
     await get().refreshProjects();
   },
+  moveProject: async (id, direction) => {
+    const projects = get().projects;
+    const index = projects.findIndex((p) => p.id === id);
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (index === -1 || swapIndex < 0 || swapIndex >= projects.length) return;
+    await repo.reorderProjects(projects[index], projects[swapIndex]);
+    await get().refreshProjects();
+  },
+  moveTask: async (id, direction) => {
+    const tasks = get().tasks;
+    const index = tasks.findIndex((t) => t.id === id);
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (index === -1 || swapIndex < 0 || swapIndex >= tasks.length) return;
+    await repo.reorderTasks(tasks[index], tasks[swapIndex]);
+    await get().refreshTasks();
+  },
 
   addMeeting: async (input) => {
-    await repo.createMeeting(input);
+    const id = await repo.createMeeting(input);
     await get().refreshMeetings();
+    const meeting = get().meetings.find((m) => m.id === id);
+    if (meeting) scheduleMeetingReminder(meeting);
   },
   updateMeeting: async (id, patch) => {
     await repo.updateMeeting(id, patch);
     await get().refreshMeetings();
+    const meeting = get().meetings.find((m) => m.id === id);
+    if (meeting) scheduleMeetingReminder(meeting);
   },
   removeMeeting: async (id) => {
     await repo.deleteMeeting(id);
+    await cancelMeetingReminder(id);
     await get().refreshMeetings();
   },
 }));

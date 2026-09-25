@@ -44,6 +44,7 @@ export interface RecurringRule {
   reminder_days_before: number;
   notes: string | null;
   created_at: string;
+  is_paused: number;
 }
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
@@ -59,6 +60,7 @@ export interface Transaction {
   note: string | null;
   date: string;
   created_at: string;
+  receipt_uri: string | null;
 }
 
 export type DebtDirection = 'owed_to_me' | 'i_owe';
@@ -143,6 +145,16 @@ export interface Task {
   completed_at: string | null;
   sort_order: number;
   created_at: string;
+  repeat_frequency: RecurringFrequency | null;
+  repeat_interval: number | null;
+}
+
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  is_done: number;
+  sort_order: number;
 }
 
 export interface Meeting {
@@ -166,3 +178,44 @@ export interface PrayerLog {
 }
 
 export const PRAYERS: Prayer[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+
+export interface Budget {
+  id: string;
+  category_id: string;
+  monthly_limit: number;
+  currency: string;
+  created_at: string;
+}
+
+export interface Habit {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  is_archived: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface HabitLog {
+  id: string;
+  habit_id: string;
+  date: string;
+  completed: number;
+}
+
+export type JournalMood = 'great' | 'good' | 'okay' | 'low' | 'rough';
+export interface JournalEntry {
+  id: string;
+  date: string;
+  mood: JournalMood;
+  note: string | null;
+  created_at: string;
+}
+
+export interface FxRate {
+  id: string;
+  currency: string;
+  rate_to_base: number;
+  updated_at: string;
+}

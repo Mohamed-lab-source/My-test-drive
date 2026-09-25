@@ -74,6 +74,21 @@ const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   'airplane': 'airplane',
   'gamecontroller.fill': 'game-controller',
   'tshirt.fill': 'shirt',
+  'pause.fill': 'pause',
+  'play.fill': 'play',
+  'camera.fill': 'camera',
+  'photo.fill': 'image',
+  'chart.line.uptrend.xyaxis': 'trending-up',
+  'magnifyingglass': 'search',
+  'lock.fill': 'lock-closed',
+  'faceid': 'finger-print',
+  'arrow.up.arrow.down': 'swap-vertical',
+  'arrow.up': 'arrow-up',
+  'arrow.down': 'arrow-down',
+  'flame.fill': 'flame',
+  'face.smiling.fill': 'happy',
+  'folder.fill': 'folder',
+  'text.book.closed.fill': 'book',
 };
 
 interface IconProps {

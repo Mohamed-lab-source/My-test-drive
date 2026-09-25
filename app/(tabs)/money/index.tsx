@@ -11,6 +11,7 @@ import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
 import { formatMoney } from '../../../src/utils/money';
+import { convertToBase } from '../../../src/db/repositories/fx';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 
@@ -40,7 +41,7 @@ export default function MoneyScreen() {
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
   const currency = useSettingsStore((s) => s.currency);
-  const { accounts, transactions } = useFinanceStore();
+  const { accounts, transactions, fxRates } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
 
   // Opened via the Net worth widget's "+" button (anchor://money?action=add-expense).
@@ -48,7 +49,10 @@ export default function MoneyScreen() {
     if (action === 'add-expense') setAddVisible(true);
   }, [action]);
 
-  const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const netWorth = accounts.reduce(
+    (sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates),
+    0
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -82,10 +86,14 @@ export default function MoneyScreen() {
           </Card>
         </View>
 
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <QuickLink icon="exclamationmark.triangle.fill" label="Debts" color={colors.red} onPress={() => router.push('/money/debts')} />
           <QuickLink icon="repeat" label="Subscriptions" color={colors.purple} onPress={() => router.push('/money/subscriptions')} />
           <QuickLink icon="target" label="Savings" color={colors.green} onPress={() => router.push('/money/savings')} />
+        </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <QuickLink icon="chart.pie.fill" label="Budgets" color={colors.orange} onPress={() => router.push('/money/budgets')} />
+          <QuickLink icon="chart.bar.fill" label="Analytics" color={colors.teal} onPress={() => router.push('/money/analytics')} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}>

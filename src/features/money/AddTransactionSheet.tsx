@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Sheet } from '../../ui/Sheet';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
 import { ChipSelector } from '../../ui/ChipSelector';
 import { Button } from '../../ui/Button';
+import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -30,7 +32,15 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
   const [toAccountId, setToAccountId] = useState<string | null>(accounts[1]?.id ?? accounts[0]?.id ?? null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const pickReceipt = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6 });
+    if (!result.canceled && result.assets[0]) setReceiptUri(result.assets[0].uri);
+  };
 
   const relevantCategories = useMemo(
     () => categories.filter((c) => c.kind === 'both' || c.kind === type),
@@ -44,6 +54,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
     setNote('');
     setCategoryId(null);
     setTypeIndex(0);
+    setReceiptUri(null);
   };
 
   const handleSave = async () => {
@@ -60,6 +71,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
         recurring_id: null,
         note: note || null,
         date: new Date().toISOString(),
+        receipt_uri: receiptUri,
       });
       reset();
       onClose();
@@ -130,6 +142,30 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
         )}
 
         <TextField label="Note" placeholder="Optional note" value={note} onChangeText={setNote} />
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+          Receipt
+        </Text>
+        <Pressable
+          onPress={pickReceipt}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.tertiarySystemGroupedBackground,
+            borderRadius: 12,
+            padding: spacing.sm,
+            marginBottom: spacing.md,
+          }}
+        >
+          {receiptUri ? (
+            <Image source={{ uri: receiptUri }} style={{ width: 40, height: 40, borderRadius: 8 }} />
+          ) : (
+            <Icon name="camera.fill" size={20} color={colors.secondaryLabel} />
+          )}
+          <Text style={[typography.body, { color: colors.label, marginLeft: spacing.sm }]}>
+            {receiptUri ? 'Receipt attached · tap to change' : 'Attach a receipt photo'}
+          </Text>
+        </Pressable>
 
         <Button title="Save" onPress={handleSave} disabled={!canSave} loading={saving} style={{ marginTop: spacing.sm }} />
       </ScrollView>

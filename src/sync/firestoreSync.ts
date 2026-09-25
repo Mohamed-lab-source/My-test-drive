@@ -26,6 +26,12 @@ export const SYNCED_TABLES = [
   'tasks',
   'meetings',
   'prayer_logs',
+  'budgets',
+  'subtasks',
+  'habits',
+  'habit_logs',
+  'journal_entries',
+  'fx_rates',
 ] as const;
 
 let currentUid: string | null = null;

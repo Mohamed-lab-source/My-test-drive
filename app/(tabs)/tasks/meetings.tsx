@@ -8,13 +8,19 @@ import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
+import { showUndoDelete } from '../../../src/ui/undo';
 import { formatDateLong, formatTime } from '../../../src/utils/date';
 import { AddMeetingSheet } from '../../../src/features/tasks/AddMeetingSheet';
 
 export default function MeetingsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { meetings, removeMeeting } = useProductivityStore();
+  const { meetings, removeMeeting, refreshMeetings } = useProductivityStore();
   const [addVisible, setAddVisible] = useState(false);
+
+  const handleDelete = async (meeting: (typeof meetings)[number]) => {
+    await removeMeeting(meeting.id);
+    showUndoDelete('meetings', meeting, 'Meeting deleted', refreshMeetings);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -24,7 +30,7 @@ export default function MeetingsScreen() {
           <EmptyState icon="calendar" title="No meetings scheduled" />
         ) : (
           meetings.map((m) => (
-            <SwipeableRow key={m.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => removeMeeting(m.id) }]}>
+            <SwipeableRow key={m.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(m) }]}>
               <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
                 <IconCircle name="calendar" color={colors.indigo} />
                 <View style={{ marginLeft: spacing.sm, flex: 1 }}>

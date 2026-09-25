@@ -2,6 +2,7 @@ import { newId, nowIso } from '../client';
 import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
 import type {
   Account,
+  Budget,
   Category,
   Debt,
   DebtPayment,
@@ -71,10 +72,10 @@ export const listTransactionsForCategory = (categoryId: string) =>
   whereRows<Transaction>('transactions', 'category_id = ?', [categoryId], 'date DESC');
 
 export async function createTransaction(
-  input: Omit<Transaction, 'id' | 'created_at'>
+  input: Omit<Transaction, 'id' | 'created_at' | 'receipt_uri'> & { receipt_uri?: string | null }
 ): Promise<string> {
   const id = newId();
-  await insertRow('transactions', { id, ...input, created_at: nowIso() });
+  await insertRow('transactions', { id, ...input, receipt_uri: input.receipt_uri ?? null, created_at: nowIso() });
 
   if (input.type === 'income') {
     await adjustAccountBalance(input.account_id, input.amount);
@@ -106,15 +107,24 @@ export const listRecurringRules = () => allRows<RecurringRule>('recurring_rules'
 export const getRecurringRule = (id: string) => getRow<RecurringRule>('recurring_rules', id);
 
 export async function createRecurringRule(
-  input: Omit<RecurringRule, 'id' | 'created_at' | 'is_active'>
+  input: Omit<RecurringRule, 'id' | 'created_at' | 'is_active' | 'is_paused'>
 ) {
   const id = newId();
-  await insertRow('recurring_rules', { id, ...input, is_active: 1, created_at: nowIso() });
+  await insertRow('recurring_rules', { id, ...input, is_active: 1, is_paused: 0, created_at: nowIso() });
   return id;
 }
 export const updateRecurringRule = (id: string, patch: Partial<RecurringRule>) =>
   updateRow('recurring_rules', id, patch);
 export const deleteRecurringRule = (id: string) => deleteRow('recurring_rules', id);
+export const setRecurringPaused = (id: string, paused: boolean) =>
+  updateRow('recurring_rules', id, { is_paused: paused ? 1 : 0 });
+
+// Advances a rule to its next cycle without posting a transaction — for a
+// bill you're intentionally not paying this time (e.g. a skipped month).
+export async function skipRecurringCycle(rule: RecurringRule): Promise<void> {
+  const next = advanceDueDate(rule.next_due_date, rule.frequency, rule.interval_count);
+  await updateRecurringRule(rule.id, { next_due_date: next });
+}
 
 export function advanceDueDate(dateIso: string, frequency: RecurringRule['frequency'], interval: number): string {
   const d = new Date(dateIso);
@@ -225,3 +235,22 @@ export async function contributeSavingsGoal(goalId: string, amount: number, note
     is_completed: current >= goal.target_amount ? 1 : 0,
   });
 }
+
+// ---------- Budgets ----------
+export const listBudgets = () => allRows<Budget>('budgets', 'created_at ASC');
+
+export async function setBudget(categoryId: string, monthlyLimit: number, currency: string): Promise<void> {
+  const existing = await whereRows<Budget>('budgets', 'category_id = ?', [categoryId]);
+  if (existing.length > 0) {
+    await updateRow('budgets', existing[0].id, { monthly_limit: monthlyLimit, currency });
+  } else {
+    await insertRow('budgets', {
+      id: newId(),
+      category_id: categoryId,
+      monthly_limit: monthlyLimit,
+      currency,
+      created_at: nowIso(),
+    });
+  }
+}
+export const deleteBudget = (id: string) => deleteRow('budgets', id);

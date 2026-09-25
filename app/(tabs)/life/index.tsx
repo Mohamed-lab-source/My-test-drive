@@ -12,6 +12,7 @@ import { Icon } from '../../../src/ui/Icon';
 import { PrayerTracker } from '../../../src/features/life/PrayerTracker';
 import { WishlistRow } from '../../../src/features/life/WishlistRow';
 import { EmptyState } from '../../../src/ui/EmptyState';
+import { IconCircle } from '../../../src/ui/IconCircle';
 import { formatMoney } from '../../../src/utils/money';
 
 export default function LifeScreen() {
@@ -31,6 +32,37 @@ export default function LifeScreen() {
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <PrayerTracker />
+        </View>
+
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <Pressable
+            onPress={() => router.push('/life/habits')}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              backgroundColor: colors.secondarySystemGroupedBackground,
+              borderRadius: 16,
+              paddingVertical: spacing.sm,
+              marginHorizontal: 4,
+            }}
+          >
+            <IconCircle name="flame.fill" color={colors.orange} size={40} />
+            <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>Habits</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/life/journal')}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              backgroundColor: colors.secondarySystemGroupedBackground,
+              borderRadius: 16,
+              paddingVertical: spacing.sm,
+              marginHorizontal: 4,
+            }}
+          >
+            <IconCircle name="text.book.closed.fill" color={colors.indigo} size={40} />
+            <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>Journal</Text>
+          </Pressable>
         </View>
 
         {topGoal ? (

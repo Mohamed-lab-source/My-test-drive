@@ -172,4 +172,74 @@ CREATE TABLE IF NOT EXISTS prayer_logs (
   completed_at TEXT,
   UNIQUE(date, prayer)
 );
+
+CREATE TABLE IF NOT EXISTS budgets (
+  id TEXT PRIMARY KEY NOT NULL,
+  category_id TEXT NOT NULL UNIQUE REFERENCES categories(id) ON DELETE CASCADE,
+  monthly_limit INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS subtasks (
+  id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  is_done INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id);
+
+CREATE TABLE IF NOT EXISTS habits (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS habit_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  completed INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(habit_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL UNIQUE,
+  mood TEXT NOT NULL CHECK (mood IN ('great', 'good', 'okay', 'low', 'rough')),
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- id is the currency code itself, so this plugs into the same generic
+-- insertRow/updateRow/getRow helpers (and their id-keyed WHERE clauses,
+-- Firestore sync, and JSON backup) as every other table.
+CREATE TABLE IF NOT EXISTS fx_rates (
+  id TEXT PRIMARY KEY NOT NULL,
+  currency TEXT NOT NULL UNIQUE,
+  rate_to_base REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
+
+// Columns added to already-shipped tables after their initial release. A
+// fresh install gets these from CREATE TABLE above; an existing on-device
+// database predates them, so client.ts applies these as ALTER TABLE
+// migrations, guarded by checking PRAGMA table_info first (SQLite has no
+// "ADD COLUMN IF NOT EXISTS").
+export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> = [
+  { table: 'transactions', column: 'receipt_uri', ddl: 'ALTER TABLE transactions ADD COLUMN receipt_uri TEXT' },
+  {
+    table: 'recurring_rules',
+    column: 'is_paused',
+    ddl: 'ALTER TABLE recurring_rules ADD COLUMN is_paused INTEGER NOT NULL DEFAULT 0',
+  },
+  { table: 'tasks', column: 'repeat_frequency', ddl: 'ALTER TABLE tasks ADD COLUMN repeat_frequency TEXT' },
+  { table: 'tasks', column: 'repeat_interval', ddl: 'ALTER TABLE tasks ADD COLUMN repeat_interval INTEGER' },
+];

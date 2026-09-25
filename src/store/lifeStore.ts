@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { todayKey } from '../db/client';
-import type { Prayer, PrayerLog, WishlistItem } from '../db/types';
+import type { JournalEntry, JournalMood, Prayer, PrayerLog, WishlistItem } from '../db/types';
 import { PRAYERS } from '../db/types';
 import * as repo from '../db/repositories/life';
+import * as journalRepo from '../db/repositories/journal';
+import { useFinanceStore } from './financeStore';
 import { refreshPrayerWidget } from '../widgets/refresh';
 
 interface LifeState {
@@ -10,17 +12,22 @@ interface LifeState {
   wishlist: WishlistItem[];
   todayPrayerLogs: PrayerLog[];
   prayerStreak: number;
+  journalEntries: JournalEntry[];
 
   hydrate: () => Promise<void>;
   refreshWishlist: () => Promise<void>;
   refreshToday: () => Promise<void>;
+  refreshJournal: () => Promise<void>;
 
   addWishlistItem: (input: Parameters<typeof repo.createWishlistItem>[0]) => Promise<void>;
   updateWishlistItem: (id: string, patch: Partial<WishlistItem>) => Promise<void>;
   removeWishlistItem: (id: string) => Promise<void>;
+  convertWishlistToGoal: (itemId: string) => Promise<void>;
 
   togglePrayer: (prayer: Prayer, completed: boolean) => Promise<void>;
   isPrayerDone: (prayer: Prayer) => boolean;
+
+  setTodayMood: (mood: JournalMood, note: string | null) => Promise<void>;
 }
 
 export const useLifeStore = create<LifeState>((set, get) => ({
@@ -28,12 +35,14 @@ export const useLifeStore = create<LifeState>((set, get) => ({
   wishlist: [],
   todayPrayerLogs: [],
   prayerStreak: 0,
+  journalEntries: [],
 
   hydrate: async () => {
-    const wishlist = await repo.listWishlistItems();
-    set({ wishlist, loaded: true });
+    const [wishlist, journalEntries] = await Promise.all([repo.listWishlistItems(), journalRepo.listJournalEntries()]);
+    set({ wishlist, journalEntries, loaded: true });
     await get().refreshToday();
   },
+  refreshJournal: async () => set({ journalEntries: await journalRepo.listJournalEntries() }),
   refreshWishlist: async () => set({ wishlist: await repo.listWishlistItems() }),
   refreshToday: async () => {
     const key = todayKey();
@@ -57,6 +66,21 @@ export const useLifeStore = create<LifeState>((set, get) => ({
     await repo.deleteWishlistItem(id);
     await get().refreshWishlist();
   },
+  convertWishlistToGoal: async (itemId) => {
+    const item = get().wishlist.find((w) => w.id === itemId);
+    if (!item) return;
+    await useFinanceStore.getState().addSavingsGoal({
+      name: item.title,
+      target_amount: item.price ?? 0,
+      currency: item.currency,
+      target_date: null,
+      icon: 'gift.fill',
+      color: '#FF9500',
+      notes: item.url,
+    });
+    await repo.updateWishlistItem(itemId, { status: 'planned' });
+    await get().refreshWishlist();
+  },
 
   togglePrayer: async (prayer, completed) => {
     await repo.setPrayerLog(todayKey(), prayer, completed);
@@ -64,6 +88,11 @@ export const useLifeStore = create<LifeState>((set, get) => ({
   },
   isPrayerDone: (prayer) => {
     return get().todayPrayerLogs.some((p) => p.prayer === prayer && p.completed === 1);
+  },
+
+  setTodayMood: async (mood, note) => {
+    await journalRepo.setJournalEntry(todayKey(), mood, note);
+    await get().refreshJournal();
   },
 }));
 

@@ -8,13 +8,19 @@ import { Button } from '../../ui/Button';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
 import { todayKey } from '../../db/client';
-import type { TaskPriority, TaskStatus } from '../../db/types';
+import type { RecurringFrequency, TaskPriority, TaskStatus } from '../../db/types';
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high'];
 const WHEN_OPTIONS = [
   { id: 'today', label: 'Today' },
   { id: 'later', label: 'Later' },
   { id: 'backlog', label: 'Backlog' },
+];
+const REPEAT_OPTIONS: { id: RecurringFrequency | 'none'; label: string }[] = [
+  { id: 'none', label: 'Never' },
+  { id: 'daily', label: 'Daily' },
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'monthly', label: 'Monthly' },
 ];
 
 export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -25,6 +31,7 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
   const [notes, setNotes] = useState('');
   const [priorityIndex, setPriorityIndex] = useState(1);
   const [when, setWhen] = useState('today');
+  const [repeat, setRepeat] = useState<RecurringFrequency | 'none'>('none');
   const [projectId, setProjectId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -44,11 +51,14 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
         due_date: null,
         scheduled_date: when === 'today' ? todayKey() : null,
         sort_order: Date.now(),
+        repeat_frequency: repeat === 'none' ? null : repeat,
+        repeat_interval: repeat === 'none' ? null : 1,
       });
       setTitle('');
       setNotes('');
       setPriorityIndex(1);
       setWhen('today');
+      setRepeat('none');
       onClose();
     } finally {
       setSaving(false);
@@ -65,6 +75,11 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>When</Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector options={WHEN_OPTIONS} selectedId={when} onSelect={setWhen} />
+        </View>
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Repeat</Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector options={REPEAT_OPTIONS} selectedId={repeat} onSelect={(id) => setRepeat(id as RecurringFrequency | 'none')} />
         </View>
 
         <View style={{ marginBottom: spacing.md }}>

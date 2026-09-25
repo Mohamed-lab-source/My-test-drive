@@ -7,6 +7,7 @@ import { todayKey } from '../db/client';
 import * as lifeRepo from '../db/repositories/life';
 import * as productivityRepo from '../db/repositories/productivity';
 import * as financeRepo from '../db/repositories/finance';
+import { listFxRates, convertToBase } from '../db/repositories/fx';
 import { formatRelativeDay } from '../utils/date';
 import { buildPrayerWidget } from './PrayerWidget';
 import { buildTasksWidget } from './TasksWidget';
@@ -43,14 +44,15 @@ export async function renderTasksWidget(scheme: 'light' | 'dark') {
 }
 
 export async function renderMoneyWidget(scheme: 'light' | 'dark') {
-  const [accounts, recurringRules, currency] = await Promise.all([
+  const [accounts, recurringRules, currency, fxRates] = await Promise.all([
     financeRepo.listAccounts(),
     financeRepo.listRecurringRules(),
     getCurrency(),
+    listFxRates(),
   ]);
-  const netWorthMinor = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const netWorthMinor = accounts.reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
   const nextRule = recurringRules
-    .filter((r) => r.is_active && r.type === 'expense')
+    .filter((r) => r.is_active && !r.is_paused && r.type === 'expense')
     .sort((a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime())[0];
   const nextBill = nextRule
     ? {

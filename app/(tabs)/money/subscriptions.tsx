@@ -12,11 +12,18 @@ import { Button } from '../../../src/ui/Button';
 import { formatMoney } from '../../../src/utils/money';
 import { formatRelativeDay, isOverdue } from '../../../src/utils/date';
 import { AddRecurringSheet } from '../../../src/features/money/AddRecurringSheet';
+import { showUndoDelete } from '../../../src/ui/undo';
 
 export default function SubscriptionsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { recurringRules, postRecurring, removeRecurringRule } = useFinanceStore();
+  const { recurringRules, postRecurring, removeRecurringRule, skipRecurring, setRecurringPaused, refreshRecurring } =
+    useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
+
+  const handleDelete = async (rule: (typeof recurringRules)[number]) => {
+    await removeRecurringRule(rule.id);
+    showUndoDelete('recurring_rules', rule, 'Recurring item deleted', refreshRecurring);
+  };
 
   const monthlyTotal = recurringRules
     .filter((r) => r.type === 'expense' && r.frequency === 'monthly')
@@ -39,8 +46,8 @@ export default function SubscriptionsScreen() {
           <EmptyState icon="repeat" title="No recurring items" message="Track subscriptions, rent, salary, or any repeating expense." />
         ) : (
           recurringRules.map((rule) => (
-            <SwipeableRow key={rule.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => removeRecurringRule(rule.id) }]}>
-              <Card style={{ marginBottom: spacing.sm }}>
+            <SwipeableRow key={rule.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(rule) }]}>
+              <Card style={{ marginBottom: spacing.sm, opacity: rule.is_paused ? 0.5 : 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <IconCircle name={rule.icon} color={rule.color} />
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
@@ -51,6 +58,7 @@ export default function SubscriptionsScreen() {
                         { color: isOverdue(rule.next_due_date) ? colors.red : colors.secondaryLabel },
                       ]}
                     >
+                      {rule.is_paused ? 'Paused · ' : ''}
                       {rule.frequency} · next {formatRelativeDay(rule.next_due_date)}
                     </Text>
                   </View>
@@ -58,12 +66,26 @@ export default function SubscriptionsScreen() {
                     {formatMoney(rule.amount, rule.currency)}
                   </Text>
                 </View>
-                <Button
-                  title="Mark as posted"
-                  variant="secondary"
-                  onPress={() => postRecurring(rule)}
-                  style={{ marginTop: spacing.sm, alignSelf: 'flex-start', paddingHorizontal: spacing.md }}
-                />
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm, gap: spacing.sm }}>
+                  <Button
+                    title="Mark as posted"
+                    variant="secondary"
+                    onPress={() => postRecurring(rule)}
+                    style={{ paddingHorizontal: spacing.md }}
+                  />
+                  <Button
+                    title="Skip"
+                    variant="secondary"
+                    onPress={() => skipRecurring(rule)}
+                    style={{ paddingHorizontal: spacing.md }}
+                  />
+                  <Button
+                    title={rule.is_paused ? 'Resume' : 'Pause'}
+                    variant="secondary"
+                    onPress={() => setRecurringPaused(rule.id, !rule.is_paused)}
+                    style={{ paddingHorizontal: spacing.md }}
+                  />
+                </View>
               </Card>
             </SwipeableRow>
           ))

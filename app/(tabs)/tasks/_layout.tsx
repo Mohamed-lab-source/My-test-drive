@@ -8,6 +8,8 @@ export default function TasksLayout() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="meetings" />
+      <Stack.Screen name="projects" />
+      <Stack.Screen name="agenda" />
     </Stack>
   );
 }

@@ -7,10 +7,22 @@ import { Card } from '../../../src/ui/Card';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
+import { useUndoStore } from '../../../src/store/undoStore';
 
 export default function TransactionsScreen() {
   const { colors, spacing } = useTheme();
-  const { transactions, removeTransaction } = useFinanceStore();
+  const { transactions, removeTransaction, addTransaction } = useFinanceStore();
+
+  const handleDelete = async (tx: (typeof transactions)[number]) => {
+    await removeTransaction(tx.id);
+    // A raw row re-insert wouldn't redo the balance adjustment removeTransaction
+    // just reversed, so undo goes back through addTransaction instead (it gets
+    // a new id, but the amount, account and balance effect are identical).
+    useUndoStore.getState().show('Transaction deleted', () => {
+      const { id, created_at, ...rest } = tx;
+      addTransaction(rest);
+    });
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -21,7 +33,7 @@ export default function TransactionsScreen() {
         ) : (
           <Card padded={false}>
             {transactions.map((tx, i, arr) => (
-              <SwipeableRow key={tx.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => removeTransaction(tx.id) }]}>
+              <SwipeableRow key={tx.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(tx) }]}>
                 <TransactionRow tx={tx} isLast={i === arr.length - 1} />
               </SwipeableRow>
             ))}

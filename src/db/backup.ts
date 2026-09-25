@@ -14,6 +14,12 @@ const TABLES = [
   'tasks',
   'meetings',
   'prayer_logs',
+  'budgets',
+  'subtasks',
+  'habits',
+  'habit_logs',
+  'journal_entries',
+  'fx_rates',
 ];
 
 export async function exportAllData(): Promise<string> {
