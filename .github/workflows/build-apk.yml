@@ -1,0 +1,130 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - claude/finance-task-management-app-6lz29i
+    paths:
+      - "app/**"
+      - "src/**"
+      - "assets/**"
+      - "app.json"
+      - "package.json"
+      - "package-lock.json"
+      - "babel.config.js"
+      - "metro.config.js"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      # Kotlin compiles in its OWN out-of-process daemon, separate from the
+      # main Gradle JVM — GRADLE_OPTS only raises the latter's heap, so it
+      # never actually reached the process that OOMs. Confirmed from real
+      # run logs, twice: first expo-constants/expo-log-box's compileRelease-
+      # Kotlin FAILED with Metaspace OOM at 1536m; after raising that, the
+      # SAME failure recurred later on react-native-reanimated's compile
+      # (much heavier: worklets + JNI codegen), which apparently needs
+      # substantially more headroom than the smaller expo-* modules did.
+      # Each time, the daemon didn't just fail the task — it sat there
+      # repeating "OutOfMemoryError: Metaspace" for 2+ hours with the job
+      # still reporting "in_progress" the whole time, never surfacing as a
+      # failure. Sized generously here (4096m) to clear whatever the
+      # heaviest module in this dependency set needs, since under-sizing
+      # has cost hours per attempt rather than just failing fast. This
+      # setting fixed Kotlin compilation for good — a later run compiled
+      # every module (including reanimated) successfully.
+      # kotlin.daemon.jvmargs in gradle.properties is the documented way to
+      # size that daemon's JVM. A previous attempt to add it broke an
+      # unrelated Node-based autolinking step at Gradle configuration time —
+      # almost certainly because a plain `cat >>` heredoc appended directly
+      # onto the last line of the generated file with no leading newline,
+      # merging it with whatever key came last (e.g. reactNativeArchitectures)
+      # into one corrupt line. Guarantee a newline first this time so the
+      # append can't merge with existing content.
+      - name: Raise Kotlin daemon memory
+        run: |
+          printf '\n' >> android/gradle.properties
+          printf 'kotlin.daemon.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=4096m\n' >> android/gradle.properties
+          cat android/gradle.properties
+
+      # Debug builds don't embed the JS bundle — they expect a Metro dev
+      # server running on the same network, so a sideloaded debug APK hangs
+      # forever on the splash screen waiting for a bundle that never arrives.
+      # Release builds embed the JS bundle into the APK's assets, making it
+      # fully standalone. The generated project signs the release build type
+      # with the same debug keystore (see android/app/build.gradle), so this
+      # still needs no real signing setup for personal sideloading.
+      #
+      # -x lintVitalRelease: with Kotlin compilation fixed, the SAME
+      # Metaspace OOM pattern (task FAILED, then hours of silent looping
+      # with the job stuck "in_progress") recurred on lintVitalAnalyzeRelease
+      # — Android Lint's own release check runs in yet another separate JVM.
+      # Lint is a quality gate, not something a personal sideload APK needs;
+      # skipping it entirely avoids chasing per-process memory limits for
+      # every JVM AGP happens to spawn during a release build.
+      - name: Build release APK
+        working-directory: android
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1024m
+        run: ./gradlew assembleRelease -x lintVitalRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk dist/anchor-debug.apk
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anchor-debug-apk
+          path: dist/anchor-debug.apk
+
+      - name: Publish to "latest APK" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: anchor-apk-latest
+          name: Anchor — latest APK
+          body: |
+            Auto-built from commit ${{ github.sha }} on `${{ github.ref_name }}`.
+
+            Download `anchor-debug.apk` below, then on your Android phone open
+            it (or transfer it and open it) to install — you'll need to allow
+            "install unknown apps" for the browser/file app you use. This is a
+            release build (JS bundle embedded, so it works without a dev
+            server) signed with the default debug keystore, for personal
+            sideloading only.
+          files: dist/anchor-debug.apk
+          make_latest: true

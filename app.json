@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "Anchor",
+    "slug": "anchor",
+    "scheme": "anchor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anchor.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anchor.app",
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "@react-native-firebase/app",
+      "expo-notifications",
+      "expo-local-authentication",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F2F2F7",
+          "image": "./assets/icon.png",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "PrayerWidget",
+              "label": "Anchor · Prayers",
+              "description": "Today's 5 prayers with your streak — tap a prayer to mark it done",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "TasksWidget",
+              "label": "Anchor · Today",
+              "description": "Your tasks scheduled for today",
+              "minWidth": "250dp",
+              "minHeight": "180dp",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "MoneyWidget",
+              "label": "Anchor · Net Worth",
+              "description": "Net worth and your next upcoming bill",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
