@@ -97,12 +97,28 @@ Commute Destination** (for the daily drive-time estimate).
 ### How the phone-control actions work
 
 `Call Sarah` and `Text Ahmed` look Sarah/Ahmed up in your phone's contacts
-(you'll be asked to allow contacts access the first time) and open the
-dialer or messaging app pre-filled — **you still tap send/call yourself**.
-This is deliberate: Jarvis never sends a text or places a call silently in
-the background. Alarms and timers open your clock app the same way. Only
-sending an email or creating a calendar event happens directly (Jarvis
-tells you what it sent/created either way).
+(you'll be asked to allow contacts access the first time). **By default,
+Jarvis places the call or sends the text immediately — no tap needed.**
+The first time it does either, Android will ask you to grant the
+**Phone (Call)** and **SMS** permissions; allow both.
+
+This is real, on your own device, and worth understanding:
+
+- These are two of Android's most sensitive permissions. Granting them to
+  an app you sideloaded yourself is fine; it's not something you'd want to
+  grant to a random app from an app store.
+- Jarvis is instructed to only act on what *you* type or say — never on
+  text it reads elsewhere (an email, a calendar entry) even if that text
+  looks like an instruction. Still, an LLM reading untrusted text (like
+  email content) and then being able to place calls/send texts with zero
+  confirmation is a real category of risk worth being aware of.
+- **Settings → "Send & call directly"** is the kill switch: turn it off
+  and Jarvis goes back to only pre-filling the dialer/messaging app for
+  you to send yourself, with no permission needed.
+
+Alarms and timers always just open your clock app (no permission needed
+either way). Sending an email or creating a calendar event always happens
+directly, same as before — Jarvis tells you what it sent/created.
 
 ## Rebuilding after changes
 

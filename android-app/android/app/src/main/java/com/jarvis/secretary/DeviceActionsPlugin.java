@@ -9,21 +9,38 @@ import android.hardware.camera2.CameraManager;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.provider.AlarmClock;
+import android.telephony.SmsManager;
 
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
+
+import java.util.ArrayList;
 
 /**
- * Native "hands" for Jarvis: the handful of real device actions that make it
- * feel like an assistant instead of a chat window. Every action here either
- * uses a standard Android intent (dialer, SMS composer, alarm/timer — the
- * user still confirms in that app's own UI, so no dangerous permission is
- * needed) or a lightweight system service (flashlight, battery).
+ * Native "hands" for Jarvis: the real device actions that make it feel like
+ * an assistant instead of a chat window.
+ *
+ * dialNumber/sendSms/setAlarm/setTimer use standard Android intents — they
+ * hand off to the dialer/messaging/clock app's own UI, so the user still
+ * taps to confirm and no dangerous permission is needed. sendSmsDirect and
+ * callNumberDirect skip that confirmation entirely (the user asked for
+ * this): they require the SEND_SMS / CALL_PHONE runtime permissions, which
+ * are fine to self-grant on a personal sideloaded app but would be
+ * Play-Store-restricted permissions on a publicly distributed app.
  */
-@CapacitorPlugin(name = "DeviceActions")
+@CapacitorPlugin(
+    name = "DeviceActions",
+    permissions = {
+        @Permission(strings = { android.Manifest.permission.SEND_SMS }, alias = "sms"),
+        @Permission(strings = { android.Manifest.permission.CALL_PHONE }, alias = "call"),
+    }
+)
 public class DeviceActionsPlugin extends Plugin {
 
     @PluginMethod
@@ -56,6 +73,75 @@ public class DeviceActionsPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("opened", true);
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void callNumberDirect(PluginCall call) {
+        if (getPermissionState("call") != PermissionState.GRANTED) {
+            requestPermissionForAlias("call", call, "callPermsCallback");
+            return;
+        }
+        placeCall(call);
+    }
+
+    @PermissionCallback
+    private void callPermsCallback(PluginCall call) {
+        if (getPermissionState("call") == PermissionState.GRANTED) {
+            placeCall(call);
+        } else {
+            call.reject("Call permission was denied. Ask the user to grant it in Android Settings, or use dial_number instead.");
+        }
+    }
+
+    private void placeCall(PluginCall call) {
+        String number = call.getString("number");
+        if (number == null || number.isEmpty()) {
+            call.reject("A phone number is required");
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(number)));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(intent);
+        JSObject ret = new JSObject();
+        ret.put("calling", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void sendSmsDirect(PluginCall call) {
+        if (getPermissionState("sms") != PermissionState.GRANTED) {
+            requestPermissionForAlias("sms", call, "smsPermsCallback");
+            return;
+        }
+        transmitSms(call);
+    }
+
+    @PermissionCallback
+    private void smsPermsCallback(PluginCall call) {
+        if (getPermissionState("sms") == PermissionState.GRANTED) {
+            transmitSms(call);
+        } else {
+            call.reject("SMS permission was denied. Ask the user to grant it in Android Settings, or use send_sms instead.");
+        }
+    }
+
+    private void transmitSms(PluginCall call) {
+        String number = call.getString("number");
+        String message = call.getString("message", "");
+        if (number == null || number.isEmpty()) {
+            call.reject("A phone number is required");
+            return;
+        }
+        try {
+            SmsManager smsManager = SmsManager.getDefault();
+            ArrayList<String> parts = smsManager.divideMessage(message);
+            smsManager.sendMultipartTextMessage(number, null, parts, null, null);
+            JSObject ret = new JSObject();
+            ret.put("sent", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Couldn't send the text: " + e.getMessage());
+        }
     }
 
     @PluginMethod
