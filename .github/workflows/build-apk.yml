@@ -26,8 +26,38 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # android-actions/setup-android@v3 tries to install the legacy 'tools'
+      # package, which Google removed from the SDK repository — it fails
+      # every run. Install the SDK manually instead: cmdline-tools, then
+      # whatever platform/build-tools the project actually needs, picking
+      # the newest available version rather than hardcoding one that may
+      # not exist yet.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          set -euo pipefail
+          SDK_ROOT="$HOME/android-sdk"
+          mkdir -p "$SDK_ROOT/cmdline-tools"
+          cd "$SDK_ROOT/cmdline-tools"
+          curl -fsSL -o tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q tools.zip && rm tools.zip
+          mv cmdline-tools latest
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+
+          COMPILE_SDK=$(grep -oE 'compileSdkVersion = [0-9]+' "$GITHUB_WORKSPACE/android-app/android/variables.gradle" | grep -oE '[0-9]+')
+          ALL_PACKAGES=$("$SDKMANAGER" --list 2>/dev/null)
+          PLATFORM="platforms;android-${COMPILE_SDK}"
+          BUILD_TOOLS=$(echo "$ALL_PACKAGES" | grep -oE "build-tools;${COMPILE_SDK}\.[0-9]+\.[0-9]+" | sort -V | tail -1)
+          if [ -z "$BUILD_TOOLS" ]; then
+            BUILD_TOOLS=$(echo "$ALL_PACKAGES" | grep -oE 'build-tools;[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)
+          fi
+          echo "Installing: platform-tools, $PLATFORM, $BUILD_TOOLS"
+          "$SDKMANAGER" "platform-tools" "$PLATFORM" "$BUILD_TOOLS"
 
       - name: Set up Node
         uses: actions/setup-node@v4
