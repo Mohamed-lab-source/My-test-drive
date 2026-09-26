@@ -1,7 +1,7 @@
 // Local-only user preferences, persisted to localStorage. No store/IndexedDB
 // involvement since these are device-level UI settings, not app data.
 const KEY = "atomic-prefs";
-const DEFAULTS = { sound: true, haptics: true, theme: "system" };
+const DEFAULTS = { sound: true, haptics: true, theme: "system", reminderTime: null };
 let cached = null;
 export function getPrefs() {
     if (cached)

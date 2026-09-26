@@ -1,7 +1,7 @@
 import { getState } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { computeBadges } from "../domain/achievements.js";
-import { animateModalClose } from "../modal.js";
+import { animateModalClose, enableModalKeyboard } from "../modal.js";
 function getRoot() {
     let root = document.getElementById("modal-root");
     if (!root) {
@@ -13,7 +13,10 @@ function getRoot() {
 }
 export function openAchievements() {
     const container = getRoot();
+    let disposeKeyboard = null;
     function close() {
+        disposeKeyboard?.();
+        disposeKeyboard = null;
         animateModalClose(container, () => {
             container.innerHTML = "";
             document.body.classList.remove("modal-open");
@@ -40,7 +43,7 @@ export function openAchievements() {
               <div class="badge-icon">${b.earned ? b.icon : "🔒"}</div>
               <div class="badge-label">${escapeHtml(b.label)}</div>
               ${!b.earned
-        ? `<div class="badge-progress-track"><div class="badge-progress-fill" style="width:${Math.round(b.progress * 100)}%"></div></div>`
+        ? `<div class="badge-progress-track" role="progressbar" aria-label="${escapeHtml(b.label)} progress" aria-valuenow="${Math.round(b.progress * 100)}" aria-valuemin="0" aria-valuemax="100"><div class="badge-progress-fill" style="width:${Math.round(b.progress * 100)}%"></div></div>`
         : `<div class="badge-earned-tag">Earned</div>`}
             </div>`)
         .join("")}
@@ -51,5 +54,6 @@ export function openAchievements() {
     container.querySelector("#achievements-close").addEventListener("click", close);
     container.querySelector(".modal-backdrop").addEventListener("click", close);
     document.body.classList.add("modal-open");
+    disposeKeyboard = enableModalKeyboard(container, close);
 }
 //# sourceMappingURL=achievements.js.map

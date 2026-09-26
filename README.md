@@ -28,9 +28,9 @@ npm packages, no CDN. Data is stored entirely in the browser via IndexedDB
 
 ## Running it
 
-Requires only `tsc` (TypeScript compiler) and a static file server; both are
-available as globally-installed CLI tools in this environment, so no
-`npm install` is needed.
+Needs `tsc` (TypeScript compiler) and a static file server. Both are listed
+as devDependencies (`npm install`) for anywhere that isn't this sandbox,
+which already has them as globally-installed CLI tools.
 
 ```bash
 npm run build   # compiles src/**/*.ts -> public/js/**/*.js
@@ -43,6 +43,20 @@ Then open `http://localhost:8080/index.html`.
 
 If you edit anything under `src/`, re-run `npm run build` (or `npm run
 watch`) to regenerate `public/js/`.
+
+## Testing
+
+`tests/` holds a Playwright regression suite (`tests/specs/*.spec.mjs`) —
+each spec is a standalone script covering one area (core CRUD/wizard/
+stacking, gamification/analytics correctness, UI animation timing, and the
+render error boundary). Run the whole suite with:
+
+```bash
+npm test   # builds, serves public/, runs every spec, tears the server down
+```
+
+CI runs this on every push before building the APK, so a regression blocks
+the build rather than shipping silently.
 
 ## Android app (.apk)
 

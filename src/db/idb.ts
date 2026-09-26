@@ -1,4 +1,19 @@
 // Minimal promise-based IndexedDB wrapper. No external deps.
+//
+// Schema evolution here has two distinct layers, and they're not the same
+// thing:
+//
+// - STRUCTURAL changes (a new object store, a new index) belong here, gated
+//   by bumping DB_VERSION and adding a branch below keyed on
+//   event.oldVersion. There are none yet beyond the initial store creation.
+// - FIELD-level changes (a domain type gains a new property) do NOT belong
+//   here — onupgradeneeded only runs once, when the version increases, so it
+//   can't help with data that arrives later (e.g. a restored JSON backup
+//   exported from an older build). Those defaults live in
+//   src/db/migrations.ts and are applied on every read in repo.ts instead.
+//
+// See migrations.ts for that half of the story before adding a field to any
+// domain type in src/domain/types.ts.
 
 const DB_NAME = "atomic-habits";
 const DB_VERSION = 1;
@@ -12,11 +27,15 @@ export function openDatabase(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
-      for (const name of STORES) {
-        if (!db.objectStoreNames.contains(name)) {
-          db.createObjectStore(name, { keyPath: "id" });
+      // event.oldVersion is 0 for a brand-new database. A future structural
+      // change adds `if (event.oldVersion < 2) { ... }` etc. here, in order.
+      if (event.oldVersion < 1) {
+        for (const name of STORES) {
+          if (!db.objectStoreNames.contains(name)) {
+            db.createObjectStore(name, { keyPath: "id" });
+          }
         }
       }
     };

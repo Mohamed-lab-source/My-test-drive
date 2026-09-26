@@ -1,13 +1,13 @@
 import { getState, archiveHabit, setCheckIn, setCheckInNote } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
 import { lastNDates, todayISO, addDays, isDue, formatDisplay, WEEKDAY_LABELS } from "../utils/date.js";
-import { computeCurrentStreak, computeLongestStreak, dailyConsistency, findCheckIn, identityVoteCount, isVote, isNeutralized, weekdayBreakdown, } from "../domain/analytics.js";
+import { computeCurrentStreak, computeLongestStreak, dailyConsistency, findCheckIn, findHabitById, identityVoteCount, isVote, isNeutralized, weekdayBreakdown, } from "../domain/analytics.js";
 import { freezeTokenBalance } from "../domain/gamification.js";
 import { heatmapSVG } from "../charts/svg.js";
 import { hapticTap, hapticSuccess } from "../confetti.js";
 import { showToast } from "../toast.js";
 import { openHabitWizard } from "./habitWizard.js";
-import { animateModalClose } from "../modal.js";
+import { animateModalClose, enableModalKeyboard } from "../modal.js";
 function frequencyLabel(f) {
     if (f.type === "daily")
         return "Every day";
@@ -57,7 +57,10 @@ function getRoot() {
 }
 export function openHabitDetail(habit) {
     const container = getRoot();
+    let disposeKeyboard = null;
     function close() {
+        disposeKeyboard?.();
+        disposeKeyboard = null;
         animateModalClose(container, () => {
             container.innerHTML = "";
             document.body.classList.remove("modal-open");
@@ -66,7 +69,7 @@ export function openHabitDetail(habit) {
     function render() {
         const { checkins, identities, habits } = getState();
         // Re-read the habit fresh each render in case it changed underneath us.
-        const current = habits.find((h) => h.id === habit.id) ?? habit;
+        const current = findHabitById(habits, habit.id) ?? habit;
         const identity = identities.find((i) => i.id === current.identityId);
         const streak = computeCurrentStreak(current, checkins);
         const longest = computeLongestStreak(current, checkins);
@@ -193,12 +196,19 @@ export function openHabitDetail(habit) {
             const date = rect.dataset["date"];
             if (date >= today)
                 return; // today is handled from the Today tab; future days aren't loggable
-            rect.addEventListener("click", async () => {
+            const toggle = async () => {
                 const wasVote = isVote(findCheckIn(getState().checkins, current.id, date));
                 hapticTap();
                 await setCheckIn(current.id, date, wasVote ? "clear" : "full");
                 showToast(wasVote ? "↩️" : "✅", wasVote ? "Check-in cleared." : "Logged for that day.");
                 render();
+            };
+            rect.addEventListener("click", toggle);
+            rect.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggle();
+                }
             });
         });
         container.querySelector("#detail-edit").addEventListener("click", () => {
@@ -213,6 +223,8 @@ export function openHabitDetail(habit) {
             archiveHabit(current.id);
             close();
         });
+        disposeKeyboard?.();
+        disposeKeyboard = enableModalKeyboard(container, close);
     }
     document.body.classList.add("modal-open");
     render();

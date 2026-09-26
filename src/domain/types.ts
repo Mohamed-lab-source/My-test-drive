@@ -7,6 +7,8 @@ export interface Identity {
   id: string;
   /** e.g. "a healthy person", "a writer" — stored without the leading "I am". */
   statement: string;
+  /** A single emoji representing the identity, shown throughout the UI. */
+  icon: string;
   /** Optional deeper motivation — why this identity matters. */
   why: string;
   createdAt: string;

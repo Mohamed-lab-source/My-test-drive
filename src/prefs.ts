@@ -7,11 +7,13 @@ export interface Prefs {
   sound: boolean;
   haptics: boolean;
   theme: Theme;
+  /** "HH:MM" 24-hour local time, or null when reminders are off. */
+  reminderTime: string | null;
 }
 
 const KEY = "atomic-prefs";
 
-const DEFAULTS: Prefs = { sound: true, haptics: true, theme: "system" };
+const DEFAULTS: Prefs = { sound: true, haptics: true, theme: "system", reminderTime: null };
 
 let cached: Prefs | null = null;
 

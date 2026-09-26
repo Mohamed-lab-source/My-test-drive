@@ -4,7 +4,8 @@ import { WEEKDAY_LABELS } from "../utils/date.js";
 import { HABIT_TEMPLATES, ICON_CHOICES } from "../domain/templates.js";
 import { celebrate, hapticSuccess, hapticTap } from "../confetti.js";
 import { positionSegmentedThumb } from "../segmented.js";
-import { animateModalClose } from "../modal.js";
+import { animateModalClose, enableModalKeyboard } from "../modal.js";
+import { findHabitById } from "../domain/analytics.js";
 function blankState() {
     return {
         name: "",
@@ -42,7 +43,7 @@ function wouldCreateCycle(anchorId, editingId, habits) {
         if (seen.has(cursor))
             return false;
         seen.add(cursor);
-        const h = habits.find((x) => x.id === cursor);
+        const h = findHabitById(habits, cursor);
         cursor = h && h.stackAnchor.type === "habit" ? h.stackAnchor.habitId : undefined;
     }
     return false;
@@ -92,7 +93,10 @@ export function openHabitWizard(options = {}) {
     const skipTemplate = editing || !!duplicateFrom;
     const steps = skipTemplate ? ["name", "when", "stick", "review"] : ["template", "name", "when", "stick", "review"];
     let step = 0;
+    let disposeKeyboard = null;
     function close() {
+        disposeKeyboard?.();
+        disposeKeyboard = null;
         animateModalClose(container, () => {
             container.innerHTML = "";
             document.body.classList.remove("modal-open");
@@ -142,6 +146,8 @@ export function openHabitWizard(options = {}) {
         void body.offsetWidth;
         renderStep(stepName, body);
         body.classList.add(animateForward ? "step-enter-fwd" : "step-enter-back");
+        disposeKeyboard?.();
+        disposeKeyboard = enableModalKeyboard(container, close);
     }
     function goTo(newStep) {
         hapticTap();
@@ -199,8 +205,8 @@ export function openHabitWizard(options = {}) {
       <p class="wizard-subtitle">What's the habit called?</p>
       <div class="icon-preview">${state.icon}</div>
       <input type="text" id="wizard-name" class="wizard-big-input" maxlength="80" placeholder="Read before bed" value="${escapeHtml(state.name)}" />
-      <div class="icon-picker">
-        ${ICON_CHOICES.map((icon) => `<button type="button" class="icon-choice ${icon === state.icon ? "selected" : ""}" data-icon="${icon}">${icon}</button>`).join("")}
+      <div class="icon-picker" role="group" aria-label="Choose an icon">
+        ${ICON_CHOICES.map((icon) => `<button type="button" class="icon-choice ${icon === state.icon ? "selected" : ""}" data-icon="${icon}" aria-label="Icon ${icon}" aria-pressed="${icon === state.icon}">${icon}</button>`).join("")}
       </div>
       ${wizardNav({ canBack: step > 0, nextLabel: "Next", nextEnabled: state.name.trim().length > 0 })}
     `;
@@ -213,8 +219,12 @@ export function openHabitWizard(options = {}) {
         body.querySelectorAll("[data-icon]").forEach((btn) => {
             btn.addEventListener("click", () => {
                 state.icon = btn.dataset["icon"];
-                body.querySelectorAll(".icon-choice").forEach((b) => b.classList.remove("selected"));
+                body.querySelectorAll(".icon-choice").forEach((b) => {
+                    b.classList.remove("selected");
+                    b.setAttribute("aria-pressed", "false");
+                });
                 btn.classList.add("selected");
+                btn.setAttribute("aria-pressed", "true");
                 body.querySelector(".icon-preview").textContent = state.icon;
                 hapticTap();
             });
@@ -400,7 +410,7 @@ export function openHabitWizard(options = {}) {
         const identityLabel = identities.find((i) => i.id === state.identityId)?.statement;
         const anchor = stackAnchor();
         const anchorLabel = anchor.type === "habit"
-            ? `After "${habits.find((h) => h.id === anchor.habitId)?.name ?? "…"}"`
+            ? `After "${findHabitById(habits, anchor.habitId)?.name ?? "…"}"`
             : anchor.type === "custom"
                 ? `After ${anchor.text}`
                 : null;

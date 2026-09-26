@@ -11,9 +11,36 @@ export function subscribe(fn) {
     listeners.add(fn);
     return () => listeners.delete(fn);
 }
+// Every mutation below calls notify() on its own, which is exactly right for
+// a single user action. But a caller that awaits several mutations in a loop
+// (bulk-archiving N habits, importing N CSV rows) would otherwise trigger N
+// full view re-renders in a row, when only the final state after the last
+// one is ever actually seen. batch() lets such a caller coalesce those into
+// one notify() at the end, without every individual mutation needing to know
+// it might be running inside a batch.
+let batchDepth = 0;
+let notifyPending = false;
 function notify() {
+    if (batchDepth > 0) {
+        notifyPending = true;
+        return;
+    }
     for (const fn of listeners)
         fn();
+}
+export async function batch(fn) {
+    batchDepth++;
+    try {
+        await fn();
+    }
+    finally {
+        batchDepth--;
+        if (batchDepth === 0 && notifyPending) {
+            notifyPending = false;
+            for (const fn of listeners)
+                fn();
+        }
+    }
 }
 export function getState() {
     return state;

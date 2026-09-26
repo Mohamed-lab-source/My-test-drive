@@ -6,15 +6,15 @@ const MIN_SUBSET_SAMPLE = 3;
 const MIN_GAP = 0.3;
 const MIN_WITH_RATE = 0.6;
 /**
- * Finds the strongest signal that completing habit A raises the odds of
- * completing habit B the same day, among all ordered pairs of active
- * habits — a data-driven stacking suggestion rather than a guess. Returns
- * null when nothing clears the noise threshold.
+ * Every ordered pair of active habits that clears the noise threshold for
+ * "completing A raises the odds of completing B the same day", sorted by
+ * strength of signal (strongest first) and deduped so a pair only appears
+ * once — in whichever direction has the stronger gap.
  */
-export function computeCorrelationInsight(habits, checkins) {
+export function computeCorrelationInsights(habits, checkins, limit = 3) {
     const active = habits.filter((h) => !h.archived);
     const window = lastNDates(WINDOW_DAYS);
-    let best = null;
+    const candidates = [];
     for (const a of active) {
         for (const b of active) {
             if (a.id === b.id)
@@ -37,11 +37,29 @@ export function computeCorrelationInsight(habits, checkins) {
             const gap = withRate - withoutRate;
             if (gap < MIN_GAP || withRate < MIN_WITH_RATE)
                 continue;
-            if (!best || gap > best.withRate - best.withoutRate) {
-                best = { a, b, withRate, withoutRate, sampleSize: bothDueDates.length };
-            }
+            candidates.push({ a, b, withRate, withoutRate, sampleSize: bothDueDates.length });
         }
     }
-    return best;
+    candidates.sort((x, y) => y.withRate - y.withoutRate - (x.withRate - x.withoutRate));
+    const seenPairs = new Set();
+    const results = [];
+    for (const c of candidates) {
+        const pairKey = [c.a.id, c.b.id].sort().join(":");
+        if (seenPairs.has(pairKey))
+            continue;
+        seenPairs.add(pairKey);
+        results.push(c);
+        if (results.length >= limit)
+            break;
+    }
+    return results;
+}
+/**
+ * Finds the single strongest correlation signal — a data-driven stacking
+ * suggestion rather than a guess. Returns null when nothing clears the
+ * noise threshold.
+ */
+export function computeCorrelationInsight(habits, checkins) {
+    return computeCorrelationInsights(habits, checkins, 1)[0] ?? null;
 }
 //# sourceMappingURL=insights.js.map

@@ -19,6 +19,25 @@ function getCheckinIndex(checkins) {
 export function findCheckIn(checkins, habitId, date) {
     return getCheckinIndex(checkins).get(`${habitId}|${date}`);
 }
+// Same idea for habit-by-id lookups: views re-resolve a habit from the
+// latest `habits` array on every render (the store always hands back a
+// fresh array on mutation), so a linear .find() rescan repeats needlessly
+// across a render pass. Keyed by array reference for the same reason —
+// correctness for free on any real mutation, reuse within one pass.
+const habitIndexCache = new WeakMap();
+function getHabitIndex(habits) {
+    let index = habitIndexCache.get(habits);
+    if (!index) {
+        index = new Map();
+        for (const h of habits)
+            index.set(h.id, h);
+        habitIndexCache.set(habits, index);
+    }
+    return index;
+}
+export function findHabitById(habits, id) {
+    return getHabitIndex(habits).get(id);
+}
 export function isVote(checkin) {
     return !!checkin && (checkin.completedFull || checkin.usedTwoMinuteVersion);
 }

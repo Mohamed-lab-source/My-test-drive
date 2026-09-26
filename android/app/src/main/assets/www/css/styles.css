@@ -185,6 +185,71 @@ svg {
   letter-spacing: -0.01em;
 }
 
+/* ---- Tablet / landscape: bottom tab bar becomes a left nav rail ---- */
+
+@media (min-width: 700px) {
+  .app-shell {
+    max-width: 900px;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .app-main {
+    flex: 1;
+    min-width: 0;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 32px 48px;
+  }
+
+  .tab-bar {
+    order: -1;
+    position: sticky;
+    top: 0;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    max-width: none;
+    width: 220px;
+    margin: 0;
+    flex-shrink: 0;
+    height: 100vh;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 24px 8px calc(24px + env(safe-area-inset-bottom));
+    border-top: none;
+    border-right: 0.5px solid var(--separator);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-grouped);
+  }
+
+  .tab-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-btn);
+  }
+
+  .tab-item.active {
+    background: var(--bg-fill);
+  }
+
+  .tab-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .tab-label {
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: normal;
+  }
+}
+
 /* ---- View / large title header ---- */
 
 .view {
@@ -405,6 +470,10 @@ svg {
 
 .btn-block {
   width: 100%;
+}
+
+.btn-block + .btn-block {
+  margin-top: 10px;
 }
 
 .btn-success {
@@ -656,6 +725,26 @@ svg {
   margin-top: 12px;
 }
 
+.archived-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.archived-row:last-child {
+  border-bottom: none;
+}
+
+.archived-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .identity-why-input {
   margin-top: 12px;
   font-family: var(--font-sans);
@@ -896,6 +985,39 @@ svg {
   max-width: none;
 }
 
+.line-chart-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.line-chart-grid {
+  stroke: var(--separator);
+  stroke-width: 1;
+}
+
+.line-chart-axis-label {
+  fill: var(--label-secondary);
+  font-size: 9px;
+  font-family: var(--font-sans);
+}
+
+.line-chart-area {
+  fill: var(--accent);
+  opacity: 0.12;
+}
+
+.line-chart-line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.line-chart-dot {
+  fill: var(--accent);
+}
+
 .heatmap-legend {
   margin-top: 8px;
   font-size: 12px;
@@ -1084,6 +1206,59 @@ body.modal-open {
   background: var(--label-tertiary);
   margin: 8px auto 0;
   flex-shrink: 0;
+}
+
+.quick-actions-sheet {
+  max-height: none;
+  padding: 4px 16px 16px;
+}
+
+.quick-actions-title {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-secondary);
+  margin: 6px 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.quick-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-row);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.quick-action-btn {
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--separator);
+  background: var(--bg-surface);
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--accent);
+}
+
+.quick-action-btn:last-child {
+  border-bottom: none;
+}
+
+.quick-action-btn:active {
+  background: var(--bg-fill);
+}
+
+.quick-action-danger {
+  color: var(--red);
+}
+
+.quick-actions-cancel {
+  font-weight: 600;
 }
 
 .wizard-header {
@@ -1656,6 +1831,31 @@ body.modal-open {
   margin: 0;
 }
 
+/* ---- Crash fallback ---- */
+
+.crash-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 24px;
+}
+
+.crash-icon {
+  font-size: 44px;
+}
+
+.crash-fallback h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.crash-fallback p {
+  margin: 0 0 8px;
+  max-width: 320px;
+}
+
 /* ---- Scroll reveal ---- */
 
 .scroll-reveal {
@@ -1791,6 +1991,23 @@ body.modal-open {
 .spotlight-icon {
   font-size: 18px;
   flex-shrink: 0;
+}
+
+.year-review-stat {
+  text-align: center;
+  padding: 20px 0 16px;
+}
+
+.year-review-value {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.year-review-label {
+  font-size: 13px;
+  color: var(--label-secondary);
+  margin-top: 6px;
 }
 
 /* ---- Today: quote of the day ---- */

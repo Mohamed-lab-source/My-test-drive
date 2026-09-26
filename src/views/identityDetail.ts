@@ -1,12 +1,13 @@
 import { getState, archiveIdentity, updateIdentity } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
-import { lastNDates } from "../utils/date.js";
-import { dailyConsistency, identityVoteCount } from "../domain/analytics.js";
+import { lastNDates, todayISO, startOfMonth, addMonths, datesInRange } from "../utils/date.js";
+import { dailyConsistency, findHabitById, identityVoteCount } from "../domain/analytics.js";
 import { heatmapSVG } from "../charts/svg.js";
-import { hapticSuccess } from "../confetti.js";
+import { hapticSuccess, hapticTap } from "../confetti.js";
 import { openHabitDetail } from "./habitDetail.js";
 import { openHabitWizard } from "./habitWizard.js";
-import { animateModalClose } from "../modal.js";
+import { animateModalClose, enableModalKeyboard } from "../modal.js";
+import { ICON_CHOICES } from "../domain/templates.js";
 import type { Identity } from "../domain/types.js";
 
 function getRoot(): HTMLElement {
@@ -22,8 +23,12 @@ function getRoot(): HTMLElement {
 export function openIdentityDetail(identity: Identity): void {
   const container = getRoot();
   let editing = false;
+  let editIcon = identity.icon;
+  let disposeKeyboard: (() => void) | null = null;
 
   function close(): void {
+    disposeKeyboard?.();
+    disposeKeyboard = null;
     animateModalClose(container, () => {
       container.innerHTML = "";
       document.body.classList.remove("modal-open");
@@ -38,6 +43,16 @@ export function openIdentityDetail(identity: Identity): void {
     const votes30 = identityVoteCount(current.id, habits, checkins, lastNDates(30));
     const cells = dailyConsistency(linkedHabits, checkins, lastNDates(84));
 
+    const today = todayISO();
+    const thisMonthDates = datesInRange(startOfMonth(today), today);
+    const prevMonthAnchor = addMonths(today, -1);
+    const prevMonthDates = datesInRange(startOfMonth(prevMonthAnchor), prevMonthAnchor);
+    const votesThisMonth = identityVoteCount(current.id, habits, checkins, thisMonthDates);
+    const votesPrevMonth = identityVoteCount(current.id, habits, checkins, prevMonthDates);
+    const monthChange =
+      votesPrevMonth === 0 ? null : Math.round(((votesThisMonth - votesPrevMonth) / votesPrevMonth) * 100);
+    const monthName = new Date().toLocaleDateString(undefined, { month: "long" });
+
     container.innerHTML = `
       <div class="modal-backdrop"></div>
       <div class="modal-sheet" role="dialog" aria-modal="true">
@@ -49,10 +64,18 @@ export function openIdentityDetail(identity: Identity): void {
         </div>
         <div class="wizard-body">
           <div class="detail-hero">
-            <div class="detail-hero-icon">🧭</div>
+            <div class="detail-hero-icon" id="identity-icon-preview">${escapeHtml(editing ? editIcon : current.icon || "🧭")}</div>
             ${
               editing
-                ? `<div class="form-card-row prefix-row" style="justify-content:center;">
+                ? `<div class="icon-picker" id="identity-icon-picker" role="group" aria-label="Choose an icon">
+                    ${ICON_CHOICES.concat(["🧭"])
+                      .map(
+                        (icon) =>
+                          `<button type="button" class="icon-choice ${icon === editIcon ? "selected" : ""}" data-icon="${icon}" aria-label="Icon ${icon}" aria-pressed="${icon === editIcon}">${icon}</button>`
+                      )
+                      .join("")}
+                  </div>
+                  <div class="form-card-row prefix-row" style="justify-content:center;">
                     <span class="row-label">I am</span>
                     <input type="text" id="identity-edit-input" class="plain-input" maxlength="80" value="${escapeHtml(current.statement)}" />
                   </div>
@@ -85,6 +108,27 @@ export function openIdentityDetail(identity: Identity): void {
               </div>`
               )
               .join("")}
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">${escapeHtml(monthName)} so far</h2>
+            <div class="stat-tile-row">
+              <div class="stat-tile">
+                <div class="stat-tile-label">Votes this month</div>
+                <div class="stat-tile-value">${votesThisMonth}</div>
+              </div>
+            </div>
+            <p class="muted month-compare">
+              ${
+                monthChange === null
+                  ? `${votesThisMonth} vote${votesThisMonth === 1 ? "" : "s"} so far — no data from the same point last month to compare.`
+                  : monthChange > 0
+                  ? `Up ${monthChange}% from the same point last month.`
+                  : monthChange < 0
+                  ? `Down ${Math.abs(monthChange)}% from the same point last month.`
+                  : `Matching the same point last month.`
+              }
+            </p>
           </div>
 
           <div class="card">
@@ -135,7 +179,7 @@ export function openIdentityDetail(identity: Identity): void {
 
     container.querySelectorAll<HTMLButtonElement>("[data-open-habit]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const habit = habits.find((h) => h.id === btn.dataset["openHabit"]);
+        const habit = findHabitById(habits, btn.dataset["openHabit"]!);
         if (habit) openHabitDetail(habit);
       });
     });
@@ -157,20 +201,37 @@ export function openIdentityDetail(identity: Identity): void {
         input.select();
       });
       const whyInput = container.querySelector<HTMLTextAreaElement>("#identity-why-input")!;
+      container.querySelectorAll<HTMLButtonElement>("#identity-icon-picker [data-icon]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          editIcon = btn.dataset["icon"]!;
+          container.querySelectorAll("#identity-icon-picker .icon-choice").forEach((b) => {
+            b.classList.remove("selected");
+            b.setAttribute("aria-pressed", "false");
+          });
+          btn.classList.add("selected");
+          btn.setAttribute("aria-pressed", "true");
+          container.querySelector("#identity-icon-preview")!.textContent = editIcon;
+          hapticTap();
+        });
+      });
       container.querySelector("#identity-save")!.addEventListener("click", async () => {
         const value = input.value.trim();
         if (!value) return;
-        await updateIdentity({ ...current, statement: value, why: whyInput.value.trim() });
+        await updateIdentity({ ...current, statement: value, icon: editIcon, why: whyInput.value.trim() });
         hapticSuccess();
         editing = false;
         render();
       });
     } else {
       container.querySelector("#identity-edit")!.addEventListener("click", () => {
+        editIcon = current.icon || "🧭";
         editing = true;
         render();
       });
     }
+
+    disposeKeyboard?.();
+    disposeKeyboard = enableModalKeyboard(container, close);
   }
 
   document.body.classList.add("modal-open");

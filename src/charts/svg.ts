@@ -111,7 +111,9 @@ export function heatmapSVG(cells: HeatmapCell[], interactive = false): string {
     const tappable = interactive && cell.due > 0;
     rects.push(
       `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="2" fill="${heatColorVar(cell)}"${
-        tappable ? ` class="heat-cell-tappable" data-date="${cell.date}"` : ""
+        tappable
+          ? ` class="heat-cell-tappable" data-date="${cell.date}" tabindex="0" role="button" aria-label="${escapeHtml(title)}"`
+          : ""
       }><title>${escapeHtml(title)}</title></rect>`
     );
   });
@@ -119,6 +121,69 @@ export function heatmapSVG(cells: HeatmapCell[], interactive = false): string {
   return `
     <svg class="viz-root" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Daily consistency heatmap">
       ${rects.join("")}
+    </svg>
+  `;
+}
+
+export interface LinePoint {
+  date: string;
+  value: number;
+}
+
+/**
+ * A proper axis'd line chart (gridlines + date labels), distinct from the
+ * axis-less sparkline above — for a trend worth reading values off of, not
+ * just glancing at the shape of.
+ */
+export function lineChartSVG(points: LinePoint[], height = 130): string {
+  if (points.length === 0) return "";
+  const width = 320;
+  const paddingLeft = 30;
+  const paddingBottom = 20;
+  const paddingTop = 10;
+  const plotWidth = width - paddingLeft - 10;
+  const plotHeight = height - paddingTop - paddingBottom;
+  const max = Math.max(1, ...points.map((p) => p.value));
+  const step = points.length > 1 ? plotWidth / (points.length - 1) : 0;
+
+  const coords = points.map((p, i) => ({
+    x: paddingLeft + i * step,
+    y: paddingTop + plotHeight - (p.value / max) * plotHeight,
+  }));
+
+  const linePoints = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
+  const floorY = (paddingTop + plotHeight).toFixed(1);
+  const areaPoints = `${paddingLeft.toFixed(1)},${floorY} ${linePoints} ${coords[coords.length - 1]!.x.toFixed(1)},${floorY}`;
+
+  const gridLines = [0, 0.5, 1]
+    .map((f) => {
+      const y = paddingTop + plotHeight * (1 - f);
+      const val = Math.round(max * f);
+      return `<line x1="${paddingLeft}" y1="${y.toFixed(1)}" x2="${width - 10}" y2="${y.toFixed(1)}" class="line-chart-grid" />
+              <text x="0" y="${(y + 3).toFixed(1)}" class="line-chart-axis-label">${val}</text>`;
+    })
+    .join("");
+
+  const labelIndices =
+    points.length > 1 ? Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])) : [0];
+  const xLabels = labelIndices
+    .map((i) => {
+      const c = coords[i]!;
+      return `<text x="${c.x.toFixed(1)}" y="${height - 4}" class="line-chart-axis-label" text-anchor="middle">${escapeHtml(formatDisplay(points[i]!.date))}</text>`;
+    })
+    .join("");
+
+  const dots = coords
+    .map((c, i) => (points[i]!.value > 0 ? `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.5" class="line-chart-dot" />` : ""))
+    .join("");
+
+  return `
+    <svg class="viz-root line-chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Daily votes over time, last ${points.length} days">
+      ${gridLines}
+      <polygon points="${areaPoints}" class="line-chart-area" />
+      <polyline points="${linePoints}" fill="none" class="line-chart-line" />
+      ${dots}
+      ${xLabels}
     </svg>
   `;
 }

@@ -5,6 +5,8 @@ import { identityVoteCount, identityVoteSeries } from "../domain/analytics.js";
 import { sparklineSVG } from "../charts/svg.js";
 import { openHabitWizard } from "./habitWizard.js";
 import { openIdentityDetail } from "./identityDetail.js";
+import { openQuickActions } from "./quickActions.js";
+import { enableLongPress } from "../longPress.js";
 export function renderIdentities(container) {
     const { identities, habits, checkins } = getState();
     const active = identities.filter((i) => !i.archived);
@@ -44,7 +46,7 @@ export function renderIdentities(container) {
             return `
                 <div class="card identity-card stagger-in" style="--stagger-index: ${i}">
                   <div class="identity-card-main" data-open-identity="${identity.id}">
-                    <div class="identity-statement">I am <strong>${escapeHtml(identity.statement)}</strong></div>
+                    <div class="identity-statement"><span class="habit-icon">${escapeHtml(identity.icon || "🧭")}</span> I am <strong>${escapeHtml(identity.statement)}</strong></div>
                     <div class="identity-stats">
                       <div>
                         <div class="stat-tile-value">${totalVotes}</div>
@@ -94,6 +96,16 @@ export function renderIdentities(container) {
         btn.addEventListener("click", () => {
             openHabitWizard({ identityId: btn.dataset["addHabit"] });
         });
+    });
+    enableLongPress(container, "[data-open-identity]", (el) => {
+        const identity = active.find((i) => i.id === el.dataset["openIdentity"]);
+        if (!identity)
+            return;
+        openQuickActions(`I am ${identity.statement}`, [
+            { label: "View & edit", onSelect: () => openIdentityDetail(identity) },
+            { label: "+ Habit", onSelect: () => openHabitWizard({ identityId: identity.id }) },
+            { label: "Archive", danger: true, onSelect: () => archiveIdentity(identity.id) },
+        ]);
     });
 }
 //# sourceMappingURL=identities.js.map

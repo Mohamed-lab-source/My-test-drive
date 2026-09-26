@@ -6,6 +6,7 @@ import {
   computeLongestStreak,
   dailyConsistency,
   findCheckIn,
+  findHabitById,
   identityVoteCount,
   isVote,
   isNeutralized,
@@ -16,7 +17,7 @@ import { heatmapSVG } from "../charts/svg.js";
 import { hapticTap, hapticSuccess } from "../confetti.js";
 import { showToast } from "../toast.js";
 import { openHabitWizard } from "./habitWizard.js";
-import { animateModalClose } from "../modal.js";
+import { animateModalClose, enableModalKeyboard } from "../modal.js";
 import type { Habit, Frequency, CheckIn } from "../domain/types.js";
 
 function frequencyLabel(f: Frequency): string {
@@ -66,8 +67,11 @@ function getRoot(): HTMLElement {
 
 export function openHabitDetail(habit: Habit): void {
   const container = getRoot();
+  let disposeKeyboard: (() => void) | null = null;
 
   function close(): void {
+    disposeKeyboard?.();
+    disposeKeyboard = null;
     animateModalClose(container, () => {
       container.innerHTML = "";
       document.body.classList.remove("modal-open");
@@ -77,7 +81,7 @@ export function openHabitDetail(habit: Habit): void {
   function render(): void {
     const { checkins, identities, habits } = getState();
     // Re-read the habit fresh each render in case it changed underneath us.
-    const current = habits.find((h) => h.id === habit.id) ?? habit;
+    const current = findHabitById(habits, habit.id) ?? habit;
     const identity = identities.find((i) => i.id === current.identityId);
     const streak = computeCurrentStreak(current, checkins);
     const longest = computeLongestStreak(current, checkins);
@@ -217,12 +221,19 @@ export function openHabitDetail(habit: Habit): void {
     container.querySelectorAll<SVGRectElement>(".heat-cell-tappable").forEach((rect) => {
       const date = rect.dataset["date"]!;
       if (date >= today) return; // today is handled from the Today tab; future days aren't loggable
-      rect.addEventListener("click", async () => {
+      const toggle = async (): Promise<void> => {
         const wasVote = isVote(findCheckIn(getState().checkins, current.id, date));
         hapticTap();
         await setCheckIn(current.id, date, wasVote ? "clear" : "full");
         showToast(wasVote ? "↩️" : "✅", wasVote ? "Check-in cleared." : "Logged for that day.");
         render();
+      };
+      rect.addEventListener("click", toggle);
+      rect.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggle();
+        }
       });
     });
 
@@ -238,6 +249,9 @@ export function openHabitDetail(habit: Habit): void {
       archiveHabit(current.id);
       close();
     });
+
+    disposeKeyboard?.();
+    disposeKeyboard = enableModalKeyboard(container, close);
   }
 
   document.body.classList.add("modal-open");

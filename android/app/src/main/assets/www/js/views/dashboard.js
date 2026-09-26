@@ -2,14 +2,15 @@ import { getState } from "../state/store.js";
 import { lastNDates, todayISO, isDue, startOfMonth, addMonths, datesInRange } from "../utils/date.js";
 import { escapeHtml } from "../utils/html.js";
 import { computeCurrentStreak, computeLongestStreak, completionRate, dailyConsistency, identityVoteCount, identityVoteSeries, totalVotesAllTime, isVote, } from "../domain/analytics.js";
-import { statTile, heatmapSVG, barList } from "../charts/svg.js";
+import { statTile, heatmapSVG, barList, lineChartSVG } from "../charts/svg.js";
 import { positionSegmentedThumb } from "../segmented.js";
 import { openSettings } from "./settings.js";
 import { openAchievements } from "./achievements.js";
 import { computeBadges } from "../domain/achievements.js";
 import { computeXP, levelForXP } from "../domain/gamification.js";
-import { computeCorrelationInsight } from "../domain/insights.js";
+import { computeCorrelationInsights } from "../domain/insights.js";
 import { initScrollReveal } from "../scrollReveal.js";
+import { openSearch } from "./search.js";
 let heatmapDays = 84;
 function weeklyInsight(thisWeek, prevWeek, perfectWeek, perfectToday) {
     if (perfectWeek) {
@@ -45,6 +46,10 @@ export function renderDashboard(container) {
         value: completionRate(h, checkins, last30),
     }))
         .sort((a, b) => b.value - a.value);
+    const dailyVoteSeries = last30.map((date) => ({
+        date,
+        value: checkins.filter((c) => isVote(c) && c.date === date).length,
+    }));
     const last7 = lastNDates(7);
     const prev7 = lastNDates(14).slice(0, 7);
     const votesThisWeek = checkins.filter((c) => isVote(c) && last7.includes(c.date)).length;
@@ -65,7 +70,7 @@ export function renderDashboard(container) {
         .filter((c) => c.votes > 0)
         .sort((a, b) => b.votes - a.votes);
     const mvpIdentity = mvpIdentityCandidates[0] ?? null;
-    const correlation = computeCorrelationInsight(habits, checkins);
+    const correlations = computeCorrelationInsights(habits, checkins, 3);
     const badges = computeBadges(habits, checkins);
     const earnedCount = badges.filter((b) => b.earned).length;
     const levelInfo = levelForXP(computeXP(checkins));
@@ -86,6 +91,7 @@ export function renderDashboard(container) {
           <p class="view-subtitle">The data behind the 1% — small, consistent votes compounding over time.</p>
         </div>
         <div class="header-action-group">
+          <button type="button" class="icon-btn" id="open-search" aria-label="Search">🔍</button>
           <button type="button" class="icon-btn" id="open-achievements" aria-label="Achievements">🏆</button>
           <button type="button" class="icon-btn settings-gear" id="open-settings" aria-label="Settings">⚙️</button>
         </div>
@@ -95,7 +101,7 @@ export function renderDashboard(container) {
         <div class="level-badge">${levelInfo.level}</div>
         <div class="level-copy">
           <div class="level-title">Level ${levelInfo.level} · ${escapeHtml(levelInfo.title)}</div>
-          <div class="level-progress-track"><div class="level-progress-fill" style="width:${Math.round(levelInfo.progress * 100)}%"></div></div>
+          <div class="level-progress-track" role="progressbar" aria-label="XP progress to next level" aria-valuenow="${levelInfo.xpIntoLevel}" aria-valuemin="0" aria-valuemax="${levelInfo.xpForNextLevel}"><div class="level-progress-fill" style="width:${Math.round(levelInfo.progress * 100)}%"></div></div>
           <div class="level-sub muted">${levelInfo.xpIntoLevel} / ${levelInfo.xpForNextLevel} XP to next level</div>
         </div>
       </div>
@@ -111,12 +117,13 @@ export function renderDashboard(container) {
 
       ${insight ? `<div class="insight-card scroll-reveal ${perfectWeek ? "insight-card-perfect" : ""}"><span class="insight-icon">${insight.icon}</span><span>${insight.text}</span></div>` : ""}
 
-      ${correlation
-        ? `<div class="coaching-tip-card scroll-reveal">
-              <span class="coaching-tip-icon">🔗</span>
-              <span>Smart insight: on days you do <strong>${escapeHtml(correlation.a.name)}</strong>, you complete <strong>${escapeHtml(correlation.b.name)}</strong> ${Math.round(correlation.withRate * 100)}% of the time — vs ${Math.round(correlation.withoutRate * 100)}% otherwise. Consider stacking "${escapeHtml(correlation.b.name)}" right after "${escapeHtml(correlation.a.name)}".</span>
-            </div>`
-        : ""}
+      ${correlations
+        .map((c) => `
+        <div class="coaching-tip-card scroll-reveal">
+          <span class="coaching-tip-icon">🔗</span>
+          <span>Smart insight: on days you do <strong>${escapeHtml(c.a.name)}</strong>, you complete <strong>${escapeHtml(c.b.name)}</strong> ${Math.round(c.withRate * 100)}% of the time — vs ${Math.round(c.withoutRate * 100)}% otherwise. Consider stacking "${escapeHtml(c.b.name)}" right after "${escapeHtml(c.a.name)}".</span>
+        </div>`)
+        .join("")}
 
       ${mvpHabit || mvpIdentity
         ? `<div class="card scroll-reveal">
@@ -170,6 +177,13 @@ export function renderDashboard(container) {
       </div>
 
       <div class="card scroll-reveal">
+        <h2 class="card-title">Daily votes — last 30 days</h2>
+        ${dailyVoteSeries.every((p) => p.value === 0)
+        ? `<div class="empty-state">No votes logged yet.</div>`
+        : `<div class="line-chart-wrap">${lineChartSVG(dailyVoteSeries)}</div>`}
+      </div>
+
+      <div class="card scroll-reveal">
         <h2 class="card-title">Completion rate — last 30 days</h2>
         ${barData.length === 0
         ? `<div class="empty-state">No habits yet.</div>`
@@ -197,6 +211,7 @@ export function renderDashboard(container) {
     </section>
   `;
     container.querySelector("#open-settings").addEventListener("click", () => openSettings());
+    container.querySelector("#open-search").addEventListener("click", () => openSearch());
     container.querySelector("#open-achievements").addEventListener("click", () => openAchievements());
     container.querySelector("#open-achievements-card").addEventListener("click", () => openAchievements());
     const rangeControl = container.querySelector("#heatmap-range-control");

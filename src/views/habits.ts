@@ -1,9 +1,12 @@
-import { getState, archiveHabit, saveHabit } from "../state/store.js";
+import { getState, archiveHabit, saveHabit, batch } from "../state/store.js";
 import { escapeHtml } from "../utils/html.js";
+import { findHabitById } from "../domain/analytics.js";
 import { WEEKDAY_LABELS } from "../utils/date.js";
 import { openHabitWizard } from "./habitWizard.js";
 import { openHabitDetail } from "./habitDetail.js";
 import { enableSwipeToReveal } from "../swipe.js";
+import { enableLongPress } from "../longPress.js";
+import { openQuickActions } from "./quickActions.js";
 import { undoableArchive } from "./undoArchive.js";
 import { hapticTap } from "../confetti.js";
 import type { Habit, Frequency } from "../domain/types.js";
@@ -22,7 +25,7 @@ function stackDescription(habit: Habit, allHabits: Habit[]): string | null {
     return anchor.text ? `After ${anchor.text}` : null;
   }
   if (anchor.type === "habit") {
-    const anchorHabit = allHabits.find((h) => h.id === anchor.habitId);
+    const anchorHabit = findHabitById(allHabits, anchor.habitId);
     return anchorHabit ? `After "${anchorHabit.name}"` : null;
   }
   return null;
@@ -247,9 +250,11 @@ export function renderHabits(container: HTMLElement): void {
 
   container.querySelector("#bulk-archive-btn")?.addEventListener("click", async () => {
     const ids = Array.from(selectedIds);
-    for (const id of ids) {
-      await archiveHabit(id);
-    }
+    await batch(async () => {
+      for (const id of ids) {
+        await archiveHabit(id);
+      }
+    });
     hapticTap();
     selectMode = false;
     selectedIds = new Set();
@@ -299,7 +304,7 @@ function wireListInteractions(listEl: HTMLElement, habits: Habit[], container: H
   listEl.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const habit = habits.find((h) => h.id === btn.dataset["edit"]);
+      const habit = findHabitById(habits, btn.dataset["edit"]!);
       if (habit) openHabitWizard({ editHabit: habit });
     });
   });
@@ -307,7 +312,7 @@ function wireListInteractions(listEl: HTMLElement, habits: Habit[], container: H
   listEl.querySelectorAll<HTMLButtonElement>("[data-archive-habit]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const habit = habits.find((h) => h.id === btn.dataset["archiveHabit"]);
+      const habit = findHabitById(habits, btn.dataset["archiveHabit"]!);
       if (habit) undoableArchive(habit);
     });
   });
@@ -319,7 +324,7 @@ function wireListInteractions(listEl: HTMLElement, habits: Habit[], container: H
         toggleSelected(id);
         return;
       }
-      const habit = habits.find((h) => h.id === id);
+      const habit = findHabitById(habits, id);
       if (habit) openHabitDetail(habit);
     });
   });
@@ -344,7 +349,18 @@ function wireListInteractions(listEl: HTMLElement, habits: Habit[], container: H
     });
   });
 
-  if (!selectMode) enableSwipeToReveal(listEl);
+  if (!selectMode) {
+    enableSwipeToReveal(listEl);
+    enableLongPress(listEl, ".habit-card", (el) => {
+      const habit = findHabitById(habits, el.dataset["openDetail"]!);
+      if (!habit) return;
+      openQuickActions(habit.name, [
+        { label: "Edit", onSelect: () => openHabitWizard({ editHabit: habit }) },
+        { label: "Duplicate", onSelect: () => openHabitWizard({ duplicateFrom: habit }) },
+        { label: "Archive", danger: true, onSelect: () => undoableArchive(habit) },
+      ]);
+    });
+  }
 }
 
 function moveRoot(sortedHabits: Habit[], habitId: string, direction: -1 | 1): void {

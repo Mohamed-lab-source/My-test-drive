@@ -1,14 +1,16 @@
 import { getAll, put, remove, clearStore, putAll, STORES } from "./idb.js";
+import { backfillHabit, backfillIdentity, backfillCheckIn } from "./migrations.js";
 import { newId } from "../utils/id.js";
 // ---- Identities ----
 export async function listIdentities() {
     const identities = await getAll("identities");
-    return identities.map((i) => ({ ...i, why: i.why ?? "" }));
+    return identities.map(backfillIdentity);
 }
 export async function createIdentity(statement) {
     const identity = {
         id: newId(),
         statement: statement.trim(),
+        icon: "🧭",
         why: "",
         createdAt: new Date().toISOString(),
         archived: false,
@@ -29,14 +31,7 @@ export async function updateIdentity(identity) {
 // ---- Habits ----
 export async function listHabits() {
     const habits = await getAll("habits");
-    // Backfill fields added after some habits were created. sortOrder falls
-    // back to creation time so pre-existing habits keep their original order.
-    return habits.map((h) => ({
-        ...h,
-        timeOfDay: h.timeOfDay ?? "anytime",
-        sortOrder: h.sortOrder ?? Date.parse(h.createdAt),
-        tags: h.tags ?? [],
-    }));
+    return habits.map(backfillHabit);
 }
 export async function createHabit(input) {
     const habit = {
@@ -66,8 +61,7 @@ export async function archiveHabit(id) {
 // ---- Check-ins ----
 export async function listCheckIns() {
     const checkins = await getAll("checkins");
-    // Backfill fields added after some check-ins were created.
-    return checkins.map((c) => ({ ...c, skipped: c.skipped ?? false, frozen: c.frozen ?? false, note: c.note ?? "" }));
+    return checkins.map(backfillCheckIn);
 }
 /** Sets (or clears) the check-in for a habit on a given date. */
 export async function setCheckIn(habitId, date, existing, patch) {
