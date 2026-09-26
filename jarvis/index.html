@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Jarvis</title>
+<meta name="description" content="Your personal AI secretary" />
+<meta name="theme-color" content="#0a0e14" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span> JARVIS</div>
+    <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab active" data-view="chatView">Chat</button>
+    <button class="tab" data-view="briefingView">Briefing</button>
+    <button class="tab" data-view="remindersView">Reminders</button>
+  </div>
+
+  <!-- CHAT -->
+  <section class="view active" id="chatView">
+    <div id="chatLog"></div>
+    <div class="composer">
+      <button class="round-btn" id="micBtn" title="Voice input">🎤</button>
+      <textarea id="chatInput" rows="1" placeholder="Ask Jarvis anything..."></textarea>
+      <button class="round-btn primary" id="sendBtn" title="Send">➤</button>
+    </div>
+  </section>
+
+  <!-- BRIEFING -->
+  <section class="view" id="briefingView">
+    <div class="scroll-view">
+      <button class="briefing-btn" id="runBriefingBtn">☀️ Get My Morning Briefing</button>
+
+      <div class="card" id="weatherCard" style="display:none;">
+        <h3>🌤️ Weather</h3>
+        <div class="big-stat" id="weatherTemp">--°</div>
+        <div class="sub-stat" id="weatherDesc">—</div>
+      </div>
+
+      <div class="card" id="commuteCard" style="display:none;">
+        <h3>🚗 Commute</h3>
+        <div class="big-stat" id="commuteTime">--</div>
+        <div class="sub-stat" id="commuteDesc">—</div>
+      </div>
+
+      <div class="card" id="calendarCard">
+        <h3>📅 Today</h3>
+        <div id="calendarList"><div class="empty-hint">Connect Google Calendar in Settings to see today's events here.</div></div>
+      </div>
+
+      <div class="card" id="briefingTextCard" style="display:none;">
+        <h3>🗣️ Full Briefing</h3>
+        <div class="briefing-text" id="briefingText"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REMINDERS -->
+  <section class="view" id="remindersView">
+    <div class="scroll-view">
+      <div class="add-row">
+        <input type="text" id="reminderInput" placeholder="Remind me to..." />
+      </div>
+      <div class="add-row">
+        <input type="datetime-local" id="reminderTime" />
+        <button class="chip-btn" id="addReminderBtn">Add</button>
+      </div>
+      <div class="card">
+        <h3>⏰ Upcoming</h3>
+        <div id="reminderList"><div class="empty-hint">No reminders yet.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS (overlay) -->
+  <section class="view" id="settingsView" style="position:absolute; inset:0; background:var(--bg); z-index:20;">
+    <div class="topbar">
+      <div class="brand">Settings</div>
+      <button class="icon-btn" id="closeSettingsBtn">✕</button>
+    </div>
+    <div class="scroll-view">
+
+      <div class="field">
+        <label>Gemini API Key <span class="status-pill" id="keyStatus">not set</span></label>
+        <input type="password" id="apiKeyInput" placeholder="Paste your free Gemini API key" />
+        <div class="hint">Free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Sign in with Google → Create API Key → paste it here. This is the only thing that runs Jarvis's brain, and it's free for personal use.</div>
+      </div>
+
+      <div class="field">
+        <label>Voice</label>
+        <select id="voiceSelect"></select>
+        <div class="hint">Choose which built-in voice Jarvis speaks with.</div>
+      </div>
+
+      <div class="field">
+        <label>Google Calendar <span class="status-pill" id="calStatus">not connected</span></label>
+        <button class="wide-btn accent" id="connectCalBtn">Connect Google Calendar</button>
+        <div class="hint" id="calHint">Requires a one-time Google Cloud OAuth Client ID — see the README for the 2-minute click-through setup. Paste your Client ID below once you have it.</div>
+        <input type="text" id="oauthClientInput" placeholder="Google OAuth Client ID (ends in .apps.googleusercontent.com)" style="margin-top:8px;" />
+      </div>
+
+      <div class="field">
+        <label>Home Location</label>
+        <input type="text" id="homeLocInput" placeholder="e.g. Maadi, Cairo" />
+      </div>
+      <div class="field">
+        <label>Work / Commute Destination</label>
+        <input type="text" id="workLocInput" placeholder="e.g. Downtown Cairo" />
+      </div>
+
+      <div class="field">
+        <label>Wake Word Mode</label>
+        <select id="wakeModeSelect">
+          <option value="off">Off (tap mic button)</option>
+          <option value="listen">Always listening while app is open</option>
+        </select>
+        <div class="hint">Android background always-listening isn't possible for a web app — this listens only while Jarvis is open on screen.</div>
+      </div>
+
+      <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v1.0 · runs entirely in your browser · your keys never leave this device except to call Google/Gemini directly.</div>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
