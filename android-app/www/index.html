@@ -2,15 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
 <title>Jarvis</title>
-<meta name="description" content="Your personal AI secretary" />
 <meta name="theme-color" content="#0a0e14" />
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" href="icons/icon-192.png" />
-<link rel="apple-touch-icon" href="icons/icon-192.png" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -77,7 +71,7 @@
         <button class="chip-btn" id="addReminderBtn">Add</button>
       </div>
       <div class="card">
-        <h3>⏰ Upcoming</h3>
+        <h3>⏰ Upcoming <span class="sub-stat" style="font-weight:400;">(fires even if the app is closed)</span></h3>
         <div id="reminderList"><div class="empty-hint">No reminders yet.</div></div>
       </div>
     </div>
@@ -92,22 +86,32 @@
     <div class="scroll-view">
 
       <div class="field">
-        <label>Gemini API Key <span class="status-pill" id="keyStatus">not set</span></label>
-        <input type="password" id="apiKeyInput" placeholder="Paste your free Gemini API key" />
-        <div class="hint">Free key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Sign in with Google → Create API Key → paste it here. This is the only thing that runs Jarvis's brain, and it's free for personal use.</div>
+        <label>xAI (Grok) API Key <span class="status-pill" id="keyStatus">not set</span></label>
+        <input type="password" id="apiKeyInput" placeholder="Paste your xAI API key" />
+        <div class="hint">From <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a> → API Keys → Create key. This is a paid API (per-token billing) — Grok has no free tier, but no request-count limits like Gemini's free tier either.</div>
+      </div>
+
+      <div class="field">
+        <label>Grok Model</label>
+        <select id="modelSelect">
+          <option value="grok-4-fast">grok-4-fast (fast &amp; cheap, recommended)</option>
+          <option value="grok-4">grok-4 (smartest, pricier)</option>
+          <option value="grok-3-mini">grok-3-mini (cheapest)</option>
+        </select>
       </div>
 
       <div class="field">
         <label>Voice</label>
         <select id="voiceSelect"></select>
-        <div class="hint">Choose which built-in voice Jarvis speaks with.</div>
+        <div class="hint">Uses your phone's native text-to-speech voices.</div>
       </div>
 
       <div class="field">
         <label>Google Calendar <span class="status-pill" id="calStatus">not connected</span></label>
         <button class="wide-btn accent" id="connectCalBtn">Connect Google Calendar</button>
-        <div class="hint" id="calHint">Requires a one-time Google Cloud OAuth Client ID — see the README for the 2-minute click-through setup. Paste your Client ID below once you have it.</div>
-        <input type="text" id="oauthClientInput" placeholder="Google OAuth Client ID (ends in .apps.googleusercontent.com)" style="margin-top:8px;" />
+        <div class="hint">Requires a one-time Google Cloud OAuth setup — see the README. Paste the Client ID and Client Secret below (Application type: <b>Desktop app</b>).</div>
+        <input type="text" id="oauthClientInput" placeholder="OAuth Client ID (ends in .apps.googleusercontent.com)" style="margin-top:8px;" />
+        <input type="password" id="oauthSecretInput" placeholder="OAuth Client Secret" style="margin-top:8px;" />
       </div>
 
       <div class="field">
@@ -119,17 +123,8 @@
         <input type="text" id="workLocInput" placeholder="e.g. Downtown Cairo" />
       </div>
 
-      <div class="field">
-        <label>Wake Word Mode</label>
-        <select id="wakeModeSelect">
-          <option value="off">Off (tap mic button)</option>
-          <option value="listen">Always listening while app is open</option>
-        </select>
-        <div class="hint">Android background always-listening isn't possible for a web app — this listens only while Jarvis is open on screen.</div>
-      </div>
-
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v1.0 · runs entirely in your browser · your keys never leave this device except to call Google/Gemini directly.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v1.0 (native) · your keys are stored only on this device.</div>
     </div>
   </section>
 

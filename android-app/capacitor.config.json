@@ -1,0 +1,20 @@
+{
+  "appId": "com.jarvis.secretary",
+  "appName": "Jarvis",
+  "webDir": "www",
+  "backgroundColor": "#0a0e14",
+  "android": {
+    "backgroundColor": "#0a0e14",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_jarvis",
+      "iconColor": "#00d1ff"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 400,
+      "backgroundColor": "#0a0e14"
+    }
+  }
+}

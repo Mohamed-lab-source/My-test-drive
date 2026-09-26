@@ -1,11 +1,13 @@
 # My-test-drive
 Testing apps
 
-## Jarvis — personal AI secretary
+## Jarvis — personal AI secretary (native Android app)
 
-An installable Android web app (PWA): voice + text chat, morning briefings,
-Google Calendar, commute checks, and reminders, powered by a free Gemini API
-key. No coding needed to run it.
+A real installable Android APK: voice + text chat, morning briefings, real
+Google Calendar, commute checks, and reminders that fire as genuine OS
+notifications even when the app is closed. Brain: Grok (xAI). Built and
+packaged automatically by GitHub Actions — no Android tooling needed on
+your end.
 
-See [`jarvis/README.md`](jarvis/README.md) for setup (get it on your phone in
-~5 minutes).
+See [`android-app/README.md`](android-app/README.md) for setup (download
+the APK, install it, add your Grok API key — ~10 minutes).
