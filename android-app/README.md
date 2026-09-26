@@ -2,8 +2,10 @@
 
 A real Android app (an APK you install directly on your phone — no Play
 Store, no PWA, no browser tab). Voice + text chat, morning briefings, real
-Google Calendar, commute checks, and reminders that fire as genuine OS
-notifications even when the app is closed.
+Google Calendar and Gmail, commute checks, reminders that fire as genuine
+OS notifications even when the app is closed, and real phone control —
+calling and texting contacts by name, setting alarms and timers, and
+flipping the flashlight.
 
 Brain: **Grok** (xAI). Voice: your phone's native speech recognizer and
 text-to-speech.
@@ -38,7 +40,7 @@ costs money per use (typically cents per conversation for personal use).
 3. Copy the key.
 4. Open Jarvis → ⚙️ Settings → paste it into **xAI (Grok) API Key**.
 
-## 3. Connect your Google Calendar (optional but recommended)
+## 3. Connect your Google account — Calendar + Gmail (optional but recommended)
 
 This needs a one-time OAuth client from Google Cloud — clicking through
 screens, no code. About 3 minutes. Note the app type is **Desktop app**
@@ -47,7 +49,8 @@ inside a real Android app).
 
 1. Go to **[console.cloud.google.com](https://console.cloud.google.com)**, sign in with your Google account.
 2. Click the project dropdown → **New Project** → name it "Jarvis" → **Create**.
-3. Search **"Google Calendar API"** → open it → **Enable**.
+3. Search **"Google Calendar API"** → open it → **Enable**. Then search
+   **"Gmail API"** → open it → **Enable** too (Jarvis needs both).
 4. Go to **APIs & Services → OAuth consent screen**.
    - User type: **External** → **Create**.
    - Fill in app name ("Jarvis") and your email → **Save and Continue** through the remaining screens.
@@ -56,14 +59,15 @@ inside a real Android app).
    - Application type: **Desktop app**.
    - Name it anything → **Create**.
 6. Copy the **Client ID** and **Client Secret** it shows you.
-7. In Jarvis → Settings, paste both into **Google Calendar**, then tap
-   **Connect Google Calendar**. This opens Google sign-in in your phone's
+7. In Jarvis → Settings, paste both into **Google Account**, then tap
+   **Connect Google Account**. This opens Google sign-in in your phone's
    browser (this is normal and required — Google blocks sign-in inside
-   apps directly for security). Sign in, approve, and you'll be dropped
-   back into Jarvis, connected.
+   apps directly for security). Sign in, approve — the consent screen will
+   list both Calendar and Gmail access — and you'll be dropped back into
+   Jarvis, connected.
 
-Skip this and Jarvis still handles chat, weather, commute, and reminders —
-it just won't see your real calendar.
+Skip this and Jarvis still handles chat, weather, commute, reminders, and
+phone control — it just won't see your real calendar or inbox.
 
 ## 4. Set your locations
 
@@ -77,11 +81,28 @@ Commute Destination** (for the daily drive-time estimate).
   - "Book a dentist appointment tomorrow at 4pm"
   - "Remind me to call Ahmed at 6"
   - "How's traffic to work right now?"
+  - "Call Sarah" / "Text Ahmed and tell him I'm running late"
+  - "Set an alarm for 7am" / "Set a 10 minute timer"
+  - "What's in my inbox?" / "Email Sarah and tell her the report's attached"
+  - "Turn on the flashlight" / "How much battery do I have?"
 - **Briefing tab** — tap "Get My Morning Briefing" for a spoken rundown of
-  weather, schedule, commute, and open reminders.
+  weather, schedule, commute, open reminders, and unread email count. The
+  **Quick Actions** row above it gives instant-tap flashlight, battery, and
+  inbox checks without needing to ask. Tap ↗️ on a finished briefing to
+  share it as text to any app.
 - **Reminders tab** — add/manage reminders. These fire as real Android
   notifications, even if Jarvis isn't open — this is the one thing the
   earlier web-app version couldn't reliably do.
+
+### How the phone-control actions work
+
+`Call Sarah` and `Text Ahmed` look Sarah/Ahmed up in your phone's contacts
+(you'll be asked to allow contacts access the first time) and open the
+dialer or messaging app pre-filled — **you still tap send/call yourself**.
+This is deliberate: Jarvis never sends a text or places a call silently in
+the background. Alarms and timers open your clock app the same way. Only
+sending an email or creating a calendar event happens directly (Jarvis
+tells you what it sent/created either way).
 
 ## Rebuilding after changes
 
@@ -96,6 +117,8 @@ changed).
 1. A signed release build (this build is a debug APK — functionally
    identical, just not cryptographically signed for the Play Store; fine
    for installing directly on your own phone)
-2. Email triage (Gmail API, same OAuth pattern as Calendar)
-3. WhatsApp/SMS drafting via Android's native share/intent system
+2. Reading (not just acting on) incoming notifications, via Android's
+   Notification Listener permission
+3. A genuinely autonomous scheduled morning briefing (via
+   `@capacitor/background-runner`) rather than one you tap to run
 4. A true "Hey Jarvis" wake word using Android's always-on hotword APIs

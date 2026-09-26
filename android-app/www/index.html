@@ -36,6 +36,15 @@
     <div class="scroll-view">
       <button class="briefing-btn" id="runBriefingBtn">☀️ Get My Morning Briefing</button>
 
+      <div class="card">
+        <h3>⚡ Quick Actions</h3>
+        <div class="quick-actions-row">
+          <button class="quick-action-btn" id="flashlightBtn">🔦<span>Flashlight</span></button>
+          <button class="quick-action-btn" id="batteryBtn">🔋<span id="batteryLabel">Battery</span></button>
+          <button class="quick-action-btn" id="unreadEmailBtn">✉️<span id="unreadLabel">Inbox</span></button>
+        </div>
+      </div>
+
       <div class="card" id="weatherCard" style="display:none;">
         <h3>🌤️ Weather</h3>
         <div class="big-stat" id="weatherTemp">--°</div>
@@ -50,11 +59,16 @@
 
       <div class="card" id="calendarCard">
         <h3>📅 Today</h3>
-        <div id="calendarList"><div class="empty-hint">Connect Google Calendar in Settings to see today's events here.</div></div>
+        <div id="calendarList"><div class="empty-hint">Connect your Google account in Settings to see today's events here.</div></div>
+      </div>
+
+      <div class="card" id="unreadCard" style="display:none;">
+        <h3>✉️ Unread Email</h3>
+        <div id="unreadList"></div>
       </div>
 
       <div class="card" id="briefingTextCard" style="display:none;">
-        <h3>🗣️ Full Briefing</h3>
+        <h3>🗣️ Full Briefing <button class="icon-btn" id="shareBriefingBtn" style="width:32px; height:32px; font-size:14px; margin-left:auto;">↗️</button></h3>
         <div class="briefing-text" id="briefingText"></div>
       </div>
     </div>
@@ -107,9 +121,9 @@
       </div>
 
       <div class="field">
-        <label>Google Calendar <span class="status-pill" id="calStatus">not connected</span></label>
-        <button class="wide-btn accent" id="connectCalBtn">Connect Google Calendar</button>
-        <div class="hint">Requires a one-time Google Cloud OAuth setup — see the README. Paste the Client ID and Client Secret below (Application type: <b>Desktop app</b>).</div>
+        <label>Google Account (Calendar + Gmail) <span class="status-pill" id="calStatus">not connected</span></label>
+        <button class="wide-btn accent" id="connectCalBtn">Connect Google Account</button>
+        <div class="hint">Requires a one-time Google Cloud OAuth setup — see the README. Paste the Client ID and Client Secret below (Application type: <b>Desktop app</b>). Grants read/write Calendar access and read + send access to Gmail.</div>
         <input type="text" id="oauthClientInput" placeholder="OAuth Client ID (ends in .apps.googleusercontent.com)" style="margin-top:8px;" />
         <input type="password" id="oauthSecretInput" placeholder="OAuth Client Secret" style="margin-top:8px;" />
       </div>

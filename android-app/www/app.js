@@ -2,12 +2,17 @@
    JARVIS — native Android app (Capacitor WebView)
    Brain: xAI Grok (OpenAI-compatible chat completions + tool calling)
    Voice: native Android speech recognition + text-to-speech plugins
-   Calendar: Google OAuth via system browser (PKCE) + Calendar API
+   Google: OAuth via system browser (PKCE) + Calendar API + Gmail API
+   Phone: real device actions (call, text, alarm, timer, flashlight, battery)
+          via a small custom native plugin, DeviceActionsPlugin.java
+   Contacts: look people up by name so "call Ahmed" works
    Reminders: real OS-level scheduled notifications (fire even if app closed)
    ========================================================================= */
 
-const { Preferences, Browser, App, LocalNotifications, SpeechRecognition, TextToSpeech } =
-  (window.Capacitor && window.Capacitor.Plugins) || {};
+const {
+  Preferences, Browser, App, LocalNotifications, SpeechRecognition, TextToSpeech,
+  Share, Network, Contacts, DeviceActions,
+} = (window.Capacitor && window.Capacitor.Plugins) || {};
 
 /* ---------------------------------------------------------------------- *
  * Storage — Capacitor Preferences (native), loaded into memory at boot
@@ -194,10 +199,15 @@ async function speak(text) {
 }
 
 /* ---------------------------------------------------------------------- *
- * Google OAuth for Calendar — system browser + PKCE (works around
+ * Google OAuth for Calendar + Gmail — system browser + PKCE (works around
  * Google's block on OAuth inside embedded app WebViews)
  * ---------------------------------------------------------------------- */
-const CAL_SCOPE = "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly";
+const GOOGLE_SCOPES = [
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+].join(" ");
 const REDIRECT_URI = "com.jarvis.secretary://oauth2redirect";
 let pendingPkce = null;
 
@@ -227,7 +237,7 @@ async function connectCalendar() {
   authUrl.searchParams.set("client_id", state.oauthClientId);
   authUrl.searchParams.set("redirect_uri", REDIRECT_URI);
   authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("scope", CAL_SCOPE);
+  authUrl.searchParams.set("scope", GOOGLE_SCOPES);
   authUrl.searchParams.set("code_challenge", challenge);
   authUrl.searchParams.set("code_challenge_method", "S256");
   authUrl.searchParams.set("access_type", "offline");
@@ -242,7 +252,7 @@ async function handleOAuthRedirect(url) {
   const parsed = new URL(url);
   const code = parsed.searchParams.get("code");
   const error = parsed.searchParams.get("error");
-  if (error) { toast(`Calendar sign-in failed: ${error}`); return; }
+  if (error) { toast(`Google sign-in failed: ${error}`); return; }
   if (!code || !pendingPkce) return;
 
   try {
@@ -268,16 +278,16 @@ async function handleOAuthRedirect(url) {
       store.set("calendarRefreshToken", state.calendarRefreshToken);
     }
     refreshCalStatus();
-    toast("Calendar connected");
+    toast("Google account connected");
     refreshCalendarCard();
   } catch (e) {
-    toast(`Calendar sign-in failed: ${e.message}`);
+    toast(`Google sign-in failed: ${e.message}`);
   } finally {
     pendingPkce = null;
   }
 }
 
-async function ensureCalendarToken() {
+async function ensureGoogleToken() {
   if (state.calendarAccessToken && Date.now() < state.calendarTokenExpiry - 30000) {
     return state.calendarAccessToken;
   }
@@ -301,7 +311,7 @@ async function ensureCalendarToken() {
 }
 
 async function calendarFetch(path, opts = {}) {
-  const token = await ensureCalendarToken();
+  const token = await ensureGoogleToken();
   const res = await fetch(`https://www.googleapis.com/calendar/v3/${path}`, {
     ...opts,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(opts.headers || {}) },
@@ -333,6 +343,56 @@ async function createCalendarEvent({ title, start, end, description }) {
   };
   const data = await calendarFetch("calendars/primary/events", { method: "POST", body: JSON.stringify(body) });
   return { id: data.id, htmlLink: data.htmlLink, summary: data.summary };
+}
+
+/* ---------------------------------------------------------------------- *
+ * Gmail — same OAuth token as Calendar, different API base
+ * ---------------------------------------------------------------------- */
+async function gmailFetch(path, opts = {}) {
+  const token = await ensureGoogleToken();
+  const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
+    ...opts,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(opts.headers || {}) },
+  });
+  if (!res.ok) throw new Error(`Gmail API error ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+function decodeHeader(headers, name) {
+  const h = (headers || []).find(x => x.name.toLowerCase() === name.toLowerCase());
+  return h ? h.value : "";
+}
+
+async function listUnreadEmails(max = 5) {
+  const list = await gmailFetch(`messages?q=${encodeURIComponent("is:unread in:inbox")}&maxResults=${Math.min(max, 10)}`);
+  const ids = (list.messages || []).map(m => m.id);
+  const emails = [];
+  for (const id of ids) {
+    const msg = await gmailFetch(`messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
+    emails.push({
+      id,
+      from: decodeHeader(msg.payload?.headers, "From"),
+      subject: decodeHeader(msg.payload?.headers, "Subject") || "(no subject)",
+      snippet: msg.snippet || "",
+      date: decodeHeader(msg.payload?.headers, "Date"),
+    });
+  }
+  return emails;
+}
+
+function base64urlEncodeUtf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function sendEmail({ to, subject, body }) {
+  const raw = base64urlEncodeUtf8(
+    `To: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset="UTF-8"\r\n\r\n${body}`
+  );
+  const data = await gmailFetch("messages/send", { method: "POST", body: JSON.stringify({ raw }) });
+  return { sent: true, id: data.id };
 }
 
 /* ---------------------------------------------------------------------- *
@@ -486,14 +546,94 @@ function wireReminderForm() {
 }
 
 /* ---------------------------------------------------------------------- *
+ * Contacts — look people up by name ("call Ahmed") via the native
+ * @capacitor-community/contacts plugin
+ * ---------------------------------------------------------------------- */
+let contactsCache = null;
+
+async function ensureContactsPermission() {
+  try {
+    const perm = await Contacts.checkPermissions();
+    if (perm.contacts === "granted") return true;
+    const req = await Contacts.requestPermissions();
+    return req.contacts === "granted";
+  } catch { return false; }
+}
+
+async function findContact(name) {
+  const granted = await ensureContactsPermission();
+  if (!granted) throw new Error("Contacts permission denied. Ask the user to allow it, or give a phone number directly.");
+  if (!contactsCache) {
+    const result = await Contacts.getContacts({ projection: { name: true, phones: true } });
+    contactsCache = result.contacts || [];
+  }
+  const needle = name.trim().toLowerCase();
+  const matches = contactsCache.filter(c => (c.name?.display || "").toLowerCase().includes(needle));
+  if (!matches.length) throw new Error(`No contact found matching "${name}". Try their full name or give a phone number.`);
+  const best = matches[0];
+  const phone = best.phones && best.phones[0] && best.phones[0].number;
+  if (!phone) throw new Error(`Found ${best.name?.display} but they have no phone number saved.`);
+  return { displayName: best.name?.display, phone };
+}
+
+/* ---------------------------------------------------------------------- *
+ * Native device actions — real phone control via DeviceActionsPlugin.java
+ * ---------------------------------------------------------------------- */
+async function callContact(name) {
+  const contact = await findContact(name);
+  await DeviceActions.dialNumber({ number: contact.phone });
+  return { dialing: contact.displayName, number: contact.phone };
+}
+async function textContact(name, message) {
+  const contact = await findContact(name);
+  await DeviceActions.sendSms({ number: contact.phone, message });
+  return { texting: contact.displayName, number: contact.phone, message };
+}
+async function dialNumber(number) {
+  await DeviceActions.dialNumber({ number });
+  return { dialing: number };
+}
+async function sendSmsTo(number, message) {
+  await DeviceActions.sendSms({ number, message });
+  return { texting: number, message };
+}
+async function setAlarm(hour, minute, label) {
+  await DeviceActions.setAlarm({ hour, minute, label: label || "Jarvis alarm" });
+  return { alarmSet: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`, label };
+}
+async function setTimer(seconds, label) {
+  await DeviceActions.setTimer({ seconds, label: label || "Jarvis timer" });
+  return { timerSet: `${seconds}s`, label };
+}
+async function setFlashlight(on) {
+  const result = await DeviceActions.setFlashlight({ on });
+  return result;
+}
+async function getBatteryStatus() {
+  return await DeviceActions.getBatteryStatus();
+}
+
+/* ---------------------------------------------------------------------- *
  * Grok (xAI) brain — OpenAI-compatible chat completions + tool calling
  * ---------------------------------------------------------------------- */
 const SYSTEM_PROMPT = `You are Jarvis, a sharp, warm, slightly witty personal secretary living on the user's phone.
 Be concise and conversational — you're spoken aloud as often as read. Use tools whenever the user's request needs
-live information (weather, calendar, commute, reminders) rather than guessing. When creating calendar events,
-confirm the details back to the user in your reply. Never invent calendar events, weather, or commute data —
-always call the matching tool. If a tool fails because something isn't connected/set, tell the user plainly what
-to set up in Settings. Keep replies short by default; give more detail only if asked.`;
+live information (weather, calendar, commute, reminders, email) or a real device action (calling, texting, alarms,
+timers, flashlight) rather than guessing or pretending. Never invent calendar events, weather, commute data, or
+email contents — always call the matching tool. If a tool fails because something isn't connected/set up, tell the
+user plainly what to set up in Settings.
+
+Real-world actions matter here: calling/texting someone, sending an email, and creating calendar events all have
+real consequences. Confirm the key details back to the user in your reply after doing them (who, what, when).
+For sending an email specifically, if the request is ambiguous or the content is substantial, briefly state what
+you're about to send before calling send_email — a quick "Sending Ahmed: ..." is enough, no need for a separate
+confirmation round-trip unless the user seems unsure.
+
+dial_number and send_sms only open the phone's own dialer/messaging app pre-filled — the user still has to tap
+send/call themselves, so you can use these freely without extra confirmation. Prefer call_contact/text_contact
+over dial_number/send_sms when the user names a person rather than giving a raw number.
+
+Keep replies short by default; give more detail only if asked.`;
 
 const TOOLS = [
   {
@@ -560,6 +700,117 @@ const TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "list_unread_emails",
+      description: "List the user's unread Gmail inbox messages (sender, subject, snippet). Requires the Google account to be connected.",
+      parameters: {
+        type: "object",
+        properties: { max: { type: "integer", description: "Max emails to return, default 5, max 10" } },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_email",
+      description: "Send an email from the user's Gmail account. Requires the Google account to be connected.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "Recipient email address" },
+          subject: { type: "string" },
+          body: { type: "string" },
+        },
+        required: ["to", "subject", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "call_contact",
+      description: "Open the dialer with a saved contact's number, looked up by name.",
+      parameters: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "text_contact",
+      description: "Open the messaging app pre-filled to text a saved contact, looked up by name.",
+      parameters: {
+        type: "object",
+        properties: { name: { type: "string" }, message: { type: "string" } },
+        required: ["name", "message"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dial_number",
+      description: "Open the dialer with a specific phone number (use when the user gives a raw number rather than a contact name).",
+      parameters: { type: "object", properties: { number: { type: "string" } }, required: ["number"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_sms",
+      description: "Open the messaging app pre-filled to text a specific phone number.",
+      parameters: {
+        type: "object",
+        properties: { number: { type: "string" }, message: { type: "string" } },
+        required: ["number", "message"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_alarm",
+      description: "Set a device alarm for a specific time using the phone's clock app.",
+      parameters: {
+        type: "object",
+        properties: {
+          hour: { type: "integer", description: "0-23" },
+          minute: { type: "integer", description: "0-59" },
+          label: { type: "string" },
+        },
+        required: ["hour", "minute"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_timer",
+      description: "Start a countdown timer using the phone's clock app.",
+      parameters: {
+        type: "object",
+        properties: { seconds: { type: "integer" }, label: { type: "string" } },
+        required: ["seconds"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "toggle_flashlight",
+      description: "Turn the phone's flashlight on or off.",
+      parameters: { type: "object", properties: { on: { type: "boolean" } }, required: ["on"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_battery_status",
+      description: "Get the phone's current battery percentage and charging status.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 async function executeTool(name, args) {
@@ -568,6 +819,16 @@ async function executeTool(name, args) {
     case "get_commute_time": return await getCommuteTime(args.origin, args.destination);
     case "list_today_events": return { events: await listTodayEvents() };
     case "create_calendar_event": return await createCalendarEvent(args);
+    case "list_unread_emails": return { emails: await listUnreadEmails(args.max || 5) };
+    case "send_email": return await sendEmail(args);
+    case "call_contact": return await callContact(args.name);
+    case "text_contact": return await textContact(args.name, args.message);
+    case "dial_number": return await dialNumber(args.number);
+    case "send_sms": return await sendSmsTo(args.number, args.message);
+    case "set_alarm": return await setAlarm(args.hour, args.minute, args.label);
+    case "set_timer": return await setTimer(args.seconds, args.label);
+    case "toggle_flashlight": return await setFlashlight(args.on);
+    case "get_battery_status": return await getBatteryStatus();
     case "add_reminder": { const r = await addReminder(args.text, args.when || null); return { added: true, reminder: r }; }
     case "list_reminders": return { reminders: state.reminders.filter(r => !r.done) };
     default: throw new Error(`Unknown tool: ${name}`);
@@ -656,6 +917,7 @@ async function sendMessage() {
   const chatInput = document.getElementById("chatInput");
   const text = chatInput.value.trim();
   if (!text || sending) return;
+  if (!(await isOnline())) { toast("You're offline — Jarvis needs a connection to think"); return; }
   sending = true;
   chatInput.value = "";
   chatInput.style.height = "auto";
@@ -762,7 +1024,7 @@ async function runBriefing() {
   btn.textContent = "⏳ Gathering your briefing...";
   btn.disabled = true;
 
-  const results = { weather: null, commute: null, events: [], reminders: [] };
+  const results = { weather: null, commute: null, events: [], reminders: [], unread: 0 };
 
   if (state.homeLoc) {
     try {
@@ -786,6 +1048,9 @@ async function runBriefing() {
 
   results.events = await refreshCalendarCard();
   results.reminders = state.reminders.filter(r => !r.done);
+  if (state.calendarRefreshToken) {
+    try { results.unread = (await listUnreadEmails(10)).length; } catch { /* best effort */ }
+  }
 
   const lines = [];
   const hour = new Date().getHours();
@@ -796,6 +1061,7 @@ async function runBriefing() {
     : `Your calendar is clear today. `);
   if (results.commute) lines.push(`Commute to ${results.commute.to.split(",")[0]} is about ${results.commute.minutes} minutes. `);
   if (results.reminders.length) lines.push(`You have ${results.reminders.length} open reminder${results.reminders.length > 1 ? "s" : ""}: ${results.reminders.slice(0, 3).map(r => r.text).join(", ")}. `);
+  if (results.unread) lines.push(`And ${results.unread} unread email${results.unread > 1 ? "s" : ""} waiting. `);
 
   const briefing = lines.join("");
   document.getElementById("briefingTextCard").style.display = "block";
@@ -808,6 +1074,69 @@ async function runBriefing() {
 
 function wireBriefing() {
   document.getElementById("runBriefingBtn").addEventListener("click", runBriefing);
+  document.getElementById("shareBriefingBtn").addEventListener("click", async () => {
+    const text = document.getElementById("briefingText").textContent;
+    try { await Share.share({ title: "My Jarvis briefing", text }); }
+    catch { /* user cancelled the share sheet — fine */ }
+  });
+}
+
+async function isOnline() {
+  try { return (await Network.getStatus()).connected; } catch { return true; } // assume online if we can't tell
+}
+
+/* ---------------------------------------------------------------------- *
+ * Quick Actions — instant-tap device controls on the Briefing tab
+ * ---------------------------------------------------------------------- */
+let flashlightOn = false;
+
+async function refreshBatteryLabel() {
+  try {
+    const { level, charging } = await getBatteryStatus();
+    const label = document.getElementById("batteryLabel");
+    label.textContent = level >= 0 ? `${level}%${charging ? " ⚡" : ""}` : "Battery";
+  } catch { /* ignore — best effort */ }
+}
+
+async function refreshUnreadLabel() {
+  if (!state.calendarRefreshToken) return;
+  try {
+    const emails = await listUnreadEmails(5);
+    document.getElementById("unreadLabel").textContent = emails.length ? `${emails.length} unread` : "Inbox clear";
+    const card = document.getElementById("unreadCard");
+    const list = document.getElementById("unreadList");
+    if (!emails.length) { card.style.display = "none"; return; }
+    card.style.display = "block";
+    list.innerHTML = "";
+    emails.forEach(e => {
+      const row = document.createElement("div");
+      row.className = "email-row";
+      row.innerHTML = `
+        <div class="email-from">${escapeHtml((e.from || "").split("<")[0].trim())}</div>
+        <div class="email-subject">${escapeHtml(e.subject)}</div>
+        <div class="email-snippet">${escapeHtml(e.snippet)}</div>
+      `;
+      list.appendChild(row);
+    });
+  } catch { /* not connected or offline — leave label as-is */ }
+}
+
+function wireQuickActions() {
+  document.getElementById("flashlightBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("flashlightBtn");
+    try {
+      flashlightOn = !flashlightOn;
+      await setFlashlight(flashlightOn);
+      btn.classList.toggle("active", flashlightOn);
+    } catch (e) {
+      flashlightOn = false;
+      toast(e.message || "Couldn't reach the flashlight");
+    }
+  });
+  document.getElementById("batteryBtn").addEventListener("click", refreshBatteryLabel);
+  document.getElementById("unreadEmailBtn").addEventListener("click", refreshUnreadLabel);
+  refreshBatteryLabel();
+  refreshUnreadLabel();
 }
 
 /* ---------------------------------------------------------------------- *
@@ -828,6 +1157,7 @@ async function boot() {
   wireChat();
   wireMic();
   wireBriefing();
+  wireQuickActions();
   wireDeepLinks();
   await populateVoices();
   renderHistoryOnLoad();
