@@ -40,6 +40,9 @@ const state = {
   voiceName: "",
   pitch: 1.0,
   rate: 1.0,
+  useElevenLabs: false,
+  elevenLabsApiKey: "",
+  elevenLabsVoiceId: "",
   directActions: true, // call/text fire immediately, no tap — the user asked for this explicitly
   reminders: [],
   chatHistory: [], // OpenAI-style: [{role, content, tool_calls?, tool_call_id?}]
@@ -66,6 +69,9 @@ async function loadState() {
   state.voiceName = await store.get("voiceName", "");
   state.pitch = await store.get("pitch", 1.0);
   state.rate = await store.get("rate", 1.0);
+  state.useElevenLabs = await store.get("useElevenLabs", false);
+  state.elevenLabsApiKey = await store.get("elevenLabsApiKey", "");
+  state.elevenLabsVoiceId = await store.get("elevenLabsVoiceId", "");
   state.directActions = await store.get("directActions", true);
   state.reminders = await store.get("reminders", []);
   state.chatHistory = await store.get("chatHistory", []);
@@ -257,25 +263,160 @@ async function populateVoices() {
     rateValue.textContent = state.rate.toFixed(2);
     store.set("rate", state.rate);
   });
+
+  wireElevenLabs();
+}
+
+/* ---------------------------------------------------------------------- *
+ * ElevenLabs — optional premium voice. Unlike Android's TTS, ElevenLabs'
+ * voice list carries real gender/accent labels, so this is the one path
+ * that can actually guarantee a male British voice. Free tier: ~10 min of
+ * audio/month, no card required. Falls back to the device voice on any
+ * error (quota exhausted, network down, bad key) so speech never just goes
+ * silent.
+ * ---------------------------------------------------------------------- */
+let elevenLabsVoicesCache = [];
+
+function scoreElevenLabsVoice(v) {
+  const gender = (v.labels?.gender || "").toLowerCase();
+  const accent = (v.labels?.accent || "").toLowerCase();
+  let score = 0;
+  if (gender === "male") score += 10;
+  if (accent.includes("british") || accent.includes("english")) score += 5;
+  return score;
+}
+
+function renderElevenLabsVoiceOptions() {
+  const select = document.getElementById("elevenLabsVoiceSelect");
+  select.innerHTML = "";
+  [...elevenLabsVoicesCache]
+    .sort((a, b) => scoreElevenLabsVoice(b) - scoreElevenLabsVoice(a))
+    .forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v.voice_id;
+      const gender = v.labels?.gender || "?";
+      const accent = v.labels?.accent ? `, ${v.labels.accent}` : "";
+      opt.textContent = `${v.name} (${gender}${accent})`;
+      if (v.voice_id === state.elevenLabsVoiceId) opt.selected = true;
+      select.appendChild(opt);
+    });
+}
+
+async function loadElevenLabsVoices() {
+  const select = document.getElementById("elevenLabsVoiceSelect");
+  if (!state.elevenLabsApiKey) { toast("Add your ElevenLabs API key first"); return; }
+  try {
+    const res = await fetch("https://api.elevenlabs.io/v1/voices", {
+      headers: { "xi-api-key": state.elevenLabsApiKey },
+    });
+    if (!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    elevenLabsVoicesCache = data.voices || [];
+    if (!elevenLabsVoicesCache.length) { toast("No voices returned — check your API key"); return; }
+    if (!state.elevenLabsVoiceId || !elevenLabsVoicesCache.some(v => v.voice_id === state.elevenLabsVoiceId)) {
+      const best = [...elevenLabsVoicesCache].sort((a, b) => scoreElevenLabsVoice(b) - scoreElevenLabsVoice(a))[0];
+      state.elevenLabsVoiceId = best.voice_id;
+      store.set("elevenLabsVoiceId", state.elevenLabsVoiceId);
+    }
+    renderElevenLabsVoiceOptions();
+    select.value = state.elevenLabsVoiceId;
+    toast(`Loaded ${elevenLabsVoicesCache.length} voices`);
+  } catch (e) {
+    toast(`Couldn't load voices: ${e.message}`);
+  }
+}
+
+function wireElevenLabs() {
+  const toggle = document.getElementById("elevenLabsToggle");
+  const keyInput = document.getElementById("elevenLabsKeyInput");
+  const voiceSelect = document.getElementById("elevenLabsVoiceSelect");
+
+  toggle.checked = state.useElevenLabs;
+  keyInput.value = state.elevenLabsApiKey;
+
+  toggle.addEventListener("change", () => {
+    state.useElevenLabs = toggle.checked;
+    store.set("useElevenLabs", state.useElevenLabs);
+    if (state.useElevenLabs && !elevenLabsVoicesCache.length && state.elevenLabsApiKey) loadElevenLabsVoices();
+  });
+  keyInput.addEventListener("change", () => {
+    state.elevenLabsApiKey = keyInput.value.trim();
+    store.set("elevenLabsApiKey", state.elevenLabsApiKey);
+  });
+  voiceSelect.addEventListener("change", () => {
+    state.elevenLabsVoiceId = voiceSelect.value;
+    store.set("elevenLabsVoiceId", state.elevenLabsVoiceId);
+  });
+  document.getElementById("loadElevenLabsVoicesBtn").addEventListener("click", loadElevenLabsVoices);
+  document.getElementById("testElevenLabsBtn").addEventListener("click", async () => {
+    if (!state.elevenLabsVoiceId) { toast("Load voices and pick one first"); return; }
+    try { await speakElevenLabs("Good day. This is what I'll sound like."); }
+    catch (e) { toast(`ElevenLabs error: ${e.message}`); }
+  });
+
+  if (state.elevenLabsApiKey) loadElevenLabsVoices();
+}
+
+async function speakElevenLabs(text) {
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${state.elevenLabsVoiceId}`, {
+    method: "POST",
+    headers: {
+      "xi-api-key": state.elevenLabsApiKey,
+      "Content-Type": "application/json",
+      Accept: "audio/mpeg",
+    },
+    body: JSON.stringify({
+      text,
+      model_id: "eleven_turbo_v2_5", // cheapest/fastest model — conserves the free monthly quota
+      voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`${res.status}${body ? ": " + body.slice(0, 140) : ""}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    await new Promise((resolve, reject) => {
+      const audio = new Audio(url);
+      audio.onended = resolve;
+      audio.onerror = () => reject(new Error("playback failed"));
+      audio.play().catch(reject);
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function speakDevice(text) {
+  // Re-resolve by voiceURI every call: the plugin re-sorts the full voice
+  // list fresh each time, so the index is only valid alongside a matching
+  // lang for the voice it actually points at.
+  const voiceIndex = cachedVoices.findIndex(v => v.voiceURI === state.voiceName);
+  const matched = voiceIndex >= 0 ? cachedVoices[voiceIndex] : null;
+  await TextToSpeech.speak({
+    text,
+    lang: matched ? matched.lang : "en-US",
+    rate: state.rate,
+    pitch: state.pitch,
+    volume: 1.0,
+    category: "ambient",
+    voice: voiceIndex >= 0 ? voiceIndex : undefined,
+  });
 }
 
 async function speak(text) {
-  try {
-    // Re-resolve by voiceURI every call: the plugin re-sorts the full voice
-    // list fresh each time, so the index is only valid alongside a matching
-    // lang for the voice it actually points at.
-    const voiceIndex = cachedVoices.findIndex(v => v.voiceURI === state.voiceName);
-    const matched = voiceIndex >= 0 ? cachedVoices[voiceIndex] : null;
-    await TextToSpeech.speak({
-      text,
-      lang: matched ? matched.lang : "en-US",
-      rate: state.rate,
-      pitch: state.pitch,
-      volume: 1.0,
-      category: "ambient",
-      voice: voiceIndex >= 0 ? voiceIndex : undefined,
-    });
-  } catch (e) { console.warn("TTS failed", e); }
+  if (state.useElevenLabs && state.elevenLabsApiKey && state.elevenLabsVoiceId) {
+    try {
+      await speakElevenLabs(text);
+      return;
+    } catch (e) {
+      console.warn("ElevenLabs TTS failed, falling back to device voice", e);
+      toast(`Premium voice unavailable — using phone voice`);
+    }
+  }
+  try { await speakDevice(text); } catch (e) { console.warn("TTS failed", e); }
 }
 
 /* ---------------------------------------------------------------------- *

@@ -8,7 +8,9 @@ calling and texting contacts by name, setting alarms and timers, and
 flipping the flashlight.
 
 Brain: **Groq** (free — GPT-OSS 120B by default, no credit card, no
-bill). Voice: your phone's native speech recognizer and text-to-speech.
+bill). Voice: your phone's native speech recognizer and text-to-speech,
+with an optional ElevenLabs premium voice (free tier, real male/female
+voice picking) for something closer to an actual JARVIS sound.
 
 ## 1. Get the APK
 
@@ -75,7 +77,23 @@ phone control — it just won't see your real calendar or inbox.
 In Settings: **Home Location** (for weather + commute start) and **Work /
 Commute Destination** (for the daily drive-time estimate).
 
-## 5. Using it
+## 5. Get an actual male JARVIS-style voice (optional)
+
+Your phone's built-in text-to-speech gives Jarvis no way to know which
+voices are male or female — Android just doesn't expose that. If Pitch
+tuning on a phone voice isn't cutting it, ElevenLabs actually labels
+voices by gender and accent, so this is the real fix:
+
+1. Go to **[elevenlabs.io/app/sign-up](https://elevenlabs.io/app/sign-up)** — free, no card needed.
+2. Sign in → click your avatar (bottom-left) → **API Keys** → **Create API Key** → copy it.
+3. Jarvis → Settings → **Premium Voice** → paste the key → turn the toggle on.
+4. Tap **⟳ Load** — the voice list fills in, sorted with male British voices first. Pick one, tap **▶️ Test**.
+
+Free tier is about 10 minutes of speech a month — plenty for briefings and
+short replies. If you run out, Jarvis automatically falls back to your
+phone's voice rather than going silent.
+
+## 6. Using it
 
 - **Chat tab** — type or tap 🎤 and talk. Try:
   - "What's on my calendar today?"
