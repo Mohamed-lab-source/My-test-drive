@@ -578,7 +578,7 @@ async function ensureContactsPermission() {
 
 async function findContact(name) {
   const granted = await ensureContactsPermission();
-  if (!granted) throw new Error("Contacts permission denied. Ask the user to allow it, or give a phone number directly.");
+  if (!granted) throw new Error("Contacts permission is off. Ask the user to grant it: long-press the Jarvis icon → App info → Permissions → Contacts → Allow. Or give a phone number directly instead.");
   if (!contactsCache) {
     const result = await Contacts.getContacts({ projection: { name: true, phones: true } });
     contactsCache = result.contacts || [];
