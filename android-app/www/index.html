@@ -100,17 +100,17 @@
     <div class="scroll-view">
 
       <div class="field">
-        <label>xAI (Grok) API Key <span class="status-pill" id="keyStatus">not set</span></label>
-        <input type="password" id="apiKeyInput" placeholder="Paste your xAI API key" />
-        <div class="hint">From <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a> → API Keys → Create key. This is a paid API (per-token billing) — Grok has no free tier, but no request-count limits like Gemini's free tier either.</div>
+        <label>Groq API Key (free) <span class="status-pill" id="keyStatus">not set</span></label>
+        <input type="password" id="apiKeyInput" placeholder="Paste your Groq API key" />
+        <div class="hint">From <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> → Create API Key. Free forever, no credit card — just a request-per-minute limit, not a bill.</div>
       </div>
 
       <div class="field">
-        <label>Grok Model</label>
+        <label>Groq Model</label>
         <select id="modelSelect">
-          <option value="grok-4-fast">grok-4-fast (fast &amp; cheap, recommended)</option>
-          <option value="grok-4">grok-4 (smartest, pricier)</option>
-          <option value="grok-3-mini">grok-3-mini (cheapest)</option>
+          <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (recommended — smart &amp; free)</option>
+          <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (largest, most capable)</option>
+          <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (fastest, lighter tasks)</option>
         </select>
       </div>
 

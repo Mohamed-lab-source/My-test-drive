@@ -7,8 +7,8 @@ OS notifications even when the app is closed, and real phone control —
 calling and texting contacts by name, setting alarms and timers, and
 flipping the flashlight.
 
-Brain: **Grok** (xAI). Voice: your phone's native speech recognizer and
-text-to-speech.
+Brain: **Groq** (free — Llama 3.3 70B by default, no credit card, no
+bill). Voice: your phone's native speech recognizer and text-to-speech.
 
 ## 1. Get the APK
 
@@ -28,17 +28,18 @@ servers (no Android tooling needed on your end):
    the Play Store, including this one.
 5. Open **Jarvis** from your app drawer. It's a real app icon now.
 
-## 2. Give it a brain — Grok API key
+## 2. Give it a brain — Groq API key (free, no card)
 
-Jarvis needs an xAI API key. **Note: unlike Gemini, Grok has no free
-tier** — it's pay-per-token, billed to your xAI account. You chose Grok
-over Gemini for its higher/less-restrictive rate limits; just know it
-costs money per use (typically cents per conversation for personal use).
+Jarvis needs a Groq API key. Groq is genuinely free — no credit card, no
+bill, ever. What you get instead of a bill is a rate limit (roughly 30
+requests/minute depending on the model), which is more than enough for
+normal personal use — you'll only ever hit it if you fire off requests
+back-to-back.
 
-1. Go to **[console.x.ai](https://console.x.ai)** → sign in → **API Keys** → **Create API Key**.
-2. Add a bit of credit to your xAI billing (required before the key works).
+1. Go to **[console.groq.com/keys](https://console.groq.com/keys)** → sign in with Google/GitHub (no card needed anywhere).
+2. Click **Create API Key**.
 3. Copy the key.
-4. Open Jarvis → ⚙️ Settings → paste it into **xAI (Grok) API Key**.
+4. Open Jarvis → ⚙️ Settings → paste it into **Groq API Key**.
 
 ## 3. Connect your Google account — Calendar + Gmail (optional but recommended)
 

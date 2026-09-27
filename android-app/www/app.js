@@ -1,6 +1,6 @@
 /* =========================================================================
    JARVIS — native Android app (Capacitor WebView)
-   Brain: xAI Grok (OpenAI-compatible chat completions + tool calling)
+   Brain: Groq (free, OpenAI-compatible chat completions + tool calling)
    Voice: native Android speech recognition + text-to-speech plugins
    Google: OAuth via system browser (PKCE) + Calendar API + Gmail API
    Phone: real device actions (call, text, alarm, timer, flashlight, battery)
@@ -32,7 +32,7 @@ const store = {
 
 const state = {
   apiKey: "",
-  model: "grok-4-fast",
+  model: "llama-3.3-70b-versatile",
   oauthClientId: "",
   oauthClientSecret: "",
   homeLoc: "",
@@ -49,7 +49,7 @@ const state = {
 
 async function loadState() {
   state.apiKey = await store.get("apiKey", "");
-  state.model = await store.get("model", "grok-4-fast");
+  state.model = await store.get("model", "llama-3.3-70b-versatile");
   state.oauthClientId = await store.get("oauthClientId", "");
   state.oauthClientSecret = await store.get("oauthClientSecret", "");
   state.homeLoc = await store.get("homeLoc", "");
@@ -593,7 +593,7 @@ async function findContact(name) {
  * calling/texting fires immediately (callNumberDirect/sendSmsDirect — no
  * tap needed) or only pre-fills the dialer/messaging app for the user to
  * send themselves. Either way runs through these same functions, so the
- * Grok tool schema never changes — only what happens underneath does.
+ * Groq tool schema never changes — only what happens underneath does.
  * ---------------------------------------------------------------------- */
 async function placeCall(number) {
   if (state.directActions) {
@@ -644,7 +644,7 @@ async function getBatteryStatus() {
 }
 
 /* ---------------------------------------------------------------------- *
- * Grok (xAI) brain — OpenAI-compatible chat completions + tool calling
+ * Groq brain — OpenAI-compatible chat completions + tool calling, free tier
  * ---------------------------------------------------------------------- */
 const SYSTEM_PROMPT = `You are Jarvis, a sharp, warm, slightly witty personal secretary living on the user's phone.
 Be concise and conversational — you're spoken aloud as often as read. Use tools whenever the user's request needs
@@ -866,14 +866,14 @@ async function executeTool(name, args) {
   }
 }
 
-async function callGrok(messages) {
+async function callGroq(messages) {
   if (!state.apiKey) throw new Error("NO_API_KEY");
-  const res = await fetch("https://api.x.ai/v1/chat/completions", {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.apiKey}` },
     body: JSON.stringify({ model: state.model, messages, tools: TOOLS, tool_choice: "auto" }),
   });
-  if (!res.ok) throw new Error(`Grok API error ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Groq API error ${res.status}: ${await res.text()}`);
   return res.json();
 }
 
@@ -886,10 +886,10 @@ async function runAgentTurn(userText) {
   let guard = 0;
   while (guard++ < 6) {
     let data;
-    try { data = await callGrok(messages); }
+    try { data = await callGroq(messages); }
     catch (e) {
       if (String(e.message).includes("NO_API_KEY")) {
-        return { text: "I don't have a Grok API key yet. Add one in Settings and I'll be right with you.", messages };
+        return { text: "I don't have a Groq API key yet. Add one in Settings and I'll be right with you.", messages };
       }
       return { text: `I hit an error talking to my brain: ${e.message}`, messages };
     }
