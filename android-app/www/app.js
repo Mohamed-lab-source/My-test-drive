@@ -38,6 +38,8 @@ const state = {
   homeLoc: "",
   workLoc: "",
   voiceName: "",
+  pitch: 1.0,
+  rate: 1.0,
   directActions: true, // call/text fire immediately, no tap — the user asked for this explicitly
   reminders: [],
   chatHistory: [], // OpenAI-style: [{role, content, tool_calls?, tool_call_id?}]
@@ -62,6 +64,8 @@ async function loadState() {
   state.homeLoc = await store.get("homeLoc", "");
   state.workLoc = await store.get("workLoc", "");
   state.voiceName = await store.get("voiceName", "");
+  state.pitch = await store.get("pitch", 1.0);
+  state.rate = await store.get("rate", 1.0);
   state.directActions = await store.get("directActions", true);
   state.reminders = await store.get("reminders", []);
   state.chatHistory = await store.get("chatHistory", []);
@@ -185,12 +189,15 @@ function wireSettingsForm() {
 let cachedVoices = [];
 
 function scoreVoiceForJarvis(v) {
+  // Android's TTS voice list carries no gender field at all, so there's no
+  // reliable signal to auto-pick a "male" voice — this only ranks on what
+  // we can actually know: accent and audio quality. Getting a male voice
+  // is a manual pick from the dropdown (use Test to preview each one).
   const lang = (v.lang || "").toLowerCase();
   const name = (v.name || "").toLowerCase();
   let score = 0;
   if (lang === "en-gb") score += 10; // British, closest to the source material
   else if (lang.startsWith("en-")) score += 5;
-  if (/\b(male|man|david|daniel|james|arthur|george|oliver|ryan|guy|rjs|gbb)\b/.test(name)) score += 4;
   if (name.includes("network")) score += 2; // cloud voices usually sound better than on-device "-local" ones
   if (v.localService === false) score += 1;
   return score;
@@ -231,6 +238,25 @@ async function populateVoices() {
   document.getElementById("testVoiceBtn").addEventListener("click", () => {
     speak("Good day. This is what I'll sound like.");
   });
+
+  const pitchSlider = document.getElementById("pitchSlider");
+  const rateSlider = document.getElementById("rateSlider");
+  const pitchValue = document.getElementById("pitchValue");
+  const rateValue = document.getElementById("rateValue");
+  pitchSlider.value = state.pitch;
+  rateSlider.value = state.rate;
+  pitchValue.textContent = state.pitch.toFixed(2);
+  rateValue.textContent = state.rate.toFixed(2);
+  pitchSlider.addEventListener("input", () => {
+    state.pitch = parseFloat(pitchSlider.value);
+    pitchValue.textContent = state.pitch.toFixed(2);
+    store.set("pitch", state.pitch);
+  });
+  rateSlider.addEventListener("input", () => {
+    state.rate = parseFloat(rateSlider.value);
+    rateValue.textContent = state.rate.toFixed(2);
+    store.set("rate", state.rate);
+  });
 }
 
 async function speak(text) {
@@ -243,8 +269,8 @@ async function speak(text) {
     await TextToSpeech.speak({
       text,
       lang: matched ? matched.lang : "en-US",
-      rate: 1.0,
-      pitch: 1.0,
+      rate: state.rate,
+      pitch: state.pitch,
       volume: 1.0,
       category: "ambient",
       voice: voiceIndex >= 0 ? voiceIndex : undefined,

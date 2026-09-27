@@ -119,7 +119,17 @@
           <select id="voiceSelect" style="flex:1;"></select>
           <button class="wide-btn" id="testVoiceBtn" style="width:auto; margin:0; padding:0 16px;">▶️ Test</button>
         </div>
-        <div class="hint">Uses your phone's built-in text-to-speech voices — Jarvis picks the best-sounding one available by default. For better options, go to Android Settings → System → Languages &amp; input → Text-to-speech and install a higher-quality voice pack (Google's TTS engine offers several English accents).</div>
+        <div class="hint">Your phone's built-in voices don't come labeled by gender, so Jarvis can't reliably auto-pick a male one — <b>scroll through the list and tap Test</b> to find one you like. For more/better options (some phones only ship one or two English voices), go to Android Settings → System → Languages &amp; input → Text-to-speech → gear icon next to your engine → install additional voices.</div>
+      </div>
+
+      <div class="field">
+        <label>Pitch <span id="pitchValue" class="status-pill">1.0</span></label>
+        <input type="range" id="pitchSlider" min="0.6" max="1.4" step="0.05" value="1.0" style="width:100%;" />
+        <div class="hint">Lower = deeper, more synthetic — closer to a JARVIS-style tone. Higher = brighter.</div>
+      </div>
+      <div class="field">
+        <label>Speaking Rate <span id="rateValue" class="status-pill">1.0</span></label>
+        <input type="range" id="rateSlider" min="0.7" max="1.4" step="0.05" value="1.0" style="width:100%;" />
       </div>
 
       <div class="field">
