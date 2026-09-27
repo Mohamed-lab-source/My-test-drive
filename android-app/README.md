@@ -7,7 +7,7 @@ OS notifications even when the app is closed, and real phone control —
 calling and texting contacts by name, setting alarms and timers, and
 flipping the flashlight.
 
-Brain: **Groq** (free — Llama 3.3 70B by default, no credit card, no
+Brain: **Groq** (free — GPT-OSS 120B by default, no credit card, no
 bill). Voice: your phone's native speech recognizer and text-to-speech.
 
 ## 1. Get the APK

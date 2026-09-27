@@ -32,7 +32,7 @@ const store = {
 
 const state = {
   apiKey: "",
-  model: "llama-3.3-70b-versatile",
+  model: "openai/gpt-oss-120b",
   oauthClientId: "",
   oauthClientSecret: "",
   homeLoc: "",
@@ -49,7 +49,13 @@ const state = {
 
 async function loadState() {
   state.apiKey = await store.get("apiKey", "");
-  state.model = await store.get("model", "llama-3.3-70b-versatile");
+  state.model = await store.get("model", "openai/gpt-oss-120b");
+  // llama-3.3-70b-versatile was Groq's free-tier default until they deprecated it
+  // (June 2026) — migrate anyone who saved it before this build knew better.
+  if (state.model === "llama-3.3-70b-versatile") {
+    state.model = "openai/gpt-oss-120b";
+    store.set("model", state.model);
+  }
   state.oauthClientId = await store.get("oauthClientId", "");
   state.oauthClientSecret = await store.get("oauthClientSecret", "");
   state.homeLoc = await store.get("homeLoc", "");
