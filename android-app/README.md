@@ -114,6 +114,25 @@ phone's voice rather than going silent.
   relying on the model's memory.
 - Settings → "How should Jarvis address you?" changes "sir" to anything you like.
 
+### Jarvis everywhere (one-time setup, in Settings)
+
+- **Summon from anywhere** → tap *Make Jarvis my assistant* → choose
+  *Digital assistant app* → *Jarvis*. Now long-pressing home/power (or your
+  phone's assistant gesture, or a Bluetooth headset button) opens Jarvis
+  already listening, from any screen.
+- **Watch my messages** → tap *Give Jarvis notification access* → turn on
+  Jarvis. If the switch is greyed out, Android is blocking it because the app
+  wasn't installed from the Play Store: tap *Open Jarvis app info* → ⋮ (top
+  right) → *Allow restricted settings*, then try again.
+  Then: "what did I miss?", "did Omi text me?", "reply to Omi: on my way"
+  (sends straight into that WhatsApp/SMS thread, no tap).
+- **Announce new messages aloud** → never / only with headphones (default) /
+  always. With the app closed he still announces, in your phone's voice.
+- **Running the phone** needs no setup: "open Spotify", "play some Arctic
+  Monkeys", "next song", "volume to 40", "navigate home", "WhatsApp Ahmed
+  that I'll be late", "turn on Wi-Fi" (Android only lets apps open the
+  Wi-Fi/Bluetooth panel, so he brings it up for you to tap).
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

@@ -155,6 +155,28 @@
       </div>
 
       <div class="field">
+        <label>Summon from anywhere <span class="status-pill" id="assistStatus">not set</span></label>
+        <button class="wide-btn accent" id="assistSetupBtn">Make Jarvis my assistant</button>
+        <div class="hint">In the screen that opens, choose <b>Digital assistant app</b> → <b>Jarvis</b>. After that, long-press the home or power button (or swipe up from a bottom corner, depending on your phone) from any screen and Jarvis is listening. Bluetooth headset buttons work too.</div>
+      </div>
+
+      <div class="field">
+        <label>Watch my messages <span class="status-pill" id="notifStatus">off</span></label>
+        <button class="wide-btn accent" id="notifSetupBtn">Give Jarvis notification access</button>
+        <div class="hint">Lets Jarvis see incoming WhatsApp, SMS, Telegram and similar messages so he can announce them, read them back ("what did I miss?"), and reply by voice. Turn on <b>Jarvis</b> in the screen that opens. If the switch is greyed out: tap below to open App info, then ⋮ (top right) → <b>Allow restricted settings</b>, and try again. Android does this for apps installed outside the Play Store.</div>
+        <button class="wide-btn" id="appInfoBtn" style="margin-top:8px;">Open Jarvis app info</button>
+      </div>
+
+      <div class="field">
+        <label>Announce new messages aloud</label>
+        <select id="announceSelect">
+          <option value="headphones">Only when headphones are connected</option>
+          <option value="always">Always</option>
+          <option value="off">Never</option>
+        </select>
+      </div>
+
+      <div class="field">
         <label>What Jarvis remembers about you</label>
         <div id="memoryList" class="memory-list"><div class="empty-hint">Nothing yet. Tell him things ("my sister is Omi", "I hate early meetings") and he'll keep them.</div></div>
         <button class="wide-btn danger" id="clearMemoryBtn" style="margin-top:8px;">Forget everything</button>
@@ -228,7 +250,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.0 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.1 · your keys are stored only on this device.</div>
     </div>
   </section>
 

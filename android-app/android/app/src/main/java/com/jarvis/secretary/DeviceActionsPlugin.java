@@ -1,8 +1,25 @@
 package com.jarvis.secretary;
 
+import android.app.PendingIntent;
+import android.app.RemoteInput;
+import android.app.SearchManager;
+import android.app.role.RoleManager;
+import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.media.AudioManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.SystemClock;
+import android.provider.MediaStore;
+import android.provider.Settings;
+import android.telephony.PhoneNumberUtils;
+import android.telephony.TelephonyManager;
+import android.view.KeyEvent;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -11,6 +28,7 @@ import android.os.BatteryManager;
 import android.provider.AlarmClock;
 import android.telephony.SmsManager;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -21,6 +39,8 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Native "hands" for Jarvis: the real device actions that make it feel like
@@ -244,6 +264,300 @@ public class DeviceActionsPlugin extends Plugin {
         getContext().startActivity(intent);
         JSObject ret = new JSObject();
         ret.put("opened", true);
+        call.resolve(ret);
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Plumbing for native -> JS events
+     * ------------------------------------------------------------------ */
+    private static volatile DeviceActionsPlugin instance;
+
+    @Override
+    public void load() {
+        instance = this;
+    }
+
+    static void emitAssist() {
+        DeviceActionsPlugin p = instance;
+        if (p != null) p.notifyListeners("assist", new JSObject());
+    }
+
+    static void emitNotification(JSObject data) {
+        DeviceActionsPlugin p = instance;
+        if (p != null) p.notifyListeners("notification", data);
+    }
+
+    private boolean tryStart(Intent intent) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(intent);
+            return true;
+        } catch (ActivityNotFoundException | SecurityException e) {
+            return false;
+        }
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Summon from anywhere — Jarvis as the device's assistant app
+     * ------------------------------------------------------------------ */
+    @PluginMethod
+    public void consumeAssistLaunch(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("assist", MainActivity.consumePendingAssist());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getAssistantStatus(PluginCall call) {
+        boolean held = false;
+        if (Build.VERSION.SDK_INT >= 29) {
+            RoleManager rm = getContext().getSystemService(RoleManager.class);
+            if (rm != null && rm.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) held = rm.isRoleHeld(RoleManager.ROLE_ASSISTANT);
+        }
+        JSObject ret = new JSObject();
+        ret.put("isDefault", held);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openAssistantSettings(PluginCall call) {
+        boolean ok = tryStart(new Intent(Settings.ACTION_VOICE_INPUT_SETTINGS))
+            || tryStart(new Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+            || tryStart(new Intent(Settings.ACTION_SETTINGS));
+        if (ok) call.resolve(); else call.reject("Couldn't open assistant settings");
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Running the phone
+     * ------------------------------------------------------------------ */
+    @PluginMethod
+    public void openApp(PluginCall call) {
+        String name = call.getString("name", "").trim().toLowerCase(Locale.ROOT);
+        if (name.isEmpty()) { call.reject("Which app?"); return; }
+        PackageManager pm = getContext().getPackageManager();
+        Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> apps = pm.queryIntentActivities(main, 0);
+        ResolveInfo best = null;
+        String bestLabel = null;
+        int bestScore = 0;
+        for (ResolveInfo ri : apps) {
+            String label = ri.loadLabel(pm).toString();
+            String l = label.toLowerCase(Locale.ROOT);
+            int score = l.equals(name) ? 3 : l.startsWith(name) ? 2 : l.contains(name) ? 1 : 0;
+            if (score > bestScore) { best = ri; bestLabel = label; bestScore = score; }
+        }
+        if (best == null) { call.reject("No installed app called \"" + name + "\""); return; }
+        Intent launch = pm.getLaunchIntentForPackage(best.activityInfo.packageName);
+        if (launch == null || !tryStart(launch)) { call.reject("Couldn't open " + bestLabel); return; }
+        JSObject ret = new JSObject();
+        ret.put("opened", bestLabel);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void playMusic(PluginCall call) {
+        String query = call.getString("query", "").trim();
+        if (query.isEmpty()) {
+            sendMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY);
+            JSObject ret = new JSObject();
+            ret.put("resumed", true);
+            call.resolve(ret);
+            return;
+        }
+        Intent intent = new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH);
+        intent.putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*");
+        intent.putExtra(SearchManager.QUERY, query);
+        if (!tryStart(intent)) { call.reject("No music app on this phone handles voice search"); return; }
+        JSObject ret = new JSObject();
+        ret.put("playing", query);
+        call.resolve(ret);
+    }
+
+    private void sendMediaKey(int keyCode) {
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        long now = SystemClock.uptimeMillis();
+        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0));
+        am.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0));
+    }
+
+    @PluginMethod
+    public void mediaControl(PluginCall call) {
+        String action = call.getString("action", "play_pause");
+        int code;
+        if ("play".equals(action)) code = KeyEvent.KEYCODE_MEDIA_PLAY;
+        else if ("pause".equals(action)) code = KeyEvent.KEYCODE_MEDIA_PAUSE;
+        else if ("next".equals(action)) code = KeyEvent.KEYCODE_MEDIA_NEXT;
+        else if ("previous".equals(action)) code = KeyEvent.KEYCODE_MEDIA_PREVIOUS;
+        else code = KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
+        sendMediaKey(code);
+        JSObject ret = new JSObject();
+        ret.put("sent", action);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setVolume(PluginCall call) {
+        int pct = Math.max(0, Math.min(100, call.getInt("percent", 50)));
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        try {
+            int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(max * pct / 100f), AudioManager.FLAG_SHOW_UI);
+        } catch (SecurityException e) {
+            call.reject("Android won't let me change the volume while Do Not Disturb is on");
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("volume", pct);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void navigate(PluginCall call) {
+        String dest = call.getString("destination", "").trim();
+        if (dest.isEmpty()) { call.reject("Navigate where?"); return; }
+        String mode = call.getString("mode", "driving");
+        String m = "walking".equals(mode) ? "w" : "bicycling".equals(mode) ? "b" : "d";
+        Intent maps = new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=" + Uri.encode(dest) + "&mode=" + m));
+        maps.setPackage("com.google.android.apps.maps");
+        boolean ok = tryStart(maps) || tryStart(new Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(dest))));
+        if (!ok) { call.reject("No maps app installed"); return; }
+        JSObject ret = new JSObject();
+        ret.put("navigatingTo", dest);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openWhatsAppChat(PluginCall call) {
+        String number = call.getString("number", "").trim();
+        String message = call.getString("message", "");
+        if (number.isEmpty()) { call.reject("A phone number is required"); return; }
+        String digits = toE164(number).replaceAll("[^0-9]", "");
+        Uri uri = Uri.parse("https://wa.me/" + digits + (message.isEmpty() ? "" : "?text=" + Uri.encode(message)));
+        Intent wa = new Intent(Intent.ACTION_VIEW, uri).setPackage("com.whatsapp");
+        Intent waBiz = new Intent(Intent.ACTION_VIEW, uri).setPackage("com.whatsapp.w4b");
+        if (!(tryStart(wa) || tryStart(waBiz) || tryStart(new Intent(Intent.ACTION_VIEW, uri)))) {
+            call.reject("WhatsApp isn't installed");
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("opened", true);
+        call.resolve(ret);
+    }
+
+    // Local numbers ("010...") need a country code for wa.me; use the SIM's.
+    private String toE164(String raw) {
+        if (raw.startsWith("+")) return raw;
+        if (raw.startsWith("00")) return "+" + raw.substring(2);
+        TelephonyManager tm = (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
+        String iso = tm != null ? tm.getSimCountryIso() : "";
+        if ((iso == null || iso.isEmpty()) && tm != null) iso = tm.getNetworkCountryIso();
+        if (iso == null || iso.isEmpty()) iso = Locale.getDefault().getCountry();
+        String formatted = PhoneNumberUtils.formatNumberToE164(raw, iso.toUpperCase(Locale.ROOT));
+        return formatted != null ? formatted : raw;
+    }
+
+    @PluginMethod
+    public void openSettingsPanel(PluginCall call) {
+        String panel = call.getString("panel", "");
+        Intent intent;
+        boolean q = Build.VERSION.SDK_INT >= 29;
+        switch (panel) {
+            case "wifi": intent = new Intent(q ? Settings.Panel.ACTION_WIFI : Settings.ACTION_WIFI_SETTINGS); break;
+            case "internet": intent = new Intent(q ? Settings.Panel.ACTION_INTERNET_CONNECTIVITY : Settings.ACTION_WIRELESS_SETTINGS); break;
+            case "bluetooth": intent = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS); break;
+            case "volume": intent = new Intent(q ? Settings.Panel.ACTION_VOLUME : Settings.ACTION_SOUND_SETTINGS); break;
+            case "nfc": intent = new Intent(q ? Settings.Panel.ACTION_NFC : Settings.ACTION_NFC_SETTINGS); break;
+            case "display": intent = new Intent(Settings.ACTION_DISPLAY_SETTINGS); break;
+            default: intent = new Intent(Settings.ACTION_SETTINGS);
+        }
+        if (!tryStart(intent)) { call.reject("Couldn't open that panel"); return; }
+        JSObject ret = new JSObject();
+        ret.put("opened", panel);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void webSearch(PluginCall call) {
+        String query = call.getString("query", "").trim();
+        Intent search = new Intent(Intent.ACTION_WEB_SEARCH);
+        search.putExtra(SearchManager.QUERY, query);
+        boolean ok = tryStart(search)
+            || tryStart(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(query))));
+        if (ok) call.resolve(); else call.reject("No browser available");
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Watching the phone — incoming messages via JarvisNotificationListener
+     * ------------------------------------------------------------------ */
+    private boolean notificationAccessGranted() {
+        String flat = Settings.Secure.getString(getContext().getContentResolver(), "enabled_notification_listeners");
+        ComponentName me = new ComponentName(getContext(), JarvisNotificationListener.class);
+        return flat != null && flat.contains(me.flattenToString());
+    }
+
+    @PluginMethod
+    public void getNotificationAccess(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("granted", notificationAccessGranted());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openNotificationAccessSettings(PluginCall call) {
+        boolean ok = false;
+        if (Build.VERSION.SDK_INT >= 30) {
+            Intent detail = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS);
+            detail.putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                new ComponentName(getContext(), JarvisNotificationListener.class).flattenToString());
+            ok = tryStart(detail);
+        }
+        if (!ok) ok = tryStart(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+        if (ok) call.resolve(); else call.reject("Couldn't open notification access settings");
+    }
+
+    @PluginMethod
+    public void openAppDetails(PluginCall call) {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+        if (tryStart(intent)) call.resolve(); else call.reject("Couldn't open app info");
+    }
+
+    @PluginMethod
+    public void getRecentNotifications(PluginCall call) {
+        if (!notificationAccessGranted()) {
+            call.reject("NO_ACCESS");
+            return;
+        }
+        long cutoff = System.currentTimeMillis() - call.getInt("sinceMinutes", 180) * 60_000L;
+        JSArray list = new JSArray();
+        for (JarvisNotificationListener.Entry e : JarvisNotificationListener.snapshot()) {
+            if (e.time >= cutoff) list.put(JarvisNotificationListener.toJs(e));
+        }
+        JSObject ret = new JSObject();
+        ret.put("messages", list);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void replyToNotification(PluginCall call) {
+        String id = call.getString("id", "");
+        String text = call.getString("message", "");
+        JarvisNotificationListener.Entry e = JarvisNotificationListener.find(id);
+        if (e == null) { call.reject("That message isn't available any more; it may have been dismissed"); return; }
+        if (e.replyAction == null) { call.reject(e.app + " doesn't allow direct replies from notifications"); return; }
+        RemoteInput[] inputs = e.replyAction.getRemoteInputs();
+        Intent fill = new Intent();
+        Bundle results = new Bundle();
+        for (RemoteInput ri : inputs) results.putCharSequence(ri.getResultKey(), text);
+        RemoteInput.addResultsToIntent(inputs, fill, results);
+        try {
+            e.replyAction.actionIntent.send(getContext(), 0, fill);
+        } catch (PendingIntent.CanceledException ex) {
+            call.reject("That conversation was closed; open " + e.app + " to reply");
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("replied", e.from);
+        ret.put("app", e.app);
         call.resolve(ret);
     }
 }

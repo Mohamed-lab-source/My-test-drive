@@ -30,7 +30,31 @@
                 <data android:scheme="com.jarvis.secretary" android:host="oauth2redirect" />
             </intent-filter>
 
+            <!-- Lets Jarvis be picked as the phone's assistant app: long-press
+                 home/power or the assistant gesture summons him from anywhere -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- Headset / Bluetooth voice-command button -->
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
         </activity>
+
+        <!-- Sees incoming messages so Jarvis can announce, read, and reply to them.
+             Only active after the user grants Notification access in Settings. -->
+        <service
+            android:name=".JarvisNotificationListener"
+            android:label="Jarvis"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -44,6 +68,14 @@
     </application>
 
     <!-- Permissions -->
+
+    <!-- Android 11+ hides other apps unless declared: needed to find apps to open by name -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
