@@ -110,14 +110,16 @@
         <select id="modelSelect">
           <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (recommended — smart &amp; free)</option>
           <option value="openai/gpt-oss-20b">openai/gpt-oss-20b (lighter, faster)</option>
-          <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (fastest, simple tasks)</option>
         </select>
       </div>
 
       <div class="field">
         <label>Voice</label>
-        <select id="voiceSelect"></select>
-        <div class="hint">Uses your phone's native text-to-speech voices.</div>
+        <div style="display:flex; gap:8px;">
+          <select id="voiceSelect" style="flex:1;"></select>
+          <button class="wide-btn" id="testVoiceBtn" style="width:auto; margin:0; padding:0 16px;">▶️ Test</button>
+        </div>
+        <div class="hint">Uses your phone's built-in text-to-speech voices — Jarvis picks the best-sounding one available by default. For better options, go to Android Settings → System → Languages &amp; input → Text-to-speech and install a higher-quality voice pack (Google's TTS engine offers several English accents).</div>
       </div>
 
       <div class="field">
