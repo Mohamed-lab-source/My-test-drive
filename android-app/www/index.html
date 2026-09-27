@@ -18,7 +18,7 @@
   <div class="tabbar">
     <button class="tab active" data-view="chatView">Jarvis</button>
     <button class="tab" data-view="briefingView">Briefing</button>
-    <button class="tab" data-view="remindersView">Reminders</button>
+    <button class="tab" data-view="remindersView">Planner</button>
   </div>
 
   <!-- JARVIS HUD -->
@@ -100,8 +100,20 @@
         <button class="chip-btn" id="addReminderBtn">Add</button>
       </div>
       <div class="card">
-        <h3>⏰ Upcoming <span class="sub-stat" style="font-weight:400;">(fires even if the app is closed)</span></h3>
+        <h3>⏰ Reminders</h3>
         <div id="reminderList"><div class="empty-hint">No reminders yet.</div></div>
+      </div>
+      <div class="card">
+        <h3>📋 Lists</h3>
+        <div id="listsList"></div>
+      </div>
+      <div class="card">
+        <h3>🗒️ Notes</h3>
+        <div id="notesList" class="memory-list"></div>
+      </div>
+      <div class="card">
+        <h3>⚙️ Protocols</h3>
+        <div id="protocolsList" class="memory-list"></div>
       </div>
     </div>
   </section>
@@ -142,6 +154,17 @@
           </span>
           <span class="toggle-switch"><input type="checkbox" id="greetToggle" checked /><span class="toggle-track"></span></span>
         </label>
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Daily briefing</b>
+            <div class="hint" style="margin-top:2px;">A notification at this time every day; tap it and Jarvis reads your briefing.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="dailyBriefingToggle" /><span class="toggle-track"></span></span>
+        </label>
+        <input type="time" id="dailyBriefingTime" value="07:30" style="margin-top:8px;" />
       </div>
 
       <div class="field">
@@ -250,7 +273,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.1 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.2 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -259,5 +282,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="app.js"></script>
+<script src="features.js"></script>
 </body>
 </html>

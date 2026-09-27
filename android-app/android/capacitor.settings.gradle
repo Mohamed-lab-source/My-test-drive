@@ -2,23 +2,8 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
-include ':capacitor-app'
-project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
-
-include ':capacitor-browser'
-project(':capacitor-browser').projectDir = new File('../node_modules/@capacitor/browser/android')
-
-include ':capacitor-local-notifications'
-project(':capacitor-local-notifications').projectDir = new File('../node_modules/@capacitor/local-notifications/android')
-
-include ':capacitor-preferences'
-project(':capacitor-preferences').projectDir = new File('../node_modules/@capacitor/preferences/android')
-
-include ':capacitor-share'
-project(':capacitor-share').projectDir = new File('../node_modules/@capacitor/share/android')
-
-include ':capacitor-network'
-project(':capacitor-network').projectDir = new File('../node_modules/@capacitor/network/android')
+include ':capacitor-community-contacts'
+project(':capacitor-community-contacts').projectDir = new File('../node_modules/@capacitor-community/contacts/android')
 
 include ':capacitor-community-speech-recognition'
 project(':capacitor-community-speech-recognition').projectDir = new File('../node_modules/@capacitor-community/speech-recognition/android')
@@ -26,5 +11,26 @@ project(':capacitor-community-speech-recognition').projectDir = new File('../nod
 include ':capacitor-community-text-to-speech'
 project(':capacitor-community-text-to-speech').projectDir = new File('../node_modules/@capacitor-community/text-to-speech/android')
 
-include ':capacitor-community-contacts'
-project(':capacitor-community-contacts').projectDir = new File('../node_modules/@capacitor-community/contacts/android')
+include ':capacitor-app'
+project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
+
+include ':capacitor-browser'
+project(':capacitor-browser').projectDir = new File('../node_modules/@capacitor/browser/android')
+
+include ':capacitor-clipboard'
+project(':capacitor-clipboard').projectDir = new File('../node_modules/@capacitor/clipboard/android')
+
+include ':capacitor-geolocation'
+project(':capacitor-geolocation').projectDir = new File('../node_modules/@capacitor/geolocation/android')
+
+include ':capacitor-local-notifications'
+project(':capacitor-local-notifications').projectDir = new File('../node_modules/@capacitor/local-notifications/android')
+
+include ':capacitor-network'
+project(':capacitor-network').projectDir = new File('../node_modules/@capacitor/network/android')
+
+include ':capacitor-preferences'
+project(':capacitor-preferences').projectDir = new File('../node_modules/@capacitor/preferences/android')
+
+include ':capacitor-share'
+project(':capacitor-share').projectDir = new File('../node_modules/@capacitor/share/android')

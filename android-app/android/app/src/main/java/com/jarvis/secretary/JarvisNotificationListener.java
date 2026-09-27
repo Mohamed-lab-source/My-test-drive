@@ -66,17 +66,39 @@ public class JarvisNotificationListener extends NotificationListenerService {
 
     private TextToSpeech tts;
     private boolean ttsReady = false;
+    private static volatile JarvisNotificationListener connected;
 
     @Override
     public void onListenerConnected() {
         super.onListenerConnected();
+        connected = this;
         tts = new TextToSpeech(this, status -> ttsReady = status == TextToSpeech.SUCCESS);
     }
 
     @Override
     public void onListenerDisconnected() {
+        connected = null;
         shutdownTts();
         super.onListenerDisconnected();
+    }
+
+    /**
+     * Do Not Disturb, via the listener's own privilege: an enabled
+     * notification listener may change the interruption filter without the
+     * separate DND-access permission. "Priority only" keeps alarms working.
+     * Returns false when the listener isn't connected (access not granted).
+     */
+    static boolean setDoNotDisturb(boolean on) {
+        JarvisNotificationListener l = connected;
+        if (l == null) return false;
+        l.requestInterruptionFilter(on ? INTERRUPTION_FILTER_PRIORITY : INTERRUPTION_FILTER_ALL);
+        return true;
+    }
+
+    static Boolean isDoNotDisturbOn() {
+        JarvisNotificationListener l = connected;
+        if (l == null) return null;
+        return l.getCurrentInterruptionFilter() != INTERRUPTION_FILTER_ALL;
     }
 
     @Override

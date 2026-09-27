@@ -538,3 +538,19 @@ body {
   transition: opacity 0.25s;
 }
 .toast.show { opacity: 1; }
+
+/* Planner */
+.planner-block { padding: 6px 0 10px; border-bottom: 1px solid var(--border); }
+.planner-block:last-child { border-bottom: none; }
+.planner-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.list-item { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 14px; }
+.list-item input { accent-color: var(--accent); width: 18px; height: 18px; }

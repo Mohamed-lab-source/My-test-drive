@@ -11,7 +11,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.app.ActivityManager;
+import android.database.Cursor;
 import android.media.AudioManager;
+import android.os.Environment;
+import android.os.StatFs;
+import android.provider.CallLog;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -59,6 +64,7 @@ import java.util.Locale;
     permissions = {
         @Permission(strings = { android.Manifest.permission.SEND_SMS }, alias = "sms"),
         @Permission(strings = { android.Manifest.permission.CALL_PHONE }, alias = "call"),
+        @Permission(strings = { android.Manifest.permission.READ_CALL_LOG }, alias = "calllog"),
     }
 )
 public class DeviceActionsPlugin extends Plugin {
@@ -558,6 +564,101 @@ public class DeviceActionsPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("replied", e.from);
         ret.put("app", e.app);
+        call.resolve(ret);
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Call log
+     * ------------------------------------------------------------------ */
+    @PluginMethod
+    public void getCallLog(PluginCall call) {
+        if (getPermissionState("calllog") != PermissionState.GRANTED) {
+            requestPermissionForAlias("calllog", call, "callLogPermsCallback");
+            return;
+        }
+        readCallLog(call);
+    }
+
+    @PermissionCallback
+    private void callLogPermsCallback(PluginCall call) {
+        if (getPermissionState("calllog") == PermissionState.GRANTED) readCallLog(call);
+        else call.reject("Call log permission was denied. It can be granted in App info → Permissions → Call logs.");
+    }
+
+    private void readCallLog(PluginCall call) {
+        int limit = Math.max(1, Math.min(50, call.getInt("limit", 15)));
+        boolean onlyMissed = Boolean.TRUE.equals(call.getBoolean("onlyMissed", false));
+        String[] projection = { CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME, CallLog.Calls.TYPE, CallLog.Calls.DATE, CallLog.Calls.DURATION };
+        String selection = onlyMissed ? CallLog.Calls.TYPE + " = " + CallLog.Calls.MISSED_TYPE : null;
+        JSArray calls = new JSArray();
+        try (Cursor c = getContext().getContentResolver().query(CallLog.Calls.CONTENT_URI, projection, selection, null, CallLog.Calls.DATE + " DESC")) {
+            while (c != null && c.moveToNext() && calls.length() < limit) {
+                JSObject o = new JSObject();
+                String name = c.getString(1);
+                int type = c.getInt(2);
+                o.put("number", c.getString(0));
+                o.put("name", name == null || name.isEmpty() ? null : name);
+                o.put("type", type == CallLog.Calls.MISSED_TYPE ? "missed" : type == CallLog.Calls.INCOMING_TYPE ? "incoming"
+                    : type == CallLog.Calls.OUTGOING_TYPE ? "outgoing" : type == CallLog.Calls.REJECTED_TYPE ? "rejected" : "other");
+                o.put("time", c.getLong(3));
+                o.put("durationSec", c.getLong(4));
+                calls.put(o);
+            }
+        } catch (SecurityException e) {
+            call.reject("Call log permission was denied");
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("calls", calls);
+        call.resolve(ret);
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Do Not Disturb (through the notification listener's privilege)
+     * ------------------------------------------------------------------ */
+    @PluginMethod
+    public void setDoNotDisturb(PluginCall call) {
+        boolean on = Boolean.TRUE.equals(call.getBoolean("on", true));
+        if (!JarvisNotificationListener.setDoNotDisturb(on)) {
+            call.reject("NO_ACCESS");
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("doNotDisturb", on);
+        call.resolve(ret);
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Diagnostics
+     * ------------------------------------------------------------------ */
+    @PluginMethod
+    public void getSystemStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("device", Build.MANUFACTURER + " " + Build.MODEL);
+        ret.put("android", Build.VERSION.RELEASE);
+        StatFs fs = new StatFs(Environment.getDataDirectory().getPath());
+        ret.put("storageFreeGB", Math.round(fs.getAvailableBytes() / 1e8) / 10.0);
+        ret.put("storageTotalGB", Math.round(fs.getTotalBytes() / 1e8) / 10.0);
+        ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo mem = new ActivityManager.MemoryInfo();
+        am.getMemoryInfo(mem);
+        ret.put("ramFreeGB", Math.round(mem.availMem / 1e8) / 10.0);
+        ret.put("ramTotalGB", Math.round(mem.totalMem / 1e8) / 10.0);
+        ret.put("lowMemory", mem.lowMemory);
+        Intent battery = getContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (battery != null) {
+            int level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            ret.put("batteryPercent", level >= 0 && scale > 0 ? Math.round(100f * level / scale) : -1);
+            ret.put("batteryTempC", battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0);
+            int health = battery.getIntExtra(BatteryManager.EXTRA_HEALTH, 0);
+            ret.put("batteryHealth", health == BatteryManager.BATTERY_HEALTH_GOOD ? "good"
+                : health == BatteryManager.BATTERY_HEALTH_OVERHEAT ? "overheating"
+                : health == BatteryManager.BATTERY_HEALTH_DEAD ? "dead" : "unknown");
+        }
+        ret.put("uptimeHours", Math.round(SystemClock.elapsedRealtime() / 360000.0) / 10.0);
+        Boolean dnd = JarvisNotificationListener.isDoNotDisturbOn();
+        if (dnd != null) ret.put("doNotDisturb", dnd);
         call.resolve(ret);
     }
 }

@@ -49,6 +49,10 @@ const state = {
   memories: [],            // long-term facts about the user: [{id, text, at}]
   lastGreetAt: 0,
   announceMode: "headphones", // read natively too: off | headphones | always
+  notes: [],               // [{id, text, at}]
+  lists: {},               // { "shopping": [{id, text, done}] }
+  protocols: [],           // user-defined routines: [{name, steps, at}]
+  dailyBriefing: { enabled: false, time: "07:30" },
   directActions: true, // call/text fire immediately, no tap — the user asked for this explicitly
   reminders: [],
   chatHistory: [], // OpenAI-style: [{role, content, tool_calls?, tool_call_id?}]
@@ -84,6 +88,10 @@ async function loadState() {
   state.memories = await store.get("memories", []);
   state.lastGreetAt = await store.get("lastGreetAt", 0);
   state.announceMode = await store.get("announceMode", "headphones");
+  state.notes = await store.get("notes", []);
+  state.lists = await store.get("lists", {});
+  state.protocols = await store.get("protocols", []);
+  state.dailyBriefing = await store.get("dailyBriefing", { enabled: false, time: "07:30" });
   state.directActions = await store.get("directActions", true);
   state.reminders = await store.get("reminders", []);
   state.chatHistory = trimHistory(await store.get("chatHistory", []));
@@ -572,7 +580,7 @@ async function ensureGoogleToken() {
   if (state.calendarAccessToken && Date.now() < state.calendarTokenExpiry - 30000) {
     return state.calendarAccessToken;
   }
-  if (!state.calendarRefreshToken) throw new Error("Calendar not connected. Ask the user to connect it in Settings.");
+  if (!state.calendarRefreshToken) throw new Error("The Google account (calendar and email) isn't connected. Ask the user to connect it in Settings.");
   const body = new URLSearchParams({
     client_id: state.oauthClientId,
     client_secret: state.oauthClientSecret,
@@ -685,7 +693,7 @@ async function geocode(place) {
   const data = await res.json();
   if (!data.results || !data.results.length) throw new Error(`Couldn't find location "${place}"`);
   const r = data.results[0];
-  return { lat: r.latitude, lon: r.longitude, label: `${r.name}, ${r.country || ""}`.trim() };
+  return { lat: r.latitude, lon: r.longitude, label: `${r.name}, ${r.country || ""}`.trim(), timezone: r.timezone };
 }
 
 const WEATHER_CODES = {
@@ -697,9 +705,7 @@ const WEATHER_CODES = {
 };
 
 async function getWeather(location) {
-  const place = location || state.homeLoc;
-  if (!place) throw new Error("No location set. Ask the user for their city or set Home Location in Settings.");
-  const geo = await geocode(place);
+  const geo = await resolvePlace(location); // named place, else home, else current GPS position
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current=temperature_2m,weather_code,wind_speed_10m&temperature_unit=celsius`;
   const res = await fetch(url);
   const data = await res.json();
@@ -745,50 +751,83 @@ async function ensureNotifyPermission() {
   } catch { return false; }
 }
 
-async function addReminder(text, whenIso) {
+// Repeating reminders use the plugin's cron-style "on" schedule, which it
+// re-arms after every firing. Weekday reminders need one notification per
+// day (Mon–Fri), kept in their own id range so they can't collide.
+const REPEAT_ID_BASE = 100000;
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function reminderNotificationIds(r) {
+  if (r.repeat === "weekdays") return [1, 2, 3, 4, 5].map(k => REPEAT_ID_BASE + r.id * 10 + k);
+  return [r.id];
+}
+
+async function scheduleReminder(r) {
+  if (!r.time) return;
+  const when = new Date(r.time);
+  const repeating = r.repeat && r.repeat !== "none";
+  if (!repeating && when.getTime() <= Date.now()) return;
+  if (!(await ensureNotifyPermission())) {
+    toast("Notification permission denied — reminder saved but won't alert you");
+    return;
+  }
+  const base = { title: "Jarvis reminder", body: r.text, smallIcon: "ic_stat_jarvis" };
+  const hm = { hour: when.getHours(), minute: when.getMinutes() };
+  let notifications;
+  if (r.repeat === "daily") notifications = [{ ...base, id: r.id, schedule: { on: hm, allowWhileIdle: true } }];
+  else if (r.repeat === "weekly") notifications = [{ ...base, id: r.id, schedule: { on: { ...hm, weekday: when.getDay() + 1 }, allowWhileIdle: true } }];
+  else if (r.repeat === "weekdays") notifications = [2, 3, 4, 5, 6].map((weekday, k) => ({ ...base, id: REPEAT_ID_BASE + r.id * 10 + k + 1, schedule: { on: { ...hm, weekday }, allowWhileIdle: true } }));
+  else notifications = [{ ...base, id: r.id, schedule: { at: when, allowWhileIdle: true } }];
+  try { await LocalNotifications.schedule({ notifications }); } catch (e) { console.warn("schedule failed", e); }
+}
+
+async function cancelReminderNotifications(r) {
+  try { await LocalNotifications.cancel({ notifications: reminderNotificationIds(r).map(id => ({ id })) }); } catch {}
+}
+
+async function addReminder(text, whenIso, repeat = "none") {
+  if (repeat !== "none" && !whenIso) throw new Error("A repeating reminder needs a time of day.");
   const id = nextReminderId();
-  const r = { id, text, time: whenIso || null, done: false };
+  const r = { id, text, time: whenIso || null, done: false, repeat };
   state.reminders.push(r);
   saveReminders();
   renderReminders();
-  if (whenIso && new Date(whenIso).getTime() > Date.now()) {
-    const granted = await ensureNotifyPermission();
-    if (granted) {
-      try {
-        await LocalNotifications.schedule({
-          notifications: [{
-            id, title: "Jarvis reminder", body: text,
-            schedule: { at: new Date(whenIso) },
-            smallIcon: "ic_stat_jarvis",
-          }],
-        });
-      } catch (e) { console.warn("schedule failed", e); }
-    } else {
-      toast("Notification permission denied — reminder saved but won't alert you");
-    }
-  }
-  return r;
+  await scheduleReminder(r);
+  return { id, text, when: reminderWhenLabel(r) };
 }
 
 async function deleteReminder(id) {
-  state.reminders = state.reminders.filter(r => r.id !== id);
+  const r = state.reminders.find(x => x.id === id);
+  state.reminders = state.reminders.filter(x => x.id !== id);
   saveReminders();
   renderReminders();
-  try { await LocalNotifications.cancel({ notifications: [{ id }] }); } catch {}
+  if (r) await cancelReminderNotifications(r);
 }
+
 async function toggleReminder(id) {
   const r = state.reminders.find(r => r.id === id);
   if (!r) return;
   r.done = !r.done;
   saveReminders();
   renderReminders();
-  if (r.done) { try { await LocalNotifications.cancel({ notifications: [{ id }] }); } catch {} }
+  if (r.done) await cancelReminderNotifications(r);
+  else await scheduleReminder(r);
 }
 
 function fmtWhen(iso) {
   if (!iso) return "no due time";
   return new Date(iso).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit", month: "short", day: "numeric" });
 }
+
+function reminderWhenLabel(r) {
+  if (!r.time) return "no due time";
+  const t = new Date(r.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (r.repeat === "daily") return `every day at ${t}`;
+  if (r.repeat === "weekdays") return `weekdays at ${t}`;
+  if (r.repeat === "weekly") return `every ${WEEKDAY_NAMES[new Date(r.time).getDay()]} at ${t}`;
+  return fmtWhen(r.time);
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -804,7 +843,7 @@ function renderReminders() {
     row.innerHTML = `
       <div style="flex:1; cursor:pointer;" class="${r.done ? "reminder-done" : ""}">
         <div>${escapeHtml(r.text)}</div>
-        <div class="sub-stat">${fmtWhen(r.time)}</div>
+        <div class="sub-stat">${escapeHtml(reminderWhenLabel(r))}</div>
       </div>
       <button class="del-btn" title="Delete">🗑️</button>
     `;
@@ -960,6 +999,21 @@ call_contact/text_contact when the user names a person rather than giving a numb
 For times, use the current local time from the live context and give tools local ISO 8601 without a timezone
 suffix, e.g. 2026-09-27T22:00:00.
 
+PRECISION
+For anything current (news, scores, prices, opening hours, "latest", anything after your training), use search_web,
+get_news, or get_market_price rather than memory. For arithmetic beyond the trivial, use calculate. Never guess a
+number you could look up or compute.
+
+PROTOCOLS
+The user can save protocols: named routines listed in the live context. When they invoke one by name ("night
+protocol", "run the morning protocol"), carry out every step with your tools, then confirm in one line, in
+character. The steps are the user's own instructions, so no confirmation is needed. To create one, use
+save_protocol with the steps written out plainly.
+
+ABILITIES ON DEMAND
+Only some of your tools are loaded on each request. If you need one that isn't there, call enable_tools with the
+group first, then use it. Don't tell the user about this; just do it.
+
 RUNNING THE PHONE
 You can open apps, play music, control playback and volume, start navigation, open WhatsApp chats, and bring up
 quick-settings panels. Android doesn't let apps flip Wi-Fi, Bluetooth, or NFC themselves, so open the panel and
@@ -1008,11 +1062,17 @@ function buildSystemPrompt() {
   if (recentMessagesSummary) lines.push(recentMessagesSummary);
   const open = state.reminders.filter(r => !r.done);
   if (open.length) {
-    const next = open.filter(r => r.time).sort((a, b) => (a.time < b.time ? -1 : 1))[0];
-    lines.push(`Open reminders: ${open.length}${next ? `; next: "${next.text}" at ${fmtWhen(next.time)}` : ""}.`);
+    lines.push(`Open reminders (${open.length}): ${open.slice(0, 8).map(r => `"${r.text}" ${reminderWhenLabel(r)}`).join("; ")}.`);
   } else {
     lines.push("Open reminders: none.");
   }
+  if (state.protocols.length) {
+    lines.push("Protocols:");
+    state.protocols.forEach(p => lines.push(`- ${p.name}: ${p.steps}`));
+  }
+  const listNames = Object.keys(state.lists);
+  if (listNames.length) lines.push(`Lists: ${listNames.map(n => `${n} (${state.lists[n].filter(i => !i.done).length})`).join(", ")}.`);
+  if (state.notes.length) lines.push(`Notes saved: ${state.notes.length}.`);
   if (state.memories.length) {
     lines.push("What you know about the user:");
     state.memories.forEach(m => lines.push(`- ${m.text}`));
@@ -1305,14 +1365,6 @@ const TOOLS = [
   {
     type: "function",
     function: {
-      name: "list_today_events",
-      description: "List the user's Google Calendar events for today. Requires calendar to be connected.",
-      parameters: { type: "object", properties: {} },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "create_calendar_event",
       description: "Create a new Google Calendar event. Requires calendar to be connected.",
       parameters: {
@@ -1334,7 +1386,11 @@ const TOOLS = [
       description: "Add a reminder/to-do for the user, optionally with a due date/time. Fires a real notification even if the app is closed.",
       parameters: {
         type: "object",
-        properties: { text: { type: "string" }, when: { type: "string", description: "ISO 8601 datetime, optional" } },
+        properties: {
+          text: { type: "string" },
+          when: { type: "string", description: "Local ISO 8601 datetime. For repeating reminders, its time of day (and weekday, for weekly) is used." },
+          repeat: { type: "string", enum: ["none", "daily", "weekdays", "weekly"], description: "Default none" },
+        },
         required: ["text"],
       },
     },
@@ -1477,7 +1533,6 @@ async function executeTool(name, args) {
     case "lookup_knowledge": return await lookupKnowledge(args.query);
     case "get_weather": return await getWeather(args.location);
     case "get_commute_time": return await getCommuteTime(args.origin, args.destination);
-    case "list_today_events": return { events: await listTodayEvents() };
     case "create_calendar_event": return await createCalendarEvent(args);
     case "list_unread_emails": return { emails: await listUnreadEmails(args.max || 5) };
     case "send_email": return await sendEmail(args);
@@ -1489,13 +1544,20 @@ async function executeTool(name, args) {
     case "set_timer": return await setTimer(args.seconds, args.label);
     case "toggle_flashlight": return await setFlashlight(args.on);
     case "get_battery_status": return await getBatteryStatus();
-    case "add_reminder": { const r = await addReminder(args.text, args.when || null); return { added: true, reminder: r }; }
+    case "add_reminder": return { added: true, reminder: await addReminder(args.text, args.when || null, args.repeat || "none") };
     case "list_reminders": return { reminders: state.reminders.filter(r => !r.done) };
-    default: throw new Error(`Unknown tool: ${name}`);
+    default:
+      if (FEATURE_HANDLERS[name]) return await FEATURE_HANDLERS[name](args);
+      throw new Error(`Unknown tool: ${name}`);
   }
 }
 
-async function callGroq(messages, { withTools = true } = {}) {
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Groq's free tier: 30 requests and 8,000 tokens a minute, 200,000 tokens a day.
+// A 429 says how long to wait ("try again in 7.6s"); short waits are absorbed
+// here once, longer ones surface as RATE_LIMIT / DAILY_LIMIT.
+async function callGroq(messages, { withTools = true, tools = null, retried = false } = {}) {
   if (!state.apiKey) throw new Error("NO_API_KEY");
   const body = {
     model: state.model,
@@ -1505,21 +1567,117 @@ async function callGroq(messages, { withTools = true } = {}) {
     // into the visible reply as garbled, duplicated text.
     include_reasoning: false,
   };
-  if (withTools) { body.tools = TOOLS; body.tool_choice = "auto"; }
+  if (withTools) { body.tools = tools || allToolSchemas(); body.tool_choice = "auto"; }
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.apiKey}` },
     body: JSON.stringify(body),
   });
+  if (res.status === 429 || res.status === 413) {
+    const text = await res.text();
+    if (/per day|TPD|RPD/i.test(text)) throw new Error("DAILY_LIMIT");
+    if (res.status === 413 || /request too large/i.test(text)) throw new Error("TOO_LARGE");
+    const m = text.match(/try again in (?:(\d+)m)?([\d.]+)s/i);
+    const waitS = m ? parseInt(m[1] || "0", 10) * 60 + parseFloat(m[2]) : null;
+    if (!retried && waitS !== null && waitS <= 30) {
+      const status = document.getElementById("hudStatus");
+      if (status) status.textContent = `HOLDING · ${Math.ceil(waitS)}s`;
+      await sleep((waitS + 0.5) * 1000);
+      if (status) status.textContent = HUD_TEXT.thinking;
+      return callGroq(messages, { withTools, tools, retried: true });
+    }
+    throw new Error("RATE_LIMIT");
+  }
   if (!res.ok) throw new Error(`Groq API error ${res.status}: ${await res.text()}`);
   return res.json();
+}
+
+/* ---------------------------------------------------------------------- *
+ * Tool routing — send only the tools a request is likely to need. With
+ * 60-odd tools, sending every schema each time would cost ~5,000 tokens a
+ * request against an 8,000-a-minute budget. Core tools always go; groups
+ * are added by keywords, by what the last turn used (for follow-ups), or by
+ * Jarvis himself via enable_tools when he needs something that isn't loaded.
+ * ---------------------------------------------------------------------- */
+const CORE_TOOLS = ["remember", "forget", "calculate", "search_web", "lookup_knowledge", "add_reminder", "list_reminders", "delete_reminder"];
+
+const TOOL_GROUPS = {
+  comms: {
+    about: "calls, texts, WhatsApp, reading and replying to messages, call log, sharing location",
+    tools: ["call_contact", "text_contact", "dial_number", "send_sms", "read_messages", "reply_to_message", "whatsapp_message", "get_call_log", "share_my_location"],
+    match: /\b(call|calls|called|ring|phone|dial|text|texts|texted|sms|message|messages|msg|whatsapp|telegram|signal|reply|respond|missed|contact|tell|let \w+ know|send (him|her|them)|location)\b/i,
+  },
+  calendar_email: {
+    about: "calendar events on any day, creating and deleting events, reading and sending email",
+    tools: ["list_events", "create_calendar_event", "delete_calendar_event", "list_unread_emails", "read_email", "send_email"],
+    match: /\b(calendar|event|events|meeting|meetings|schedule|scheduled|appointment|agenda|busy|free (on|at|tomorrow|today)|book|email|emails|mail|gmail|inbox)\b/i,
+  },
+  world: {
+    about: "weather and forecasts, news headlines, stock and crypto prices, currency conversion, world clock",
+    tools: ["get_weather", "get_forecast", "get_news", "get_market_price", "convert_currency", "world_time"],
+    match: /\b(weather|rain|raining|forecast|temperature|hot|cold|sunny|umbrella|wind|sunrise|sunset|news|headlines|happening|stock|stocks|shares?|market|price of|bitcoin|crypto|btc|eth|ethereum|dollars?|euros?|pounds?|currency|exchange rate|convert|egp|usd|eur|gbp|time (is it )?in|timezone)\b/i,
+  },
+  location: {
+    about: "where the user is, finding nearby places, directions and navigation, commute time",
+    tools: ["where_am_i", "find_nearby", "navigate", "get_commute_time", "share_my_location"],
+    match: /\b(where am i|location|nearby|near me|near here|closest|nearest|around here|directions|navigate|take me|route|commute|traffic|how far|pharmacy|hospital|atm|restaurant|cafe|coffee|fuel|petrol|gas station|supermarket|mosque)\b/i,
+  },
+  phone: {
+    about: "opening apps, music and media, volume, Wi-Fi/Bluetooth panels, flashlight, battery, alarms and timers, Do Not Disturb, clipboard, diagnostics, browser search",
+    tools: ["open_app", "play_music", "media_control", "set_volume", "open_settings_panel", "toggle_flashlight", "get_battery_status", "set_alarm", "set_timer", "do_not_disturb", "read_clipboard", "copy_to_clipboard", "run_diagnostics", "web_search"],
+    match: /\b(open|launch|start|play|playing|music|song|songs|album|artist|pause|resume|stop|next|skip|previous|volume|louder|quieter|mute|wi-?fi|bluetooth|hotspot|nfc|brightness|display|flashlight|torch|battery|charge|alarm|timer|wake me|do not disturb|dnd|silence|silent|clipboard|copy|copied|paste|diagnostic|diagnostics|storage|memory|ram|system|status|browser|google it)\b/i,
+  },
+  organizer: {
+    about: "notes, named lists (shopping, to-do), protocols (saved routines)",
+    tools: ["take_note", "find_notes", "delete_note", "add_to_list", "get_list", "remove_from_list", "clear_list", "save_protocol", "delete_protocol"],
+    match: /\b(note|notes|jot|write (that|this|it) down|list|lists|shopping|groceries|grocery|to-?do|packing|protocol|protocols|routine)\b/i,
+  },
+};
+
+function allToolSchemas() { return [...TOOLS, ...FEATURE_TOOLS]; }
+
+function groupOfTool(name) {
+  return Object.keys(TOOL_GROUPS).find(g => TOOL_GROUPS[g].tools.includes(name)) || null;
+}
+
+let lastTurnGroups = new Set();
+
+function pickToolGroups(userText) {
+  const groups = new Set(lastTurnGroups); // follow-ups ("and tomorrow?") keep the last turn's tools
+  for (const [g, def] of Object.entries(TOOL_GROUPS)) if (def.match.test(userText)) groups.add(g);
+  // Running a protocol can touch anything.
+  const lower = userText.toLowerCase();
+  if (state.protocols.some(p => lower.includes(p.name.toLowerCase()))) Object.keys(TOOL_GROUPS).forEach(g => groups.add(g));
+  return groups;
+}
+
+function toolsForGroups(groups) {
+  const names = new Set(CORE_TOOLS);
+  groups.forEach(g => TOOL_GROUPS[g].tools.forEach(n => names.add(n)));
+  const schemas = allToolSchemas().filter(t => names.has(t.function.name));
+  const missing = Object.keys(TOOL_GROUPS).filter(g => !groups.has(g));
+  if (missing.length) {
+    schemas.push({
+      type: "function",
+      function: {
+        name: "enable_tools",
+        description: "Load more of your abilities before using them. Not loaded yet: " +
+          missing.map(g => `${g} (${TOOL_GROUPS[g].about})`).join("; ") + ".",
+        parameters: { type: "object", properties: { groups: { type: "array", items: { type: "string", enum: missing } } }, required: ["groups"] },
+      },
+    });
+  }
+  return schemas;
 }
 
 // History is trimmed to the last ~30 messages, but a cut can land between an
 // assistant tool_calls message and its tool results, and the API rejects an
 // orphaned tool message. Always start the kept window on a user turn.
 function trimHistory(messages) {
-  const kept = messages.filter(m => m.role !== "system").slice(-30);
+  const kept = messages.filter(m => m.role !== "system").slice(-20).map(m =>
+    // Old tool outputs (message lists, search results) are the bulk of the
+    // tokens; keep enough for follow-ups, not the whole payload.
+    m.role === "tool" && m.content && m.content.length > 1200 ? { ...m, content: m.content.slice(0, 1200) + "…" } : m);
   while (kept.length && kept[0].role !== "user") kept.shift();
   return kept;
 }
@@ -1540,7 +1698,6 @@ const TOOL_LABELS = {
   lookup_knowledge: a => `QUERYING ARCHIVES: ${a.query || ""}`,
   get_weather: a => `SCANNING WEATHER${a.location ? ": " + a.location : ""}`,
   get_commute_time: () => "PLOTTING ROUTE",
-  list_today_events: () => "READING CALENDAR",
   create_calendar_event: a => `WRITING TO CALENDAR: ${a.title || ""}`,
   list_unread_emails: () => "SCANNING INBOX",
   send_email: a => `TRANSMITTING EMAIL TO ${a.to || ""}`,
@@ -1557,24 +1714,40 @@ const TOOL_LABELS = {
 };
 
 function toolLabel(name, args) {
-  const fn = TOOL_LABELS[name];
+  const fn = TOOL_LABELS[name] || FEATURE_LABELS[name];
   return `› ${(fn ? fn(args || {}) : name.toUpperCase()).toUpperCase()}`;
 }
 
 async function runAgentTurn(userText) {
   await refreshContextExtras();
-  const messages = [
+  let messages = [
     { role: "system", content: buildSystemPrompt() },
     ...state.chatHistory,
     { role: "user", content: userText },
   ];
+  const groups = pickToolGroups(userText);
+  const usedGroups = new Set();
+  let shrunk = false;
   let guard = 0;
-  while (guard++ < 6) {
+  while (guard++ < 8) {
     let data;
-    try { data = await callGroq(messages); }
+    try { data = await callGroq(messages, { tools: toolsForGroups(groups) }); }
     catch (e) {
-      if (String(e.message).includes("NO_API_KEY")) {
+      const msg = String(e.message);
+      if (msg.includes("TOO_LARGE") && !shrunk) {
+        // One request alone blew the per-minute token budget: drop most history and retry.
+        shrunk = true;
+        messages = [messages[0], ...trimHistory(state.chatHistory.slice(-4)), ...messages.slice(1 + state.chatHistory.length)];
+        continue;
+      }
+      if (msg.includes("NO_API_KEY")) {
         return { text: `I'm without a mind at the moment, ${state.address}. Add a Groq API key in Settings and I'll be right with you.`, messages };
+      }
+      if (msg.includes("DAILY_LIMIT")) {
+        return { text: `I've used up today's free thinking allowance from Groq, ${state.address}. It resets within the day; until then I'm afraid I'm rather quiet.`, messages };
+      }
+      if (msg.includes("RATE_LIMIT") || msg.includes("TOO_LARGE")) {
+        return { text: `I'm thinking faster than the free tier allows, ${state.address}. Give me a minute and ask again.`, messages };
       }
       return { text: `I'm having trouble reaching my own thoughts, ${state.address}. ${e.message}`, messages };
     }
@@ -1587,15 +1760,24 @@ async function runAgentTurn(userText) {
         const name = call.function.name;
         let args = {};
         try { args = JSON.parse(call.function.arguments || "{}"); } catch {}
-        addToolMsg(toolLabel(name, args));
         let result;
-        try { result = await executeTool(name, args); } catch (e) { result = { error: e.message }; }
+        if (name === "enable_tools") {
+          const added = (args.groups || []).filter(g => TOOL_GROUPS[g]);
+          added.forEach(g => groups.add(g));
+          result = { enabled: added, note: "Those abilities are available now; go ahead and use them." };
+        } else {
+          addToolMsg(toolLabel(name, args));
+          const g = groupOfTool(name);
+          if (g) usedGroups.add(g);
+          try { result = await executeTool(name, args); } catch (e) { result = { error: e.message }; }
+        }
         messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
       }
       continue;
     }
     const text = (msg.content || "").trim() || "…";
     messages.push({ role: "assistant", content: text });
+    lastTurnGroups = usedGroups;
     return { text, messages };
   }
   return { text: "That one's gone round in circles. Let's try it a simpler way.", messages };
@@ -2069,18 +2251,25 @@ function wireDeepLinks() {
 /* ---------------------------------------------------------------------- *
  * Boot
  * ---------------------------------------------------------------------- */
+// One subsystem failing to start (a plugin missing on some device, say)
+// shouldn't take the rest of Jarvis down with it.
+async function safely(label, fn) {
+  try { await fn(); } catch (e) { console.error(`${label} failed to start`, e); }
+}
+
 async function boot() {
   await loadState();
-  wireTabs();
-  wireSettingsForm();
-  wireReminderForm();
-  wireChat();
-  wireReactor();
-  wireEverywhere();
-  wireBriefing();
-  wireQuickActions();
-  wireDeepLinks();
-  await populateVoices();
+  await safely("tabs", wireTabs);
+  await safely("settings", wireSettingsForm);
+  await safely("reminder form", wireReminderForm);
+  await safely("chat", wireChat);
+  await safely("reactor", wireReactor);
+  await safely("assistant/messages", wireEverywhere);
+  await safely("features", initFeatures);
+  await safely("briefing", wireBriefing);
+  await safely("quick actions", wireQuickActions);
+  await safely("deep links", wireDeepLinks);
+  await safely("voices", populateVoices);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();

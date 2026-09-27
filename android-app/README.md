@@ -133,6 +133,41 @@ phone's voice rather than going silent.
   that I'll be late", "turn on Wi-Fi" (Android only lets apps open the
   Wi-Fi/Bluetooth panel, so he brings it up for you to tap).
 
+### 2.2 feature pack
+
+| # | Feature | Try saying |
+|---|---|---|
+| 1 | Live web search | "What was the Ahly score last night?" |
+| 2 | News headlines | "What's in the news?" / "Any news on the iPhone launch?" |
+| 3 | Weather forecast | "Will it rain tomorrow?" / "What's the week looking like?" |
+| 4 | Stocks & crypto | "How's Apple stock doing?" / "Bitcoin price" |
+| 5 | Currency conversion | "100 dollars in Egyptian pounds" |
+| 6 | Exact calculator | "What's 17.5% of 2,340?" |
+| 7 | World clock | "What time is it in Tokyo?" |
+| 8 | Where am I | "Where am I?" |
+| 9 | Find nearby | "Nearest pharmacy" → "take me there" |
+| 10 | Share location | "Send Omi my location" |
+| 11 | Notes | "Note that the wifi password is ..." / "What was the wifi password?" |
+| 12 | Lists | "Add milk and eggs to my shopping list" / "What's on it?" |
+| 13 | Recurring reminders | "Remind me every weekday at 9:30 about standup" |
+| 14 | Calendar, any day | "What's on Thursday?" / "Cancel my 3pm" |
+| 15 | Read full emails | "Read me Sara's email" |
+| 16 | Do Not Disturb | "Do not disturb for now" (needs notification access) |
+| 17 | Missed calls | "Did I miss any calls?" |
+| 18 | Clipboard | "Summarise what I just copied" / "Copy that address" |
+| 19 | Protocols | "Create a night protocol: alarm at 7, do not disturb on, volume 20" → later just "Night protocol" |
+| 20 | Daily briefing | Settings → *Daily briefing* at a time you pick; tap the notification and he reads it |
+| + | Diagnostics | "Run diagnostics" |
+
+Lists, notes, protocols, and reminders all show on the **Planner** tab.
+
+**Why he doesn't send all 56 abilities every time:** Groq's free tier allows
+8,000 tokens a minute. Sending every tool description on every request would
+cost about 3,900 tokens each, so a two-step answer could hit the limit. Jarvis
+now sends only the abilities that fit what you said (about 800-1,600 tokens)
+and loads more himself when he needs them. If the limit is still hit, he
+waits and retries instead of failing.
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:
