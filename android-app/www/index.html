@@ -16,17 +16,32 @@
   </div>
 
   <div class="tabbar">
-    <button class="tab active" data-view="chatView">Chat</button>
+    <button class="tab active" data-view="chatView">Jarvis</button>
     <button class="tab" data-view="briefingView">Briefing</button>
     <button class="tab" data-view="remindersView">Reminders</button>
   </div>
 
-  <!-- CHAT -->
+  <!-- JARVIS HUD -->
   <section class="view active" id="chatView">
+    <div class="hud">
+      <button class="reactor idle" id="reactor" aria-label="Talk to Jarvis">
+        <span class="ring ring-outer"></span>
+        <span class="ring ring-mid"></span>
+        <span class="ring ring-inner"></span>
+        <span class="core"></span>
+      </button>
+      <div class="hud-status" id="hudStatus">STANDING BY</div>
+      <div class="telemetry">
+        <span id="telTime">--:--</span>
+        <span class="sep">//</span>
+        <span id="telBattery">PWR --%</span>
+        <span class="sep">//</span>
+        <span id="telNet">LINK --</span>
+      </div>
+    </div>
     <div id="chatLog"></div>
     <div class="composer">
-      <button class="round-btn" id="micBtn" title="Voice input">🎤</button>
-      <textarea id="chatInput" rows="1" placeholder="Ask Jarvis anything..."></textarea>
+      <textarea id="chatInput" rows="1" placeholder="Type to Jarvis, or tap the core to talk"></textarea>
       <button class="round-btn primary" id="sendBtn" title="Send">➤</button>
     </div>
   </section>
@@ -114,6 +129,38 @@
       </div>
 
       <div class="field">
+        <label>How should Jarvis address you?</label>
+        <input type="text" id="addressInput" placeholder="sir" />
+        <div class="hint">"sir" by default. A name, "boss", whatever suits.</div>
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Greet me when I open Jarvis</b>
+            <div class="hint" style="margin-top:2px;">A short spoken status on arrival: time, battery, what's next. At most once every 20 minutes.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="greetToggle" checked /><span class="toggle-track"></span></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Conversation mode</b>
+            <div class="hint" style="margin-top:2px;">After Jarvis answers you out loud, he keeps listening so you can just talk back. Say "that's all" or tap the core to end.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="convoToggle" checked /><span class="toggle-track"></span></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label>What Jarvis remembers about you</label>
+        <div id="memoryList" class="memory-list"><div class="empty-hint">Nothing yet. Tell him things ("my sister is Omi", "I hate early meetings") and he'll keep them.</div></div>
+        <button class="wide-btn danger" id="clearMemoryBtn" style="margin-top:8px;">Forget everything</button>
+      </div>
+
+      <div class="field">
         <label>Voice</label>
         <div style="display:flex; gap:8px;">
           <select id="voiceSelect" style="flex:1;"></select>
@@ -181,7 +228,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v1.0 (native) · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.0 · your keys are stored only on this device.</div>
     </div>
   </section>
 

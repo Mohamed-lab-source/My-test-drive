@@ -95,7 +95,28 @@ phone's voice rather than going silent.
 
 ## 6. Using it
 
-- **Chat tab** — type or tap 🎤 and talk. Try:
+### How Jarvis behaves
+
+- **He speaks first.** Open the app and he gives you a one-or-two-sentence
+  status: what's next, anything worth knowing (low battery, an event soon).
+  At most once every 20 minutes; turn it off in Settings.
+- **Tap the core to talk.** The arc reactor on the Jarvis tab is the
+  microphone. After he answers out loud he keeps listening, so you can just
+  talk back. Say "that's all" (or tap the core) to end the exchange.
+  Conversation mode can be turned off in Settings.
+- **He remembers you.** Tell him durable things ("Omi is my sister", "I hate
+  meetings before ten") and he keeps them, and uses them. Settings shows
+  everything he remembers, with a delete button for each.
+- **He knows the moment.** Every message carries the real date, time,
+  battery, and your open reminders, so "remind me in two hours" and "what's
+  on tonight" work properly.
+- **He looks things up.** Factual questions go to Wikipedia rather than
+  relying on the model's memory.
+- Settings → "How should Jarvis address you?" changes "sir" to anything you like.
+
+### Things to try
+
+- **Jarvis tab** — tap the core and talk, or type. Try:
   - "What's on my calendar today?"
   - "Book a dentist appointment tomorrow at 4pm"
   - "Remind me to call Ahmed at 6"
