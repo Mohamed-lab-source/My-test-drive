@@ -1301,7 +1301,8 @@ function wireEverywhere() {
   DeviceActions.addListener("notification", (m) => {
     const line = addMsg("tool", `› ${String(m.app).toUpperCase()} · ${String(m.from).toUpperCase()}: `);
     line.appendChild(document.createTextNode(m.text));
-    const shouldSpeak = state.announceMode === "always" || (state.announceMode === "headphones" && m.headphones);
+    const shouldSpeak = state.announceMode === "always" || (state.announceMode === "headphones" && m.headphones)
+      || (typeof isVip === "function" && isVip(m.from));
     if (shouldSpeak && !busy && !conversationActive && !speakingNow) {
       speakWithHud(`${state.address.charAt(0).toUpperCase() + state.address.slice(1)}, ${m.app} from ${m.from}: ${m.text}`);
     }
@@ -2469,6 +2470,7 @@ async function boot() {
   await safely("places", initPlaces);
   await safely("more", initMore);
   await safely("trackers", initTrackers);
+  await safely("stark", initStark);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();
@@ -2483,7 +2485,8 @@ async function boot() {
       refreshTelemetry();
       refreshAbilityStatus();
       if (!(await handleAssist())) greet();
-    } else if (conversationActive) {
+    } else if (conversationActive && !window.__keepConversation) {
+      // (not while Jarvis himself opened something, like the camera, mid-conversation)
       interrupt();
     }
   });

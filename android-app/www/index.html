@@ -42,6 +42,8 @@
         <span class="tel-mode warn" hidden>MUTED</span>
         <span class="sep" id="telFocusSep" hidden>//</span>
         <span id="telFocus" hidden>FOCUS</span>
+        <span class="sep" id="telDriveSep" hidden>//</span>
+        <span id="telDrive" class="tel-drive" hidden>DRIVE</span>
       </div>
       <div class="hud-widgets" id="hudWidgets" hidden></div>
     </div>
@@ -194,6 +196,24 @@
           <span class="toggle-switch"><input type="checkbox" id="dailyBriefingToggle" /><span class="toggle-track"></span></span>
         </label>
         <input type="time" id="dailyBriefingTime" value="07:30" style="margin-top:8px;" />
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Wake-up call</b>
+            <div class="hint" style="margin-top:2px;">At this time Jarvis opens himself with a chime and briefs you: weather, schedule, reminders. Needs "Let Jarvis pop up over other apps" (below) to open by himself.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="wakeUpToggle" /><span class="toggle-track"></span></span>
+        </label>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <input type="time" id="wakeUpTime" value="07:00" style="flex:1;" />
+          <select id="wakeUpDays" style="flex:1;">
+            <option value="daily">Every day</option>
+            <option value="weekdays">Sun–Thu</option>
+            <option value="weekends">Fri–Sat</option>
+          </select>
+        </div>
       </div>
 
       <div class="field">
@@ -440,6 +460,17 @@
       </div>
 
       <div class="field">
+        <label>Jarvis everywhere</label>
+        <div class="hint"><b>Quick Settings tile:</b> pull down the notification shade → tap the ✏️ edit button → drag the <b>Jarvis</b> tile up. One tap and he's listening.<br><b>Home-screen widget:</b> long-press an empty spot on your home screen → Widgets → <b>Jarvis</b>. Shows the time, power, what's next, water and meds; tap it to talk.</div>
+      </div>
+
+      <div class="field">
+        <label>Lock the phone by voice</label>
+        <div class="hint">The first time you say "lock the phone", Android asks you to activate Jarvis as a device admin (used only to lock the screen). <b>Before uninstalling Jarvis</b>, remove it here:</div>
+        <button class="wide-btn" id="removeLockBtn" style="margin-top:8px;">Remove lock permission</button>
+      </div>
+
+      <div class="field">
         <label>Backup</label>
         <div style="display:flex; gap:8px;">
           <button class="wide-btn accent" id="exportBackupBtn" style="margin:0;">Export backup</button>
@@ -450,7 +481,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.8 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.9 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -458,9 +489,16 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="boot-overlay" id="scanOverlay" hidden>
+  <div class="boot-title">DIAGNOSTICS</div>
+  <div class="boot-sub">FULL SYSTEMS SCAN</div>
+  <div class="boot-log"></div>
+  <div class="boot-skip">tap to close</div>
+</div>
+
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.8</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.9</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
@@ -472,5 +510,6 @@
 <script src="places.js"></script>
 <script src="more.js"></script>
 <script src="trackers.js"></script>
+<script src="stark.js"></script>
 </body>
 </html>

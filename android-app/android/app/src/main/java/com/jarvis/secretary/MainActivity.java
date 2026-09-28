@@ -69,6 +69,7 @@ public class MainActivity extends BridgeActivity {
             || "com.jarvis.secretary.TALK".equals(action)) return "talk";
         if ("com.jarvis.secretary.BRIEFING".equals(action)) return "briefing";
         if ("com.jarvis.secretary.PLANNER".equals(action)) return "planner";
+        if ("com.jarvis.secretary.WAKEUP".equals(action)) return "wakeup";
         return null;
     }
 }

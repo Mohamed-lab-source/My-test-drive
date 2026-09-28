@@ -290,6 +290,7 @@ handleAssist = async function () {
   } catch {}
   if (!action) return false;
   document.getElementById("settingsView").style.display = "none";
+  if (typeof ACTION_HANDLERS === "object" && ACTION_HANDLERS[action]) { await ACTION_HANDLERS[action](); return true; }
   if (action === "planner") { openTab("remindersView"); return true; }
   if (action === "briefing") {
     openTab("briefingView");

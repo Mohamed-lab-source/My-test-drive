@@ -180,8 +180,10 @@ public class JarvisNotificationListener extends NotificationListenerService {
     private void maybeAnnounce(Entry entry, boolean headphones) {
         SharedPreferences prefs = getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
         String mode = pref(prefs, "announceMode", "headphones");
-        if ("off".equals(mode)) return;
-        if ("headphones".equals(mode) && !headphones) return;
+        // VIPs ("always tell me when Mom messages") are announced whatever the mode.
+        boolean vip = isVip(prefs, entry.from);
+        if (!vip && "off".equals(mode)) return;
+        if (!vip && "headphones".equals(mode) && !headphones) return;
         if (tts == null || !ttsReady) return;
 
         String address = pref(prefs, "address", "sir");
@@ -238,6 +240,20 @@ public class JarvisNotificationListener extends NotificationListenerService {
         } catch (Exception e) {
             return "A message";
         }
+    }
+
+    private static boolean isVip(SharedPreferences prefs, String from) {
+        String raw = prefs.getString("jarvis:vips", null);
+        if (raw == null || from == null) return false;
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(raw);
+            String f = from.toLowerCase();
+            for (int i = 0; i < arr.length(); i++) {
+                String v = arr.optString(i, "").toLowerCase().trim();
+                if (!v.isEmpty() && (f.equals(v) || f.contains(v))) return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     private static String pref(SharedPreferences prefs, String key, String fallback) {

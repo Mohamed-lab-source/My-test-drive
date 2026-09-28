@@ -889,4 +889,113 @@ public class DeviceActionsPlugin extends Plugin {
         ret.put("brightness", pct);
         call.resolve(ret);
     }
+
+    /* ---------------- Home-screen widget ---------------- */
+
+    @PluginMethod
+    public void updateWidget(PluginCall call) {
+        JarvisWidget.refresh(getContext(), call.getString("line1", ""), call.getString("line2", ""), call.getString("line3", ""));
+        call.resolve();
+    }
+
+    /* ---------------- Wake-up call ---------------- */
+
+    @PluginMethod
+    public void setWakeUpCall(PluginCall call) {
+        android.content.SharedPreferences.Editor e = getContext().getSharedPreferences(WakeUpReceiver.PREFS, Context.MODE_PRIVATE).edit();
+        e.putBoolean("enabled", Boolean.TRUE.equals(call.getBoolean("enabled", true)));
+        e.putInt("hour", call.getInt("hour", 7));
+        e.putInt("minute", call.getInt("minute", 0));
+        e.putString("days", call.getString("days", "1234567"));
+        e.apply();
+        long next;
+        try {
+            next = WakeUpReceiver.schedule(getContext());
+        } catch (SecurityException se) {
+            // Android 12+: exact alarms need "Alarms & reminders" permission.
+            if (Build.VERSION.SDK_INT >= 31) tryStart(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getContext().getPackageName())));
+            call.reject("NO_EXACT_ALARM");
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("next", next);
+        call.resolve(ret);
+    }
+
+    /* ---------------- Lock the phone ---------------- */
+
+    @PluginMethod
+    public void lockPhone(PluginCall call) {
+        android.app.admin.DevicePolicyManager dpm = (android.app.admin.DevicePolicyManager) getContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
+        ComponentName admin = new ComponentName(getContext(), JarvisAdmin.class);
+        if (dpm == null) { call.reject("Unavailable"); return; }
+        if (Boolean.TRUE.equals(call.getBoolean("checkOnly", false))) {
+            JSObject ret = new JSObject();
+            ret.put("enabled", dpm.isAdminActive(admin));
+            call.resolve(ret);
+            return;
+        }
+        if (!dpm.isAdminActive(admin)) {
+            Intent i = new Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+            i.putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin);
+            i.putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Lets Jarvis lock the screen when you ask. Nothing else.");
+            tryStart(i);
+            call.reject("NEEDS_ADMIN");
+            return;
+        }
+        dpm.lockNow();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void removeLockPermission(PluginCall call) {
+        android.app.admin.DevicePolicyManager dpm = (android.app.admin.DevicePolicyManager) getContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
+        ComponentName admin = new ComponentName(getContext(), JarvisAdmin.class);
+        if (dpm != null && dpm.isAdminActive(admin)) dpm.removeActiveAdmin(admin);
+        call.resolve();
+    }
+
+    /* ---------------- Vision: on-device labels + text ---------------- */
+
+    @PluginMethod
+    public void analyzeImage(PluginCall call) {
+        String b64 = call.getString("base64", "");
+        if (b64 == null || b64.isEmpty()) { call.reject("No image"); return; }
+        int comma = b64.indexOf(',');
+        if (b64.startsWith("data:") && comma > 0) b64 = b64.substring(comma + 1);
+        android.graphics.Bitmap bmp;
+        try {
+            byte[] bytes = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+            bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (Exception e) { call.reject("Couldn't read the photo"); return; }
+        if (bmp == null) { call.reject("Couldn't read the photo"); return; }
+        final android.graphics.Bitmap photo = bmp;
+        com.google.mlkit.vision.common.InputImage image = com.google.mlkit.vision.common.InputImage.fromBitmap(photo, 0);
+        com.google.mlkit.vision.label.ImageLabeler labeler = com.google.mlkit.vision.label.ImageLabeling.getClient(
+            new com.google.mlkit.vision.label.defaults.ImageLabelerOptions.Builder().setConfidenceThreshold(0.55f).build());
+        labeler.process(image).addOnCompleteListener(labelTask -> {
+            JSArray labels = new JSArray();
+            if (labelTask.isSuccessful() && labelTask.getResult() != null) {
+                for (com.google.mlkit.vision.label.ImageLabel l : labelTask.getResult()) {
+                    JSObject o = new JSObject();
+                    o.put("label", l.getText());
+                    o.put("confidence", Math.round(l.getConfidence() * 100));
+                    labels.put(o);
+                }
+            }
+            labeler.close();
+            com.google.mlkit.vision.text.TextRecognizer reader = com.google.mlkit.vision.text.TextRecognition.getClient(
+                com.google.mlkit.vision.text.latin.TextRecognizerOptions.DEFAULT_OPTIONS);
+            reader.process(image).addOnCompleteListener(textTask -> {
+                JSObject ret = new JSObject();
+                ret.put("labels", labels);
+                String text = textTask.isSuccessful() && textTask.getResult() != null ? textTask.getResult().getText() : "";
+                ret.put("text", text.length() > 3000 ? text.substring(0, 3000) : text);
+                ret.put("width", photo.getWidth());
+                ret.put("height", photo.getHeight());
+                reader.close();
+                call.resolve(ret);
+            });
+        });
+    }
 }

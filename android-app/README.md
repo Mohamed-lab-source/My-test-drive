@@ -270,6 +270,21 @@ A new **Trackers** tab brings everything together: water, medications, habits, b
 
 **Backup:** Settings → Backup → Export saves everything to a file (Drive, WhatsApp…); Restore brings it back on any phone. API keys and passwords are never included.
 
+### 2.9 — the Stark pack
+
+| | How |
+|---|---|
+| Visual answers | Weather, forecasts, routes (with Navigate), prices, gold, fixtures, prayer times, nearby places (tap to go), spending, screen time and the Hijri calendar appear as holographic cards in the chat. |
+| Vision | "What am I looking at?", "Read this": the camera opens; on-device recognition of objects and English/Latin text. Arabic script isn't supported by the recognizer. |
+| Wake-up call | Settings → Wake-up call, or "Wake me up at 6:30 on weekdays". At that time Jarvis opens himself with a chime and briefs you. Needs "pop up over other apps". |
+| Lockdown | "Lock the phone" / "Lockdown protocol". Asks once for device-admin permission (lock only); remove it in Settings before uninstalling. |
+| Diagnostics | "Run a full diagnostic": animated scan of battery health and heat, storage, memory, uptime, latency and a download speed test, then a spoken report. |
+| Widget | Long-press the home screen → Widgets → Jarvis: live clock, power, what's next, water and meds. Tap to talk. |
+| Quick Settings | Pull down the shade → edit → add the Jarvis tile. One tap to talk, from anywhere. |
+| Driving mode | "I'm driving to Smart Village": messages read aloud, replies kept very short, navigation started. Off after 3 hours or "driving mode off". |
+| Power | "Power connected, sir." when you plug in; "Fully charged." at 100%. |
+| VIPs | "Always tell me when Mom messages": announced even when announcements are off. |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

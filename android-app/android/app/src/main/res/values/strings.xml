@@ -7,4 +7,6 @@
     <string name="shortcut_talk">Talk to Jarvis</string>
     <string name="shortcut_briefing">Briefing</string>
     <string name="shortcut_planner">Planner</string>
+    <string name="widget_description">Jarvis status at a glance; tap to talk</string>
+    <string name="admin_description">Lets Jarvis lock the screen when you ask him to. Nothing else.</string>
 </resources>
