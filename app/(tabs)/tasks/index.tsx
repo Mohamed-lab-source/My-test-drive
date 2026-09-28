@@ -15,6 +15,9 @@ import { AddTaskSheet } from '../../../src/features/tasks/AddTaskSheet';
 import { TaskDetailSheet } from '../../../src/features/tasks/TaskDetailSheet';
 import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
 import { Icon } from '../../../src/ui/Icon';
+import { TextField } from '../../../src/ui/TextField';
+import { parseQuickTask } from '../../../src/utils/quickAdd';
+import { formatDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
 import { formatRelativeDay, formatTime } from '../../../src/utils/date';
 import type { Task } from '../../../src/db/types';
@@ -28,7 +31,32 @@ export default function TasksScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
-  const { tasks, meetings, moveTask, clearCompleted, refreshTasks } = useProductivityStore();
+  const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask } = useProductivityStore();
+  const [quickText, setQuickText] = useState('');
+  const quick = useMemo(() => parseQuickTask(quickText, projects), [quickText, projects]);
+
+  const submitQuick = async () => {
+    if (!quick.title) return;
+    await addTask({
+      project_id: quick.projectId,
+      title: quick.title,
+      notes: null,
+      status: quick.backlog ? 'backlog' : 'todo',
+      priority: quick.priority,
+      due_date: null,
+      scheduled_date: quick.scheduledDate,
+      sort_order: Date.now(),
+    });
+    setQuickText('');
+  };
+
+  const quickWhen = quick.backlog
+    ? 'Backlog'
+    : quick.scheduledDate === todayKey()
+      ? 'Today'
+      : quick.scheduledDate
+        ? formatDateKey(quick.scheduledDate)
+        : 'Unscheduled';
   const [segment, setSegment] = useState(0);
   const [addVisible, setAddVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
@@ -111,6 +139,21 @@ export default function TasksScreen() {
         )}
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <TextField
+            placeholder="Quick add — e.g. Call mom tomorrow !high #family"
+            value={quickText}
+            onChangeText={setQuickText}
+            onSubmitEditing={submitQuick}
+            returnKeyType="done"
+            blurOnSubmit={false}
+          />
+          {quick.title ? (
+            <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.xs, marginBottom: spacing.sm }]}>
+              “{quick.title}” · {quickWhen}
+              {quick.priority !== 'medium' ? ` · ${quick.priority}` : ''}
+              {quick.projectName ? ` · ${quick.projectName}` : ''} — press return to add
+            </Text>
+          ) : null}
           <SegmentedControl options={SEGMENTS} selectedIndex={segment} onChange={setSegment} />
         </View>
 

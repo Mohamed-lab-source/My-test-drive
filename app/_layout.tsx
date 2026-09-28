@@ -12,7 +12,13 @@ import { useHabitsStore } from '../src/store/habitsStore';
 import { AuthProvider, useAuth, type AuthStatus } from '../src/auth/AuthProvider';
 import { pullAllFromCloud } from '../src/sync/firestoreSync';
 import { UndoSnackbar } from '../src/ui/UndoSnackbar';
-import { initNotifications, rescheduleAllReminders } from '../src/notifications/scheduler';
+import {
+  initNotifications,
+  reschedulePrayerAlerts,
+  rescheduleAllReminders,
+  rescheduleOccasionReminders,
+} from '../src/notifications/scheduler';
+import { settingsHydrated } from '../src/store/settingsStore';
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 
 function useProtectedRoute(status: AuthStatus) {
@@ -46,9 +52,16 @@ function AppShell() {
   useEffect(() => {
     initNotifications();
     Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()])
-      .then(() => {
+      .then(async () => {
         setDataReady(true);
-        rescheduleAllReminders(useProductivityStore.getState().meetings, useFinanceStore.getState().recurringRules);
+        await settingsHydrated();
+        await rescheduleAllReminders(
+          useProductivityStore.getState().meetings,
+          useFinanceStore.getState().recurringRules,
+          useProductivityStore.getState().tasks
+        );
+        await reschedulePrayerAlerts();
+        await rescheduleOccasionReminders();
       })
       .catch((e) => {
         console.error('Failed to hydrate app state', e);

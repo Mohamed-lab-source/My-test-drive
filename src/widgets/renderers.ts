@@ -8,7 +8,8 @@ import * as lifeRepo from '../db/repositories/life';
 import * as productivityRepo from '../db/repositories/productivity';
 import * as financeRepo from '../db/repositories/finance';
 import { listFxRates, convertToBase } from '../db/repositories/fx';
-import { formatRelativeDay } from '../utils/date';
+import { formatRelativeDay, formatTime } from '../utils/date';
+import { findPrayerCity, getNextPrayer } from '../utils/prayerTimes';
 import { buildPrayerWidget } from './PrayerWidget';
 import { buildTasksWidget } from './TasksWidget';
 import { buildMoneyWidget } from './MoneyWidget';
@@ -16,22 +17,35 @@ import { buildMoneyWidget } from './MoneyWidget';
 export type WidgetName = 'PrayerWidget' | 'TasksWidget' | 'MoneyWidget';
 export const WIDGET_NAMES: WidgetName[] = ['PrayerWidget', 'TasksWidget', 'MoneyWidget'];
 
-async function getCurrency(): Promise<string> {
+async function readSettings(): Promise<{ currency?: string; prayerCityId?: string | null }> {
   try {
     const raw = await AsyncStorage.getItem('anchor-settings');
-    const parsed = raw ? JSON.parse(raw) : null;
-    return parsed?.state?.currency ?? 'USD';
+    return (raw ? JSON.parse(raw) : null)?.state ?? {};
   } catch {
-    return 'USD';
+    return {};
   }
 }
 
+async function getCurrency(): Promise<string> {
+  return (await readSettings()).currency ?? 'USD';
+}
+
+const PRAYER_NAMES: Record<string, string> = { fajr: 'Fajr', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' };
+
+async function getNextPrayerLabel(): Promise<string | null> {
+  const city = findPrayerCity((await readSettings()).prayerCityId ?? null);
+  if (!city) return null;
+  const next = getNextPrayer(city);
+  return `${PRAYER_NAMES[next.prayer]} ${formatTime(next.time.toISOString())}`;
+}
+
 export async function renderPrayerWidget(scheme: 'light' | 'dark') {
-  const [logs, streak] = await Promise.all([
+  const [logs, streak, nextPrayer] = await Promise.all([
     lifeRepo.listPrayerLogsForDate(todayKey()),
     lifeRepo.computePrayerStreak(),
+    getNextPrayerLabel(),
   ]);
-  return buildPrayerWidget({ logs, streak }, scheme);
+  return buildPrayerWidget({ logs, streak, nextPrayer }, scheme);
 }
 
 export async function renderTasksWidget(scheme: 'light' | 'dark') {

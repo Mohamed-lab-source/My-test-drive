@@ -35,6 +35,11 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Accounts screen — add, rename, change type/currency, set a balance to match your bank, archive
 - Zakat calculator (2.5% above a user-entered nisab, with receivables/debts toggles)
 - Month-in-review: spend vs. last month, top category, biggest expense, net
+- Split a bill: "Split with" names on a new expense creates an "owed to me" debt per person for their share
+- Auto-post recurring items (salary, rent) when they come due, catching up missed cycles on launch
+- Budget alerts: a notification when a category crosses 80% and 100% of its monthly limit
+- Daily net-worth snapshots with a history chart, and a 30-day cash-flow forecast from recurring items
+- Default account for new transactions
 - Custom categories
 
 **Tasks**
@@ -46,6 +51,9 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Reschedule from the task sheet (Today / Tomorrow / Next week / Backlog)
 - Focus timer (15/25/50 min) with an end-of-session notification; sessions feed the weekly review
 - Done tab with an undoable "Clear completed"
+- Natural-language quick add: `Call mom tomorrow !high #family` (today/tomorrow/weekday/next week/someday, !high/!low, #project)
+- Task reminders (in 1 hour / this evening / tomorrow 9 AM)
+- Tap a meeting to edit it, with a configurable reminder lead time and notes
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -55,12 +63,19 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Prayer history heatmap (last 5 weeks) and per-habit history heatmaps
 - Tasbih counter (33/99/100 rounds, daily total)
 - Quran khatm tracker (pages read, pace-based finish date, multiple khatms)
+- Prayer times for 30+ cities (via `adhan`, each with its local calculation method), next-prayer countdown, and optional adhan notifications
+- Hijri date on Home (Umm al-Qura via Intl when available, arithmetic fallback, ±2 day adjustment)
+- Fasting tracker (Ramadan / voluntary / make-up) with a 5-week heatmap and 12-month totals
+- Occasions — birthdays and anniversaries sorted by how soon they are, with a yearly reminder on the day
+
+**Home**
+- Quick actions: log an expense, add a task, open Tasbih or Quran
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood
 
 **Home-screen widgets (Android)**
-- Prayers — today's 5 prayers with streak, tap a prayer to mark it done right from the widget
+- Prayers — today's 5 prayers with streak and the next prayer time, tap a prayer to mark it done right from the widget
 - Today — your tasks scheduled for today; tap the circle to mark a task done, tap + to add one
 - Net worth — current net worth and next upcoming bill; tap + to log an expense, tap Pay to post the bill
 

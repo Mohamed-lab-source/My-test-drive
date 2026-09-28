@@ -51,3 +51,12 @@ export function daysUntil(iso: string | null): number | null {
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   return Math.round((startOfDay(target) - startOfDay(now)) / 86400000);
 }
+
+// Days from today until the next occurrence of an annual date (0 = today).
+// month is 1-12. Feb 29 lands on Mar 1 in non-leap years via Date rollover.
+export function daysUntilAnnual(month: number, day: number, now: Date = new Date()): number {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let next = new Date(today.getFullYear(), month - 1, day);
+  if (next < today) next = new Date(today.getFullYear() + 1, month - 1, day);
+  return Math.round((next.getTime() - today.getTime()) / 86400000);
+}

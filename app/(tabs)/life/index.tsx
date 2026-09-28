@@ -55,11 +55,17 @@ export default function LifeScreen() {
           <PrayerTracker />
         </View>
 
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <LifeLink icon="flame.fill" label="Habits" color={colors.orange} onPress={() => router.push('/life/habits')} />
           <LifeLink icon="text.book.closed.fill" label="Journal" color={colors.indigo} onPress={() => router.push('/life/journal')} />
           <LifeLink icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
           <LifeLink icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
+        </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <LifeLink icon="moon.fill" label="Fasting" color={colors.purple} onPress={() => router.push('/life/fasting')} />
+          <LifeLink icon="gift.fill" label="Occasions" color={colors.pink} onPress={() => router.push('/life/occasions')} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

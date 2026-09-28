@@ -48,10 +48,11 @@ export const listTasksForProject = (projectId: string) =>
   whereRows<Task>('tasks', 'project_id = ?', [projectId], 'sort_order ASC');
 
 export async function createTask(
-  input: Omit<Task, 'id' | 'created_at' | 'completed_at' | 'repeat_frequency' | 'repeat_interval'> & {
+  input: Omit<Task, 'id' | 'created_at' | 'completed_at' | 'repeat_frequency' | 'repeat_interval' | 'remind_at'> & {
     completed_at?: string | null;
     repeat_frequency?: Task['repeat_frequency'];
     repeat_interval?: number | null;
+    remind_at?: string | null;
   }
 ) {
   const id = newId();
@@ -61,6 +62,7 @@ export async function createTask(
     completed_at: input.completed_at ?? null,
     repeat_frequency: input.repeat_frequency ?? null,
     repeat_interval: input.repeat_interval ?? null,
+    remind_at: input.remind_at ?? null,
     created_at: nowIso(),
   });
   return id;

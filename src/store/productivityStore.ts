@@ -3,7 +3,12 @@ import type { Meeting, Project, Task } from '../db/types';
 import * as repo from '../db/repositories/productivity';
 import { todayKey } from '../db/client';
 import { refreshTasksWidget } from '../widgets/refresh';
-import { cancelMeetingReminder, scheduleMeetingReminder } from '../notifications/scheduler';
+import {
+  cancelMeetingReminder,
+  cancelTaskReminder,
+  scheduleMeetingReminder,
+  scheduleTaskReminder,
+} from '../notifications/scheduler';
 
 interface ProductivityState {
   loaded: boolean;
@@ -23,6 +28,7 @@ interface ProductivityState {
   rescheduleTask: (id: string, target: repo.RescheduleTarget) => Promise<void>;
   clearCompleted: () => Promise<Task[]>;
   logFocusSession: (taskId: string | null, minutes: number) => Promise<void>;
+  setTaskReminder: (id: string, remindAt: string | null) => Promise<void>;
 
   addProject: (input: Parameters<typeof repo.createProject>[0]) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
@@ -67,10 +73,19 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
   toggleTaskDone: async (id, isDone) => {
     await repo.toggleTaskDone(id, isDone);
     await get().refreshTasks();
+    const task = get().tasks.find((t) => t.id === id);
+    if (task) scheduleTaskReminder(task);
   },
   removeTask: async (id) => {
     await repo.deleteTask(id);
+    await cancelTaskReminder(id);
     await get().refreshTasks();
+  },
+  setTaskReminder: async (id, remindAt) => {
+    await repo.updateTask(id, { remind_at: remindAt });
+    await get().refreshTasks();
+    const task = get().tasks.find((t) => t.id === id);
+    if (task) scheduleTaskReminder(task);
   },
   rescheduleTask: async (id, target) => {
     await repo.rescheduleTask(id, target);

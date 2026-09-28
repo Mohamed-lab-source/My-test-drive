@@ -248,6 +248,28 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
   minutes INTEGER NOT NULL,
   completed_at TEXT NOT NULL
 );
+
+-- One row per local day (id = the 'YYYY-MM-DD' key), in the base currency.
+CREATE TABLE IF NOT EXISTS networth_snapshots (
+  id TEXT PRIMARY KEY NOT NULL,
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fasting_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL CHECK (kind IN ('ramadan', 'voluntary', 'makeup'))
+);
+
+CREATE TABLE IF NOT EXISTS occasions (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  month INTEGER NOT NULL,
+  day INTEGER NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('birthday', 'anniversary', 'other')),
+  created_at TEXT NOT NULL
+);
 `;
 
 // Columns added to already-shipped tables after their initial release. A
@@ -264,4 +286,10 @@ export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: stri
   },
   { table: 'tasks', column: 'repeat_frequency', ddl: 'ALTER TABLE tasks ADD COLUMN repeat_frequency TEXT' },
   { table: 'tasks', column: 'repeat_interval', ddl: 'ALTER TABLE tasks ADD COLUMN repeat_interval INTEGER' },
+  { table: 'tasks', column: 'remind_at', ddl: 'ALTER TABLE tasks ADD COLUMN remind_at TEXT' },
+  {
+    table: 'recurring_rules',
+    column: 'auto_post',
+    ddl: 'ALTER TABLE recurring_rules ADD COLUMN auto_post INTEGER NOT NULL DEFAULT 0',
+  },
 ];

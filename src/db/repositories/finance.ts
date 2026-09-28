@@ -3,6 +3,7 @@ import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../
 import type {
   Account,
   Budget,
+  NetWorthSnapshot,
   Category,
   Debt,
   DebtPayment,
@@ -120,10 +121,17 @@ export const listRecurringRules = () => allRows<RecurringRule>('recurring_rules'
 export const getRecurringRule = (id: string) => getRow<RecurringRule>('recurring_rules', id);
 
 export async function createRecurringRule(
-  input: Omit<RecurringRule, 'id' | 'created_at' | 'is_active' | 'is_paused'>
+  input: Omit<RecurringRule, 'id' | 'created_at' | 'is_active' | 'is_paused' | 'auto_post'> & { auto_post?: number }
 ) {
   const id = newId();
-  await insertRow('recurring_rules', { id, ...input, is_active: 1, is_paused: 0, created_at: nowIso() });
+  await insertRow('recurring_rules', {
+    id,
+    ...input,
+    auto_post: input.auto_post ?? 0,
+    is_active: 1,
+    is_paused: 0,
+    created_at: nowIso(),
+  });
   return id;
 }
 export const updateRecurringRule = (id: string, patch: Partial<RecurringRule>) =>
@@ -131,6 +139,31 @@ export const updateRecurringRule = (id: string, patch: Partial<RecurringRule>) =
 export const deleteRecurringRule = (id: string) => deleteRow('recurring_rules', id);
 export const setRecurringPaused = (id: string, paused: boolean) =>
   updateRow('recurring_rules', id, { is_paused: paused ? 1 : 0 });
+export const setRecurringAutoPost = (id: string, on: boolean) =>
+  updateRow('recurring_rules', id, { auto_post: on ? 1 : 0 });
+
+// Posts every auto-post rule that has come due, catching up on missed
+// cycles (e.g. the app wasn't opened for a while) but capped so a
+// misconfigured daily rule can't flood the ledger.
+const MAX_CATCH_UP = 24;
+export async function postDueAutoRules(now: Date = new Date()): Promise<number> {
+  const rules = await whereRows<RecurringRule>(
+    'recurring_rules',
+    'auto_post = 1 AND is_active = 1 AND is_paused = 0 AND next_due_date <= ?',
+    [now.toISOString()]
+  );
+  let posted = 0;
+  for (let rule of rules) {
+    for (let i = 0; i < MAX_CATCH_UP && new Date(rule.next_due_date) <= now; i++) {
+      await postRecurringRule(rule);
+      posted++;
+      const refreshed = await getRow<RecurringRule>('recurring_rules', rule.id);
+      if (!refreshed) break;
+      rule = refreshed;
+    }
+  }
+  return posted;
+}
 
 // Advances a rule to its next cycle without posting a transaction — for a
 // bill you're intentionally not paying this time (e.g. a skipped month).
@@ -267,3 +300,25 @@ export async function setBudget(categoryId: string, monthlyLimit: number, curren
   }
 }
 export const deleteBudget = (id: string) => deleteRow('budgets', id);
+
+export async function getCategorySpendSince(categoryId: string, sinceIso: string): Promise<number> {
+  const rows = await whereRows<Transaction>(
+    'transactions',
+    "category_id = ? AND type = 'expense' AND date >= ?",
+    [categoryId, sinceIso]
+  );
+  return rows.reduce((sum, t) => sum + t.amount, 0);
+}
+
+// ---------- Net worth snapshots ----------
+export async function upsertNetWorthSnapshot(dateKey: string, amount: number, currency: string): Promise<void> {
+  const existing = await getRow<NetWorthSnapshot>('networth_snapshots', dateKey);
+  if (!existing) {
+    await insertRow('networth_snapshots', { id: dateKey, amount, currency });
+  } else if (existing.amount !== amount || existing.currency !== currency) {
+    await updateRow('networth_snapshots', dateKey, { amount, currency });
+  }
+}
+
+export const listNetWorthSnapshots = (limit = 90) =>
+  allRows<NetWorthSnapshot>('networth_snapshots', `id DESC LIMIT ${limit}`).then((rows) => rows.reverse());

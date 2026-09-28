@@ -45,6 +45,7 @@ export interface RecurringRule {
   notes: string | null;
   created_at: string;
   is_paused: number;
+  auto_post: number;
 }
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
@@ -147,6 +148,7 @@ export interface Task {
   created_at: string;
   repeat_frequency: RecurringFrequency | null;
   repeat_interval: number | null;
+  remind_at: string | null;
 }
 
 export interface Subtask {
@@ -242,3 +244,26 @@ export interface FocusSession {
 }
 
 export const QURAN_PAGES = 604;
+
+export interface NetWorthSnapshot {
+  id: string;
+  amount: number;
+  currency: string;
+}
+
+export type FastKind = 'ramadan' | 'voluntary' | 'makeup';
+export interface FastingLog {
+  id: string;
+  date: string;
+  kind: FastKind;
+}
+
+export type OccasionKind = 'birthday' | 'anniversary' | 'other';
+export interface Occasion {
+  id: string;
+  name: string;
+  month: number;
+  day: number;
+  kind: OccasionKind;
+  created_at: string;
+}

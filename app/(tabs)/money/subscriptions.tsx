@@ -16,8 +16,15 @@ import { showUndoDelete } from '../../../src/ui/undo';
 
 export default function SubscriptionsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { recurringRules, postRecurring, removeRecurringRule, skipRecurring, setRecurringPaused, refreshRecurring } =
-    useFinanceStore();
+  const {
+    recurringRules,
+    postRecurring,
+    removeRecurringRule,
+    skipRecurring,
+    setRecurringPaused,
+    setRecurringAutoPost,
+    refreshRecurring,
+  } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
 
   const handleDelete = async (rule: (typeof recurringRules)[number]) => {
@@ -59,6 +66,7 @@ export default function SubscriptionsScreen() {
                       ]}
                     >
                       {rule.is_paused ? 'Paused · ' : ''}
+                      {rule.auto_post ? 'Auto · ' : ''}
                       {rule.frequency} · next {formatRelativeDay(rule.next_due_date)}
                     </Text>
                   </View>
@@ -83,6 +91,12 @@ export default function SubscriptionsScreen() {
                     title={rule.is_paused ? 'Resume' : 'Pause'}
                     variant="secondary"
                     onPress={() => setRecurringPaused(rule.id, !rule.is_paused)}
+                    style={{ paddingHorizontal: spacing.md }}
+                  />
+                  <Button
+                    title={rule.auto_post ? 'Auto-post: on' : 'Auto-post: off'}
+                    variant="secondary"
+                    onPress={() => setRecurringAutoPost(rule.id, !rule.auto_post)}
                     style={{ paddingHorizontal: spacing.md }}
                   />
                 </View>

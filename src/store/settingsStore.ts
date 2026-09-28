@@ -12,6 +12,12 @@ interface SettingsState {
   notificationsEnabled: boolean;
   zakatNisab: number;
   setZakatNisab: (v: number) => void;
+  prayerCityId: string | null;
+  setPrayerCityId: (id: string | null) => void;
+  prayerAlerts: boolean;
+  setPrayerAlerts: (v: boolean) => void;
+  hijriOffset: number;
+  setHijriOffset: (v: number) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -29,6 +35,12 @@ export const useSettingsStore = create<SettingsState>()(
       notificationsEnabled: false,
       zakatNisab: 0,
       setZakatNisab: (v) => set({ zakatNisab: v }),
+      prayerCityId: null,
+      setPrayerCityId: (id) => set({ prayerCityId: id }),
+      prayerAlerts: false,
+      setPrayerAlerts: (v) => set({ prayerAlerts: v }),
+      hijriOffset: 0,
+      setHijriOffset: (v) => set({ hijriOffset: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),
@@ -41,3 +53,15 @@ export const useSettingsStore = create<SettingsState>()(
     }
   )
 );
+
+// Settings are restored from AsyncStorage asynchronously; anything that reads
+// them at launch (reminder scheduling, prayer alerts) should await this first.
+export function settingsHydrated(): Promise<void> {
+  return new Promise((resolve) => {
+    if (useSettingsStore.persist.hasHydrated()) return resolve();
+    const unsub = useSettingsStore.persist.onFinishHydration(() => {
+      unsub();
+      resolve();
+    });
+  });
+}

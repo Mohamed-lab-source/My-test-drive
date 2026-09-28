@@ -23,6 +23,9 @@ const TABLES = [
   'dhikr_logs',
   'quran_logs',
   'focus_sessions',
+  'networth_snapshots',
+  'fasting_logs',
+  'occasions',
 ];
 
 export async function exportAllData(): Promise<string> {

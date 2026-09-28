@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
@@ -16,6 +16,7 @@ export default function MeetingsScreen() {
   const { colors, typography, spacing } = useTheme();
   const { meetings, removeMeeting, refreshMeetings } = useProductivityStore();
   const [addVisible, setAddVisible] = useState(false);
+  const [editing, setEditing] = useState<(typeof meetings)[number] | null>(null);
 
   const handleDelete = async (meeting: (typeof meetings)[number]) => {
     await removeMeeting(meeting.id);
@@ -31,24 +32,27 @@ export default function MeetingsScreen() {
         ) : (
           meetings.map((m) => (
             <SwipeableRow key={m.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(m) }]}>
-              <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
-                <IconCircle name="calendar" color={colors.indigo} />
-                <View style={{ marginLeft: spacing.sm, flex: 1 }}>
-                  <Text style={[typography.headline, { color: colors.label }]}>{m.title}</Text>
-                  <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
-                    {formatDateLong(m.start_at)} · {formatTime(m.start_at)}
-                  </Text>
-                  {m.location ? (
-                    <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>{m.location}</Text>
-                  ) : null}
-                </View>
-              </Card>
+              <Pressable onPress={() => setEditing(m)}>
+                <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
+                  <IconCircle name="calendar" color={colors.indigo} />
+                  <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                    <Text style={[typography.headline, { color: colors.label }]}>{m.title}</Text>
+                    <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                      {formatDateLong(m.start_at)} · {formatTime(m.start_at)}
+                    </Text>
+                    {m.location ? (
+                      <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>{m.location}</Text>
+                    ) : null}
+                  </View>
+                </Card>
+              </Pressable>
             </SwipeableRow>
           ))
         )}
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />
       <AddMeetingSheet visible={addVisible} onClose={() => setAddVisible(false)} />
+      <AddMeetingSheet visible={!!editing} editing={editing} onClose={() => setEditing(null)} />
     </View>
   );
 }

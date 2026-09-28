@@ -11,7 +11,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
 import * as repo from '../../db/repositories/productivity';
 import { todayKey } from '../../db/client';
-import { formatDateKey } from '../../utils/date';
+import { formatDateKey, formatRelativeDay, formatTime } from '../../utils/date';
 import type { RecurringFrequency, Subtask, Task, TaskPriority } from '../../db/types';
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high'];
@@ -27,6 +27,24 @@ function scheduleLabel(task: Task): string {
   if (!task.scheduled_date) return 'Not scheduled';
   if (task.scheduled_date === todayKey()) return 'Today';
   return formatDateKey(task.scheduled_date);
+}
+
+const REMIND_OPTIONS = [
+  { id: 'hour', label: 'In 1 hour' },
+  { id: 'evening', label: 'This evening' },
+  { id: 'tomorrow', label: 'Tomorrow 9 AM' },
+  { id: 'clear', label: 'No reminder' },
+];
+
+function reminderTime(option: string, now: Date = new Date()): string | null {
+  if (option === 'hour') return new Date(now.getTime() + 3600000).toISOString();
+  if (option === 'evening') {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0);
+    if (d <= now) d.setDate(d.getDate() + 1);
+    return d.toISOString();
+  }
+  if (option === 'tomorrow') return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0).toISOString();
+  return null;
 }
 
 const REPEAT_OPTIONS: { id: RecurringFrequency | 'none'; label: string }[] = [
@@ -48,6 +66,8 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
   const updateTask = useProductivityStore((s) => s.updateTask);
   const removeTask = useProductivityStore((s) => s.removeTask);
   const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
+  const setTaskReminder = useProductivityStore((s) => s.setTaskReminder);
+  const liveRemindAt = useProductivityStore((s) => s.tasks.find((t) => t.id === task?.id)?.remind_at ?? null);
 
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -125,6 +145,18 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
               await rescheduleTask(task.id, id as repo.RescheduleTarget);
               onClose();
             }}
+          />
+        </View>
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+          Remind me ·{' '}
+          {liveRemindAt ? `${formatRelativeDay(liveRemindAt)} ${formatTime(liveRemindAt)}` : 'Off'}
+        </Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector
+            options={REMIND_OPTIONS}
+            selectedId={null}
+            onSelect={(id) => setTaskReminder(task.id, reminderTime(id))}
           />
         </View>
 

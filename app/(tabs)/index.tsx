@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,13 +11,26 @@ import { Card } from '../../src/ui/Card';
 import { IconCircle } from '../../src/ui/IconCircle';
 import { Icon } from '../../src/ui/Icon';
 import { PrayerTracker } from '../../src/features/life/PrayerTracker';
+import { AddTransactionSheet } from '../../src/features/money/AddTransactionSheet';
+import { AddTaskSheet } from '../../src/features/tasks/AddTaskSheet';
 import { formatMoney } from '../../src/utils/money';
 import { convertToBase } from '../../src/db/repositories/fx';
 import { reconstructNetWorthTrend } from '../../src/utils/networth';
+import { formatHijri } from '../../src/utils/hijri';
 import { formatRelativeDay, formatTime, isOverdue, localDateKey } from '../../src/utils/date';
 import { todayKey } from '../../src/db/client';
 
 const SPARKLINE_DAYS = 14;
+
+function QuickAction({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
+  const { colors, typography } = useTheme();
+  return (
+    <Pressable onPress={onPress} style={{ flex: 1, alignItems: 'center' }}>
+      <IconCircle name={icon} color={color} size={48} />
+      <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -32,7 +45,10 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const currency = useSettingsStore((s) => s.currency);
-  const { accounts, transactions, recurringRules, debts, fxRates } = useFinanceStore();
+  const hijriOffset = useSettingsStore((s) => s.hijriOffset);
+  const [expenseVisible, setExpenseVisible] = useState(false);
+  const [taskVisible, setTaskVisible] = useState(false);
+  const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory } = useFinanceStore();
   const { tasks, meetings } = useProductivityStore();
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
 
@@ -68,10 +84,17 @@ export default function HomeScreen() {
     [transactions, monthStart, currency, fxRates]
   );
 
-  const sparkline = useMemo(
-    () => reconstructNetWorthTrend(netWorth, transactions, SPARKLINE_DAYS, currency, fxRates),
-    [netWorth, transactions, currency, fxRates]
-  );
+  // Reconstructed from transactions, with real daily snapshots taking over
+  // for any day that has one (reconstruction can't see manual balance edits).
+  const sparkline = useMemo(() => {
+    const estimated = reconstructNetWorthTrend(netWorth, transactions, SPARKLINE_DAYS, currency, fxRates);
+    const snapshots = new Map(netWorthHistory.filter((h) => h.currency === currency).map((h) => [h.id, h.amount]));
+    const now = new Date();
+    return estimated.map((value, i) => {
+      const key = todayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (SPARKLINE_DAYS - 1 - i)));
+      return snapshots.get(key) ?? value;
+    });
+  }, [netWorth, transactions, currency, fxRates, netWorthHistory]);
   const sparkMin = Math.min(...sparkline);
   const sparkMax = Math.max(...sparkline);
   const sparkRange = Math.max(1, sparkMax - sparkMin);
@@ -90,12 +113,21 @@ export default function HomeScreen() {
           }}
         >
           <View>
-            <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>{greeting()}</Text>
+            <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
+              {greeting()} · {formatHijri(new Date(), hijriOffset)}
+            </Text>
             <Text style={[typography.largeTitle, { color: colors.label }]}>Anchor</Text>
           </View>
           <Pressable onPress={() => router.push('/search')} hitSlop={10} style={{ paddingBottom: 8 }}>
             <Icon name="magnifyingglass" size={22} color={colors.secondaryLabel} />
           </Pressable>
+        </View>
+
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <QuickAction icon="cart.fill" label="Expense" color={colors.red} onPress={() => setExpenseVisible(true)} />
+          <QuickAction icon="checkmark.circle.fill" label="Task" color={colors.blue} onPress={() => setTaskVisible(true)} />
+          <QuickAction icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
+          <QuickAction icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
@@ -250,6 +282,8 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+      <AddTransactionSheet visible={expenseVisible} onClose={() => setExpenseVisible(false)} />
+      <AddTaskSheet visible={taskVisible} onClose={() => setTaskVisible(false)} />
     </View>
   );
 }

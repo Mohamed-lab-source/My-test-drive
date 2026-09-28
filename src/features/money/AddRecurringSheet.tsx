@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Switch } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
@@ -26,6 +26,7 @@ export function AddRecurringSheet({ visible, onClose }: { visible: boolean; onCl
   const [freqIndex, setFreqIndex] = useState(1);
   const [accountId, setAccountId] = useState<string | null>(accounts[0]?.id ?? null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [autoPost, setAutoPost] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const relevantCategories = useMemo(
@@ -57,10 +58,12 @@ export function AddRecurringSheet({ visible, onClose }: { visible: boolean; onCl
         color: colors.purple,
         reminder_days_before: 1,
         notes: null,
+        auto_post: autoPost ? 1 : 0,
       });
       setName('');
       setAmount('');
       setCategoryId(null);
+      setAutoPost(false);
       onClose();
     } finally {
       setSaving(false);
@@ -101,6 +104,15 @@ export function AddRecurringSheet({ visible, onClose }: { visible: boolean; onCl
             selectedId={categoryId}
             onSelect={setCategoryId}
           />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.body, { color: colors.label }]}>Post automatically</Text>
+            <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
+              Adds the transaction for you each time it comes due (good for salary, rent)
+            </Text>
+          </View>
+          <Switch value={autoPost} onValueChange={setAutoPost} />
         </View>
         <Button title="Save" onPress={handleSave} disabled={!canSave} loading={saving} />
       </ScrollView>

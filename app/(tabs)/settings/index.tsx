@@ -19,7 +19,14 @@ import { Button } from '../../../src/ui/Button';
 import { TextField } from '../../../src/ui/TextField';
 import { exportAllData, importAllData, resetAllData } from '../../../src/db/backup';
 import { exportTransactionsCsv } from '../../../src/db/csvExport';
-import { requestNotificationPermission, rescheduleAllReminders } from '../../../src/notifications/scheduler';
+import {
+  requestNotificationPermission,
+  reschedulePrayerAlerts,
+  rescheduleAllReminders,
+  rescheduleOccasionReminders,
+} from '../../../src/notifications/scheduler';
+import { PRAYER_CITIES } from '../../../src/utils/prayerTimes';
+import { formatHijri } from '../../../src/utils/hijri';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
 import { useAuth } from '../../../src/auth/AuthProvider';
 
@@ -56,8 +63,35 @@ export default function SettingsScreen() {
   const { colors, typography, spacing, radius } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { appearance, setAppearance, currency, setCurrency, notificationsEnabled, setNotificationsEnabled } =
-    useSettingsStore();
+  const {
+    appearance,
+    setAppearance,
+    currency,
+    setCurrency,
+    notificationsEnabled,
+    setNotificationsEnabled,
+    defaultAccountId,
+    setDefaultAccountId,
+    prayerCityId,
+    setPrayerCityId,
+    prayerAlerts,
+    setPrayerAlerts,
+    hijriOffset,
+    setHijriOffset,
+  } = useSettingsStore();
+
+  const handleTogglePrayerAlerts = async (value: boolean) => {
+    if (value && !notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert('Permission needed', 'Enable notifications for Anchor in your device Settings to get adhan alerts.');
+        return;
+      }
+    }
+    setPrayerAlerts(value);
+    await reschedulePrayerAlerts();
+    await rescheduleOccasionReminders();
+  };
   const { user, signOut } = useAuth();
   const accounts = useFinanceStore((s) => s.accounts);
   const hydrateFinance = useFinanceStore((s) => s.hydrate);
@@ -117,7 +151,12 @@ export default function SettingsScreen() {
     } else {
       setNotificationsEnabled(false);
     }
-    rescheduleAllReminders(useProductivityStore.getState().meetings, useFinanceStore.getState().recurringRules);
+    await rescheduleAllReminders(
+      useProductivityStore.getState().meetings,
+      useFinanceStore.getState().recurringRules,
+      useProductivityStore.getState().tasks
+    );
+    await reschedulePrayerAlerts();
   };
 
   const handleToggleBiometric = async (value: boolean) => {
@@ -180,6 +219,51 @@ export default function SettingsScreen() {
               options={CURRENCIES.map((c) => ({ id: c, label: c }))}
               selectedId={currency}
               onSelect={setCurrency}
+            />
+          </Card>
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs, textTransform: 'uppercase' }]}>
+            Prayer times & Hijri date
+          </Text>
+          <Card>
+            <Text style={[typography.subhead, { color: colors.secondaryLabel, marginBottom: spacing.xs }]}>City</Text>
+            <ChipSelector
+              options={PRAYER_CITIES.map((c) => ({ id: c.id, label: c.name }))}
+              selectedId={prayerCityId}
+              onSelect={(id) => {
+                setPrayerCityId(id);
+                reschedulePrayerAlerts();
+              }}
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Adhan alerts</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>A notification at each prayer time</Text>
+              </View>
+              <Switch value={prayerAlerts} disabled={!prayerCityId} onValueChange={handleTogglePrayerAlerts} />
+            </View>
+            <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+              Hijri date adjustment · {formatHijri(new Date(), hijriOffset)}
+            </Text>
+            <ChipSelector
+              options={[-2, -1, 0, 1, 2].map((n) => ({ id: String(n), label: n > 0 ? `+${n}` : String(n) }))}
+              selectedId={String(hijriOffset)}
+              onSelect={(id) => setHijriOffset(Number(id))}
+            />
+          </Card>
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs, textTransform: 'uppercase' }]}>
+            Default account for new transactions
+          </Text>
+          <Card>
+            <ChipSelector
+              options={accounts.filter((a) => !a.is_archived).map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.icon }))}
+              selectedId={defaultAccountId}
+              onSelect={(id) => setDefaultAccountId(id === defaultAccountId ? null : id)}
             />
           </Card>
         </View>

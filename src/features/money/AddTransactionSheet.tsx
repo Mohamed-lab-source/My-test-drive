@@ -10,7 +10,7 @@ import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { fromMinorUnits, toMinorUnits } from '../../utils/money';
+import { formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
 import type { Transaction, TransactionType } from '../../db/types';
 
 interface AddTransactionSheetProps {
@@ -23,8 +23,9 @@ const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
 export function AddTransactionSheet({ visible, onClose, editing }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, categories, addTransaction, updateTransaction } = useFinanceStore();
+  const { accounts, categories, addTransaction, updateTransaction, addDebt } = useFinanceStore();
   const currency = useSettingsStore((s) => s.currency);
+  const defaultAccountId = useSettingsStore((s) => s.defaultAccountId);
 
   const [typeIndex, setTypeIndex] = useState(0);
   const type = TYPES[typeIndex];
@@ -34,6 +35,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [splitWith, setSplitWith] = useState('');
   const [previewVisible, setPreviewVisible] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -56,13 +58,20 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
     } else {
       setTypeIndex(0);
       setAmount('');
-      setAccountId(activeAccounts[0]?.id ?? null);
+      setAccountId(activeAccounts.find((a) => a.id === defaultAccountId)?.id ?? activeAccounts[0]?.id ?? null);
       setToAccountId(activeAccounts[1]?.id ?? activeAccounts[0]?.id ?? null);
       setCategoryId(null);
       setNote('');
       setReceiptUri(null);
     }
+    setSplitWith('');
   }, [visible, editing?.id]);
+
+  const splitNames = splitWith
+    .split(',')
+    .map((n) => n.trim())
+    .filter(Boolean);
+  const splitShare = splitNames.length > 0 ? Math.round(toMinorUnits(Number(amount) || 0) / (splitNames.length + 1)) : 0;
 
   const pickReceipt = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -95,6 +104,20 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
         await updateTransaction(editing.id, fields);
       } else {
         await addTransaction({ ...fields, currency, recurring_id: null, date: new Date().toISOString() });
+        // You paid the whole bill; each person now owes you an equal share.
+        if (type === 'expense') {
+          const label = note || categories.find((c) => c.id === categoryId)?.name || 'a shared bill';
+          for (const person of splitNames) {
+            await addDebt({
+              direction: 'owed_to_me',
+              person_name: person,
+              principal_amount: splitShare,
+              currency,
+              due_date: null,
+              notes: `Split: ${label}`,
+            });
+          }
+        }
       }
       onClose();
     } finally {
@@ -156,6 +179,22 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
         )}
 
         <TextField label="Note" placeholder="Optional note" value={note} onChangeText={setNote} />
+
+        {!editing && type === 'expense' ? (
+          <>
+            <TextField
+              label="Split with"
+              placeholder="Names, comma-separated (optional)"
+              value={splitWith}
+              onChangeText={setSplitWith}
+            />
+            {splitNames.length > 0 && splitShare > 0 ? (
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.sm, marginBottom: spacing.md }]}>
+                Each of {splitNames.join(', ')} will owe you {formatMoney(splitShare, currency)} (added to Debts)
+              </Text>
+            ) : null}
+          </>
+        ) : null}
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Receipt

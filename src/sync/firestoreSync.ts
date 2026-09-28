@@ -35,6 +35,9 @@ export const SYNCED_TABLES = [
   'dhikr_logs',
   'quran_logs',
   'focus_sessions',
+  'networth_snapshots',
+  'fasting_logs',
+  'occasions',
 ] as const;
 
 let currentUid: string | null = null;

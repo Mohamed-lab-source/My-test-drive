@@ -16,10 +16,11 @@ const INITIALS: Record<Prayer, string> = {
 export interface PrayerWidgetData {
   logs: PrayerLog[];
   streak: number;
+  nextPrayer?: string | null;
 }
 
 export function buildPrayerWidget(
-  { logs, streak }: PrayerWidgetData,
+  { logs, streak, nextPrayer }: PrayerWidgetData,
   scheme: 'light' | 'dark' = 'light'
 ) {
   const c = widgetColors(scheme);
@@ -47,7 +48,10 @@ export function buildPrayerWidget(
           width: 'match_parent',
         }}
       >
-        <TextWidget text="Prayers" style={{ fontSize: 15, fontWeight: '600', color: c.label }} />
+        <TextWidget
+          text={nextPrayer ? `Prayers · ${nextPrayer}` : 'Prayers'}
+          style={{ fontSize: 15, fontWeight: '600', color: c.label }}
+        />
         {streak > 0 ? (
           <TextWidget text={`🔥 ${streak}`} style={{ fontSize: 13, color: c.secondaryLabel }} />
         ) : null}

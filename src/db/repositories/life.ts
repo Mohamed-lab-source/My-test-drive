@@ -1,6 +1,6 @@
 import { getDb, newId, nowIso, todayKey } from '../client';
 import { allRows, deleteRow, insertRow, updateRow, whereRows } from '../helpers';
-import type { DhikrLog, Prayer, PrayerLog, QuranLog, WishlistItem } from '../types';
+import type { DhikrLog, FastKind, FastingLog, Prayer, PrayerLog, QuranLog, WishlistItem } from '../types';
 import { PRAYERS } from '../types';
 
 // ---------- Wishlist / ideas ----------
@@ -94,4 +94,19 @@ export async function logQuranPages(pages: number): Promise<void> {
 export async function startNewKhatm(): Promise<void> {
   const khatm = await getCurrentKhatm();
   await insertRow('quran_logs', { id: newId(), date: todayKey(), pages: 0, khatm: khatm + 1, created_at: nowIso() });
+}
+
+// ---------- Fasting ----------
+export const listFastingLogsSince = (sinceKey: string) =>
+  whereRows<FastingLog>('fasting_logs', 'date >= ?', [sinceKey], 'date DESC');
+
+export async function setFast(date: string, kind: FastKind | null): Promise<void> {
+  const existing = await whereRows<FastingLog>('fasting_logs', 'date = ?', [date]);
+  if (kind === null) {
+    for (const row of existing) await deleteRow('fasting_logs', row.id);
+  } else if (existing.length > 0) {
+    await updateRow('fasting_logs', existing[0].id, { kind });
+  } else {
+    await insertRow('fasting_logs', { id: newId(), date, kind });
+  }
 }

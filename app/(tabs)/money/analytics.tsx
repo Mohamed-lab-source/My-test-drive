@@ -8,7 +8,9 @@ import { Card } from '../../../src/ui/Card';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { formatMoney } from '../../../src/utils/money';
-import { localDateKey } from '../../../src/utils/date';
+import { formatDateKey, formatDateShort, localDateKey } from '../../../src/utils/date';
+import { forecastCashFlow } from '../../../src/utils/forecast';
+import { convertToBase } from '../../../src/db/repositories/fx';
 import * as repo from '../../../src/db/repositories/finance';
 import type { Transaction } from '../../../src/db/types';
 
@@ -21,7 +23,7 @@ function monthLabel(monthKey: string): string {
 
 export default function AnalyticsScreen() {
   const { colors, typography, spacing, radius } = useTheme();
-  const { categories } = useFinanceStore();
+  const { categories, accounts, recurringRules, fxRates, netWorthHistory } = useFinanceStore();
   const currency = useSettingsStore((s) => s.currency);
   const [loading, setLoading] = useState(true);
   const [monthTx, setMonthTx] = useState<Transaction[]>([]);
@@ -79,6 +81,15 @@ export default function AnalyticsScreen() {
 
   const maxTrendValue = Math.max(1, ...monthlyTrend.flatMap((m) => [m.income, m.expense]));
 
+  const netWorth = accounts.reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
+  const forecast = useMemo(
+    () => forecastCashFlow(netWorth, recurringRules, 30, currency, fxRates),
+    [netWorth, recurringRules, currency, fxRates]
+  );
+  const history = netWorthHistory.slice(-30);
+  const historyMin = Math.min(...history.map((h) => h.amount));
+  const historyRange = Math.max(1, Math.max(...history.map((h) => h.amount)) - historyMin);
+
   const thisMonth = monthlyTrend[monthlyTrend.length - 1];
   const lastMonth = monthlyTrend[monthlyTrend.length - 2];
   const spendChange = lastMonth.expense > 0 ? (thisMonth.expense - lastMonth.expense) / lastMonth.expense : null;
@@ -93,6 +104,63 @@ export default function AnalyticsScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
         {loading ? null : (
           <>
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Next 30 days</Text>
+            <Card style={{ marginBottom: spacing.lg }}>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Projected net worth from recurring items</Text>
+              <Text style={[typography.title1, { color: colors.label, marginTop: 2 }]}>{formatMoney(forecast.endBalance, currency)}</Text>
+              {forecast.lowDate && forecast.lowBalance < netWorth ? (
+                <Text style={[typography.footnote, { color: forecast.lowBalance < 0 ? colors.red : colors.secondaryLabel, marginTop: 2 }]}>
+                  Lowest point {formatMoney(forecast.lowBalance, currency)} around {formatDateShort(forecast.lowDate)}
+                </Text>
+              ) : null}
+              {forecast.events.slice(0, 5).map((e, i) => (
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs }}>
+                  <Text style={[typography.subhead, { color: colors.secondaryLabel }]} numberOfLines={1}>
+                    {formatDateShort(e.date)} · {e.name}
+                  </Text>
+                  <Text style={[typography.subhead, { color: e.delta >= 0 ? colors.green : colors.label }]}>
+                    {e.delta >= 0 ? '+' : '−'}
+                    {formatMoney(Math.abs(e.delta), currency)}
+                  </Text>
+                </View>
+              ))}
+              {forecast.events.length === 0 ? (
+                <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                  No recurring items due in the next 30 days.
+                </Text>
+              ) : null}
+            </Card>
+
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Net worth history</Text>
+            <Card style={{ marginBottom: spacing.lg }}>
+              {history.length < 2 ? (
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                  Anchor records your net worth once a day; the chart fills in as you use the app.
+                </Text>
+              ) : (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 80 }}>
+                    {history.map((h) => (
+                      <View
+                        key={h.id}
+                        style={{
+                          flex: 1,
+                          marginHorizontal: 1,
+                          borderRadius: 2,
+                          backgroundColor: colors.blue,
+                          height: Math.max(3, ((h.amount - historyMin) / historyRange) * 80),
+                        }}
+                      />
+                    ))}
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs }}>
+                    <Text style={[typography.caption2, { color: colors.tertiaryLabel }]}>{formatDateKey(history[0].id)}</Text>
+                    <Text style={[typography.caption2, { color: colors.tertiaryLabel }]}>Today</Text>
+                  </View>
+                </>
+              )}
+            </Card>
+
             <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Month in review</Text>
             <Card style={{ marginBottom: spacing.lg }}>
               <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Spent so far this month</Text>
