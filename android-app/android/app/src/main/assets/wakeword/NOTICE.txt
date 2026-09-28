@@ -2,3 +2,4 @@ Wake word models from openWakeWord by David Scripka
 https://github.com/dscripka/openWakeWord (release v0.5.1)
 melspectrogram.tflite, embedding_model.tflite, hey_jarvis_v0.1.tflite
 The pretrained models are licensed CC BY-NC-SA 4.0 (non-commercial use).
+Modification: melspectrogram.tflite's input shape was changed from [1,1] to [1,1760] (the 80 ms chunk plus 30 ms context it is always fed), because Android's TFLite runtime prepares the model at its stored shape and fails at [1,1]. Weights and outputs are unchanged.
