@@ -753,20 +753,47 @@ async function startWakeWord() {
   const perm = await SpeechRecognition.requestPermissions();
   if (perm.speechRecognition !== "granted") throw new Error("Jarvis needs the microphone for this. Allow it in App info → Permissions.");
   try { await LocalNotifications.requestPermissions(); } catch {}
-  const r = await DeviceActions.setWakeWord({ enabled: true });
+  const r = await DeviceActions.setWakeWord({ enabled: true, sensitivity: state.wakeSensitivity || "normal" });
   wakeRunning = !!r.running;
 }
+
+const WAKE_STAGES = {
+  stopped: "off", loading: "starting up…", "mic-waiting": "waiting for the microphone",
+  listening: "listening", paused: "paused while Jarvis listens", error: "stopped by an error",
+};
 
 async function refreshWakeStatus() {
   const pill = document.getElementById("wakeStatus");
   const pop = document.getElementById("popUpStatus");
+  const bat = document.getElementById("batteryStatus");
   try {
     const st = await DeviceActions.getWakeWordStatus();
     wakeRunning = !!st.running;
-    if (pill) { pill.textContent = st.running ? "listening" : "off"; pill.classList.toggle("ok", !!st.running); }
+    const label = st.running ? (WAKE_STAGES[st.stage] || st.stage || "listening") : "off";
+    if (pill) { pill.textContent = label; pill.classList.toggle("ok", st.running && st.stage === "listening"); }
     if (pop) { pop.textContent = st.canPopUp ? "allowed" : "not allowed"; pop.classList.toggle("ok", !!st.canPopUp); }
+    if (bat) { bat.textContent = st.batteryUnrestricted ? "unrestricted" : "restricted"; bat.classList.toggle("ok", !!st.batteryUnrestricted); }
+    const diag = document.getElementById("wakeDiag");
+    if (diag) {
+      diag.hidden = !state.wakeWord;
+      const pct = v => `${Math.round(Math.max(0, Math.min(1, Number(v) || 0)) * 100)}%`;
+      document.getElementById("diagStage").textContent = label.toUpperCase();
+      document.getElementById("diagLevel").style.width = pct(Math.sqrt(st.level || 0));
+      document.getElementById("diagScore").style.width = pct(st.peakScore);
+      document.getElementById("diagScoreNum").textContent = (Number(st.peakScore) || 0).toFixed(2);
+      diag.style.setProperty("--thresh", { high: "30%", low: "70%" }[state.wakeSensitivity] || "50%");
+      document.getElementById("diagDetections").textContent = `${st.detections || 0}${st.lastDetection ? " · last " + new Date(st.lastDetection).toLocaleTimeString() : ""}`;
+      document.getElementById("diagRoute").textContent = st.lastWakeRoute ? `LAST WAKE: ${st.lastWakeRoute}` : "";
+      document.getElementById("diagError").textContent = st.error ? `PROBLEM: ${st.error}` : "";
+    }
   } catch {}
 }
+
+// While Settings is open, keep the diagnostics live.
+setInterval(() => {
+  const view = document.getElementById("settingsView");
+  if (state.wakeWord && view && view.style.display === "flex") refreshWakeStatus();
+}, 400);
 
 async function setWakeWordEnabled(on) {
   state.wakeWord = !!on;
@@ -833,6 +860,17 @@ async function initPresence() {
   if (wakeToggle) {
     wakeToggle.checked = !!state.wakeWord;
     wakeToggle.addEventListener("change", () => setWakeWordEnabled(wakeToggle.checked));
+  }
+  const batBtn = document.getElementById("batteryUnrestrictBtn");
+  if (batBtn) batBtn.addEventListener("click", () => DeviceActions.openBatterySettings().catch(e => toast(e.message)));
+  const sens = document.getElementById("wakeSensitivitySelect");
+  if (sens) {
+    sens.value = state.wakeSensitivity || "normal";
+    sens.addEventListener("change", () => {
+      state.wakeSensitivity = sens.value;
+      store.set("wakeSensitivity", sens.value);
+      if (state.wakeWord) startWakeWord().catch(e => toast(e.message)).finally(refreshWakeStatus);
+    });
   }
   const popBtn = document.getElementById("popUpBtn");
   if (popBtn) popBtn.addEventListener("click", () => DeviceActions.openOverlaySettings().catch(e => toast(e.message)));

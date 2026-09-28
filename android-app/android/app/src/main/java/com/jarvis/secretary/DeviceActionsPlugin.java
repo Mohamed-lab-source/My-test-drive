@@ -679,6 +679,8 @@ public class DeviceActionsPlugin extends Plugin {
             return;
         }
         if (Build.VERSION.SDK_INT < 26) { call.reject("UNSUPPORTED"); return; }
+        svc.putExtra("sensitivity", call.getString("sensitivity", "normal"));
+        WakeWordService.setSensitivity(call.getString("sensitivity", "normal"));
         if (ctx.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             call.reject("NO_MIC");
             return;
@@ -711,7 +713,27 @@ public class DeviceActionsPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("running", WakeWordService.isRunning());
         ret.put("canPopUp", Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(getContext()));
+        ret.put("stage", WakeWordService.stage);
+        ret.put("error", WakeWordService.lastError);
+        ret.put("level", WakeWordService.level);
+        ret.put("peakScore", WakeWordService.peakScore);
+        ret.put("detections", WakeWordService.detections);
+        ret.put("lastDetection", WakeWordService.lastDetection);
+        ret.put("lastWakeRoute", WakeWordService.lastWakeRoute);
+        android.os.PowerManager pm = (android.os.PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        ret.put("batteryUnrestricted", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openBatterySettings(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getContext().getPackageName()));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (!tryStart(i)) {
+            Intent fallback = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (!tryStart(fallback)) { call.reject("Could not open battery settings"); return; }
+        }
+        call.resolve();
     }
 
     @PluginMethod

@@ -51,10 +51,23 @@ public class WakeWordService extends Service {
     private static final int MEL_FRAMES = 76;
     private static final int EMBEDDINGS = 16;
     private static final int WARMUP_CHUNKS = 20;
-    private static final float THRESHOLD = 0.5f;
+    private static volatile float threshold = 0.5f;
 
     private static volatile boolean running = false;
     private static volatile long pausedUntil = 0;
+
+    // Live diagnostics, shown in Settings so problems can be seen on the phone itself.
+    static volatile String stage = "stopped";   // stopped | loading | mic-waiting | listening | paused | error
+    static volatile String lastError = null;
+    static volatile float level = 0f;           // microphone loudness, 0..1
+    static volatile float peakScore = 0f;       // highest "hey jarvis" score in the last ~2 s
+    static volatile int detections = 0;
+    static volatile long lastDetection = 0;
+    static volatile String lastWakeRoute = null; // how the last wake-up reached the user
+
+    static void setSensitivity(String s) {
+        threshold = "high".equals(s) ? 0.3f : "low".equals(s) ? 0.7f : 0.5f;
+    }
 
     private volatile boolean stopRequested = false;
     private Thread worker;
@@ -89,6 +102,7 @@ public class WakeWordService extends Service {
             return START_NOT_STICKY;
         }
         running = true;
+        if (intent != null && intent.hasExtra("sensitivity")) setSensitivity(intent.getStringExtra("sensitivity"));
         if (worker == null) {
             stopRequested = false;
             worker = new Thread(this::listenLoop, "jarvis-wake");
@@ -101,6 +115,7 @@ public class WakeWordService extends Service {
     public void onDestroy() {
         stopRequested = true;
         running = false;
+        stage = "stopped";
         if (worker != null) worker.interrupt();
         worker = null;
         super.onDestroy();
@@ -111,6 +126,8 @@ public class WakeWordService extends Service {
     private void listenLoop() {
         Interpreter mel = null, emb = null, kw = null;
         AudioRecord rec = null;
+        stage = "loading";
+        lastError = null;
         try {
             Interpreter.Options opts = new Interpreter.Options().setNumThreads(1);
             mel = new Interpreter(loadModel("wakeword/melspectrogram.tflite"), opts);
@@ -136,13 +153,16 @@ public class WakeWordService extends Service {
 
             while (!stopRequested) {
                 if (isPaused()) {
+                    stage = "paused";
+                    level = 0f;
                     if (rec != null) { releaseRecorder(rec); rec = null; }
                     Thread.sleep(200);
                     continue;
                 }
                 if (rec == null) {
                     rec = openRecorder();
-                    if (rec == null) { Thread.sleep(2000); continue; }
+                    if (rec == null) { stage = "mic-waiting"; Thread.sleep(2000); continue; }
+                    stage = "listening";
                     // Fresh start: same state openWakeWord begins from.
                     Arrays.fill(raw, 0f);
                     frames.clear();
@@ -165,7 +185,10 @@ public class WakeWordService extends Service {
                 }
 
                 System.arraycopy(raw, CHUNK, raw, 0, CONTEXT);
-                for (int i = 0; i < CHUNK; i++) raw[CONTEXT + i] = pcm[i];
+                double sumSq = 0;
+                for (int i = 0; i < CHUNK; i++) { raw[CONTEXT + i] = pcm[i]; sumSq += (double) pcm[i] * pcm[i]; }
+                level = (float) Math.min(1.0, Math.sqrt(sumSq / CHUNK) / 3000.0);
+                peakScore *= 0.96f;
 
                 mel.run(melIn, melOut);
                 for (int t = 0; t < melShape[2]; t++) {
@@ -189,9 +212,13 @@ public class WakeWordService extends Service {
                     int e = 0;
                     for (float[] v : embeddings) kwIn[0][e++] = v;
                     kw.run(kwIn, kwOut);
+                    float score = kwOut[0][0];
+                    if (score > peakScore) peakScore = score;
                     long now = System.currentTimeMillis();
-                    if (kwOut[0][0] > THRESHOLD && now - lastFire > 3000) {
+                    if (score > threshold && now - lastFire > 3000) {
                         lastFire = now;
+                        detections++;
+                        lastDetection = now;
                         onWake();
                     }
                 }
@@ -199,6 +226,8 @@ public class WakeWordService extends Service {
         } catch (InterruptedException ignored) {
         } catch (Throwable t) {
             Log.e(TAG, "wake word loop stopped", t);
+            stage = "error";
+            lastError = t.getClass().getSimpleName() + ": " + t.getMessage();
         } finally {
             if (rec != null) releaseRecorder(rec);
             if (mel != null) mel.close();
@@ -208,16 +237,21 @@ public class WakeWordService extends Service {
     }
 
     private AudioRecord openRecorder() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return null;
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            lastError = "Microphone permission is off";
+            return null;
+        }
         try {
             int min = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
             AudioRecord rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, CHUNK * 2 * 4));
-            if (rec.getState() != AudioRecord.STATE_INITIALIZED) { rec.release(); return null; }
+            if (rec.getState() != AudioRecord.STATE_INITIALIZED) { rec.release(); lastError = "Microphone could not be opened"; return null; }
             rec.startRecording();
+            if (rec.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) { releaseRecorder(rec); lastError = "Microphone is busy (another app may be using it)"; return null; }
             return rec;
         } catch (Exception e) {
             Log.w(TAG, "microphone unavailable", e);
+            lastError = "Microphone unavailable: " + e.getMessage();
             return null;
         }
     }
@@ -248,6 +282,7 @@ public class WakeWordService extends Service {
         pause(120_000);
         MainActivity.queueAction("talk");
         if (MainActivity.isInForeground()) {
+            lastWakeRoute = "app was open: answered directly";
             DeviceActionsPlugin.emitAssist();
             return;
         }
@@ -256,8 +291,9 @@ public class WakeWordService extends Service {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         boolean canPopUp = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this);
         if (canPopUp) {
-            try { startActivity(open); return; } catch (Exception e) { Log.w(TAG, "could not open Jarvis", e); }
+            try { startActivity(open); lastWakeRoute = "opened Jarvis over other apps"; return; } catch (Exception e) { Log.w(TAG, "could not open Jarvis", e); }
         }
+        lastWakeRoute = "posted a 'Tap to talk' notification (pop-up permission is off)";
         // Without "display over other apps", Android blocks opening from the
         // background: show a heads-up notification that opens him on tap.
         PendingIntent pi = PendingIntent.getActivity(this, 2, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

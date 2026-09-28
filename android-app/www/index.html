@@ -213,6 +213,26 @@
           <span class="status-pill" id="popUpStatus">not allowed</span>
         </div>
         <div class="hint">So "Hey Jarvis" can open him straight away from any screen: turn on <b>Jarvis</b> in the screen that opens. Without it, he'll show a "Tap to talk" notification instead.</div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+          <button class="wide-btn" id="batteryUnrestrictBtn" style="margin:0;">Keep Jarvis running in the background</button>
+          <span class="status-pill" id="batteryStatus">restricted</span>
+        </div>
+        <div class="hint">Samsung, Xiaomi, Oppo and others shut down background listeners to save battery. Choose <b>Allow</b> / <b>Unrestricted</b>.</div>
+        <label style="margin-top:10px;">Sensitivity</label>
+        <select id="wakeSensitivitySelect">
+          <option value="high">High: wakes more easily (try this for accents)</option>
+          <option value="normal">Normal</option>
+          <option value="low">Low: fewer false wake-ups</option>
+        </select>
+        <div class="wake-diag" id="wakeDiag" hidden>
+          <div>STATUS <span id="diagStage">--</span></div>
+          <div>MIC LEVEL <span class="diag-bar"><span id="diagLevel"></span></span></div>
+          <div>"HEY JARVIS" SCORE <span class="diag-bar"><span id="diagScore"></span></span> <span id="diagScoreNum">0.00</span></div>
+          <div>DETECTIONS <span id="diagDetections">0</span></div>
+          <div id="diagRoute"></div>
+          <div id="diagError" class="diag-error"></div>
+          <div class="hint" style="margin-top:6px;">Say "Hey Jarvis" now: the mic bar should move when you talk, and the score should jump above the line when you say it.</div>
+        </div>
       </div>
 
       <div class="field">
@@ -393,7 +413,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.5 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.5.1 · your keys are stored only on this device.</div>
     </div>
   </section>
 

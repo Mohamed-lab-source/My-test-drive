@@ -75,6 +75,7 @@ const state = {
   lastBootDate: "",
   meetingAlertIds: [],
   wakeWord: false,         // "Hey Jarvis" hands-free listening
+  wakeSensitivity: "normal",
 };
 
 async function loadState() {
@@ -113,7 +114,7 @@ async function loadState() {
   state.calendarRefreshToken = await store.get("calendarRefreshToken", null);
   state.reminderIdCounter = await store.get("reminderIdCounter", 1);
   for (const key of ["wit", "hudTheme", "haptics", "silentMode", "listenLang", "emergencyName", "emergencyNumber",
-    "meetingAlerts", "convoSummary", "summaryBuffer", "activityLog", "lastBootDate", "meetingAlertIds", "wakeWord"]) {
+    "meetingAlerts", "convoSummary", "summaryBuffer", "activityLog", "lastBootDate", "meetingAlertIds", "wakeWord", "wakeSensitivity"]) {
     state[key] = await store.get(key, state[key]);
   }
 }
