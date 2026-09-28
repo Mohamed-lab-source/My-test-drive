@@ -20,6 +20,11 @@ public class MainActivity extends BridgeActivity {
         return action;
     }
 
+    /** Used by the "Hey Jarvis" service when it wakes him. */
+    static void queueAction(String action) {
+        pendingAction = action;
+    }
+
     static boolean isInForeground() {
         return inForeground;
     }

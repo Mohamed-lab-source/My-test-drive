@@ -74,6 +74,7 @@ const state = {
   activityLog: [],         // [{at, label}] actions Jarvis has taken
   lastBootDate: "",
   meetingAlertIds: [],
+  wakeWord: false,         // "Hey Jarvis" hands-free listening
 };
 
 async function loadState() {
@@ -112,7 +113,7 @@ async function loadState() {
   state.calendarRefreshToken = await store.get("calendarRefreshToken", null);
   state.reminderIdCounter = await store.get("reminderIdCounter", 1);
   for (const key of ["wit", "hudTheme", "haptics", "silentMode", "listenLang", "emergencyName", "emergencyNumber",
-    "meetingAlerts", "convoSummary", "summaryBuffer", "activityLog", "lastBootDate", "meetingAlertIds"]) {
+    "meetingAlerts", "convoSummary", "summaryBuffer", "activityLog", "lastBootDate", "meetingAlertIds", "wakeWord"]) {
     state[key] = await store.get(key, state[key]);
   }
 }
@@ -1612,11 +1613,21 @@ async function callGroq(messages, { withTools = true, tools = null, model = null
     max_completion_tokens: 1024,
   };
   if (withTools) { body.tools = tools || allToolSchemas(); body.tool_choice = "auto"; }
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.apiKey}` },
-    body: JSON.stringify(body),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  let res;
+  try {
+    res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.apiKey}` },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    throw new Error(e.name === "AbortError" ? "Groq took too long to answer" : e.message);
+  } finally {
+    clearTimeout(timer);
+  }
   if (res.status === 429 || res.status === 413) {
     const text = await res.text();
     const daily = /per day|TPD|RPD/i.test(text);
@@ -2103,7 +2114,7 @@ async function interrupt() {
 function wireReactor() {
   document.getElementById("reactor").addEventListener("click", async () => {
     if (conversationActive) { interrupt(); return; }
-    if (busy) return;
+    if (busy) { toast("One moment, still thinking…"); return; }
     // Tapping while he's mid-greeting means "I want to talk": cut him off and listen.
     if (speakingNow) await stopSpeaking();
     conversation();

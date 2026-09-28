@@ -195,6 +195,17 @@ waits and retries instead of failing.
 
 **Free tier, handled better.** Requests now use brisk reasoning and a capped reply length, and search results are trimmed. When the main model hits Groq's per-minute limit, Jarvis switches instantly to the other free model, which has its own separate budget. The "thinking faster than the free tier allows" message should now be rare. Replies that came back doubled ("Netflix, sir.Netflix, sir.") are collapsed.
 
+### 2.4 — "Hey Jarvis"
+
+Settings → **"Hey Jarvis"** → switch on **Listen for "Hey Jarvis"**. Then say "Hey Jarvis" from anywhere.
+
+- The wake word is detected **on the phone** with [openWakeWord](https://github.com/dscripka/openWakeWord)'s pretrained "hey jarvis" model (models CC BY-NC-SA 4.0, personal use). No audio is sent anywhere until he wakes.
+- Android requires a small permanent notification while this is on, and it uses some battery.
+- Tap **Let Jarvis pop up over other apps** and allow it, so he opens instantly from any screen. Without it, Android only allows a "Yes, sir? Tap to talk" notification.
+- The wake-word listener steps aside whenever Jarvis is listening to you himself, then resumes.
+
+Microphone reliability: if the recognizer reports it's busy (common just after speech), Jarvis now retries once. A stalled Groq or ElevenLabs request times out instead of leaving him deaf to taps, and tapping the core while he's thinking says so.
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

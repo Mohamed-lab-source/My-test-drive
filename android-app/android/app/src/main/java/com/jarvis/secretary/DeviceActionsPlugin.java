@@ -663,4 +663,66 @@ public class DeviceActionsPlugin extends Plugin {
         if (dnd != null) ret.put("doNotDisturb", dnd);
         call.resolve(ret);
     }
+
+    /* ---------------- "Hey Jarvis" wake word ---------------- */
+
+    @PluginMethod
+    public void setWakeWord(PluginCall call) {
+        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        Context ctx = getContext();
+        Intent svc = new Intent(ctx, WakeWordService.class);
+        if (!enabled) {
+            ctx.stopService(svc);
+            JSObject ret = new JSObject();
+            ret.put("running", false);
+            call.resolve(ret);
+            return;
+        }
+        if (Build.VERSION.SDK_INT < 26) { call.reject("UNSUPPORTED"); return; }
+        if (ctx.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            call.reject("NO_MIC");
+            return;
+        }
+        try {
+            ctx.startForegroundService(svc);
+        } catch (Exception e) {
+            call.reject("Could not start listening: " + e.getMessage());
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("running", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setWakeWordPaused(PluginCall call) {
+        if (Boolean.TRUE.equals(call.getBoolean("paused", true))) {
+            WakeWordService.pause(call.getInt("ms", 60000));
+        } else {
+            WakeWordService.resume();
+        }
+        JSObject ret = new JSObject();
+        ret.put("running", WakeWordService.isRunning());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getWakeWordStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("running", WakeWordService.isRunning());
+        ret.put("canPopUp", Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(getContext()));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openOverlaySettings(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getContext().getPackageName()));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Could not open the setting: " + e.getMessage());
+        }
+    }
 }

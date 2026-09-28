@@ -104,7 +104,10 @@ async function fetchElevenLabsBlob(text) {
       } catch {}
     }
   }
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), 12000);
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${state.elevenLabsVoiceId}`, {
+    signal: ctrl.signal,
     method: "POST",
     headers: { "xi-api-key": state.elevenLabsApiKey, "Content-Type": "application/json", Accept: "audio/mpeg" },
     body: JSON.stringify({
@@ -732,6 +735,78 @@ TOOL_GROUPS.safety = {
   match: /\b(emergency|sos|in danger|i'?m hurt|help me)\b|طوارئ|الحقني|ساعدني|النجدة/i,
 };
 
+/* 21. "Hey Jarvis" — on-device wake word, plus a sturdier microphone ------ */
+let wakeRunning = false;
+
+async function pauseWakeWord() {
+  if (!wakeRunning) return;
+  try { await DeviceActions.setWakeWordPaused({ paused: true, ms: 60000 }); } catch {}
+  await sleep(350); // let the wake-word service let go of the microphone
+}
+
+function resumeWakeWord() {
+  if (!wakeRunning) return;
+  DeviceActions.setWakeWordPaused({ paused: false }).catch(() => {});
+}
+
+async function startWakeWord() {
+  const perm = await SpeechRecognition.requestPermissions();
+  if (perm.speechRecognition !== "granted") throw new Error("Jarvis needs the microphone for this. Allow it in App info → Permissions.");
+  try { await LocalNotifications.requestPermissions(); } catch {}
+  const r = await DeviceActions.setWakeWord({ enabled: true });
+  wakeRunning = !!r.running;
+}
+
+async function refreshWakeStatus() {
+  const pill = document.getElementById("wakeStatus");
+  const pop = document.getElementById("popUpStatus");
+  try {
+    const st = await DeviceActions.getWakeWordStatus();
+    wakeRunning = !!st.running;
+    if (pill) { pill.textContent = st.running ? "listening" : "off"; pill.classList.toggle("ok", !!st.running); }
+    if (pop) { pop.textContent = st.canPopUp ? "allowed" : "not allowed"; pop.classList.toggle("ok", !!st.canPopUp); }
+  } catch {}
+}
+
+async function setWakeWordEnabled(on) {
+  state.wakeWord = !!on;
+  store.set("wakeWord", state.wakeWord);
+  try {
+    if (on) await startWakeWord();
+    else { await DeviceActions.setWakeWord({ enabled: false }); wakeRunning = false; }
+  } catch (e) {
+    state.wakeWord = false;
+    store.set("wakeWord", false);
+    const t = document.getElementById("wakeWordToggle");
+    if (t) t.checked = false;
+    toast(String(e.message).includes("NO_MIC") ? "Microphone permission is needed" : e.message, 4000);
+  }
+  refreshWakeStatus();
+}
+
+// The recognizer sometimes reports "busy" right after speech or when another
+// app has just let go of the mic: step everything aside and try once more.
+const baseListenOnce = listenOnce;
+listenOnce = async function () {
+  if (speakingNow) await stopSpeaking();
+  await pauseWakeWord();
+  try {
+    return await baseListenOnce();
+  } catch (e) {
+    if (!/busy|client side|audio recording|recogni[sz]er/i.test(String(e.message))) throw e;
+    try { await SpeechRecognition.stop(); } catch {}
+    await sleep(700);
+    return await baseListenOnce();
+  }
+};
+
+const baseConversation = conversation;
+conversation = async function () {
+  if (conversationActive || busy) return baseConversation();
+  try { return await baseConversation(); }
+  finally { if (!conversationActive) resumeWakeWord(); }
+};
+
 /* Settings & init --------------------------------------------------------- */
 function bindSetting(id, key, { type = "value", onChange } = {}) {
   const el = document.getElementById(id);
@@ -754,11 +829,26 @@ async function initPresence() {
   bindSetting("meetingAlertsToggle", "meetingAlerts", { type: "checked" });
   bindSetting("emergencyNameInput", "emergencyName");
   bindSetting("emergencyNumberInput", "emergencyNumber");
+  const wakeToggle = document.getElementById("wakeWordToggle");
+  if (wakeToggle) {
+    wakeToggle.checked = !!state.wakeWord;
+    wakeToggle.addEventListener("change", () => setWakeWordEnabled(wakeToggle.checked));
+  }
+  const popBtn = document.getElementById("popUpBtn");
+  if (popBtn) popBtn.addEventListener("click", () => DeviceActions.openOverlaySettings().catch(e => toast(e.message)));
+  if (state.wakeWord) startWakeWord().catch(e => console.warn("wake word", e)).finally(refreshWakeStatus);
+  else refreshWakeStatus();
   document.querySelectorAll(".tel-mode").forEach(el => { el.hidden = !state.silentMode; });
   renderChips();
   renderActivity();
   // Widgets need the network and a moment's grace after launch.
   setTimeout(() => refreshWidgets().catch(() => {}), 4000);
   setInterval(() => refreshWidgets().catch(() => {}), 15 * 60 * 1000);
-  App.addListener("appStateChange", ({ isActive }) => { if (isActive) refreshWidgets().catch(() => {}); });
+  App.addListener("appStateChange", ({ isActive }) => {
+    if (!isActive) return;
+    refreshWidgets().catch(() => {});
+    refreshWakeStatus();
+    // Android may have stopped the service; restart it while we're in the foreground (allowed then).
+    if (state.wakeWord && !wakeRunning) startWakeWord().catch(() => {}).finally(refreshWakeStatus);
+  });
 }

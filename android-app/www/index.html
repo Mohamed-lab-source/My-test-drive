@@ -186,6 +186,22 @@
       </div>
 
       <div class="field">
+        <label>"Hey Jarvis" <span class="status-pill" id="wakeStatus">off</span></label>
+        <label class="toggle-row">
+          <span>
+            <b>Listen for "Hey Jarvis"</b>
+            <div class="hint" style="margin-top:2px;">Hands-free: say "Hey Jarvis" and he answers. The listening happens entirely on your phone; nothing is sent anywhere until he wakes. Android shows a small permanent notification while it's on, and it uses some battery.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="wakeWordToggle" /><span class="toggle-track"></span></span>
+        </label>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+          <button class="wide-btn" id="popUpBtn" style="margin:0;">Let Jarvis pop up over other apps</button>
+          <span class="status-pill" id="popUpStatus">not allowed</span>
+        </div>
+        <div class="hint">So "Hey Jarvis" can open him straight away from any screen: turn on <b>Jarvis</b> in the screen that opens. Without it, he'll show a "Tap to talk" notification instead.</div>
+      </div>
+
+      <div class="field">
         <label>Summon from anywhere <span class="status-pill" id="assistStatus">not set</span></label>
         <button class="wide-btn accent" id="assistSetupBtn">Make Jarvis my assistant</button>
         <div class="hint">In the screen that opens, choose <b>Digital assistant app</b> → <b>Jarvis</b>. After that, long-press the home or power button (or swipe up from a bottom corner, depending on your phone) from any screen and Jarvis is listening. Bluetooth headset buttons work too.</div>
@@ -347,7 +363,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.3 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.4 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -357,7 +373,7 @@
 
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.3</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.4</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
