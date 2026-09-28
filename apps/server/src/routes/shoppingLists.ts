@@ -83,6 +83,16 @@ shoppingListsRouter.get("/shopping-lists", requireAuth, async (req, res) => {
   res.json(lists);
 });
 
+shoppingListsRouter.delete("/shopping-lists/:id", requireAuth, async (req, res) => {
+  const list = await prisma.shoppingList.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  if (!list) {
+    res.status(404).json({ error: "Shopping list not found" });
+    return;
+  }
+  await prisma.shoppingList.delete({ where: { id: list.id } });
+  res.json({ ok: true });
+});
+
 shoppingListsRouter.get("/shopping-lists/:id", requireAuth, async (req, res) => {
   const list = await prisma.shoppingList.findFirst({
     where: { id: req.params.id, userId: req.userId },

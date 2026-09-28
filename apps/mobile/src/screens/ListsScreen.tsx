@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { CompositeScreenProps } from "@react-navigation/native";
@@ -8,9 +8,10 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { fetchShoppingListHistory } from "../api/endpoints";
+import { deleteShoppingList, fetchShoppingListHistory } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
+import { Chip } from "../components/Chip";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { RecipeCard } from "../components/RecipeCard";
 import { useLocale } from "../i18n/LocaleContext";
@@ -27,13 +28,48 @@ type Segment = "favorites" | "shoppingLists";
 
 export function ListsScreen({ navigation }: Props) {
   const { isAuthenticated } = useAuth();
-  const { favoriteRecipes, isLoading: favoritesLoading } = useFavorites();
+  const { favoriteRecipes, isLoading: favoritesLoading, toggleFavorite } = useFavorites();
   const { t } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [segment, setSegment] = useState<Segment>("favorites");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [favSort, setFavSort] = useState<"recent" | "az">("recent");
+
+  const sortedFavorites = useMemo(() => {
+    if (favSort === "az") return [...favoriteRecipes].sort((a, b) => a.title.localeCompare(b.title));
+    return favoriteRecipes;
+  }, [favoriteRecipes, favSort]);
+
+  const removeShoppingList = (id: string) => {
+    Alert.alert(t("lists.deleteListConfirmTitle"), t("lists.deleteListConfirmMessage"), [
+      { text: t("home.cancel"), style: "cancel" },
+      {
+        text: t("lists.deleteList"),
+        style: "destructive",
+        onPress: () => {
+          setHistory((prev) => prev.filter((h) => h.id !== id));
+          deleteShoppingList(id).catch(() => {
+            fetchShoppingListHistory().then(setHistory).catch(() => {});
+          });
+        },
+      },
+    ]);
+  };
+
+  const clearAllFavorites = () => {
+    Alert.alert(t("lists.clearFavoritesConfirmTitle"), t("lists.clearFavoritesConfirmMessage"), [
+      { text: t("home.cancel"), style: "cancel" },
+      {
+        text: t("lists.clearFavorites"),
+        style: "destructive",
+        onPress: () => {
+          favoriteRecipes.forEach((r) => toggleFavorite(r));
+        },
+      },
+    ]);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -75,10 +111,25 @@ export function ListsScreen({ navigation }: Props) {
     return (
       <SafeAreaView style={styles.safe}>
         <FlatList
-          data={favoriteRecipes}
+          data={sortedFavorites}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={header}
+          ListHeaderComponent={
+            <View>
+              {header}
+              {favoriteRecipes.length > 0 ? (
+                <View style={styles.favControlsRow}>
+                  <View style={styles.favSortRow}>
+                    <Chip label={t("lists.sortRecent")} selected={favSort === "recent"} onPress={() => setFavSort("recent")} />
+                    <Chip label={t("lists.sortAZ")} selected={favSort === "az"} onPress={() => setFavSort("az")} />
+                  </View>
+                  <AnimatedPressable pressScale={0.92} onPress={clearAllFavorites}>
+                    <Text style={styles.clearFavoritesLink}>{t("lists.clearFavorites")}</Text>
+                  </AnimatedPressable>
+                </View>
+              ) : null}
+            </View>
+          }
           ListEmptyComponent={
             !favoritesLoading ? (
               <View style={styles.emptyState}>
@@ -147,6 +198,14 @@ export function ListsScreen({ navigation }: Props) {
                   { backgroundColor: item.withinBudget ? colors.success : colors.danger },
                 ]}
               />
+              <AnimatedPressable
+                style={styles.deleteListButton}
+                pressScale={0.85}
+                onPress={() => removeShoppingList(item.id)}
+                accessibilityLabel={t("lists.deleteList")}
+              >
+                <Text style={styles.deleteListIcon}>✕</Text>
+              </AnimatedPressable>
             </AnimatedPressable>
           </FadeSlideIn>
         )}
@@ -177,6 +236,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   segmentActive: { backgroundColor: colors.primary },
   segmentText: { fontSize: 13, fontWeight: "700", color: colors.textMuted },
   segmentTextActive: { color: "#fff" },
+  favControlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing(1.5),
+  },
+  favSortRow: { flexDirection: "row" },
+  clearFavoritesLink: { color: colors.danger, fontWeight: "700", fontSize: 12 },
   sectionTitle: { fontSize: 18, fontWeight: "800", color: colors.text, marginBottom: spacing(2) },
   row: {
     flexDirection: "row",
@@ -201,6 +268,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   rowTitle: { fontWeight: "700", color: colors.text, fontSize: 14 },
   rowMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
+  deleteListButton: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    backgroundColor: colors.chipBackground,
+    alignItems: "center",
+    justifyContent: "center",
+    marginStart: spacing(1),
+  },
+  deleteListIcon: { color: colors.textMuted, fontSize: 11, fontWeight: "800" },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing(4) },
   emptyTitle: { fontSize: 18, fontWeight: "800", color: colors.text, textAlign: "center" },
   emptySubtitle: { color: colors.textMuted, textAlign: "center", marginTop: spacing(1), lineHeight: 20 },

@@ -117,6 +117,10 @@ export async function fetchShoppingListDetail(id: string) {
   return data;
 }
 
+export async function deleteShoppingList(id: string) {
+  await api.delete(`/shopping-lists/${id}`);
+}
+
 export async function fetchNearbyStores(lat?: number, lng?: number) {
   const { data } = await api.get<NearbyStores>("/nearby-stores", { params: { lat, lng } });
   return data;
