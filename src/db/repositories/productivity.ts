@@ -1,6 +1,6 @@
 import { newId, nowIso, todayKey } from '../client';
 import { allRows, deleteRow, getRow, insertRow, swapSortOrder, updateRow, whereRows } from '../helpers';
-import type { Meeting, Project, Subtask, Task } from '../types';
+import type { FocusSession, Meeting, Project, Subtask, Task } from '../types';
 
 // scheduled_date is stored as a plain 'YYYY-MM-DD' key (see todayKey), not a
 // full ISO timestamp, so the "Today" filter's string equality keeps working.
@@ -77,12 +77,21 @@ export async function toggleTaskDone(id: string, isDone: boolean) {
     completed_at: isDone ? nowIso() : null,
   });
 
-  if (isDone && task?.repeat_frequency) {
-    const nextDate = advanceScheduledDate(
-      task.scheduled_date ?? todayKey(),
-      task.repeat_frequency,
-      task.repeat_interval ?? 1
-    );
+  if (!task?.repeat_frequency) return;
+  const nextDate = advanceScheduledDate(task.scheduled_date ?? todayKey(), task.repeat_frequency, task.repeat_interval ?? 1);
+  // The occurrence this completion spawned (or would spawn): same title and
+  // repeat rule, on the next date, still open.
+  const spawned = await whereRows<Task>(
+    'tasks',
+    "id != ? AND title = ? AND repeat_frequency = ? AND scheduled_date = ? AND status != 'done'",
+    [task.id, task.title, task.repeat_frequency, nextDate]
+  );
+
+  if (!isDone) {
+    for (const s of spawned) await deleteTask(s.id);
+    return;
+  }
+  if (spawned.length === 0) {
     await createTask({
       project_id: task.project_id,
       title: task.title,
@@ -111,6 +120,31 @@ export async function rolloverStaleTasks(todayStr: string): Promise<void> {
     await updateTask(task.id, { status: 'backlog' });
   }
 }
+
+export type RescheduleTarget = 'today' | 'tomorrow' | 'next_week' | 'backlog';
+
+export async function rescheduleTask(id: string, target: RescheduleTarget): Promise<void> {
+  if (target === 'backlog') {
+    await updateTask(id, { status: 'backlog', scheduled_date: null });
+    return;
+  }
+  const d = new Date();
+  d.setDate(d.getDate() + (target === 'today' ? 0 : target === 'tomorrow' ? 1 : 7));
+  await updateTask(id, { status: 'todo', scheduled_date: todayKey(d) });
+}
+
+export async function clearCompletedTasks(): Promise<Task[]> {
+  const done = await listTasksByStatus('done');
+  for (const t of done) await deleteTask(t.id);
+  return done;
+}
+
+// ---------- Focus sessions ----------
+export async function logFocusSession(taskId: string | null, minutes: number): Promise<void> {
+  await insertRow('focus_sessions', { id: newId(), task_id: taskId, minutes, completed_at: nowIso() });
+}
+export const listFocusSessionsSince = (sinceIso: string) =>
+  whereRows<FocusSession>('focus_sessions', 'completed_at >= ?', [sinceIso]);
 
 // ---------- Subtasks ----------
 export const listSubtasks = (taskId: string) =>

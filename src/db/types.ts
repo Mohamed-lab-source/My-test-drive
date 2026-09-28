@@ -219,3 +219,26 @@ export interface FxRate {
   rate_to_base: number;
   updated_at: string;
 }
+
+export interface DhikrLog {
+  id: string;
+  date: string;
+  count: number;
+}
+
+export interface QuranLog {
+  id: string;
+  date: string;
+  pages: number;
+  khatm: number;
+  created_at: string;
+}
+
+export interface FocusSession {
+  id: string;
+  task_id: string | null;
+  minutes: number;
+  completed_at: string;
+}
+
+export const QURAN_PAGES = 604;

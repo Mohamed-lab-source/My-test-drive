@@ -7,7 +7,7 @@ import { Card } from '../../../src/ui/Card';
 import { TextField } from '../../../src/ui/TextField';
 import { Button } from '../../../src/ui/Button';
 import { EmptyState } from '../../../src/ui/EmptyState';
-import { formatDateShort } from '../../../src/utils/date';
+import { formatDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
 import type { JournalMood } from '../../../src/db/types';
 
@@ -87,7 +87,7 @@ export default function JournalScreen() {
                 >
                   <Text style={{ fontSize: 22, marginRight: spacing.sm }}>{moodInfo?.emoji}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>{formatDateShort(entry.date)}</Text>
+                    <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>{formatDateKey(entry.date)}</Text>
                     {entry.note ? <Text style={[typography.body, { color: colors.label }]}>{entry.note}</Text> : null}
                   </View>
                 </View>

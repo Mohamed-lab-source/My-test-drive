@@ -14,6 +14,7 @@ import { formatMoney } from '../../../src/utils/money';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
+import type { Transaction } from '../../../src/db/types';
 
 function QuickLink({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
   const { colors, typography, spacing, radius } = useTheme();
@@ -43,6 +44,7 @@ export default function MoneyScreen() {
   const currency = useSettingsStore((s) => s.currency);
   const { accounts, transactions, fxRates } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   // Opened via the Net worth widget's "+" button (anchor://money?action=add-expense).
   useEffect(() => {
@@ -66,9 +68,10 @@ export default function MoneyScreen() {
               {formatMoney(netWorth, currency)}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }}>
-              {accounts.map((a) => (
-                <View
+              {accounts.filter((a) => !a.is_archived).map((a) => (
+                <Pressable
                   key={a.id}
+                  onPress={() => router.push('/money/accounts')}
                   style={{
                     backgroundColor: a.color + '18',
                     borderRadius: 14,
@@ -80,7 +83,7 @@ export default function MoneyScreen() {
                   <IconCircle name={a.icon} color={a.color} size={28} />
                   <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 8 }]}>{a.name}</Text>
                   <Text style={[typography.headline, { color: colors.label }]}>{formatMoney(a.balance, a.currency)}</Text>
-                </View>
+                </Pressable>
               ))}
             </ScrollView>
           </Card>
@@ -94,6 +97,8 @@ export default function MoneyScreen() {
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <QuickLink icon="chart.pie.fill" label="Budgets" color={colors.orange} onPress={() => router.push('/money/budgets')} />
           <QuickLink icon="chart.bar.fill" label="Analytics" color={colors.teal} onPress={() => router.push('/money/analytics')} />
+          <QuickLink icon="building.columns.fill" label="Accounts" color={colors.blue} onPress={() => router.push('/money/accounts')} />
+          <QuickLink icon="hands.sparkles.fill" label="Zakat" color={colors.mint} onPress={() => router.push('/money/zakat')} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -111,7 +116,7 @@ export default function MoneyScreen() {
           ) : (
             <Card padded={false}>
               {transactions.slice(0, 8).map((tx, i, arr) => (
-                <TransactionRow key={tx.id} tx={tx} isLast={i === arr.length - 1} />
+                <TransactionRow key={tx.id} tx={tx} isLast={i === arr.length - 1} onPress={() => setEditing(tx)} />
               ))}
             </Card>
           )}
@@ -120,6 +125,7 @@ export default function MoneyScreen() {
 
       <FAB onPress={() => setAddVisible(true)} />
       <AddTransactionSheet visible={addVisible} onClose={() => setAddVisible(false)} />
+      <AddTransactionSheet visible={!!editing} editing={editing} onClose={() => setEditing(null)} />
     </View>
   );
 }

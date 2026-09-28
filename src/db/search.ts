@@ -1,4 +1,5 @@
 import { getDb } from './client';
+import { formatDateShort } from '../utils/date';
 import type { Meeting, Task, Transaction, WishlistItem } from './types';
 
 export type SearchResultType = 'transaction' | 'task' | 'meeting' | 'wishlist';
@@ -32,7 +33,7 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   ]);
 
   return [
-    ...transactions.map((t) => ({ type: 'transaction' as const, id: t.id, title: t.note || 'Transaction', subtitle: t.date.slice(0, 10) })),
+    ...transactions.map((t) => ({ type: 'transaction' as const, id: t.id, title: t.note || 'Transaction', subtitle: formatDateShort(t.date) })),
     ...tasks.map((t) => ({ type: 'task' as const, id: t.id, title: t.title, subtitle: t.status })),
     ...meetings.map((m) => ({ type: 'meeting' as const, id: m.id, title: m.title, subtitle: m.location ?? undefined })),
     ...wishlist.map((w) => ({ type: 'wishlist' as const, id: w.id, title: w.title })),

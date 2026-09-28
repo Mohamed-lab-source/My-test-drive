@@ -13,22 +13,26 @@ import { IconCircle } from '../../../src/ui/IconCircle';
 import { TaskRow } from '../../../src/features/tasks/TaskRow';
 import { AddTaskSheet } from '../../../src/features/tasks/AddTaskSheet';
 import { TaskDetailSheet } from '../../../src/features/tasks/TaskDetailSheet';
+import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
 import { Icon } from '../../../src/ui/Icon';
 import { todayKey } from '../../../src/db/client';
 import { formatRelativeDay, formatTime } from '../../../src/utils/date';
 import type { Task } from '../../../src/db/types';
+import { insertRow } from '../../../src/db/helpers';
+import { useUndoStore } from '../../../src/store/undoStore';
 
-const SEGMENTS = ['Today', 'Backlog', 'All'];
+const SEGMENTS = ['Today', 'Backlog', 'All', 'Done'];
 
 export default function TasksScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
-  const { tasks, meetings, moveTask } = useProductivityStore();
+  const { tasks, meetings, moveTask, clearCompleted, refreshTasks } = useProductivityStore();
   const [segment, setSegment] = useState(0);
   const [addVisible, setAddVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const [focusTask, setFocusTask] = useState<Task | null>(null);
 
   // Opened via the Today widget's "+" button (anchor://tasks?action=add).
   useEffect(() => {
@@ -48,8 +52,21 @@ export default function TasksScreen() {
       );
     }
     if (segment === 1) return tasks.filter((t) => t.status === 'backlog');
-    return tasks.filter((t) => t.status !== 'backlog');
+    if (segment === 3) {
+      return tasks
+        .filter((t) => t.status === 'done')
+        .sort((a, b) => (b.completed_at ?? '').localeCompare(a.completed_at ?? ''));
+    }
+    return tasks.filter((t) => t.status !== 'backlog' && t.status !== 'done');
   }, [tasks, segment, todayStr]);
+
+  const handleClearCompleted = async () => {
+    const removed = await clearCompleted();
+    useUndoStore.getState().show(`${removed.length} completed task${removed.length === 1 ? '' : 's'} cleared`, async () => {
+      for (const t of removed) await insertRow('tasks', t as unknown as Record<string, unknown>);
+      await refreshTasks();
+    });
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -98,6 +115,11 @@ export default function TasksScreen() {
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
+          {segment === 3 && filtered.length > 0 ? (
+            <Pressable onPress={handleClearCompleted} style={{ alignSelf: 'flex-end', marginBottom: spacing.sm }}>
+              <Text style={[typography.subhead, { color: colors.red }]}>Clear completed</Text>
+            </Pressable>
+          ) : null}
           {filtered.length === 0 ? (
             <Card>
               <EmptyState icon="checkmark.circle.fill" title="Nothing here" message="Tap + to add a task." />
@@ -128,7 +150,16 @@ export default function TasksScreen() {
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />
       <AddTaskSheet visible={addVisible} onClose={() => setAddVisible(false)} />
-      <TaskDetailSheet task={detailTask} visible={!!detailTask} onClose={() => setDetailTask(null)} />
+      <TaskDetailSheet
+        task={detailTask}
+        visible={!!detailTask}
+        onClose={() => setDetailTask(null)}
+        onStartFocus={(task) => {
+          setDetailTask(null);
+          setFocusTask(task);
+        }}
+      />
+      <FocusTimer task={focusTask} visible={!!focusTask} onClose={() => setFocusTask(null)} />
     </View>
   );
 }

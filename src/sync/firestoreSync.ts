@@ -32,6 +32,9 @@ export const SYNCED_TABLES = [
   'habit_logs',
   'journal_entries',
   'fx_rates',
+  'dhikr_logs',
+  'quran_logs',
+  'focus_sessions',
 ] as const;
 
 let currentUid: string | null = null;

@@ -38,3 +38,6 @@ export async function computeHabitStreak(habitId: string): Promise<number> {
   }
   return streak;
 }
+
+export const listHabitLogsSince = (habitId: string, sinceKey: string) =>
+  whereRows<HabitLog>('habit_logs', 'habit_id = ? AND date >= ? AND completed = 1', [habitId, sinceKey]);

@@ -8,6 +8,7 @@ import { Card } from '../../../src/ui/Card';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { formatMoney } from '../../../src/utils/money';
+import { localDateKey } from '../../../src/utils/date';
 import * as repo from '../../../src/db/repositories/finance';
 import type { Transaction } from '../../../src/db/types';
 
@@ -67,7 +68,7 @@ export default function AnalyticsScreen() {
       months.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, income: 0, expense: 0 });
     }
     for (const t of sixMonthTx) {
-      const key = t.date.slice(0, 7);
+      const key = localDateKey(t.date).slice(0, 7);
       const bucket = months.find((m) => m.key === key);
       if (!bucket) continue;
       if (t.type === 'income') bucket.income += t.amount;
@@ -78,12 +79,50 @@ export default function AnalyticsScreen() {
 
   const maxTrendValue = Math.max(1, ...monthlyTrend.flatMap((m) => [m.income, m.expense]));
 
+  const thisMonth = monthlyTrend[monthlyTrend.length - 1];
+  const lastMonth = monthlyTrend[monthlyTrend.length - 2];
+  const spendChange = lastMonth.expense > 0 ? (thisMonth.expense - lastMonth.expense) / lastMonth.expense : null;
+  const biggestExpense = useMemo(
+    () => monthTx.filter((t) => t.type === 'expense').sort((a, b) => b.amount - a.amount)[0],
+    [monthTx]
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Analytics" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
         {loading ? null : (
           <>
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Month in review</Text>
+            <Card style={{ marginBottom: spacing.lg }}>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Spent so far this month</Text>
+              <Text style={[typography.title1, { color: colors.label, marginTop: 2 }]}>{formatMoney(thisMonth.expense, currency)}</Text>
+              {spendChange !== null ? (
+                <Text style={[typography.footnote, { color: spendChange > 0 ? colors.red : colors.green, marginTop: 2 }]}>
+                  {spendChange > 0 ? '▲' : '▼'} {Math.abs(Math.round(spendChange * 100))}% vs. all of last month (
+                  {formatMoney(lastMonth.expense, currency)})
+                </Text>
+              ) : null}
+              {categoryBreakdown[0] ? (
+                <Text style={[typography.body, { color: colors.label, marginTop: spacing.sm }]}>
+                  Top category: <Text style={{ fontWeight: '700' }}>{categoryBreakdown[0].category?.name ?? 'Uncategorized'}</Text> (
+                  {Math.round(categoryBreakdown[0].share * 100)}%)
+                </Text>
+              ) : null}
+              {biggestExpense ? (
+                <Text style={[typography.body, { color: colors.label, marginTop: 2 }]}>
+                  Biggest expense: <Text style={{ fontWeight: '700' }}>{formatMoney(biggestExpense.amount, biggestExpense.currency)}</Text>
+                  {biggestExpense.note ? ` · ${biggestExpense.note}` : ''}
+                </Text>
+              ) : null}
+              <Text style={[typography.body, { color: colors.label, marginTop: 2 }]}>
+                Net this month:{' '}
+                <Text style={{ fontWeight: '700', color: thisMonth.income - thisMonth.expense >= 0 ? colors.green : colors.red }}>
+                  {formatMoney(thisMonth.income - thisMonth.expense, currency)}
+                </Text>
+              </Text>
+            </Card>
+
             <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>
               Income vs. expense — last 6 months
             </Text>

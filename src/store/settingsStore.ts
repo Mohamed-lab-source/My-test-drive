@@ -10,6 +10,8 @@ interface SettingsState {
   hasOnboarded: boolean;
   defaultAccountId: string | null;
   notificationsEnabled: boolean;
+  zakatNisab: number;
+  setZakatNisab: (v: number) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -25,6 +27,8 @@ export const useSettingsStore = create<SettingsState>()(
       hasOnboarded: false,
       defaultAccountId: null,
       notificationsEnabled: false,
+      zakatNisab: 0,
+      setZakatNisab: (v) => set({ zakatNisab: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

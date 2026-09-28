@@ -71,34 +71,47 @@ export const listTransactionsForAccount = (accountId: string) =>
 export const listTransactionsForCategory = (categoryId: string) =>
   whereRows<Transaction>('transactions', 'category_id = ?', [categoryId], 'date DESC');
 
+type BalanceFields = Pick<Transaction, 'type' | 'amount' | 'account_id' | 'transfer_to_account_id'>;
+
+// The balance change a transaction applies to each account it touches.
+function balanceEffects(tx: BalanceFields): Array<[string | null, number]> {
+  if (tx.type === 'income') return [[tx.account_id, tx.amount]];
+  if (tx.type === 'expense') return [[tx.account_id, -tx.amount]];
+  return [
+    [tx.account_id, -tx.amount],
+    [tx.transfer_to_account_id, tx.amount],
+  ];
+}
+
+async function applyBalanceEffects(tx: BalanceFields, sign: 1 | -1): Promise<void> {
+  for (const [accountId, delta] of balanceEffects(tx)) {
+    await adjustAccountBalance(accountId, sign * delta);
+  }
+}
+
 export async function createTransaction(
   input: Omit<Transaction, 'id' | 'created_at' | 'receipt_uri'> & { receipt_uri?: string | null }
 ): Promise<string> {
   const id = newId();
   await insertRow('transactions', { id, ...input, receipt_uri: input.receipt_uri ?? null, created_at: nowIso() });
-
-  if (input.type === 'income') {
-    await adjustAccountBalance(input.account_id, input.amount);
-  } else if (input.type === 'expense') {
-    await adjustAccountBalance(input.account_id, -input.amount);
-  } else if (input.type === 'transfer') {
-    await adjustAccountBalance(input.account_id, -input.amount);
-    await adjustAccountBalance(input.transfer_to_account_id, input.amount);
-  }
+  await applyBalanceEffects(input, 1);
   return id;
+}
+
+// Reverses the old version's balance effect, then applies the edited one,
+// so changing amount, type or account keeps every balance correct.
+export async function updateTransaction(id: string, patch: Partial<Omit<Transaction, 'id' | 'created_at'>>): Promise<void> {
+  const old = await getRow<Transaction>('transactions', id);
+  if (!old) return;
+  await applyBalanceEffects(old, -1);
+  await updateRow('transactions', id, patch);
+  await applyBalanceEffects({ ...old, ...patch }, 1);
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
   const tx = await getRow<Transaction>('transactions', id);
   if (!tx) return;
-  if (tx.type === 'income') {
-    await adjustAccountBalance(tx.account_id, -tx.amount);
-  } else if (tx.type === 'expense') {
-    await adjustAccountBalance(tx.account_id, tx.amount);
-  } else if (tx.type === 'transfer') {
-    await adjustAccountBalance(tx.account_id, tx.amount);
-    await adjustAccountBalance(tx.transfer_to_account_id, -tx.amount);
-  }
+  await applyBalanceEffects(tx, -1);
   await deleteRow('transactions', id);
 }
 

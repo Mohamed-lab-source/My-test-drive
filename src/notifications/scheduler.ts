@@ -87,3 +87,31 @@ export async function scheduleBillReminder(rule: RecurringRule): Promise<void> {
 export async function cancelBillReminder(ruleId: string): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(billReminderId(ruleId)).catch(() => {});
 }
+
+// Brings every pending reminder in line with current data — used when the
+// user turns reminders on (so items created while they were off get one) and
+// on app launch (so edits synced from another device are reflected).
+export async function rescheduleAllReminders(meetings: Meeting[], rules: RecurringRule[]): Promise<void> {
+  if (!(await areNotificationsEnabled())) {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    return;
+  }
+  for (const m of meetings) await scheduleMeetingReminder(m);
+  for (const r of rules) await scheduleBillReminder(r);
+}
+
+const FOCUS_ID = 'focus-session';
+
+export async function scheduleFocusEnd(endsAt: number, title: string): Promise<void> {
+  await cancelFocusEnd();
+  if (!(await areNotificationsEnabled())) return;
+  await Notifications.scheduleNotificationAsync({
+    identifier: FOCUS_ID,
+    content: { title: 'Focus session complete', body: title },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: endsAt, channelId: CHANNEL_ID },
+  });
+}
+
+export async function cancelFocusEnd(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(FOCUS_ID).catch(() => {});
+}

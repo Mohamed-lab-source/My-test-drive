@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Image, Pressable } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, Image, Pressable, Modal } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Sheet } from '../../ui/Sheet';
 import { SegmentedControl } from '../../ui/SegmentedControl';
@@ -10,30 +10,59 @@ import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { toMinorUnits } from '../../utils/money';
-import type { TransactionType } from '../../db/types';
+import { fromMinorUnits, toMinorUnits } from '../../utils/money';
+import type { Transaction, TransactionType } from '../../db/types';
 
 interface AddTransactionSheetProps {
   visible: boolean;
   onClose: () => void;
+  editing?: Transaction | null;
 }
 
 const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
-export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetProps) {
+export function AddTransactionSheet({ visible, onClose, editing }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, categories, addTransaction } = useFinanceStore();
+  const { accounts, categories, addTransaction, updateTransaction } = useFinanceStore();
   const currency = useSettingsStore((s) => s.currency);
 
   const [typeIndex, setTypeIndex] = useState(0);
   const type = TYPES[typeIndex];
   const [amount, setAmount] = useState('');
-  const [accountId, setAccountId] = useState<string | null>(accounts[0]?.id ?? null);
-  const [toAccountId, setToAccountId] = useState<string | null>(accounts[1]?.id ?? accounts[0]?.id ?? null);
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const activeAccounts = useMemo(
+    () => accounts.filter((a) => !a.is_archived || a.id === editing?.account_id || a.id === editing?.transfer_to_account_id),
+    [accounts, editing]
+  );
+
+  // Prefill from the transaction being edited, or reset to defaults for a new one.
+  useEffect(() => {
+    if (!visible) return;
+    if (editing) {
+      setTypeIndex(TYPES.indexOf(editing.type));
+      setAmount(String(fromMinorUnits(editing.amount)));
+      setAccountId(editing.account_id);
+      setToAccountId(editing.transfer_to_account_id);
+      setCategoryId(editing.category_id);
+      setNote(editing.note ?? '');
+      setReceiptUri(editing.receipt_uri);
+    } else {
+      setTypeIndex(0);
+      setAmount('');
+      setAccountId(activeAccounts[0]?.id ?? null);
+      setToAccountId(activeAccounts[1]?.id ?? activeAccounts[0]?.id ?? null);
+      setCategoryId(null);
+      setNote('');
+      setReceiptUri(null);
+    }
+  }, [visible, editing?.id]);
 
   const pickReceipt = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -49,48 +78,41 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
 
   const canSave = amount.length > 0 && !isNaN(Number(amount)) && Number(amount) > 0 && accountId;
 
-  const reset = () => {
-    setAmount('');
-    setNote('');
-    setCategoryId(null);
-    setTypeIndex(0);
-    setReceiptUri(null);
-  };
-
   const handleSave = async () => {
     if (!canSave || !accountId) return;
     setSaving(true);
     try {
-      await addTransaction({
+      const fields = {
         type,
         amount: toMinorUnits(Number(amount)),
-        currency,
         account_id: accountId,
         transfer_to_account_id: type === 'transfer' ? toAccountId : null,
         category_id: type === 'transfer' ? null : categoryId,
-        recurring_id: null,
         note: note || null,
-        date: new Date().toISOString(),
         receipt_uri: receiptUri,
-      });
-      reset();
+      };
+      if (editing) {
+        await updateTransaction(editing.id, fields);
+      } else {
+        await addTransaction({ ...fields, currency, recurring_id: null, date: new Date().toISOString() });
+      }
       onClose();
     } finally {
       setSaving(false);
     }
   };
 
+  const accountOptions = activeAccounts.map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.icon }));
+
   return (
     <Sheet visible={visible} onClose={onClose}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
-        <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.md }]}>Add Transaction</Text>
+        <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.md }]}>
+          {editing ? 'Edit Transaction' : 'Add Transaction'}
+        </Text>
 
         <View style={{ marginBottom: spacing.md }}>
-          <SegmentedControl
-            options={['Expense', 'Income', 'Transfer']}
-            selectedIndex={typeIndex}
-            onChange={setTypeIndex}
-          />
+          <SegmentedControl options={['Expense', 'Income', 'Transfer']} selectedIndex={typeIndex} onChange={setTypeIndex} />
         </View>
 
         <TextField
@@ -106,11 +128,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
           {type === 'transfer' ? 'From account' : 'Account'}
         </Text>
         <View style={{ marginBottom: spacing.md }}>
-          <ChipSelector
-            options={accounts.map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.icon }))}
-            selectedId={accountId}
-            onSelect={setAccountId}
-          />
+          <ChipSelector options={accountOptions} selectedId={accountId} onSelect={setAccountId} />
         </View>
 
         {type === 'transfer' ? (
@@ -119,11 +137,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
               To account
             </Text>
             <View style={{ marginBottom: spacing.md }}>
-              <ChipSelector
-                options={accounts.map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.icon }))}
-                selectedId={toAccountId}
-                onSelect={setToAccountId}
-              />
+              <ChipSelector options={accountOptions} selectedId={toAccountId} onSelect={setToAccountId} />
             </View>
           </>
         ) : (
@@ -146,8 +160,7 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Receipt
         </Text>
-        <Pressable
-          onPress={pickReceipt}
+        <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -158,17 +171,40 @@ export function AddTransactionSheet({ visible, onClose }: AddTransactionSheetPro
           }}
         >
           {receiptUri ? (
-            <Image source={{ uri: receiptUri }} style={{ width: 40, height: 40, borderRadius: 8 }} />
+            <>
+              <Pressable onPress={() => setPreviewVisible(true)}>
+                <Image source={{ uri: receiptUri }} style={{ width: 40, height: 40, borderRadius: 8 }} />
+              </Pressable>
+              <Text style={[typography.body, { color: colors.label, marginLeft: spacing.sm, flex: 1 }]}>Receipt attached</Text>
+              <Pressable onPress={pickReceipt} hitSlop={8} style={{ marginRight: spacing.md }}>
+                <Text style={[typography.subhead, { color: colors.blue }]}>Change</Text>
+              </Pressable>
+              <Pressable onPress={() => setReceiptUri(null)} hitSlop={8}>
+                <Text style={[typography.subhead, { color: colors.red }]}>Remove</Text>
+              </Pressable>
+            </>
           ) : (
-            <Icon name="camera.fill" size={20} color={colors.secondaryLabel} />
+            <Pressable onPress={pickReceipt} style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Icon name="camera.fill" size={20} color={colors.secondaryLabel} />
+              <Text style={[typography.body, { color: colors.label, marginLeft: spacing.sm }]}>Attach a receipt photo</Text>
+            </Pressable>
           )}
-          <Text style={[typography.body, { color: colors.label, marginLeft: spacing.sm }]}>
-            {receiptUri ? 'Receipt attached · tap to change' : 'Attach a receipt photo'}
-          </Text>
-        </Pressable>
+        </View>
 
         <Button title="Save" onPress={handleSave} disabled={!canSave} loading={saving} style={{ marginTop: spacing.sm }} />
       </ScrollView>
+
+      {receiptUri ? (
+        <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', alignItems: 'center', justifyContent: 'center' }}
+            onPress={() => setPreviewVisible(false)}
+          >
+            <Image source={{ uri: receiptUri }} style={{ width: '90%', height: '70%' }} resizeMode="contain" />
+            <Text style={[typography.footnote, { color: '#fff', marginTop: spacing.md }]}>Tap anywhere to close</Text>
+          </Pressable>
+        </Modal>
+      ) : null}
     </Sheet>
   );
 }

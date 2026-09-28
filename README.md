@@ -31,6 +31,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Monthly budgets per category with progress bars and overspend flags
 - Analytics — income vs. expense trend and category breakdown for the current month
 - CSV export of transactions (alongside the JSON backup)
+- Tap any transaction to edit it (balances re-adjust); swipe to repeat it today; filter the full list by type, account and category
+- Accounts screen — add, rename, change type/currency, set a balance to match your bank, archive
+- Zakat calculator (2.5% above a user-entered nisab, with receivables/debts toggles)
+- Month-in-review: spend vs. last month, top category, biggest expense, net
 - Custom categories
 
 **Tasks**
@@ -39,12 +43,21 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Recurring tasks that regenerate their next occurrence on completion
 - Meetings with date/time/location and reminder notifications
 - Agenda view merging tasks and meetings by day for the next two weeks
+- Reschedule from the task sheet (Today / Tomorrow / Next week / Backlog)
+- Focus timer (15/25/50 min) with an end-of-session notification; sessions feed the weekly review
+- Done tab with an undoable "Clear completed"
 
 **Life**
 - Daily 5-prayer tracker with streaks
 - Wishlist / ideas board with priority and price, with one-tap "save up for this" to spin up a savings goal
 - General-purpose habit streak tracker for any custom daily habit
 - Daily journal / mood check-in
+- Prayer history heatmap (last 5 weeks) and per-habit history heatmaps
+- Tasbih counter (33/99/100 rounds, daily total)
+- Quran khatm tracker (pages read, pace-based finish date, multiple khatms)
+
+**Weekly review**
+- One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood
 
 **Home-screen widgets (Android)**
 - Prayers — today's 5 prayers with streak, tap a prayer to mark it done right from the widget

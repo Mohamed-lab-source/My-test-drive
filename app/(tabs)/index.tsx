@@ -14,7 +14,7 @@ import { PrayerTracker } from '../../src/features/life/PrayerTracker';
 import { formatMoney } from '../../src/utils/money';
 import { convertToBase } from '../../src/db/repositories/fx';
 import { reconstructNetWorthTrend } from '../../src/utils/networth';
-import { formatRelativeDay, formatTime, isOverdue } from '../../src/utils/date';
+import { formatRelativeDay, formatTime, isOverdue, localDateKey } from '../../src/utils/date';
 import { todayKey } from '../../src/db/client';
 
 const SPARKLINE_DAYS = 14;
@@ -46,7 +46,7 @@ export default function HomeScreen() {
     [tasks, todayStr]
   );
   const todayMeetings = useMemo(
-    () => meetings.filter((m) => m.start_at.slice(0, 10) === todayStr),
+    () => meetings.filter((m) => localDateKey(m.start_at) === todayStr),
     [meetings, todayStr]
   );
   const upcomingBills = useMemo(
@@ -63,7 +63,7 @@ export default function HomeScreen() {
   const monthSpend = useMemo(
     () =>
       transactions
-        .filter((t) => t.type === 'expense' && t.date >= monthStart)
+        .filter((t) => t.type === 'expense' && localDateKey(t.date) >= monthStart)
         .reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0),
     [transactions, monthStart, currency, fxRates]
   );
@@ -143,6 +143,19 @@ export default function HomeScreen() {
             <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Prayer streak</Text>
             <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{prayerStreak}</Text>
           </Card>
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Pressable onPress={() => router.push('/review')}>
+            <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <IconCircle name="chart.line.uptrend.xyaxis" color={colors.purple} size={36} />
+              <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                <Text style={[typography.headline, { color: colors.label }]}>Weekly review</Text>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Faith, focus and spending over the last 7 days</Text>
+              </View>
+              <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
+            </Card>
+          </Pressable>
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

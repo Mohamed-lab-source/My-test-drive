@@ -10,6 +10,7 @@ import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { formatMoney } from '../../../src/utils/money';
+import { localDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
 import { AddBudgetSheet } from '../../../src/features/money/AddBudgetSheet';
 import { showUndoDelete } from '../../../src/ui/undo';
@@ -32,7 +33,7 @@ export default function BudgetsScreen() {
       budgets.map((budget) => {
         const category = categories.find((c) => c.id === budget.category_id);
         const spend = transactions
-          .filter((t) => t.category_id === budget.category_id && t.type === 'expense' && t.date >= monthStart)
+          .filter((t) => t.category_id === budget.category_id && t.type === 'expense' && localDateKey(t.date) >= monthStart)
           .reduce((sum, t) => sum + t.amount, 0);
         return { budget, category, spend, progress: budget.monthly_limit > 0 ? spend / budget.monthly_limit : 0 };
       }),

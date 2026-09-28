@@ -20,6 +20,9 @@ interface ProductivityState {
   updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
   toggleTaskDone: (id: string, isDone: boolean) => Promise<void>;
   removeTask: (id: string) => Promise<void>;
+  rescheduleTask: (id: string, target: repo.RescheduleTarget) => Promise<void>;
+  clearCompleted: () => Promise<Task[]>;
+  logFocusSession: (taskId: string | null, minutes: number) => Promise<void>;
 
   addProject: (input: Parameters<typeof repo.createProject>[0]) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
@@ -69,6 +72,16 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
     await repo.deleteTask(id);
     await get().refreshTasks();
   },
+  rescheduleTask: async (id, target) => {
+    await repo.rescheduleTask(id, target);
+    await get().refreshTasks();
+  },
+  clearCompleted: async () => {
+    const removed = await repo.clearCompletedTasks();
+    await get().refreshTasks();
+    return removed;
+  },
+  logFocusSession: (taskId, minutes) => repo.logFocusSession(taskId, minutes),
 
   addProject: async (input) => {
     await repo.createProject(input);

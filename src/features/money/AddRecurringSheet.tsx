@@ -87,7 +87,7 @@ export function AddRecurringSheet({ visible, onClose }: { visible: boolean; onCl
         </Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector
-            options={accounts.map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.icon }))}
+            options={accounts.filter((a) => !a.is_archived).map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.icon }))}
             selectedId={accountId}
             onSelect={setAccountId}
           />

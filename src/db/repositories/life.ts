@@ -1,6 +1,6 @@
 import { getDb, newId, nowIso, todayKey } from '../client';
 import { allRows, deleteRow, insertRow, updateRow, whereRows } from '../helpers';
-import type { Prayer, PrayerLog, WishlistItem } from '../types';
+import type { DhikrLog, Prayer, PrayerLog, QuranLog, WishlistItem } from '../types';
 import { PRAYERS } from '../types';
 
 // ---------- Wishlist / ideas ----------
@@ -58,4 +58,40 @@ export async function computePrayerStreak(): Promise<number> {
     }
   }
   return streak;
+}
+
+// ---------- Dhikr (tasbih) ----------
+export async function getDhikrCount(date: string): Promise<number> {
+  const rows = await whereRows<DhikrLog>('dhikr_logs', 'date = ?', [date]);
+  return rows[0]?.count ?? 0;
+}
+
+export async function setDhikrCount(date: string, count: number): Promise<void> {
+  const existing = await whereRows<DhikrLog>('dhikr_logs', 'date = ?', [date]);
+  if (existing.length > 0) {
+    await updateRow('dhikr_logs', existing[0].id, { count });
+  } else {
+    await insertRow('dhikr_logs', { id: newId(), date, count });
+  }
+}
+
+// ---------- Quran khatm tracker ----------
+export async function getCurrentKhatm(): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ k: number | null }>('SELECT MAX(khatm) AS k FROM quran_logs');
+  return row?.k ?? 1;
+}
+
+export const listQuranLogs = (khatm: number) =>
+  whereRows<QuranLog>('quran_logs', 'khatm = ? AND pages > 0', [khatm], 'created_at DESC');
+
+export async function logQuranPages(pages: number): Promise<void> {
+  const khatm = await getCurrentKhatm();
+  await insertRow('quran_logs', { id: newId(), date: todayKey(), pages, khatm, created_at: nowIso() });
+}
+
+// A zero-page marker row bumps MAX(khatm), which is what "current" reads.
+export async function startNewKhatm(): Promise<void> {
+  const khatm = await getCurrentKhatm();
+  await insertRow('quran_logs', { id: newId(), date: todayKey(), pages: 0, khatm: khatm + 1, created_at: nowIso() });
 }

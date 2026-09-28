@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { todayKey } from '../db/client';
-import type { JournalEntry, JournalMood, Prayer, PrayerLog, WishlistItem } from '../db/types';
+import type { JournalEntry, JournalMood, Prayer, PrayerLog, QuranLog, WishlistItem } from '../db/types';
 import { PRAYERS } from '../db/types';
 import * as repo from '../db/repositories/life';
 import * as journalRepo from '../db/repositories/journal';
@@ -13,8 +13,15 @@ interface LifeState {
   todayPrayerLogs: PrayerLog[];
   prayerStreak: number;
   journalEntries: JournalEntry[];
+  dhikrToday: number;
+  quranKhatm: number;
+  quranLogs: QuranLog[];
 
   hydrate: () => Promise<void>;
+  refreshQuran: () => Promise<void>;
+  setDhikrToday: (count: number) => Promise<void>;
+  logQuranPages: (pages: number) => Promise<void>;
+  startNewKhatm: () => Promise<void>;
   refreshWishlist: () => Promise<void>;
   refreshToday: () => Promise<void>;
   refreshJournal: () => Promise<void>;
@@ -36,11 +43,34 @@ export const useLifeStore = create<LifeState>((set, get) => ({
   todayPrayerLogs: [],
   prayerStreak: 0,
   journalEntries: [],
+  dhikrToday: 0,
+  quranKhatm: 1,
+  quranLogs: [],
 
   hydrate: async () => {
-    const [wishlist, journalEntries] = await Promise.all([repo.listWishlistItems(), journalRepo.listJournalEntries()]);
-    set({ wishlist, journalEntries, loaded: true });
-    await get().refreshToday();
+    const [wishlist, journalEntries, dhikrToday] = await Promise.all([
+      repo.listWishlistItems(),
+      journalRepo.listJournalEntries(),
+      repo.getDhikrCount(todayKey()),
+    ]);
+    set({ wishlist, journalEntries, dhikrToday, loaded: true });
+    await Promise.all([get().refreshToday(), get().refreshQuran()]);
+  },
+  refreshQuran: async () => {
+    const quranKhatm = await repo.getCurrentKhatm();
+    set({ quranKhatm, quranLogs: await repo.listQuranLogs(quranKhatm) });
+  },
+  setDhikrToday: async (count) => {
+    set({ dhikrToday: count });
+    await repo.setDhikrCount(todayKey(), count);
+  },
+  logQuranPages: async (pages) => {
+    await repo.logQuranPages(pages);
+    await get().refreshQuran();
+  },
+  startNewKhatm: async () => {
+    await repo.startNewKhatm();
+    await get().refreshQuran();
   },
   refreshJournal: async () => set({ journalEntries: await journalRepo.listJournalEntries() }),
   refreshWishlist: async () => set({ wishlist: await repo.listWishlistItems() }),

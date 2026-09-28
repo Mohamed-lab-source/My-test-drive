@@ -12,7 +12,7 @@ import { useHabitsStore } from '../src/store/habitsStore';
 import { AuthProvider, useAuth, type AuthStatus } from '../src/auth/AuthProvider';
 import { pullAllFromCloud } from '../src/sync/firestoreSync';
 import { UndoSnackbar } from '../src/ui/UndoSnackbar';
-import { initNotifications } from '../src/notifications/scheduler';
+import { initNotifications, rescheduleAllReminders } from '../src/notifications/scheduler';
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 
 function useProtectedRoute(status: AuthStatus) {
@@ -46,7 +46,10 @@ function AppShell() {
   useEffect(() => {
     initNotifications();
     Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()])
-      .then(() => setDataReady(true))
+      .then(() => {
+        setDataReady(true);
+        rescheduleAllReminders(useProductivityStore.getState().meetings, useFinanceStore.getState().recurringRules);
+      })
       .catch((e) => {
         console.error('Failed to hydrate app state', e);
         setDataReady(true);
@@ -76,6 +79,7 @@ function AppShell() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
         <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="review" />
       </Stack>
       <UndoSnackbar />
     </>

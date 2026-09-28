@@ -11,9 +11,30 @@ import { ProgressRing } from '../../../src/ui/ProgressRing';
 import { Icon } from '../../../src/ui/Icon';
 import { PrayerTracker } from '../../../src/features/life/PrayerTracker';
 import { WishlistRow } from '../../../src/features/life/WishlistRow';
+import { PrayerHistory } from '../../../src/features/life/PrayerHistory';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { formatMoney } from '../../../src/utils/money';
+
+function LifeLink({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
+  const { colors, typography, spacing } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        backgroundColor: colors.secondarySystemGroupedBackground,
+        borderRadius: 16,
+        paddingVertical: spacing.sm,
+        marginHorizontal: 4,
+      }}
+    >
+      <IconCircle name={icon} color={color} size={40} />
+      <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export default function LifeScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -35,34 +56,14 @@ export default function LifeScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
-          <Pressable
-            onPress={() => router.push('/life/habits')}
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              backgroundColor: colors.secondarySystemGroupedBackground,
-              borderRadius: 16,
-              paddingVertical: spacing.sm,
-              marginHorizontal: 4,
-            }}
-          >
-            <IconCircle name="flame.fill" color={colors.orange} size={40} />
-            <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>Habits</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/life/journal')}
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              backgroundColor: colors.secondarySystemGroupedBackground,
-              borderRadius: 16,
-              paddingVertical: spacing.sm,
-              marginHorizontal: 4,
-            }}
-          >
-            <IconCircle name="text.book.closed.fill" color={colors.indigo} size={40} />
-            <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>Journal</Text>
-          </Pressable>
+          <LifeLink icon="flame.fill" label="Habits" color={colors.orange} onPress={() => router.push('/life/habits')} />
+          <LifeLink icon="text.book.closed.fill" label="Journal" color={colors.indigo} onPress={() => router.push('/life/journal')} />
+          <LifeLink icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
+          <LifeLink icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <PrayerHistory />
         </View>
 
         {topGoal ? (

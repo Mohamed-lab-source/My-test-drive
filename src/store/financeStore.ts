@@ -37,9 +37,11 @@ interface FinanceState {
   refreshFxRates: () => Promise<void>;
 
   addTransaction: (input: Parameters<typeof repo.createTransaction>[0]) => Promise<void>;
+  updateTransaction: (id: string, patch: Parameters<typeof repo.updateTransaction>[1]) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
 
   addAccount: (input: Parameters<typeof repo.createAccount>[0]) => Promise<void>;
+  updateAccount: (id: string, patch: Partial<Account>) => Promise<void>;
   addCategory: (input: Parameters<typeof repo.createCategory>[0]) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
 
@@ -120,6 +122,10 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await repo.createTransaction(input);
     await Promise.all([get().refreshTransactions(), get().refreshAccounts()]);
   },
+  updateTransaction: async (id, patch) => {
+    await repo.updateTransaction(id, patch);
+    await Promise.all([get().refreshTransactions(), get().refreshAccounts()]);
+  },
   removeTransaction: async (id) => {
     await repo.deleteTransaction(id);
     await Promise.all([get().refreshTransactions(), get().refreshAccounts()]);
@@ -127,6 +133,10 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   addAccount: async (input) => {
     await repo.createAccount(input);
+    await get().refreshAccounts();
+  },
+  updateAccount: async (id, patch) => {
+    await repo.updateAccount(id, patch);
     await get().refreshAccounts();
   },
   addCategory: async (input) => {

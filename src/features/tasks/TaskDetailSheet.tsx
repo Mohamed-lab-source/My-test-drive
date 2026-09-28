@@ -10,9 +10,25 @@ import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
 import * as repo from '../../db/repositories/productivity';
+import { todayKey } from '../../db/client';
+import { formatDateKey } from '../../utils/date';
 import type { RecurringFrequency, Subtask, Task, TaskPriority } from '../../db/types';
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high'];
+const SCHEDULE_OPTIONS: { id: repo.RescheduleTarget; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'tomorrow', label: 'Tomorrow' },
+  { id: 'next_week', label: 'Next week' },
+  { id: 'backlog', label: 'Backlog' },
+];
+
+function scheduleLabel(task: Task): string {
+  if (task.status === 'backlog') return 'In backlog';
+  if (!task.scheduled_date) return 'Not scheduled';
+  if (task.scheduled_date === todayKey()) return 'Today';
+  return formatDateKey(task.scheduled_date);
+}
+
 const REPEAT_OPTIONS: { id: RecurringFrequency | 'none'; label: string }[] = [
   { id: 'none', label: 'Never' },
   { id: 'daily', label: 'Daily' },
@@ -20,10 +36,18 @@ const REPEAT_OPTIONS: { id: RecurringFrequency | 'none'; label: string }[] = [
   { id: 'monthly', label: 'Monthly' },
 ];
 
-export function TaskDetailSheet({ task, visible, onClose }: { task: Task | null; visible: boolean; onClose: () => void }) {
+interface TaskDetailSheetProps {
+  task: Task | null;
+  visible: boolean;
+  onClose: () => void;
+  onStartFocus: (task: Task) => void;
+}
+
+export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDetailSheetProps) {
   const { colors, typography, spacing } = useTheme();
   const updateTask = useProductivityStore((s) => s.updateTask);
   const removeTask = useProductivityStore((s) => s.removeTask);
+  const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
 
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -91,6 +115,20 @@ export function TaskDetailSheet({ task, visible, onClose }: { task: Task | null;
         <TextField label="Notes" placeholder="Optional details" value={notes} onChangeText={setNotes} multiline />
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+          Schedule · {scheduleLabel(task)}
+        </Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector
+            options={SCHEDULE_OPTIONS}
+            selectedId={null}
+            onSelect={async (id) => {
+              await rescheduleTask(task.id, id as repo.RescheduleTarget);
+              onClose();
+            }}
+          />
+        </View>
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Priority
         </Text>
         <View style={{ marginBottom: spacing.md }}>
@@ -156,6 +194,12 @@ export function TaskDetailSheet({ task, visible, onClose }: { task: Task | null;
         </View>
 
         <Button title="Save" onPress={handleSave} loading={saving} style={{ marginBottom: spacing.sm }} />
+        <Button
+          title="Start focus timer"
+          variant="secondary"
+          onPress={() => onStartFocus(task)}
+          style={{ marginBottom: spacing.sm }}
+        />
         <Button title="Delete task" variant="destructive" onPress={handleDelete} style={{ marginBottom: spacing.xl }} />
       </ScrollView>
     </Sheet>

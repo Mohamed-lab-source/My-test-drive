@@ -226,6 +226,28 @@ CREATE TABLE IF NOT EXISTS fx_rates (
   rate_to_base REAL NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS dhikr_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL UNIQUE,
+  count INTEGER NOT NULL DEFAULT 0
+);
+
+-- khatm numbers each full read-through; the current one is MAX(khatm).
+CREATE TABLE IF NOT EXISTS quran_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  pages INTEGER NOT NULL,
+  khatm INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS focus_sessions (
+  id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+  minutes INTEGER NOT NULL,
+  completed_at TEXT NOT NULL
+);
 `;
 
 // Columns added to already-shipped tables after their initial release. A

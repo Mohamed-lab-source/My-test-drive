@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -7,18 +7,82 @@ import { useHabitsStore } from '../../../src/store/habitsStore';
 import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { Icon } from '../../../src/ui/Icon';
+import { Heatmap } from '../../../src/ui/Heatmap';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { showUndoDelete } from '../../../src/ui/undo';
 import { AddHabitSheet } from '../../../src/features/life/AddHabitSheet';
+import * as habitsRepo from '../../../src/db/repositories/habits';
+import { todayKey } from '../../../src/db/client';
+import type { Habit } from '../../../src/db/types';
+
+const WEEKS = 5;
+
+function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) {
+  const { colors, typography, spacing } = useTheme();
+  const { streaks, todayLogs, isHabitDoneToday, toggleHabit } = useHabitsStore();
+  const [expanded, setExpanded] = useState(false);
+  const [history, setHistory] = useState<Record<string, number>>({});
+
+  const done = isHabitDoneToday(habit.id);
+  const streak = streaks[habit.id] ?? 0;
+
+  useEffect(() => {
+    if (!expanded) return;
+    const since = new Date();
+    since.setDate(since.getDate() - WEEKS * 7);
+    habitsRepo
+      .listHabitLogsSince(habit.id, todayKey(since))
+      .then((logs) => setHistory(Object.fromEntries(logs.map((l) => [l.date, 1]))));
+  }, [expanded, todayLogs, habit.id]);
+
+  return (
+    <SwipeableRow actions={[{ label: 'Delete', color: colors.red, onPress: onDelete }]}>
+      <Card style={{ marginBottom: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable onPress={() => setExpanded((e) => !e)} style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <IconCircle name={habit.icon} color={habit.color} />
+            <View style={{ flex: 1, marginLeft: spacing.sm }}>
+              <Text style={[typography.headline, { color: colors.label }]}>{habit.name}</Text>
+              {streak > 0 ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <Icon name="flame.fill" size={13} color={colors.orange} />
+                  <Text style={[typography.caption1, { color: colors.orange, marginLeft: 3 }]}>
+                    {streak} day{streak === 1 ? '' : 's'} streak
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>Tap to see history</Text>
+              )}
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              toggleHabit(habit.id, !done);
+            }}
+            hitSlop={8}
+          >
+            <Icon name={done ? 'checkmark.circle.fill' : 'circle'} size={28} color={done ? colors.green : colors.gray3} />
+          </Pressable>
+        </View>
+        {expanded ? (
+          <View style={{ marginTop: spacing.md }}>
+            <Heatmap values={history} color={habit.color} weeks={WEEKS} />
+          </View>
+        ) : null}
+      </Card>
+    </SwipeableRow>
+  );
+}
 
 export default function HabitsScreen() {
-  const { colors, typography, spacing } = useTheme();
-  const { habits, streaks, isHabitDoneToday, toggleHabit, removeHabit, hydrate } = useHabitsStore();
+  const { colors, spacing } = useTheme();
+  const { habits, removeHabit, hydrate } = useHabitsStore();
   const [addVisible, setAddVisible] = useState(false);
 
-  const handleDelete = async (habit: (typeof habits)[number]) => {
+  const handleDelete = async (habit: Habit) => {
     await removeHabit(habit.id);
     showUndoDelete('habits', habit, 'Habit deleted', hydrate);
   };
@@ -30,37 +94,7 @@ export default function HabitsScreen() {
         {habits.length === 0 ? (
           <EmptyState icon="flame.fill" title="No habits yet" message="Track anything you want to do daily and build a streak." />
         ) : (
-          habits.map((habit) => {
-            const done = isHabitDoneToday(habit.id);
-            const streak = streaks[habit.id] ?? 0;
-            return (
-              <SwipeableRow key={habit.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(habit) }]}>
-                <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
-                  <IconCircle name={habit.icon} color={habit.color} />
-                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                    <Text style={[typography.headline, { color: colors.label }]}>{habit.name}</Text>
-                    {streak > 0 ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                        <Icon name="flame.fill" size={13} color={colors.orange} />
-                        <Text style={[typography.caption1, { color: colors.orange, marginLeft: 3 }]}>
-                          {streak} day{streak === 1 ? '' : 's'} streak
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Pressable
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      toggleHabit(habit.id, !done);
-                    }}
-                    hitSlop={8}
-                  >
-                    <Icon name={done ? 'checkmark.circle.fill' : 'circle'} size={28} color={done ? colors.green : colors.gray3} />
-                  </Pressable>
-                </Card>
-              </SwipeableRow>
-            );
-          })
+          habits.map((habit) => <HabitCard key={habit.id} habit={habit} onDelete={() => handleDelete(habit)} />)
         )}
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />

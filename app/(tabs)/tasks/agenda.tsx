@@ -6,7 +6,7 @@ import { useProductivityStore } from '../../../src/store/productivityStore';
 import { Card } from '../../../src/ui/Card';
 import { Icon } from '../../../src/ui/Icon';
 import { EmptyState } from '../../../src/ui/EmptyState';
-import { formatTime } from '../../../src/utils/date';
+import { formatTime, localDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
 
 const DAYS_AHEAD = 14;
@@ -37,7 +37,7 @@ export default function AgendaScreen() {
       days.map((day) => ({
         ...day,
         tasks: tasks.filter((t) => t.status !== 'done' && t.scheduled_date === day.key),
-        meetings: meetings.filter((m) => m.start_at.slice(0, 10) === day.key),
+        meetings: meetings.filter((m) => localDateKey(m.start_at) === day.key),
       })),
     [days, tasks, meetings]
   );

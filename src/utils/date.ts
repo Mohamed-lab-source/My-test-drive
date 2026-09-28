@@ -1,3 +1,17 @@
+// The device-local calendar day ('YYYY-MM-DD') a full ISO timestamp falls on.
+// Slicing the ISO string instead gives the UTC day, which is wrong for
+// anything late at night or early in the morning away from UTC.
+export function localDateKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Formats a 'YYYY-MM-DD' key as a local date (parsing it bare would treat it
+// as UTC midnight and can land on the previous day).
+export function formatDateKey(key: string): string {
+  return formatDateShort(`${key}T00:00:00`);
+}
+
 export function formatDateShort(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });

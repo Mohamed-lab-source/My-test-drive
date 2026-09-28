@@ -19,7 +19,7 @@ import { Button } from '../../../src/ui/Button';
 import { TextField } from '../../../src/ui/TextField';
 import { exportAllData, importAllData, resetAllData } from '../../../src/db/backup';
 import { exportTransactionsCsv } from '../../../src/db/csvExport';
-import { requestNotificationPermission } from '../../../src/notifications/scheduler';
+import { requestNotificationPermission, rescheduleAllReminders } from '../../../src/notifications/scheduler';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
 import { useAuth } from '../../../src/auth/AuthProvider';
 
@@ -117,6 +117,7 @@ export default function SettingsScreen() {
     } else {
       setNotificationsEnabled(false);
     }
+    rescheduleAllReminders(useProductivityStore.getState().meetings, useFinanceStore.getState().recurringRules);
   };
 
   const handleToggleBiometric = async (value: boolean) => {
