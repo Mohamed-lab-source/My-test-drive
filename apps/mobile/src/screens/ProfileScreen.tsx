@@ -16,6 +16,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { useTextSize } from "../context/TextSizeContext";
+import { useWhatsNew } from "../context/WhatsNewContext";
 import { ACCENT_PRESETS, spacing, type AccentKey, type ThemeColors } from "../theme";
 import { ALL_ALLERGENS } from "../utils/allergens";
 import type { TranslationKey } from "../i18n/translations";
@@ -32,6 +33,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { colors, preference: themePreference, setPreference: setThemePreference, accent, setAccent } = useTheme();
   const { unitSystem, setUnitSystem } = useUnits();
   const { textSize, setTextSize } = useTextSize();
+  const { hasUnseen: hasUnseenWhatsNew } = useWhatsNew();
   const { displayStreak, longestStreak, totalCooked } = useCookStreak();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
@@ -147,12 +149,13 @@ export function ProfileScreen({ navigation }: Props) {
               onPress={() => navigation.navigate("MyReviews")}
             />
           </View>
-          <View style={styles.buttonSpacing}>
+          <View style={[styles.buttonSpacing, styles.badgeAnchor]}>
             <PrimaryButton
               label={t("whatsNew.title")}
               variant="outline"
               onPress={() => navigation.navigate("WhatsNew")}
             />
+            {hasUnseenWhatsNew ? <View style={styles.unseenDot} /> : null}
           </View>
           <View style={styles.buttonSpacing}>
             <PrimaryButton
@@ -311,12 +314,13 @@ export function ProfileScreen({ navigation }: Props) {
             onPress={() => navigation.navigate("MyReviews")}
           />
         </View>
-        <View style={styles.buttonSpacing}>
+        <View style={[styles.buttonSpacing, styles.badgeAnchor]}>
           <PrimaryButton
             label={t("whatsNew.title")}
             variant="outline"
             onPress={() => navigation.navigate("WhatsNew")}
           />
+          {hasUnseenWhatsNew ? <View style={styles.unseenDot} /> : null}
         </View>
         <View style={styles.buttonSpacing}>
           <PrimaryButton
@@ -411,6 +415,18 @@ const createStyles = (colors: ThemeColors) =>
     logoutButton: { marginTop: spacing(5) },
     loggedOut: { flexGrow: 1, padding: spacing(3), justifyContent: "center" },
     buttonSpacing: { marginTop: spacing(2) },
+    badgeAnchor: { position: "relative" },
+    unseenDot: {
+      position: "absolute",
+      top: -2,
+      end: -2,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.danger,
+      borderWidth: 1.5,
+      borderColor: colors.background,
+    },
     streakRow: {
       flexDirection: "row",
       backgroundColor: colors.chipBackground,

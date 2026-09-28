@@ -32,6 +32,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { useAuth } from "../context/AuthContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
+import { useToast } from "../context/ToastContext";
 import { usePantryCheck } from "../context/PantryCheckContext";
 import { useUnits } from "../context/UnitsContext";
 import { formatQuantity } from "../utils/units";
@@ -63,6 +64,7 @@ export function MealPlannerScreen({ navigation }: Props) {
   const { unitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { plan, setPlan } = useMealPlan();
+  const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
   const { preference } = useLocalPreference();
   const textAlign = isRTL ? "right" : "left";
@@ -404,7 +406,13 @@ export function MealPlannerScreen({ navigation }: Props) {
                     <AnimatedPressable
                       style={styles.removeButton}
                       pressScale={0.85}
-                      onPress={() => setPlan(dateKey, null)}
+                      onPress={() => {
+                        setPlan(dateKey, null);
+                        showToast(t("mealPlanner.dayRemovedToast", { title: recipe.title }), {
+                          actionLabel: t("home.undo"),
+                          onAction: () => setPlan(dateKey, recipe),
+                        });
+                      }}
                     >
                       <Text style={styles.removeButtonText}>✕</Text>
                     </AnimatedPressable>

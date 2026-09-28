@@ -222,6 +222,7 @@ const en = {
   "mealPlanner.budgetCapPlaceholder": "e.g. 600",
   "mealPlanner.budgetCapProgress": "{spent} / {cap} EGP",
   "mealPlanner.budgetCapOver": "Over budget by {amount} EGP",
+  "mealPlanner.dayRemovedToast": "{title} removed from plan",
 
   "pantryFinder.title": "What can I cook?",
   "pantryFinder.subtitle": "Add the ingredients you have on hand, and we'll find recipes that use them.",
@@ -674,6 +675,7 @@ const ar: Record<keyof typeof en, string> = {
   "mealPlanner.budgetCapPlaceholder": "مثال: 600",
   "mealPlanner.budgetCapProgress": "{spent} / {cap} جنيه",
   "mealPlanner.budgetCapOver": "تجاوزت الميزانية بمقدار {amount} جنيه",
+  "mealPlanner.dayRemovedToast": "تمت إزالة {title} من الخطة",
 
   "pantryFinder.title": "ماذا أطبخ؟",
   "pantryFinder.subtitle": "أضف المكونات المتوفرة لديك، وسنجد لك وصفات تستخدمها.",

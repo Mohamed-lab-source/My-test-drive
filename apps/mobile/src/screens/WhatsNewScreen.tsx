@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { CHANGELOG_ENTRIES } from "../data/changelog";
+import { useWhatsNew } from "../context/WhatsNewContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -14,8 +15,13 @@ type Props = NativeStackScreenProps<RootStackParamList, "WhatsNew">;
 export function WhatsNewScreen({}: Props) {
   const { locale, isRTL } = useLocale();
   const { colors } = useTheme();
+  const { markSeen } = useWhatsNew();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const textAlign = isRTL ? "right" : "left";
+
+  useEffect(() => {
+    markSeen();
+  }, [markSeen]);
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
