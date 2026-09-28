@@ -680,3 +680,19 @@ body {
 .place-check { font-size: 12px; margin-top: 6px; color: var(--text-dim); overflow-wrap: anywhere; }
 .place-check.ok { color: var(--good); }
 .place-check.bad { color: var(--danger); }
+
+/* ---- 2.8: trackers ---- */
+.tab { font-size: 12.5px; padding-left: 2px; padding-right: 2px; }
+.stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid var(--border); }
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: var(--text-dim); }
+.stat-value { text-align: right; font-variant-numeric: tabular-nums; }
+.stat-value.warn, .warn-text { color: var(--danger) !important; }
+.water-dots { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+.water-dot { width: 30px; height: 30px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; border: 2px solid rgba(var(--accent-rgb), 0.5); background: transparent; padding: 0; }
+.water-dot.full { background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+.goal-row { padding-bottom: 6px; }
+.goal-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.goal-bar > span { display: block; height: 100%; background: var(--good); }
+svg.spark { width: 100%; height: 40px; margin-top: 4px; }
+svg.spark polyline { vector-effect: non-scaling-stroke; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }

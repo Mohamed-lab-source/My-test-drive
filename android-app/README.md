@@ -249,6 +249,27 @@ Places now resolve through a chain: exact coordinates → "here" → saved place
 | Birthdays | "Import birthdays from my contacts" |
 | Ringer & brightness | "Put my phone on vibrate", "Dim the screen to 20%", "Auto brightness" (asks once for permission) |
 
+### 2.8 — trackers
+
+A new **Trackers** tab brings everything together: water, medications, habits, body & fitness, goals, spending, bills & debts, and the car.
+
+| | Try saying |
+|---|---|
+| Water | "I drank a glass of water" (instant, works offline), "Set my water goal to 10", "Remind me to drink water". Or tap the drops. |
+| Workouts | "I ran 5 km in 28 minutes", "Bench press 3 sets of 8 at 60 kg". Personal records are called out. |
+| Weight | "I weigh 82.5", "My goal is 78 kg" (trend chart in the tab) |
+| Mood | "Feeling 4 out of 10, stressed about work"; weekly average and best/worst days |
+| Medications | "Remind me to take vitamin D at 9 am and 9 pm"; "I took my pills" (instant); missed doses are flagged |
+| Car | "Filled 40 liters for 700, odometer 52300", "Oil change done at 52300": km/L, cost per km, next service |
+| Bills | "Internet bill is 450 on the 5th": reminder the day before; "I paid the internet" (logged as spending) |
+| Debts | "Ahmed owes me 500", "I owe Omi 200", "Ahmed paid me back 200" |
+| Goals | "Goal: save 20000 for a laptop by March", "Add 3000 to the laptop fund" |
+| Reports | "How's my health this week?", "What do I owe and what's due?" |
+
+**Jarvis notices:** falling behind on water, a missed dose, a bill due within two days, the car nearing its service, a goal deadline close. He mentions each once, when it fits.
+
+**Backup:** Settings → Backup → Export saves everything to a file (Drive, WhatsApp…); Restore brings it back on any phone. API keys and passwords are never included.
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

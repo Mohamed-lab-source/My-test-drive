@@ -19,6 +19,7 @@
     <button class="tab active" data-view="chatView">Jarvis</button>
     <button class="tab" data-view="briefingView">Briefing</button>
     <button class="tab" data-view="remindersView">Planner</button>
+    <button class="tab" data-view="trackersView">Trackers</button>
   </div>
 
   <!-- JARVIS HUD -->
@@ -122,14 +123,6 @@
         <div id="protocolsList" class="memory-list"></div>
       </div>
       <div class="card">
-        <h3>💰 Spending</h3>
-        <div id="spendingList"></div>
-      </div>
-      <div class="card">
-        <h3>🔥 Habits</h3>
-        <div id="habitsList"></div>
-      </div>
-      <div class="card">
         <h3>🎂 Important Dates</h3>
         <div id="datesList"></div>
       </div>
@@ -137,6 +130,20 @@
         <h3>🛰️ Activity Log</h3>
         <div id="activityList"></div>
       </div>
+    </div>
+  </section>
+
+  <!-- TRACKERS -->
+  <section class="view" id="trackersView">
+    <div class="scroll-view">
+      <div class="card"><h3>💧 Water</h3><div id="waterBox"></div></div>
+      <div class="card"><h3>💊 Medications today</h3><div id="medsBox"></div></div>
+      <div class="card"><h3>🔥 Habits</h3><div id="habitsList"></div></div>
+      <div class="card"><h3>🏋️ Body &amp; fitness</h3><div id="fitnessBox"></div></div>
+      <div class="card"><h3>🎯 Goals</h3><div id="goalsBox"></div></div>
+      <div class="card"><h3>💰 Spending</h3><div id="spendingList"></div></div>
+      <div class="card"><h3>🧾 Bills &amp; debts</h3><div id="moneyBox"></div></div>
+      <div class="card"><h3>🚗 Car</h3><div id="carBox"></div></div>
     </div>
   </section>
 
@@ -432,8 +439,18 @@
         <div class="hint">Tip: in Google Maps, tap a place → Share → copy the link and paste it here. Or stand there and tap 📍 Here, or tell Jarvis "this is my home".</div>
       </div>
 
+      <div class="field">
+        <label>Backup</label>
+        <div style="display:flex; gap:8px;">
+          <button class="wide-btn accent" id="exportBackupBtn" style="margin:0;">Export backup</button>
+          <button class="wide-btn" id="restoreBackupBtn" style="margin:0;">Restore</button>
+        </div>
+        <input type="file" id="restoreBackupInput" accept="application/json,.json" hidden />
+        <div class="hint">Saves your reminders, notes, trackers, memories and settings to a file you can keep in Drive or WhatsApp, and restore on any phone. API keys and passwords are left out; re-enter those after restoring.</div>
+      </div>
+
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.7 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.8 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -443,7 +460,7 @@
 
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.7</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.8</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
@@ -454,5 +471,6 @@
 <script src="extras.js"></script>
 <script src="places.js"></script>
 <script src="more.js"></script>
+<script src="trackers.js"></script>
 </body>
 </html>

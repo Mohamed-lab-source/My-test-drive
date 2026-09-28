@@ -2468,6 +2468,7 @@ async function boot() {
   await safely("extras", initExtras);
   await safely("places", initPlaces);
   await safely("more", initMore);
+  await safely("trackers", initTrackers);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();
