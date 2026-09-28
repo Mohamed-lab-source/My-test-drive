@@ -987,6 +987,13 @@ public class DeviceActionsPlugin extends Plugin {
             com.google.mlkit.vision.text.TextRecognizer reader = com.google.mlkit.vision.text.TextRecognition.getClient(
                 com.google.mlkit.vision.text.latin.TextRecognizerOptions.DEFAULT_OPTIONS);
             reader.process(image).addOnCompleteListener(textTask -> {
+                if (!labelTask.isSuccessful() && !textTask.isSuccessful()) {
+                    // Play Services fetches the models on first use; until then both fail.
+                    Exception err = textTask.getException() != null ? textTask.getException() : labelTask.getException();
+                    reader.close();
+                    call.reject("MODEL_NOT_READY: " + (err != null ? err.getMessage() : "unknown"));
+                    return;
+                }
                 JSObject ret = new JSObject();
                 ret.put("labels", labels);
                 String text = textTask.isSuccessful() && textTask.getResult() != null ? textTask.getResult().getText() : "";

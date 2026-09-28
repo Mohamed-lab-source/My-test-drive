@@ -148,7 +148,12 @@ async function lookAround({ question } = {}) {
   try { b64 = await capturePhoto(); }
   catch (e) { throw new Error(/cancel/i.test(String(e.message)) ? "The camera was closed without a photo." : e.message); }
   finally { setTimeout(() => { window.__keepConversation = false; }, 2000); }
-  const r = await DeviceActions.analyzeImage({ base64: b64 });
+  let r;
+  try { r = await DeviceActions.analyzeImage({ base64: b64 }); }
+  catch (e) {
+    if (String(e.message).includes("MODEL_NOT_READY")) throw new Error("My vision models are still being downloaded by Google Play Services (a one-time step that needs internet). Give it a minute and try again.");
+    throw e;
+  }
   const card = hudCard("VISUAL ANALYSIS");
   const img = el("img", "hud-photo");
   img.src = `data:image/jpeg;base64,${b64}`;

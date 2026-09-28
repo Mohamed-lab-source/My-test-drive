@@ -66,6 +66,9 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- Download the vision models in the background right after install -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="ica,ocr" />
+
         <!-- Quick Settings tile -->
         <service
             android:name=".JarvisTileService"

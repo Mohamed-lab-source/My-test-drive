@@ -7,8 +7,8 @@ android {
         applicationId "com.jarvis.secretary"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "3.0"
+        versionCode 16
+        versionName "3.0.1"
         // Phones only: keeps the wake-word engine's native code small
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -62,9 +62,11 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     // On-device "Hey Jarvis" wake word (openWakeWord models)
     implementation 'org.tensorflow:tensorflow-lite:2.16.1'
-    // "What am I looking at?": on-device image labels and text (no network, no key)
-    implementation 'com.google.mlkit:image-labeling:17.0.9'
-    implementation 'com.google.mlkit:text-recognition:16.0.1'
+    // "What am I looking at?": on-device image labels and text. The Play Services
+    // variants keep the ~36 MB recognition engine out of the APK; Android fetches
+    // it once (see com.google.mlkit.vision.DEPENDENCIES in the manifest).
+    implementation 'com.google.android.gms:play-services-mlkit-image-labeling:16.0.8'
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
     // Background watchers (price / rain alerts while Jarvis is closed)
     implementation 'androidx.work:work-runtime:2.10.0'
 }
