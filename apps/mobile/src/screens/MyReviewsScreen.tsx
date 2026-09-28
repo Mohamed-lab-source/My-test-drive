@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -19,6 +19,7 @@ export function MyReviewsScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [entries, setEntries] = useState<MyRating[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const textAlign = isRTL ? "right" : "left";
 
   useEffect(() => {
@@ -26,6 +27,14 @@ export function MyReviewsScreen({ navigation }: Props) {
       .then(setEntries)
       .catch(() => setEntries([]));
   }, [locale]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchMyRatings()
+      .then(setEntries)
+      .catch(() => {})
+      .finally(() => setRefreshing(false));
+  };
 
   if (entries === null) {
     return (
@@ -64,6 +73,7 @@ export function MyReviewsScreen({ navigation }: Props) {
           </FadeSlideIn>
         )}
         ListEmptyComponent={<Text style={styles.empty}>{t("myReviews.empty")}</Text>}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </SafeAreaView>
   );

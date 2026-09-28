@@ -11,6 +11,7 @@ type FavoritesContextValue = {
   favoriteRecipes: RecipeSummary[];
   isFavorite: (slug: string) => boolean;
   toggleFavorite: (recipe: RecipeSummary) => Promise<void>;
+  refresh: () => Promise<void>;
 };
 
 const FavoritesContext = createContext<FavoritesContextValue | undefined>(undefined);
@@ -81,8 +82,8 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ isLoading, favoriteRecipes, isFavorite, toggleFavorite }),
-    [isLoading, favoriteRecipes, isFavorite, toggleFavorite]
+    () => ({ isLoading, favoriteRecipes, isFavorite, toggleFavorite, refresh: load }),
+    [isLoading, favoriteRecipes, isFavorite, toggleFavorite, load]
   );
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;

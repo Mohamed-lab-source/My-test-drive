@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -23,16 +23,16 @@ export function NotesListScreen({ navigation }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { notes, isLoading: notesLoading } = useNotes();
   const [entries, setEntries] = useState<NotedRecipe[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const textAlign = isRTL ? "right" : "left";
 
-  useEffect(() => {
-    if (notesLoading) return;
+  const load = () => {
     const slugs = Object.keys(notes);
     if (slugs.length === 0) {
       setEntries([]);
-      return;
+      return Promise.resolve();
     }
-    fetchRecipes({})
+    return fetchRecipes({})
       .then((all) => {
         const bySlug = new Map(all.map((r) => [r.slug, r]));
         const matched = slugs
@@ -44,7 +44,18 @@ export function NotesListScreen({ navigation }: Props) {
         setEntries(matched);
       })
       .catch(() => setEntries([]));
+  };
+
+  useEffect(() => {
+    if (notesLoading) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes, notesLoading, locale]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    load().finally(() => setRefreshing(false));
+  };
 
   if (entries === null) {
     return (
@@ -80,6 +91,7 @@ export function NotesListScreen({ navigation }: Props) {
           </FadeSlideIn>
         )}
         ListEmptyComponent={<Text style={styles.empty}>{t("notes.empty")}</Text>}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </SafeAreaView>
   );

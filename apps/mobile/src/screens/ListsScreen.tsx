@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { CompositeScreenProps } from "@react-navigation/native";
@@ -28,7 +28,8 @@ type Segment = "favorites" | "shoppingLists";
 
 export function ListsScreen({ navigation }: Props) {
   const { isAuthenticated } = useAuth();
-  const { favoriteRecipes, isLoading: favoritesLoading, toggleFavorite } = useFavorites();
+  const { favoriteRecipes, isLoading: favoritesLoading, toggleFavorite, refresh: refreshFavorites } = useFavorites();
+  const [refreshingFavorites, setRefreshingFavorites] = useState(false);
   const { t } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -80,6 +81,18 @@ export function ListsScreen({ navigation }: Props) {
         .finally(() => setLoading(false));
     }, [isAuthenticated])
   );
+
+  const onRefreshFavorites = () => {
+    setRefreshingFavorites(true);
+    refreshFavorites().finally(() => setRefreshingFavorites(false));
+  };
+
+  const onRefreshHistory = () => {
+    setLoading(true);
+    fetchShoppingListHistory()
+      .then(setHistory)
+      .finally(() => setLoading(false));
+  };
 
   const header = (
     <View style={styles.header}>
@@ -141,6 +154,7 @@ export function ListsScreen({ navigation }: Props) {
           renderItem={({ item, index }) => (
             <RecipeCard recipe={item} index={index} onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })} />
           )}
+          refreshControl={<RefreshControl refreshing={refreshingFavorites} onRefresh={onRefreshFavorites} />}
         />
       </SafeAreaView>
     );
@@ -176,6 +190,7 @@ export function ListsScreen({ navigation }: Props) {
           </View>
         }
         ListEmptyComponent={!loading ? <Text style={styles.emptySubtitle}>{t("lists.empty")}</Text> : null}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefreshHistory} />}
         renderItem={({ item, index }) => (
           <FadeSlideIn index={index}>
             <AnimatedPressable
