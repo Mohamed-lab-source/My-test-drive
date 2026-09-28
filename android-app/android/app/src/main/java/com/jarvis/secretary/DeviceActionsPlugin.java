@@ -308,8 +308,10 @@ public class DeviceActionsPlugin extends Plugin {
      * ------------------------------------------------------------------ */
     @PluginMethod
     public void consumeAssistLaunch(PluginCall call) {
+        String action = MainActivity.consumePendingAction();
         JSObject ret = new JSObject();
-        ret.put("assist", MainActivity.consumePendingAssist());
+        ret.put("assist", action != null);
+        ret.put("action", action);
         call.resolve(ret);
     }
 

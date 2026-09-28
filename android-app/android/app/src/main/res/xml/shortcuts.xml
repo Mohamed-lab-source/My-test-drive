@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="talk"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_talk"
+        android:shortcutLongLabel="@string/shortcut_talk">
+        <intent
+            android:action="com.jarvis.secretary.TALK"
+            android:targetPackage="com.jarvis.secretary"
+            android:targetClass="com.jarvis.secretary.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="briefing"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_briefing"
+        android:shortcutLongLabel="@string/shortcut_briefing">
+        <intent
+            android:action="com.jarvis.secretary.BRIEFING"
+            android:targetPackage="com.jarvis.secretary"
+            android:targetClass="com.jarvis.secretary.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="planner"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_planner"
+        android:shortcutLongLabel="@string/shortcut_planner">
+        <intent
+            android:action="com.jarvis.secretary.PLANNER"
+            android:targetPackage="com.jarvis.secretary"
+            android:targetClass="com.jarvis.secretary.MainActivity" />
+    </shortcut>
+</shortcuts>

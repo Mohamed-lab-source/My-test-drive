@@ -22,6 +22,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Long-press the app icon: Talk to Jarvis / Briefing / Planner -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+
             <!-- Catches the redirect back from the system browser after Google sign-in -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

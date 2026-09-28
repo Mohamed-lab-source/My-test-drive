@@ -168,6 +168,33 @@ now sends only the abilities that fit what you said (about 800-1,600 tokens)
 and loads more himself when he needs them. If the limit is still hit, he
 waits and retries instead of failing.
 
+### 2.3 — presence & personality
+
+| | What it does |
+|---|---|
+| Boot sequence | First open of the day runs a systems check (Groq link, voice, Google, message watch, memory, power). Tap to skip. |
+| Summon acknowledgement | Summoned from anywhere, he answers "Yes, sir?" before listening. Short phrases are cached so they play instantly. |
+| Home-screen shortcuts | Long-press the Jarvis icon: **Talk to Jarvis**, **Briefing**, **Planner**. |
+| Typewriter replies | Replies type out at speaking pace when voiced, quickly when read. |
+| Voice-reactive core | With the ElevenLabs voice, the arc reactor pulses with his actual voice. |
+| Faster premium voice | Long replies are spoken sentence by sentence; he starts talking after the first. If the premium voice fails midway, the phone voice finishes the sentence. |
+| HUD themes | Arc Reactor, Mark III (red & gold), Stealth, Vibranium: Settings → HUD theme. |
+| HUD widgets | Weather at home, next event, and unread messages under the telemetry line. |
+| Suggestion chips | One-tap prompts that change with the time of day. |
+| Personality dial | Reserved, Classic JARVIS, or Full Stark. |
+| Manners & archive | Time-aware manners, and he knows his own history ("Wake up, daddy's home", "I am Iron Man", House Party Protocol). |
+| Arabic | Settings → "I speak to Jarvis in" → Arabic (Egypt). He replies in whichever language you use; "خلاص" or "شكرا" ends a conversation. |
+| Episodic memory | Older conversation is folded into a short running summary, so he remembers what you talked about days ago. |
+| Activity log | Planner → Activity Log, or ask "what have you done today?" |
+| Meeting heads-up | A notification ten minutes before each calendar event. |
+| Low-battery warnings | Spoken once each at 20%, 10% and 5% as it drains, not in every reply. |
+| Silent mode | "Silent mode on": replies are written, not spoken, with a haptic tap instead (MUTED in the HUD). |
+| Emergency protocol | Settings → Emergency protocol. "Jarvis, emergency" texts that person your location and calls them. He never calls emergency services himself (123 ambulance, 122 police). |
+| Works offline | With no network, or when Groq is out of budget, he still handles the torch, timers, alarms, volume, notes, lists, Do Not Disturb, opening apps, the time and the battery. |
+| Haptics | Small vibrations on listening, actions and warnings (can be turned off). |
+
+**Free tier, handled better.** Requests now use brisk reasoning and a capped reply length, and search results are trimmed. When the main model hits Groq's per-minute limit, Jarvis switches instantly to the other free model, which has its own separate budget. The "thinking faster than the free tier allows" message should now be rare. Replies that came back doubled ("Netflix, sir.Netflix, sir.") are collapsed.
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

@@ -37,9 +37,13 @@
         <span id="telBattery">PWR --%</span>
         <span class="sep">//</span>
         <span id="telNet">LINK --</span>
+        <span class="sep tel-mode" hidden>//</span>
+        <span class="tel-mode warn" hidden>MUTED</span>
       </div>
+      <div class="hud-widgets" id="hudWidgets" hidden></div>
     </div>
     <div id="chatLog"></div>
+    <div class="chips" id="chips"></div>
     <div class="composer">
       <textarea id="chatInput" rows="1" placeholder="Type to Jarvis, or tap the core to talk"></textarea>
       <button class="round-btn primary" id="sendBtn" title="Send">➤</button>
@@ -115,6 +119,10 @@
         <h3>⚙️ Protocols</h3>
         <div id="protocolsList" class="memory-list"></div>
       </div>
+      <div class="card">
+        <h3>🛰️ Activity Log</h3>
+        <div id="activityList"></div>
+      </div>
     </div>
   </section>
 
@@ -188,6 +196,72 @@
         <button class="wide-btn accent" id="notifSetupBtn">Give Jarvis notification access</button>
         <div class="hint">Lets Jarvis see incoming WhatsApp, SMS, Telegram and similar messages so he can announce them, read them back ("what did I miss?"), and reply by voice. Turn on <b>Jarvis</b> in the screen that opens. If the switch is greyed out: tap below to open App info, then ⋮ (top right) → <b>Allow restricted settings</b>, and try again. Android does this for apps installed outside the Play Store.</div>
         <button class="wide-btn" id="appInfoBtn" style="margin-top:8px;">Open Jarvis app info</button>
+      </div>
+
+      <div class="field">
+        <label>HUD theme</label>
+        <select id="hudThemeSelect">
+          <option value="arc">Arc Reactor (blue)</option>
+          <option value="mark3">Mark III (red &amp; gold)</option>
+          <option value="stealth">Stealth (silver)</option>
+          <option value="vibranium">Vibranium (violet)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Personality</label>
+        <select id="witSelect">
+          <option value="reserved">Reserved: all business</option>
+          <option value="classic">Classic JARVIS</option>
+          <option value="stark">Full Stark: extra sarcasm</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>I speak to Jarvis in</label>
+        <select id="listenLangSelect">
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="ar-EG">Arabic (Egypt)</option>
+        </select>
+        <div class="hint">What the microphone listens for. He replies in whatever language you use.</div>
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Haptics</b>
+            <div class="hint" style="margin-top:2px;">Small vibrations when he listens, acts, or warns you.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="hapticsToggle" checked /><span class="toggle-track"></span></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Silent mode</b>
+            <div class="hint" style="margin-top:2px;">Jarvis writes his replies instead of speaking them (meetings, the cinema). Or just say "silent mode on".</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="silentToggle" /><span class="toggle-track"></span></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Meeting heads-up</b>
+            <div class="hint" style="margin-top:2px;">A notification ten minutes before each calendar event (needs Google connected).</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="meetingAlertsToggle" checked /><span class="toggle-track"></span></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label>Emergency protocol</label>
+        <input type="text" id="emergencyNameInput" placeholder="Contact name (e.g. Mum)" />
+        <input type="tel" id="emergencyNumberInput" placeholder="Their phone number" style="margin-top:8px;" />
+        <div class="hint">Say "Jarvis, emergency" and he immediately texts this person your location, then calls them. He never calls emergency services himself: for that, 123 (ambulance) or 122 (police).</div>
       </div>
 
       <div class="field">
@@ -273,7 +347,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.2 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.3 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -281,7 +355,15 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="boot-overlay" id="bootOverlay" hidden>
+  <div class="boot-title">J.A.R.V.I.S.</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.3</div>
+  <div class="boot-log"></div>
+  <div class="boot-skip">tap to skip</div>
+</div>
+
 <script src="app.js"></script>
 <script src="features.js"></script>
+<script src="presence.js"></script>
 </body>
 </html>

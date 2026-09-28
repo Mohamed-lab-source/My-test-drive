@@ -7,16 +7,17 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 
-    // Set when Jarvis is summoned as the device assistant (long-press home or
-    // power, the assistant gesture, or a headset's voice-command button);
-    // the JS side consumes it and starts listening immediately.
-    private static volatile boolean pendingAssist = false;
+    // Set when Jarvis is opened for a purpose: summoned as the device
+    // assistant (long-press home/power, assistant gesture, headset button) or
+    // via a home-screen shortcut. The JS side consumes it: "talk" starts
+    // listening, "briefing" plays the briefing, "planner" opens the Planner.
+    private static volatile String pendingAction = null;
     private static volatile boolean inForeground = false;
 
-    static boolean consumePendingAssist() {
-        boolean was = pendingAssist;
-        pendingAssist = false;
-        return was;
+    static String consumePendingAction() {
+        String action = pendingAction;
+        pendingAction = null;
+        return action;
     }
 
     static boolean isInForeground() {
@@ -35,8 +36,9 @@ public class MainActivity extends BridgeActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (isAssistIntent(intent)) {
-            pendingAssist = true;
+        String action = actionFor(intent);
+        if (action != null) {
+            pendingAction = action;
             DeviceActionsPlugin.emitAssist();
         }
     }
@@ -53,11 +55,15 @@ public class MainActivity extends BridgeActivity {
         super.onPause();
     }
 
-    private static boolean isAssistIntent(Intent intent) {
-        if (intent == null || intent.getAction() == null) return false;
+    private static String actionFor(Intent intent) {
+        if (intent == null || intent.getAction() == null) return null;
         String action = intent.getAction();
-        return Intent.ACTION_ASSIST.equals(action)
+        if (Intent.ACTION_ASSIST.equals(action)
             || Intent.ACTION_VOICE_COMMAND.equals(action)
-            || "android.intent.action.SEARCH_LONG_PRESS".equals(action);
+            || "android.intent.action.SEARCH_LONG_PRESS".equals(action)
+            || "com.jarvis.secretary.TALK".equals(action)) return "talk";
+        if ("com.jarvis.secretary.BRIEFING".equals(action)) return "briefing";
+        if ("com.jarvis.secretary.PLANNER".equals(action)) return "planner";
+        return null;
     }
 }
