@@ -998,4 +998,34 @@ public class DeviceActionsPlugin extends Plugin {
             });
         });
     }
+
+    /* ---------------- Background watchers ---------------- */
+
+    @PluginMethod
+    public void setWatches(PluginCall call) {
+        JSArray list = call.getArray("watches", new JSArray());
+        WatchWorker.sync(getContext(), list.toString());
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void getWatchState(PluginCall call) {
+        android.content.SharedPreferences p = getContext().getSharedPreferences(WatchWorker.PREFS, Context.MODE_PRIVATE);
+        JSObject ret = new JSObject();
+        ret.put("fired", p.getString("fired", "{}"));
+        ret.put("lastRun", p.getLong("lastRun", 0));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void clearWatchFired(PluginCall call) {
+        android.content.SharedPreferences p = getContext().getSharedPreferences(WatchWorker.PREFS, Context.MODE_PRIVATE);
+        String id = call.getString("id", "");
+        try {
+            org.json.JSONObject fired = new org.json.JSONObject(p.getString("fired", "{}"));
+            fired.remove(id);
+            p.edit().putString("fired", fired.toString()).apply();
+        } catch (Exception ignored) {}
+        call.resolve();
+    }
 }

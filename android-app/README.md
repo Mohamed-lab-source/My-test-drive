@@ -285,6 +285,21 @@ A new **Trackers** tab brings everything together: water, medications, habits, b
 | Power | "Power connected, sir." when you plug in; "Fully charged." at 100%. |
 | VIPs | "Always tell me when Mom messages": announced even when announcements are off. |
 
+### 3.0 — operations
+
+| | Try saying |
+|---|---|
+| Watchers | "Tell me when Bitcoin goes above 70,000", "…when 21k gold drops below 4,000", "…when the dollar goes above 55", "Let me know if it's going to rain". Checked about every 30 minutes in the background, even with Jarvis closed. "What are you watching?", "Stop the gold watch". |
+| Meeting mode | "Record this meeting": continuous transcription until "end meeting" (or a tap), then a summary with decisions and action items saved to Notes. |
+| Dictation | "Take a long note": everything you say until "stop dictation", cleaned up, titled and saved. |
+| Portfolio | "I bought 100 shares of CIB at 80", "I have 0.05 bitcoin", "How's my portfolio?" EGX names (CIB, TMG, Fawry, EFG, Eastern…) resolve to the Egyptian Exchange. Also a card in Trackers. |
+| Relationship radar | "Remind me to call Mom every week": nudges only if the call log shows you haven't. "Who haven't I spoken to in a while?" |
+| Reminder buttons | Every reminder notification has Done and Snooze 10 min. |
+| Live timers | Timers Jarvis sets count down in the HUD, and he says "Time's up". |
+| Sound design | Subtle interface tones (Settings → Interface sounds). |
+| On this day | "What happened on this day?" |
+| Catch me up | "Catch me up": messages, missed calls, emails, overdue reminders, triggered alerts and tracker items since you last opened Jarvis. |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

@@ -44,6 +44,8 @@
         <span id="telFocus" hidden>FOCUS</span>
         <span class="sep" id="telDriveSep" hidden>//</span>
         <span id="telDrive" class="tel-drive" hidden>DRIVE</span>
+        <span class="sep" id="telTimerSep" hidden>//</span>
+        <span id="telTimer" class="tel-timer" hidden>T-00:00</span>
       </div>
       <div class="hud-widgets" id="hudWidgets" hidden></div>
     </div>
@@ -144,6 +146,7 @@
       <div class="card"><h3>🏋️ Body &amp; fitness</h3><div id="fitnessBox"></div></div>
       <div class="card"><h3>🎯 Goals</h3><div id="goalsBox"></div></div>
       <div class="card"><h3>💰 Spending</h3><div id="spendingList"></div></div>
+      <div class="card"><h3>📈 Portfolio</h3><div id="portfolioBox"></div></div>
       <div class="card"><h3>🧾 Bills &amp; debts</h3><div id="moneyBox"></div></div>
       <div class="card"><h3>🚗 Car</h3><div id="carBox"></div></div>
     </div>
@@ -284,6 +287,16 @@
         <button class="wide-btn accent" id="notifSetupBtn">Give Jarvis notification access</button>
         <div class="hint">Lets Jarvis see incoming WhatsApp, SMS, Telegram and similar messages so he can announce them, read them back ("what did I miss?"), and reply by voice. Turn on <b>Jarvis</b> in the screen that opens. If the switch is greyed out: tap below to open App info, then ⋮ (top right) → <b>Allow restricted settings</b>, and try again. Android does this for apps installed outside the Play Store.</div>
         <button class="wide-btn" id="appInfoBtn" style="margin-top:8px;">Open Jarvis app info</button>
+      </div>
+
+      <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Interface sounds</b>
+            <div class="hint" style="margin-top:2px;">Subtle Stark-style tones for start-up, cards and scans.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="uiSoundsToggle" checked /><span class="toggle-track"></span></span>
+        </label>
       </div>
 
       <div class="field">
@@ -481,7 +494,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.9 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v3.0 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -498,7 +511,7 @@
 
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.9</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v3.0</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
@@ -511,5 +524,6 @@
 <script src="more.js"></script>
 <script src="trackers.js"></script>
 <script src="stark.js"></script>
+<script src="ops.js"></script>
 </body>
 </html>

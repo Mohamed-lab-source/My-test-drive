@@ -792,7 +792,8 @@ async function scheduleReminder(r) {
     toast("Notification permission denied — reminder saved but won't alert you");
     return;
   }
-  const base = { title: "Jarvis reminder", body: r.text, smallIcon: "ic_stat_jarvis" };
+  // Done / Snooze buttons on the notification (registered in ops.js).
+  const base = { title: "Jarvis reminder", body: r.text, smallIcon: "ic_stat_jarvis", actionTypeId: "JARVIS_REMINDER", extra: { reminderId: r.id } };
   const hm = { hour: when.getHours(), minute: when.getMinutes() };
   let notifications;
   if (r.repeat === "daily") notifications = [{ ...base, id: r.id, schedule: { on: hm, allowWhileIdle: true } }];
@@ -2471,6 +2472,7 @@ async function boot() {
   await safely("more", initMore);
   await safely("trackers", initTrackers);
   await safely("stark", initStark);
+  await safely("ops", initOps);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();

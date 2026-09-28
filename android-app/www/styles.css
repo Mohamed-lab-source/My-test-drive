@@ -741,3 +741,6 @@ svg.spark polyline { vector-effect: non-scaling-stroke; fill: none; stroke: var(
 @keyframes hudIn { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes hudScan { to { transform: translateY(260%); } }
 @media (prefers-reduced-motion: reduce) { .hud-card, .hud-card::before { animation: none; } }
+
+/* ---- 3.0 ---- */
+.tel-timer { color: var(--accent); }
