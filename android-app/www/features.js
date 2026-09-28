@@ -222,7 +222,7 @@ function evaluateMath(input) {
 
 /* 7. World clock -------------------------------------------------------- */
 async function worldTime(place) {
-  const geo = await geocode(place);
+  const geo = await (typeof geocodeCity === "function" ? geocodeCity : geocode)(place);
   if (!geo.timezone) throw new Error(`I couldn't find a timezone for "${place}".`);
   const now = new Date();
   const local = new Intl.DateTimeFormat("en-GB", { timeZone: geo.timezone, weekday: "long", hour: "2-digit", minute: "2-digit", hour12: false }).format(now);

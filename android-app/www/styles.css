@@ -675,3 +675,8 @@ body {
 #diagScore { background: var(--good); }
 .diag-bar:has(#diagScore)::after { content: ""; position: absolute; top: 0; bottom: 0; width: 1px; left: var(--thresh, 50%); background: var(--danger); }
 .diag-error { color: var(--danger) !important; }
+
+/* ---- 2.6: place lookups in settings ---- */
+.place-check { font-size: 12px; margin-top: 6px; color: var(--text-dim); overflow-wrap: anywhere; }
+.place-check.ok { color: var(--good); }
+.place-check.bad { color: var(--danger); }

@@ -405,15 +405,24 @@
 
       <div class="field">
         <label>Home Location</label>
-        <input type="text" id="homeLocInput" placeholder="e.g. Maadi, Cairo" />
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="homeLocInput" placeholder="Address, landmark, or Google Maps link" style="flex:1;" />
+          <button class="wide-btn" id="homeHereBtn" style="width:auto; margin:0; padding:0 12px;" title="Use where I am now">📍 Here</button>
+        </div>
+        <div class="place-check" id="homeLocCheck"></div>
       </div>
       <div class="field">
         <label>Work / Commute Destination</label>
-        <input type="text" id="workLocInput" placeholder="e.g. Downtown Cairo" />
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="workLocInput" placeholder="Address, landmark, or Google Maps link" style="flex:1;" />
+          <button class="wide-btn" id="workHereBtn" style="width:auto; margin:0; padding:0 12px;" title="Use where I am now">📍 Here</button>
+        </div>
+        <div class="place-check" id="workLocCheck"></div>
+        <div class="hint">Tip: in Google Maps, tap a place → Share → copy the link and paste it here. Or stand there and tap 📍 Here, or tell Jarvis "this is my home".</div>
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.5.3 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.6 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -423,7 +432,7 @@
 
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.5</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.6</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
@@ -432,5 +441,6 @@
 <script src="features.js"></script>
 <script src="presence.js"></script>
 <script src="extras.js"></script>
+<script src="places.js"></script>
 </body>
 </html>

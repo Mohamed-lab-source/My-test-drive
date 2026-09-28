@@ -2432,6 +2432,7 @@ async function boot() {
   await safely("voices", populateVoices);
   await safely("presence", initPresence);
   await safely("extras", initExtras);
+  await safely("places", initPlaces);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();

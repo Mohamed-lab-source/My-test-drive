@@ -221,6 +221,14 @@ Microphone reliability: if the recognizer reports it's busy (common just after s
 | Read a link | Copy a link, then "Summarise this article". |
 | Find my phone | "Hey Jarvis, where are you?": full-volume chime and flashing torch. Tap the core to stop. Works offline. |
 
+### 2.6 — finding places properly
+
+Places now resolve through a chain: exact coordinates → "here" → saved places ("home", "work", "البيت") → Google Maps links (short share links are followed) → OpenStreetMap search → Photon search → city names. Addresses that aren't found as written are retried in simpler forms and reported as approximate.
+
+- **Settings → Home / Work:** type an address or landmark, or paste a Google Maps share link. Jarvis checks it immediately and shows what he found. Or stand there and tap **📍 Here**.
+- **Say** "this is my home", "save this as the gym", or "set work to <address or link>".
+- **Commute** starts from where you are now, includes a Google Maps directions link, and says plainly that the estimate has no live traffic.
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:
