@@ -229,6 +229,26 @@ Places now resolve through a chain: exact coordinates → "here" → saved place
 - **Say** "this is my home", "save this as the gym", or "set work to <address or link>".
 - **Commute** starts from where you are now, includes a Google Maps directions link, and says plainly that the estimate has no live traffic.
 
+### 2.7 — ten more, and a conversation that keeps flowing
+
+**Talk flow:**
+- A moment's silence or a misheard phrase no longer ends the conversation; Jarvis listens again. He gives up only after two silences in a row, or three right after he's asked you a question.
+- Offline or error replies get one more try.
+- "stop the music" or "never mind the alarm" are requests, not goodbyes. Only a short sign-off ("that's all", "thanks Jarvis", "خلاص") ends the conversation.
+
+| | Try saying |
+|---|---|
+| Football | "How did Al Ahly do?", "When's the next Zamalek match?", "Premier League scores" |
+| Gold | "What's the price of 21 karat gold?" (per gram in EGP; spot price, shops differ) |
+| Qur'an | "Read me the first ayah of Al-Kahf", "Play Surah Al-Kahf" (Alafasy; tap the core to stop) |
+| Hijri calendar | "What's the Hijri date?", "How many days until Ramadan?" |
+| Screen time | "How long was I on TikTok today?" (asks once for Usage access) |
+| Sleep | Logged automatically from "goodnight" and "good morning"; "How have I been sleeping?" |
+| Evening debrief | Settings → Evening debrief, or "Give me my evening debrief" |
+| Leave-by alerts | For calendar events with a location: "Time to leave" notification with drive time plus a traffic buffer |
+| Birthdays | "Import birthdays from my contacts" |
+| Ringer & brightness | "Put my phone on vibrate", "Dim the screen to 20%", "Auto brightness" (asks once for permission) |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

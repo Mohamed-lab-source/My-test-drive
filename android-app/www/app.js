@@ -641,6 +641,7 @@ async function listTodayEvents() {
   return (data.items || []).map(ev => ({
     id: ev.id, title: ev.summary || "(no title)",
     start: ev.start?.dateTime || ev.start?.date, end: ev.end?.dateTime || ev.end?.date,
+    location: ev.location || undefined,
   }));
 }
 
@@ -2129,24 +2130,51 @@ async function listenOnce() {
   return ((result && result.matches && result.matches[0]) || "").trim();
 }
 
+// "stop the music" is a request, not a goodbye: only short sign-offs end the conversation.
+function isDismissal(heard) {
+  const full = String(heard).trim().replace(/[.!?]+$/, "");
+  const t = full.replace(/[, ]+(jarvis|sir)$/i, "");
+  if (/^(stop|no|nothing|bye|goodbye|never ?mind)\b\s*\S/i.test(t) && !/^(no,? (thanks|thank you)|nothing else|stop listening)$/i.test(t)) return false;
+  const m = t.match(DISMISSAL) || full.match(DISMISSAL);
+  if (!m) return false;
+  // "that's all for now" ends it; "thanks Jarvis, now call mom" is a new request.
+  const rest = m.input.slice(m.index + m[0].length).replace(/^[\s,.]+/, "");
+  return rest.split(/\s+/).filter(Boolean).length <= 2;
+}
+
+// Keep the talk flowing: a moment's silence or a misheard phrase doesn't end
+// the conversation; Jarvis listens again. After he's asked a question he
+// waits a little longer. Only a real sign-off, a tap, or a longer silence ends it.
 async function conversation() {
   if (conversationActive || busy) return;
   conversationActive = true;
   let turns = 0;
+  let misses = 0;
+  let askedQuestion = false;
   try {
     while (conversationActive) {
       let heard = "";
       try { heard = await listenOnce(); }
       catch (e) {
-        // Silence or a recognizer timeout just ends the exchange; only complain
-        // if it failed on the very first attempt.
-        if (turns === 0) toast(e.message && !/no match|didn't|timeout/i.test(e.message) ? e.message : "Didn't catch that");
-        break;
+        const quiet = /no match|didn'?t|timeout|no speech|speech input|not recogni[sz]ed/i.test(String(e.message || ""));
+        if (!quiet) {
+          if (turns === 0) toast(e.message || "Didn't catch that");
+          break;
+        }
       }
       if (!conversationActive) break;
-      if (!heard) break;
+      if (!heard) {
+        misses++;
+        const patience = askedQuestion ? 3 : 2;
+        if (misses >= patience) {
+          if (turns === 0) toast("Didn't catch that");
+          break;
+        }
+        continue; // listen again
+      }
+      misses = 0;
       turns++;
-      if (DISMISSAL.test(heard)) {
+      if (isDismissal(heard)) {
         addMsg("user", heard);
         const bye = pick([`Very good, ${state.address}.`, `I'll be here, ${state.address}.`, "Standing by.", `As you wish, ${state.address}.`]);
         addMsg("assistant", bye);
@@ -2154,7 +2182,13 @@ async function conversation() {
         break;
       }
       const reply = await ask(heard, { spoken: true });
-      if (reply === null || !state.conversationMode) break;
+      if (!state.conversationMode) break;
+      if (reply === null) {
+        // Offline or an error: say so, but stay in the conversation for one more try.
+        if (++misses >= 2) break;
+        continue;
+      }
+      askedQuestion = /\?\s*$/.test(reply) || /[؟]\s*$/.test(reply);
     }
   } finally {
     conversationActive = false;
@@ -2433,6 +2467,7 @@ async function boot() {
   await safely("presence", initPresence);
   await safely("extras", initExtras);
   await safely("places", initPlaces);
+  await safely("more", initMore);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();

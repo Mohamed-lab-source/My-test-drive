@@ -747,4 +747,146 @@ public class DeviceActionsPlugin extends Plugin {
             call.reject("Could not open the setting: " + e.getMessage());
         }
     }
+
+    /* ---------------- Screen time ---------------- */
+
+    private boolean hasUsageAccess() {
+        android.app.AppOpsManager ops = (android.app.AppOpsManager) getContext().getSystemService(Context.APP_OPS_SERVICE);
+        if (ops == null) return false;
+        int mode = Build.VERSION.SDK_INT >= 29
+            ? ops.unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), getContext().getPackageName())
+            : ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), getContext().getPackageName());
+        return mode == android.app.AppOpsManager.MODE_ALLOWED;
+    }
+
+    /** Foreground time per app between start and end, built from resume/pause events (more exact than daily buckets). */
+    @PluginMethod
+    public void getAppUsage(PluginCall call) {
+        if (!hasUsageAccess()) { call.reject("NO_ACCESS"); return; }
+        long end = call.getLong("end", System.currentTimeMillis());
+        long start = call.getLong("start", end - 24L * 3600 * 1000);
+        android.app.usage.UsageStatsManager usm = (android.app.usage.UsageStatsManager) getContext().getSystemService(Context.USAGE_STATS_SERVICE);
+        if (usm == null) { call.reject("Usage stats unavailable"); return; }
+        java.util.HashMap<String, Long> total = new java.util.HashMap<>();
+        java.util.HashMap<String, Long> openedAt = new java.util.HashMap<>();
+        java.util.HashMap<String, Integer> opens = new java.util.HashMap<>();
+        android.app.usage.UsageEvents events = usm.queryEvents(start, end);
+        android.app.usage.UsageEvents.Event e = new android.app.usage.UsageEvents.Event();
+        String current = null;
+        while (events.hasNextEvent()) {
+            events.getNextEvent(e);
+            String pkg = e.getPackageName();
+            int type = e.getEventType();
+            if (type == 1) { // ACTIVITY_RESUMED / MOVE_TO_FOREGROUND
+                if (current != null && !current.equals(pkg) && openedAt.containsKey(current)) {
+                    total.put(current, total.getOrDefault(current, 0L) + (e.getTimeStamp() - openedAt.remove(current)));
+                }
+                if (!pkg.equals(current)) opens.put(pkg, opens.getOrDefault(pkg, 0) + 1);
+                openedAt.put(pkg, e.getTimeStamp());
+                current = pkg;
+            } else if (type == 2 || type == 23) { // ACTIVITY_PAUSED / ACTIVITY_STOPPED
+                Long t0 = openedAt.remove(pkg);
+                if (t0 != null) total.put(pkg, total.getOrDefault(pkg, 0L) + (e.getTimeStamp() - t0));
+                if (pkg.equals(current)) current = null;
+            }
+        }
+        for (java.util.Map.Entry<String, Long> open : openedAt.entrySet()) {
+            total.put(open.getKey(), total.getOrDefault(open.getKey(), 0L) + (end - open.getValue()));
+        }
+        PackageManager pm = getContext().getPackageManager();
+        Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        java.util.HashSet<String> launchers = new java.util.HashSet<>();
+        for (ResolveInfo ri : pm.queryIntentActivities(home, 0)) launchers.add(ri.activityInfo.packageName);
+        JSArray apps = new JSArray();
+        long sum = 0;
+        java.util.ArrayList<java.util.Map.Entry<String, Long>> sorted = new java.util.ArrayList<>(total.entrySet());
+        sorted.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+        for (java.util.Map.Entry<String, Long> en : sorted) {
+            String pkg = en.getKey();
+            long ms = en.getValue();
+            if (ms < 60000 || launchers.contains(pkg) || pkg.equals("com.android.systemui")) continue;
+            sum += ms;
+            if (apps.length() >= 15) continue;
+            String label = pkg;
+            try { label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString(); } catch (Exception ignored) {}
+            JSObject a = new JSObject();
+            a.put("app", label);
+            a.put("package", pkg);
+            a.put("minutes", Math.round(ms / 60000.0));
+            a.put("opens", opens.getOrDefault(pkg, 0));
+            apps.put(a);
+        }
+        JSObject ret = new JSObject();
+        ret.put("totalMinutes", Math.round(sum / 60000.0));
+        ret.put("apps", apps);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void openUsageAccessSettings(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+        if (Build.VERSION.SDK_INT >= 29) i.setData(Uri.parse("package:" + getContext().getPackageName()));
+        if (!tryStart(i) && !tryStart(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))) { call.reject("Could not open the setting"); return; }
+        call.resolve();
+    }
+
+    /* ---------------- Ringer & brightness ---------------- */
+
+    @PluginMethod
+    public void setRingerMode(PluginCall call) {
+        String mode = call.getString("mode", "normal");
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        android.app.NotificationManager nm = (android.app.NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        int target = "silent".equals(mode) ? AudioManager.RINGER_MODE_SILENT
+            : "vibrate".equals(mode) ? AudioManager.RINGER_MODE_VIBRATE : AudioManager.RINGER_MODE_NORMAL;
+        try {
+            am.setRingerMode(target);
+        } catch (SecurityException e) {
+            // Leaving or entering silent needs "Do Not Disturb access".
+            if (nm != null && !nm.isNotificationPolicyAccessGranted()) {
+                tryStart(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
+                call.reject("NO_POLICY_ACCESS");
+                return;
+            }
+            call.reject("Couldn't change the ringer: " + e.getMessage());
+            return;
+        }
+        int now = am.getRingerMode();
+        JSObject ret = new JSObject();
+        ret.put("ringer", now == AudioManager.RINGER_MODE_SILENT ? "silent" : now == AudioManager.RINGER_MODE_VIBRATE ? "vibrate" : "normal");
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setBrightness(PluginCall call) {
+        if (!Settings.System.canWrite(getContext())) {
+            Intent i = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+            tryStart(i);
+            call.reject("NO_WRITE_SETTINGS");
+            return;
+        }
+        android.content.ContentResolver cr = getContext().getContentResolver();
+        JSObject ret = new JSObject();
+        if (Boolean.TRUE.equals(call.getBoolean("auto", false))) {
+            Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC);
+            ret.put("brightness", "auto");
+            call.resolve(ret);
+            return;
+        }
+        int pct = Math.max(1, Math.min(100, call.getInt("percent", 50)));
+        Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+        // The slider feels logarithmic: map percent onto a gentle curve over 0-255.
+        int value = (int) Math.round(255 * Math.pow(pct / 100.0, 2.2));
+        Settings.System.putInt(cr, Settings.System.SCREEN_BRIGHTNESS, Math.max(1, value));
+        if (getActivity() != null) {
+            final float level = Math.max(0.01f, value / 255f);
+            getActivity().runOnUiThread(() -> {
+                android.view.WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
+                lp.screenBrightness = level;
+                getActivity().getWindow().setAttributes(lp);
+            });
+        }
+        ret.put("brightness", pct);
+        call.resolve(ret);
+    }
 }
