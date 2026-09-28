@@ -89,6 +89,10 @@ const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   'face.smiling.fill': 'happy',
   'folder.fill': 'folder',
   'text.book.closed.fill': 'book',
+  'safari.fill': 'compass',
+  'sunrise.fill': 'partly-sunny',
+  'checklist': 'checkbox',
+  'arrow.up.right': 'navigate',
 };
 
 interface IconProps {

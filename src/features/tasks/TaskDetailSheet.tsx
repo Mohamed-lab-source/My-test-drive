@@ -88,7 +88,11 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
 
   if (!task) return null;
 
-  const refreshSubtasks = () => repo.listSubtasks(task.id).then(setSubtasks);
+  const refreshSubtasks = () =>
+    repo.listSubtasks(task.id).then((rows) => {
+      setSubtasks(rows);
+      useProductivityStore.getState().refreshSubtaskCounts();
+    });
 
   const handleAddSubtask = async () => {
     if (!newSubtask.trim()) return;

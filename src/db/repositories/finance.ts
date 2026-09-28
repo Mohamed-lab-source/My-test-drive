@@ -66,6 +66,11 @@ export const listTransactionsInRange = (startIso: string, endIso: string) =>
     'date DESC'
   );
 
+// Case-insensitive note search across the full history (the store only keeps
+// the most recent few hundred).
+export const searchTransactionsByNote = (query: string) =>
+  whereRows<Transaction>('transactions', 'note LIKE ?', [`%${query}%`], 'date DESC, created_at DESC');
+
 export const listTransactionsForAccount = (accountId: string) =>
   whereRows<Transaction>('transactions', 'account_id = ?', [accountId], 'date DESC');
 

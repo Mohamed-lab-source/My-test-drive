@@ -6,6 +6,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
 import { SegmentedControl } from '../../../src/ui/SegmentedControl';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { Card } from '../../../src/ui/Card';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
@@ -58,6 +59,7 @@ export default function TasksScreen() {
         ? formatDateKey(quick.scheduledDate)
         : 'Unscheduled';
   const [segment, setSegment] = useState(0);
+  const [projectFilter, setProjectFilter] = useState<string>('all');
   const [addVisible, setAddVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [focusTask, setFocusTask] = useState<Task | null>(null);
@@ -73,7 +75,7 @@ export default function TasksScreen() {
     [meetings]
   );
 
-  const filtered = useMemo(() => {
+  const bySegment = useMemo(() => {
     if (segment === 0) {
       return tasks.filter(
         (t) => t.status !== 'done' && (t.scheduled_date === todayStr || t.status === 'in_progress')
@@ -87,6 +89,16 @@ export default function TasksScreen() {
     }
     return tasks.filter((t) => t.status !== 'backlog' && t.status !== 'done');
   }, [tasks, segment, todayStr]);
+
+  // A deleted project falls back to showing everything.
+  const activeProject = projectFilter === 'all' || projectFilter === 'none' || projects.some((p) => p.id === projectFilter) ? projectFilter : 'all';
+  const filtered = useMemo(
+    () =>
+      activeProject === 'all'
+        ? bySegment
+        : bySegment.filter((t) => (activeProject === 'none' ? !t.project_id : t.project_id === activeProject)),
+    [bySegment, activeProject]
+  );
 
   const handleClearCompleted = async () => {
     const removed = await clearCompleted();
@@ -155,6 +167,19 @@ export default function TasksScreen() {
             </Text>
           ) : null}
           <SegmentedControl options={SEGMENTS} selectedIndex={segment} onChange={setSegment} />
+          {projects.length > 0 ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <ChipSelector
+                options={[
+                  { id: 'all', label: 'All projects' },
+                  ...projects.map((p) => ({ id: p.id, label: p.name, color: p.color })),
+                  { id: 'none', label: 'No project' },
+                ]}
+                selectedId={activeProject}
+                onSelect={setProjectFilter}
+              />
+            </View>
+          ) : null}
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
@@ -176,7 +201,7 @@ export default function TasksScreen() {
                   isLast={i === arr.length - 1}
                   onPress={() => setDetailTask(task)}
                   reorder={
-                    segment === 2
+                    segment === 2 && activeProject === 'all'
                       ? {
                           canMoveUp: i > 0,
                           canMoveDown: i < arr.length - 1,

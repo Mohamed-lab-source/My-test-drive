@@ -9,6 +9,15 @@ import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { toMinorUnits } from '../../utils/money';
 import { accentColors } from '../../theme/colors';
+import { isoDaysFromNow } from '../../utils/projection';
+
+const DEADLINES = [
+  { id: 'none', label: 'No deadline' },
+  { id: '91', label: '3 months' },
+  { id: '182', label: '6 months' },
+  { id: '365', label: '1 year' },
+  { id: '730', label: '2 years' },
+];
 
 const ICONS = ['target', 'heart.circle.fill', 'airplane', 'house.fill', 'graduationcap.fill', 'car.fill'];
 
@@ -21,6 +30,7 @@ export function AddSavingsGoalSheet({ visible, onClose }: { visible: boolean; on
   const [target, setTarget] = useState('');
   const [icon, setIcon] = useState(ICONS[0]);
   const [color, setColor] = useState<string>(accentColors[0]);
+  const [deadline, setDeadline] = useState('none');
   const [saving, setSaving] = useState(false);
 
   const canSave = name.trim().length > 0 && Number(target) > 0;
@@ -33,13 +43,14 @@ export function AddSavingsGoalSheet({ visible, onClose }: { visible: boolean; on
         name: name.trim(),
         target_amount: toMinorUnits(Number(target)),
         currency,
-        target_date: null,
+        target_date: deadline === 'none' ? null : isoDaysFromNow(Number(deadline)),
         icon,
         color,
         notes: null,
       });
       setName('');
       setTarget('');
+      setDeadline('none');
       onClose();
     } finally {
       setSaving(false);
@@ -52,6 +63,11 @@ export function AddSavingsGoalSheet({ visible, onClose }: { visible: boolean; on
         <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.md }]}>New Savings Goal</Text>
         <TextField label="Goal" placeholder="e.g. Wedding fund" value={name} onChangeText={setName} />
         <TextField label="Target amount" placeholder="0.00" keyboardType="decimal-pad" value={target} onChangeText={setTarget} />
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Reach it in</Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector options={DEADLINES} selectedId={deadline} onSelect={setDeadline} />
+        </View>
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Icon</Text>
         <View style={{ marginBottom: spacing.md }}>

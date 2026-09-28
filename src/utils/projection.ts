@@ -19,3 +19,18 @@ export function estimatePaceCompletionDate(
   result.setDate(result.getDate() + daysNeeded);
   return result.toISOString();
 }
+
+// How much to put aside each month to hit `remaining` by `targetDate`.
+// Returns null once the date has passed (or if nothing is left to save).
+export function monthlyAmountNeeded(remaining: number, targetDate: string, now: Date = new Date()): number | null {
+  const target = new Date(targetDate);
+  if (remaining <= 0 || target.getTime() <= now.getTime()) return null;
+  const months = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
+  return Math.ceil(remaining / Math.max(1, months));
+}
+
+// ISO date at local noon `days` from today — noon keeps the calendar day
+// stable across time-zone shifts.
+export function isoDaysFromNow(days: number, now: Date = new Date()): string {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, 12).toISOString();
+}

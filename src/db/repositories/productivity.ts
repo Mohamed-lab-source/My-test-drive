@@ -1,4 +1,4 @@
-import { newId, nowIso, todayKey } from '../client';
+import { getDb, newId, nowIso, todayKey } from '../client';
 import { allRows, deleteRow, getRow, insertRow, swapSortOrder, updateRow, whereRows } from '../helpers';
 import type { FocusSession, Meeting, Project, Subtask, Task } from '../types';
 
@@ -158,6 +158,17 @@ export async function createSubtask(taskId: string, title: string): Promise<stri
   await insertRow('subtasks', { id, task_id: taskId, title, is_done: 0, sort_order: existing.length });
   return id;
 }
+export type SubtaskCounts = Record<string, { done: number; total: number }>;
+
+// Done/total per task in one query, for the "2/5" badge on task rows.
+export async function getSubtaskCounts(): Promise<SubtaskCounts> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ task_id: string; done: number; total: number }>(
+    'SELECT task_id, SUM(is_done) AS done, COUNT(*) AS total FROM subtasks GROUP BY task_id'
+  );
+  return Object.fromEntries(rows.map((r) => [r.task_id, { done: r.done ?? 0, total: r.total }]));
+}
+
 export const toggleSubtaskDone = (id: string, isDone: boolean) =>
   updateRow('subtasks', id, { is_done: isDone ? 1 : 0 });
 export const deleteSubtask = (id: string) => deleteRow('subtasks', id);

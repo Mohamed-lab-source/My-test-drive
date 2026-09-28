@@ -57,7 +57,7 @@ function FxRateRow({ currency, baseCurrency }: { currency: string; baseCurrency:
 }
 
 const APPEARANCE_OPTIONS: Appearance[] = ['system', 'light', 'dark'];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'EGP', 'MAD', 'TRY'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'KWD', 'QAR', 'BHD', 'OMR', 'JOD', 'EGP', 'MAD', 'TRY', 'INR', 'PKR', 'MYR', 'IDR'];
 
 export default function SettingsScreen() {
   const { colors, typography, spacing, radius } = useTheme();
@@ -78,6 +78,8 @@ export default function SettingsScreen() {
     setPrayerAlerts,
     hijriOffset,
     setHijriOffset,
+    jumuahReminder,
+    setJumuahReminder,
   } = useSettingsStore();
 
   const handleTogglePrayerAlerts = async (value: boolean) => {
@@ -91,6 +93,18 @@ export default function SettingsScreen() {
     setPrayerAlerts(value);
     await reschedulePrayerAlerts();
     await rescheduleOccasionReminders();
+  };
+
+  const handleToggleJumuah = async (value: boolean) => {
+    if (value && !notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert('Permission needed', "Enable notifications for Anchor in your device Settings to get Jumu'ah reminders.");
+        return;
+      }
+    }
+    setJumuahReminder(value);
+    await reschedulePrayerAlerts();
   };
   const { user, signOut } = useAuth();
   const accounts = useFinanceStore((s) => s.accounts);
@@ -154,7 +168,8 @@ export default function SettingsScreen() {
     await rescheduleAllReminders(
       useProductivityStore.getState().meetings,
       useFinanceStore.getState().recurringRules,
-      useProductivityStore.getState().tasks
+      useProductivityStore.getState().tasks,
+      useFinanceStore.getState().debts
     );
     await reschedulePrayerAlerts();
   };
@@ -243,6 +258,13 @@ export default function SettingsScreen() {
                 <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>A notification at each prayer time</Text>
               </View>
               <Switch value={prayerAlerts} disabled={!prayerCityId} onValueChange={handleTogglePrayerAlerts} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Jumu'ah reminder</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Fridays, an hour before Dhuhr</Text>
+              </View>
+              <Switch value={jumuahReminder} disabled={!prayerCityId} onValueChange={handleToggleJumuah} />
             </View>
             <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>
               Hijri date adjustment · {formatHijri(new Date(), hijriOffset)}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -28,6 +28,7 @@ export default function AnalyticsScreen() {
   const [loading, setLoading] = useState(true);
   const [monthTx, setMonthTx] = useState<Transaction[]>([]);
   const [sixMonthTx, setSixMonthTx] = useState<Transaction[]>([]);
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -78,6 +79,20 @@ export default function AnalyticsScreen() {
     }
     return months;
   }, [sixMonthTx]);
+
+  // Six-month spend for the category tapped in the breakdown below.
+  const categoryTrend = useMemo(() => {
+    if (!expandedCategoryId) return [];
+    const byMonth = new Map(monthlyTrend.map((m) => [m.key, 0]));
+    for (const t of sixMonthTx) {
+      if (t.type !== 'expense' || t.category_id !== expandedCategoryId) continue;
+      const key = localDateKey(t.date).slice(0, 7);
+      if (byMonth.has(key)) byMonth.set(key, byMonth.get(key)! + t.amount);
+    }
+    return Array.from(byMonth.entries()).map(([key, amount]) => ({ key, amount }));
+  }, [expandedCategoryId, sixMonthTx, monthlyTrend]);
+  const categoryTrendMax = Math.max(1, ...categoryTrend.map((m) => m.amount));
+  const categoryTrendAvg = categoryTrend.length ? categoryTrend.reduce((s, m) => s + m.amount, 0) / categoryTrend.length : 0;
 
   const maxTrendValue = Math.max(1, ...monthlyTrend.flatMap((m) => [m.income, m.expense]));
 
@@ -234,24 +249,61 @@ export default function AnalyticsScreen() {
               </View>
             </Card>
 
-            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>This month by category</Text>
+            <Text style={[typography.title3, { color: colors.label, marginBottom: 2 }]}>This month by category</Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>Tap a category for its 6-month trend</Text>
             {categoryBreakdown.length === 0 ? (
               <Card>
                 <EmptyState icon="chart.pie.fill" title="No spending yet" message="Log an expense to see your breakdown." />
               </Card>
             ) : (
               <Card>
-                {categoryBreakdown.map(({ category, amount, share }, i) => (
-                  <View key={category?.id ?? i} style={{ marginBottom: i === categoryBreakdown.length - 1 ? 0 : spacing.md }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text style={[typography.subhead, { color: colors.label }]}>{category?.name ?? 'Uncategorized'}</Text>
-                      <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
-                        {formatMoney(amount, currency)} · {Math.round(share * 100)}%
-                      </Text>
-                    </View>
-                    <ProgressBar progress={share} color={category?.color ?? colors.blue} />
-                  </View>
-                ))}
+                {categoryBreakdown.map(({ category, amount, share }, i) => {
+                  const expanded = !!category && category.id === expandedCategoryId;
+                  return (
+                    <Pressable
+                      key={category?.id ?? i}
+                      disabled={!category}
+                      onPress={() => setExpandedCategoryId(expanded ? null : category!.id)}
+                      style={{ marginBottom: i === categoryBreakdown.length - 1 ? 0 : spacing.md }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={[typography.subhead, { color: colors.label }]}>{category?.name ?? 'Uncategorized'}</Text>
+                        <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
+                          {formatMoney(amount, currency)} · {Math.round(share * 100)}%
+                        </Text>
+                      </View>
+                      <ProgressBar progress={share} color={category?.color ?? colors.blue} />
+                      {expanded ? (
+                        <View style={{ marginTop: spacing.sm }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 60 }}>
+                            {categoryTrend.map((m) => (
+                              <View key={m.key} style={{ flex: 1, alignItems: 'center' }}>
+                                <View
+                                  style={{
+                                    width: 14,
+                                    borderRadius: 3,
+                                    backgroundColor: category.color,
+                                    height: Math.max(2, (m.amount / categoryTrendMax) * 60),
+                                  }}
+                                />
+                              </View>
+                            ))}
+                          </View>
+                          <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                            {categoryTrend.map((m) => (
+                              <Text key={m.key} style={[typography.caption2, { flex: 1, textAlign: 'center', color: colors.secondaryLabel }]}>
+                                {monthLabel(m.key)}
+                              </Text>
+                            ))}
+                          </View>
+                          <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                            6-month average {formatMoney(Math.round(categoryTrendAvg), currency)}/month
+                          </Text>
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
               </Card>
             )}
           </>

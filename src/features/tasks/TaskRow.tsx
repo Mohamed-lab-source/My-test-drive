@@ -22,6 +22,7 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
   const removeTask = useProductivityStore((s) => s.removeTask);
   const refreshTasks = useProductivityStore((s) => s.refreshTasks);
   const project = useProductivityStore((s) => s.projects.find((p) => p.id === task.project_id));
+  const subtasks = useProductivityStore((s) => s.subtaskCounts[task.id]);
 
   const handleDelete = async () => {
     await removeTask(task.id);
@@ -65,8 +66,31 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
             >
               {task.title}
             </Text>
-            {project ? (
-              <Text style={[typography.caption1, { color: project.color, marginTop: 2, fontWeight: '600' }]}>{project.name}</Text>
+            {project || subtasks ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                {project ? (
+                  <Text style={[typography.caption1, { color: project.color, fontWeight: '600', marginRight: spacing.sm }]}>
+                    {project.name}
+                  </Text>
+                ) : null}
+                {subtasks ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Icon
+                      name="checklist"
+                      size={12}
+                      color={subtasks.done === subtasks.total ? colors.green : colors.secondaryLabel}
+                    />
+                    <Text
+                      style={[
+                        typography.caption1,
+                        { color: subtasks.done === subtasks.total ? colors.green : colors.secondaryLabel, marginLeft: 3 },
+                      ]}
+                    >
+                      {subtasks.done}/{subtasks.total}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             ) : null}
           </View>
           {!isDone && task.priority !== 'low' ? (

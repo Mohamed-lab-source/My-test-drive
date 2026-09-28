@@ -18,7 +18,7 @@ const TYPES: { id: AccountType; label: string; icon: string }[] = [
   { id: 'credit', label: 'Credit', icon: 'creditcard.fill' },
   { id: 'wallet', label: 'Wallet', icon: 'wallet.pass.fill' },
 ];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'EGP', 'MAD', 'TRY'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'KWD', 'QAR', 'BHD', 'OMR', 'JOD', 'EGP', 'MAD', 'TRY', 'INR', 'PKR', 'MYR', 'IDR'];
 
 export function AccountSheet({ visible, onClose, editing }: { visible: boolean; onClose: () => void; editing?: Account | null }) {
   const { colors, typography, spacing } = useTheme();

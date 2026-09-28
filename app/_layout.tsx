@@ -58,7 +58,8 @@ function AppShell() {
         await rescheduleAllReminders(
           useProductivityStore.getState().meetings,
           useFinanceStore.getState().recurringRules,
-          useProductivityStore.getState().tasks
+          useProductivityStore.getState().tasks,
+          useFinanceStore.getState().debts
         );
         await reschedulePrayerAlerts();
         await rescheduleOccasionReminders();

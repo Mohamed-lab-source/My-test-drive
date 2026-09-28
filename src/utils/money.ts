@@ -12,7 +12,7 @@ const formatterCache = new Map<string, Intl.NumberFormat>();
 export function formatMoney(amountMinor: number, currency: string = 'USD'): string {
   let f = formatterCache.get(currency);
   if (!f) {
-    f = new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 });
+    f = new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 });
     formatterCache.set(currency, f);
   }
   return f.format(fromMinorUnits(amountMinor));

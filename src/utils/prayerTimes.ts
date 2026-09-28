@@ -1,4 +1,4 @@
-import { CalculationMethod, Coordinates, Madhab, PrayerTimes } from 'adhan';
+import { CalculationMethod, Coordinates, Madhab, PrayerTimes, Qibla, SunnahTimes } from 'adhan';
 import type { Prayer } from '../db/types';
 
 type MethodName = keyof typeof CalculationMethod;
@@ -52,11 +52,36 @@ export const findPrayerCity = (id: string | null) => PRAYER_CITIES.find((c) => c
 
 export type PrayerSchedule = Record<Prayer, Date>;
 
-export function getPrayerSchedule(city: PrayerCity, date: Date): PrayerSchedule {
+function computeTimes(city: PrayerCity, date: Date): PrayerTimes {
   const params = CalculationMethod[city.method]();
   if (city.hanafi) params.madhab = Madhab.Hanafi;
-  const t = new PrayerTimes(new Coordinates(city.lat, city.lng), date, params);
+  return new PrayerTimes(new Coordinates(city.lat, city.lng), date, params);
+}
+
+export function getPrayerSchedule(city: PrayerCity, date: Date): PrayerSchedule {
+  const t = computeTimes(city, date);
   return { fajr: t.fajr, dhuhr: t.dhuhr, asr: t.asr, maghrib: t.maghrib, isha: t.isha };
+}
+
+export function getDayDetails(city: PrayerCity, date: Date): PrayerSchedule & { sunrise: Date; lastThird: Date } {
+  const t = computeTimes(city, date);
+  return {
+    fajr: t.fajr,
+    sunrise: t.sunrise,
+    dhuhr: t.dhuhr,
+    asr: t.asr,
+    maghrib: t.maghrib,
+    isha: t.isha,
+    lastThird: new SunnahTimes(t).lastThirdOfTheNight,
+  };
+}
+
+const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+
+// Degrees clockwise from true north toward the Kaaba, plus a compass point.
+export function getQibla(city: PrayerCity): { degrees: number; direction: string } {
+  const degrees = Qibla(new Coordinates(city.lat, city.lng));
+  return { degrees, direction: COMPASS[Math.round(degrees / 45) % 8] };
 }
 
 const ORDER: Prayer[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];

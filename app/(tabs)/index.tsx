@@ -11,6 +11,8 @@ import { Card } from '../../src/ui/Card';
 import { IconCircle } from '../../src/ui/IconCircle';
 import { Icon } from '../../src/ui/Icon';
 import { PrayerTracker } from '../../src/features/life/PrayerTracker';
+import { RamadanCard } from '../../src/features/home/RamadanCard';
+import { GettingStartedCard } from '../../src/features/home/GettingStartedCard';
 import { AddTransactionSheet } from '../../src/features/money/AddTransactionSheet';
 import { AddTaskSheet } from '../../src/features/tasks/AddTaskSheet';
 import { formatMoney } from '../../src/utils/money';
@@ -128,6 +130,11 @@ export default function HomeScreen() {
           <QuickAction icon="checkmark.circle.fill" label="Task" color={colors.blue} onPress={() => setTaskVisible(true)} />
           <QuickAction icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
           <QuickAction icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <GettingStartedCard />
+          <RamadanCard />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

@@ -14,6 +14,7 @@ export default function LifeLayout() {
       <Stack.Screen name="quran" />
       <Stack.Screen name="fasting" />
       <Stack.Screen name="occasions" />
+      <Stack.Screen name="prayer-times" />
     </Stack>
   );
 }

@@ -12,7 +12,7 @@ import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { Button } from '../../../src/ui/Button';
 import { formatMoney } from '../../../src/utils/money';
-import { formatDateShort } from '../../../src/utils/date';
+import { formatDateShort, formatRelativeDay, isOverdue } from '../../../src/utils/date';
 import { estimatePaceCompletionDate } from '../../../src/utils/projection';
 import { AddDebtSheet } from '../../../src/features/money/AddDebtSheet';
 import { AmountPromptSheet } from '../../../src/features/money/AmountPromptSheet';
@@ -49,6 +49,16 @@ function DebtCard({ debt, onPay, onDelete }: { debt: Debt; onPay: () => void; on
         <View style={{ marginTop: spacing.sm }}>
           <ProgressBar progress={progress} color={color} />
         </View>
+        {debt.due_date && debt.status !== 'paid' ? (
+          <Text
+            style={[
+              typography.caption1,
+              { color: isOverdue(debt.due_date) ? colors.red : colors.secondaryLabel, marginTop: spacing.xs, fontWeight: '600' },
+            ]}
+          >
+            Due {formatRelativeDay(debt.due_date)}
+          </Text>
+        ) : null}
         {payoffDate ? (
           <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.xs }]}>
             At this pace, paid off around {formatDateShort(payoffDate)}

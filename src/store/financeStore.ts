@@ -14,7 +14,13 @@ import * as repo from '../db/repositories/finance';
 import * as fxRepo from '../db/repositories/fx';
 import { seedDefaultsIfEmpty } from '../db/seed';
 import { refreshMoneyWidget } from '../widgets/refresh';
-import { cancelBillReminder, notifyNow, scheduleBillReminder } from '../notifications/scheduler';
+import {
+  cancelBillReminder,
+  cancelDebtReminder,
+  notifyNow,
+  scheduleBillReminder,
+  scheduleDebtReminder,
+} from '../notifications/scheduler';
 import { settingsHydrated, useSettingsStore } from './settingsStore';
 import { todayKey } from '../db/client';
 import { formatMoney } from '../utils/money';
@@ -132,7 +138,12 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     set({ recurringRules: await repo.listRecurringRules() });
     refreshMoneyWidget();
   },
-  refreshDebts: async () => set({ debts: await repo.listDebts() }),
+  refreshDebts: async () => {
+    const debts = await repo.listDebts();
+    set({ debts });
+    // Keeps due-date reminders in step with adds, payments and undo-restores.
+    for (const d of debts) scheduleDebtReminder(d);
+  },
   refreshSavings: async () => set({ savingsGoals: await repo.listSavingsGoals() }),
   refreshCategories: async () => set({ categories: await repo.listCategories() }),
   refreshBudgets: async () => set({ budgets: await repo.listBudgets() }),
@@ -233,6 +244,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   },
   removeDebt: async (id) => {
     await repo.deleteDebt(id);
+    await cancelDebtReminder(id);
     await get().refreshDebts();
   },
 

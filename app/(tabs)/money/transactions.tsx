@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -9,6 +9,8 @@ import { EmptyState } from '../../../src/ui/EmptyState';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { SegmentedControl } from '../../../src/ui/SegmentedControl';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
+import { TextField } from '../../../src/ui/TextField';
+import * as financeRepo from '../../../src/db/repositories/finance';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { useUndoStore } from '../../../src/store/undoStore';
@@ -24,16 +26,37 @@ export default function TransactionsScreen() {
   const [accountFilter, setAccountFilter] = useState<string>(ALL);
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Transaction[] | null>(null);
+
+  // Re-run when the list changes too, so edits/deletes show up in results.
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setSearchResults(null);
+      return;
+    }
+    let cancelled = false;
+    const id = setTimeout(() => {
+      financeRepo.searchTransactionsByNote(q).then((rows) => {
+        if (!cancelled) setSearchResults(rows);
+      });
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [query, transactions]);
 
   const filtered = useMemo(() => {
     const typeFilter = TYPE_FILTERS[typeIndex];
-    return transactions.filter(
+    return (searchResults ?? transactions).filter(
       (t) =>
         (typeFilter === 'all' || t.type === typeFilter) &&
         (accountFilter === ALL || t.account_id === accountFilter || t.transfer_to_account_id === accountFilter) &&
         (categoryFilter === ALL || t.category_id === categoryFilter)
     );
-  }, [transactions, typeIndex, accountFilter, categoryFilter]);
+  }, [transactions, searchResults, typeIndex, accountFilter, categoryFilter]);
 
   const withoutIdentity = (tx: Transaction) => {
     const { id, created_at, ...rest } = tx;
@@ -57,6 +80,7 @@ export default function TransactionsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="All Transactions" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 60 }}>
+        <TextField placeholder="Search notes" value={query} onChangeText={setQuery} autoCorrect={false} clearButtonMode="while-editing" />
         <View style={{ marginBottom: spacing.sm }}>
           <SegmentedControl options={['All', 'Expense', 'Income', 'Transfer']} selectedIndex={typeIndex} onChange={setTypeIndex} />
         </View>

@@ -19,6 +19,10 @@ const MOODS: { id: JournalMood; emoji: string; label: string }[] = [
   { id: 'rough', emoji: '😣', label: 'Rough' },
 ];
 
+const MOOD_SCORE: Record<JournalMood, number> = { great: 5, good: 4, okay: 3, low: 2, rough: 1 };
+const TREND_DAYS = 30;
+const TREND_HEIGHT = 56;
+
 export default function JournalScreen() {
   const { colors, typography, spacing, radius } = useTheme();
   const { journalEntries, setTodayMood } = useLifeStore();
@@ -39,6 +43,20 @@ export default function JournalScreen() {
   };
 
   const pastEntries = journalEntries.filter((e) => e.date !== todayKey());
+
+  const trend = useMemo(() => {
+    const byDate = new Map(journalEntries.map((e) => [e.date, e.mood]));
+    const now = new Date();
+    return Array.from({ length: TREND_DAYS }, (_, i) => {
+      const key = todayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (TREND_DAYS - 1 - i)));
+      return { key, mood: byDate.get(key) ?? null };
+    });
+  }, [journalEntries]);
+  const logged = trend.filter((d): d is { key: string; mood: JournalMood } => d.mood !== null);
+  const avgScore = logged.length ? logged.reduce((sum, d) => sum + MOOD_SCORE[d.mood], 0) / logged.length : null;
+  const avgMood = avgScore === null ? null : MOODS[5 - Math.round(avgScore)];
+  const moodColor = (m: JournalMood) =>
+    m === 'great' ? colors.green : m === 'good' ? colors.mint : m === 'okay' ? colors.yellow : m === 'low' ? colors.orange : colors.red;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -66,6 +84,33 @@ export default function JournalScreen() {
           <TextField placeholder="Anything on your mind? (optional)" value={note} onChangeText={setNote} multiline />
           <Button title="Save" onPress={handleSave} disabled={!mood} loading={saving} />
         </Card>
+
+        {logged.length >= 2 ? (
+          <Card style={{ marginBottom: spacing.lg }}>
+            <Text style={[typography.headline, { color: colors.label }]}>Last 30 days</Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
+              {logged.length} check-ins · on average {avgMood?.emoji} {avgMood?.label.toLowerCase()}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: TREND_HEIGHT }}>
+              {trend.map((d) => (
+                <View key={d.key} style={{ flex: 1, alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: '70%',
+                      borderRadius: 2,
+                      height: d.mood ? (MOOD_SCORE[d.mood] / 5) * TREND_HEIGHT : 3,
+                      backgroundColor: d.mood ? moodColor(d.mood) : colors.quaternaryFill,
+                    }}
+                  />
+                </View>
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs }}>
+              <Text style={[typography.caption2, { color: colors.tertiaryLabel }]}>{formatDateKey(trend[0].key)}</Text>
+              <Text style={[typography.caption2, { color: colors.tertiaryLabel }]}>Today</Text>
+            </View>
+          </Card>
+        ) : null}
 
         <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Past entries</Text>
         {pastEntries.length === 0 ? (

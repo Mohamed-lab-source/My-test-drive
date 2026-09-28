@@ -1,8 +1,9 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useSettingsStore } from '../store/settingsStore';
-import { findPrayerCity, getPrayerSchedule } from '../utils/prayerTimes';
-import type { Meeting, Occasion, RecurringRule, Task } from '../db/types';
+import { findPrayerCity, getPrayerSchedule, type PrayerCity } from '../utils/prayerTimes';
+import { todayKey } from '../db/client';
+import type { Debt, Meeting, Occasion, RecurringRule, Task } from '../db/types';
 import { listOccasions } from '../db/repositories/occasions';
 
 const CHANNEL_ID = 'anchor-reminders';
@@ -93,7 +94,12 @@ export async function cancelBillReminder(ruleId: string): Promise<void> {
 // Brings every pending reminder in line with current data — used when the
 // user turns reminders on (so items created while they were off get one) and
 // on app launch (so edits synced from another device are reflected).
-export async function rescheduleAllReminders(meetings: Meeting[], rules: RecurringRule[], tasks: Task[]): Promise<void> {
+export async function rescheduleAllReminders(
+  meetings: Meeting[],
+  rules: RecurringRule[],
+  tasks: Task[],
+  debts: Debt[] = []
+): Promise<void> {
   if (!(await areNotificationsEnabled())) {
     await Notifications.cancelAllScheduledNotificationsAsync();
     return;
@@ -101,6 +107,35 @@ export async function rescheduleAllReminders(meetings: Meeting[], rules: Recurri
   for (const m of meetings) await scheduleMeetingReminder(m);
   for (const r of rules) await scheduleBillReminder(r);
   for (const t of tasks) await scheduleTaskReminder(t);
+  for (const d of debts) await scheduleDebtReminder(d);
+}
+
+function debtReminderId(debtId: string): string {
+  return `debt-${debtId}`;
+}
+
+// 9 AM the day before the due date, or 9 AM on the day if that's already past.
+export async function scheduleDebtReminder(debt: Debt): Promise<void> {
+  await cancelDebtReminder(debt.id);
+  if (!debt.due_date || debt.status === 'paid') return;
+  const due = new Date(debt.due_date);
+  const at = (offsetDays: number) => new Date(due.getFullYear(), due.getMonth(), due.getDate() - offsetDays, 9).getTime();
+  const fireAt = at(1) > Date.now() ? at(1) : at(0);
+  if (fireAt <= Date.now()) return;
+  if (!(await areNotificationsEnabled())) return;
+  const tomorrow = fireAt === at(1);
+  await Notifications.scheduleNotificationAsync({
+    identifier: debtReminderId(debt.id),
+    content: {
+      title: debt.direction === 'i_owe' ? `Pay back ${debt.person_name}` : `${debt.person_name} owes you`,
+      body: `Due ${tomorrow ? 'tomorrow' : 'today'}`,
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireAt, channelId: CHANNEL_ID },
+  });
+}
+
+export async function cancelDebtReminder(debtId: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(debtReminderId(debtId)).catch(() => {});
 }
 
 function taskReminderId(taskId: string): string {
@@ -158,11 +193,13 @@ export async function reschedulePrayerAlerts(): Promise<void> {
       .filter((n) => n.identifier.startsWith(PRAYER_PREFIX))
       .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
   );
-  const { prayerAlerts, prayerCityId } = useSettingsStore.getState();
+  const { prayerAlerts, jumuahReminder, prayerCityId } = useSettingsStore.getState();
   const city = findPrayerCity(prayerCityId);
-  if (!prayerAlerts || !city || !(await areNotificationsEnabled())) return;
+  if (!city || !(await areNotificationsEnabled())) return;
 
   const now = new Date();
+  if (jumuahReminder) await scheduleJumuah(city, now);
+  if (!prayerAlerts) return;
   for (let i = 0; i < PRAYER_DAYS_AHEAD; i++) {
     const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     const schedule = getPrayerSchedule(city, day);
@@ -174,6 +211,25 @@ export async function reschedulePrayerAlerts(): Promise<void> {
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: time, channelId: CHANNEL_ID },
       });
     }
+  }
+}
+
+const JUMUAH_LEAD_MINUTES = 60;
+const JUMUAH_WEEKS_AHEAD = 2;
+
+// An hour before Dhuhr on the next couple of Fridays — covered by the same
+// prefix as the adhan alerts, so it rolls forward on every launch too.
+async function scheduleJumuah(city: PrayerCity, now: Date): Promise<void> {
+  const daysToFriday = (5 - now.getDay() + 7) % 7;
+  for (let w = 0; w < JUMUAH_WEEKS_AHEAD; w++) {
+    const friday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToFriday + w * 7);
+    const fireAt = getPrayerSchedule(city, friday).dhuhr.getTime() - JUMUAH_LEAD_MINUTES * 60000;
+    if (fireAt <= now.getTime()) continue;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${PRAYER_PREFIX}jumuah-${todayKey(friday)}`,
+      content: { title: "Jumu'ah today", body: 'Ghusl, Surat al-Kahf, and head to the masjid early' },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireAt, channelId: CHANNEL_ID },
+    });
   }
 }
 

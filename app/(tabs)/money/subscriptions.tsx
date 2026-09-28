@@ -13,6 +13,11 @@ import { formatMoney } from '../../../src/utils/money';
 import { formatRelativeDay, isOverdue } from '../../../src/utils/date';
 import { AddRecurringSheet } from '../../../src/features/money/AddRecurringSheet';
 import { showUndoDelete } from '../../../src/ui/undo';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import { convertToBase } from '../../../src/db/repositories/fx';
+import type { RecurringFrequency } from '../../../src/db/types';
+
+const PER_YEAR: Record<RecurringFrequency, number> = { daily: 365, weekly: 52, monthly: 12, yearly: 1 };
 
 export default function SubscriptionsScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -24,7 +29,9 @@ export default function SubscriptionsScreen() {
     setRecurringPaused,
     setRecurringAutoPost,
     refreshRecurring,
+    fxRates,
   } = useFinanceStore();
+  const currency = useSettingsStore((s) => s.currency);
   const [addVisible, setAddVisible] = useState(false);
 
   const handleDelete = async (rule: (typeof recurringRules)[number]) => {
@@ -32,9 +39,11 @@ export default function SubscriptionsScreen() {
     showUndoDelete('recurring_rules', rule, 'Recurring item deleted', refreshRecurring);
   };
 
-  const monthlyTotal = recurringRules
-    .filter((r) => r.type === 'expense' && r.frequency === 'monthly')
-    .reduce((sum, r) => sum + r.amount, 0);
+  // Every active expense, whatever its cycle, normalised to a yearly cost in
+  // the base currency.
+  const yearlyTotal = recurringRules
+    .filter((r) => r.type === 'expense' && r.is_active && !r.is_paused)
+    .reduce((sum, r) => sum + convertToBase(r.amount, r.currency, currency, fxRates) * PER_YEAR[r.frequency], 0);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -42,9 +51,12 @@ export default function SubscriptionsScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
         {recurringRules.length > 0 ? (
           <Card style={{ marginBottom: spacing.md }}>
-            <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Monthly recurring expenses</Text>
+            <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Recurring expenses per month</Text>
             <Text style={[typography.title1, { color: colors.label, marginTop: 4 }]}>
-              {formatMoney(monthlyTotal, recurringRules[0]?.currency ?? 'USD')}
+              {formatMoney(Math.round(yearlyTotal / 12), currency)}
+            </Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+              {formatMoney(Math.round(yearlyTotal), currency)} a year · paused items excluded
             </Text>
           </Card>
         ) : null}

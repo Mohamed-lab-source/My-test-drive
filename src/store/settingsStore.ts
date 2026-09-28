@@ -18,6 +18,10 @@ interface SettingsState {
   setPrayerAlerts: (v: boolean) => void;
   hijriOffset: number;
   setHijriOffset: (v: number) => void;
+  jumuahReminder: boolean;
+  setJumuahReminder: (v: boolean) => void;
+  gettingStartedDismissed: boolean;
+  setGettingStartedDismissed: (v: boolean) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -41,6 +45,10 @@ export const useSettingsStore = create<SettingsState>()(
       setPrayerAlerts: (v) => set({ prayerAlerts: v }),
       hijriOffset: 0,
       setHijriOffset: (v) => set({ hijriOffset: v }),
+      jumuahReminder: false,
+      setJumuahReminder: (v) => set({ jumuahReminder: v }),
+      gettingStartedDismissed: false,
+      setGettingStartedDismissed: (v) => set({ gettingStartedDismissed: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

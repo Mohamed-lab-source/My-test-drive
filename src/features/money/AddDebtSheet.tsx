@@ -3,6 +3,8 @@ import { View, Text, ScrollView } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
+import { ChipSelector } from '../../ui/ChipSelector';
+import { isoDaysFromNow } from '../../utils/projection';
 import { Button } from '../../ui/Button';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
@@ -11,6 +13,13 @@ import { toMinorUnits } from '../../utils/money';
 import type { DebtDirection } from '../../db/types';
 
 const DIRECTIONS: DebtDirection[] = ['i_owe', 'owed_to_me'];
+const DUE_OPTIONS = [
+  { id: 'none', label: 'No due date' },
+  { id: '7', label: '1 week' },
+  { id: '14', label: '2 weeks' },
+  { id: '30', label: '1 month' },
+  { id: '90', label: '3 months' },
+];
 
 export function AddDebtSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, typography, spacing } = useTheme();
@@ -21,6 +30,7 @@ export function AddDebtSheet({ visible, onClose }: { visible: boolean; onClose: 
   const [personName, setPersonName] = useState('');
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
+  const [due, setDue] = useState('none');
   const [saving, setSaving] = useState(false);
 
   const canSave = personName.trim().length > 0 && Number(amount) > 0;
@@ -34,13 +44,14 @@ export function AddDebtSheet({ visible, onClose }: { visible: boolean; onClose: 
         person_name: personName.trim(),
         principal_amount: toMinorUnits(Number(amount)),
         currency,
-        due_date: null,
+        due_date: due === 'none' ? null : isoDaysFromNow(Number(due)),
         notes: notes || null,
       });
       setPersonName('');
       setAmount('');
       setNotes('');
       setDirIndex(0);
+      setDue('none');
       onClose();
     } finally {
       setSaving(false);
@@ -56,6 +67,10 @@ export function AddDebtSheet({ visible, onClose }: { visible: boolean; onClose: 
         </View>
         <TextField label="Person" placeholder="Name" value={personName} onChangeText={setPersonName} />
         <TextField label="Amount" placeholder="0.00" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Due</Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector options={DUE_OPTIONS} selectedId={due} onSelect={setDue} />
+        </View>
         <TextField label="Notes" placeholder="Optional" value={notes} onChangeText={setNotes} />
         <Button title="Save" onPress={handleSave} disabled={!canSave} loading={saving} />
       </ScrollView>

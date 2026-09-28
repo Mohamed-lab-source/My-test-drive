@@ -41,6 +41,11 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Daily net-worth snapshots with a history chart, and a 30-day cash-flow forecast from recurring items
 - Default account for new transactions
 - Custom categories
+- Savings goal deadlines with a "save X/month" plan; debt due dates with a reminder the day before
+- Subscriptions total normalised across daily/weekly/monthly/yearly items, per month and per year
+- Tap a category in Analytics for its 6-month spending trend
+- Search the full transaction history by note
+- More currencies: KWD, QAR, BHD, OMR, JOD, INR, PKR, MYR, IDR
 
 **Tasks**
 - Today / Backlog / All views, with unfinished "Today" tasks rolling into Backlog automatically
@@ -54,6 +59,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Natural-language quick add: `Call mom tomorrow !high #family` (today/tomorrow/weekday/next week/someday, !high/!low, #project)
 - Task reminders (in 1 hour / this evening / tomorrow 9 AM)
 - Tap a meeting to edit it, with a configurable reminder lead time and notes
+- Filter tasks by project; subtask progress (e.g. 2/5) on each task row
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -67,9 +73,14 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Hijri date on Home (Umm al-Qura via Intl when available, arithmetic fallback, ±2 day adjustment)
 - Fasting tracker (Ramadan / voluntary / make-up) with a 5-week heatmap and 12-month totals
 - Occasions — birthdays and anniversaries sorted by how soon they are, with a yearly reminder on the day
+- Prayer times screen — today's times with sunrise and the last third of the night, a 7-day timetable, and the Qibla bearing
+- Jumu'ah reminder on Fridays, an hour before Dhuhr
+- 30-day mood trend in the journal
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
+- Getting started checklist for new accounts (dismissible)
+- Suhoor / iftar countdown during Ramadan
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood
@@ -113,7 +124,7 @@ app/(tabs)/           expo-router screens (tabs: Home, Money, Tasks, Life, Setti
 src/auth/             AuthProvider + swappable AuthBackend (Firebase Authentication)
 src/db/               SQLite schema, client, repositories, backup/restore
 src/sync/             Firestore cloud sync layer (users/{uid}/{table}/{id})
-src/notifications/    local notification scheduling (meeting + bill-due reminders)
+src/notifications/    local notification scheduling (meetings, bills, debts, tasks, prayers, occasions)
 src/store/            zustand stores (finance, productivity, life, habits, settings)
 src/theme/            colors, typography, spacing, ThemeProvider
 src/ui/               reusable design-system components

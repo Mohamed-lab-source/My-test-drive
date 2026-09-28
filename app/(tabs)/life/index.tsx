@@ -64,7 +64,7 @@ export default function LifeScreen() {
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <LifeLink icon="moon.fill" label="Fasting" color={colors.purple} onPress={() => router.push('/life/fasting')} />
           <LifeLink icon="gift.fill" label="Occasions" color={colors.pink} onPress={() => router.push('/life/occasions')} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <LifeLink icon="safari.fill" label="Prayer times" color={colors.teal} onPress={() => router.push('/life/prayer-times')} />
           <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 

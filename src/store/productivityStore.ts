@@ -15,8 +15,10 @@ interface ProductivityState {
   projects: Project[];
   tasks: Task[];
   meetings: Meeting[];
+  subtaskCounts: repo.SubtaskCounts;
 
   hydrate: () => Promise<void>;
+  refreshSubtaskCounts: () => Promise<void>;
   refreshTasks: () => Promise<void>;
   refreshProjects: () => Promise<void>;
   refreshMeetings: () => Promise<void>;
@@ -45,16 +47,19 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
   projects: [],
   tasks: [],
   meetings: [],
+  subtaskCounts: {},
 
   hydrate: async () => {
     await repo.rolloverStaleTasks(todayKey());
-    const [projects, tasks, meetings] = await Promise.all([
+    const [projects, tasks, meetings, subtaskCounts] = await Promise.all([
       repo.listProjects(),
       repo.listTasks(),
       repo.listMeetings(),
+      repo.getSubtaskCounts(),
     ]);
-    set({ projects, tasks, meetings, loaded: true });
+    set({ projects, tasks, meetings, subtaskCounts, loaded: true });
   },
+  refreshSubtaskCounts: async () => set({ subtaskCounts: await repo.getSubtaskCounts() }),
   refreshTasks: async () => {
     set({ tasks: await repo.listTasks() });
     refreshTasksWidget();

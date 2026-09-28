@@ -11,7 +11,7 @@ import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { Button } from '../../../src/ui/Button';
 import { formatMoney } from '../../../src/utils/money';
 import { formatDateShort } from '../../../src/utils/date';
-import { estimatePaceCompletionDate } from '../../../src/utils/projection';
+import { estimatePaceCompletionDate, monthlyAmountNeeded } from '../../../src/utils/projection';
 import { AddSavingsGoalSheet } from '../../../src/features/money/AddSavingsGoalSheet';
 import { AmountPromptSheet } from '../../../src/features/money/AmountPromptSheet';
 import { showUndoDelete } from '../../../src/ui/undo';
@@ -29,6 +29,7 @@ function SavingsGoalCard({ goal, onContribute, onDelete }: { goal: SavingsGoal; 
   }, [goal.id, goal.current_amount, goal.target_amount]);
 
   const progress = goal.target_amount > 0 ? goal.current_amount / goal.target_amount : 0;
+  const perMonth = goal.target_date ? monthlyAmountNeeded(goal.target_amount - goal.current_amount, goal.target_date) : null;
 
   return (
     <SwipeableRow actions={[{ label: 'Delete', color: colors.red, onPress: onDelete }]}>
@@ -48,6 +49,18 @@ function SavingsGoalCard({ goal, onContribute, onDelete }: { goal: SavingsGoal; 
         {completionDate ? (
           <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.xs }]}>
             At this pace, done around {formatDateShort(completionDate)}
+          </Text>
+        ) : null}
+        {goal.target_date && !goal.is_completed ? (
+          <Text
+            style={[
+              typography.caption1,
+              { color: perMonth === null ? colors.red : colors.blue, marginTop: 2, fontWeight: '600' },
+            ]}
+          >
+            {perMonth === null
+              ? `Target date ${formatDateShort(goal.target_date)} has passed`
+              : `Save ${formatMoney(perMonth, goal.currency)}/month to reach it by ${formatDateShort(goal.target_date)}`}
           </Text>
         ) : null}
         <Button
