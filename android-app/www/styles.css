@@ -661,3 +661,7 @@ body {
   .boot-row, .boot-done { animation: none; }
   .msg.typing::after { animation: none; }
 }
+
+/* ---- 2.5: planner life cards ---- */
+.life-head { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: 0.5px; padding-bottom: 6px; }
+#telFocus { color: var(--accent); }

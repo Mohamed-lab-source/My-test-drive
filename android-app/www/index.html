@@ -39,6 +39,8 @@
         <span id="telNet">LINK --</span>
         <span class="sep tel-mode" hidden>//</span>
         <span class="tel-mode warn" hidden>MUTED</span>
+        <span class="sep" id="telFocusSep" hidden>//</span>
+        <span id="telFocus" hidden>FOCUS</span>
       </div>
       <div class="hud-widgets" id="hudWidgets" hidden></div>
     </div>
@@ -118,6 +120,18 @@
       <div class="card">
         <h3>⚙️ Protocols</h3>
         <div id="protocolsList" class="memory-list"></div>
+      </div>
+      <div class="card">
+        <h3>💰 Spending</h3>
+        <div id="spendingList"></div>
+      </div>
+      <div class="card">
+        <h3>🔥 Habits</h3>
+        <div id="habitsList"></div>
+      </div>
+      <div class="card">
+        <h3>🎂 Important Dates</h3>
+        <div id="datesList"></div>
       </div>
       <div class="card">
         <h3>🛰️ Activity Log</h3>
@@ -274,6 +288,22 @@
       </div>
 
       <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Prayer time notifications</b>
+            <div class="hint" style="margin-top:2px;">A notification at each prayer (Egyptian General Authority of Survey times), for your home location, or where you are if no home is set.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="prayerAlertsToggle" /><span class="toggle-track"></span></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label>My currency</label>
+        <input type="text" id="currencyInput" placeholder="EGP" maxlength="3" style="text-transform:uppercase;" />
+        <div class="hint">Used when you log spending without naming a currency.</div>
+      </div>
+
+      <div class="field">
         <label>Emergency protocol</label>
         <input type="text" id="emergencyNameInput" placeholder="Contact name (e.g. Mum)" />
         <input type="tel" id="emergencyNumberInput" placeholder="Their phone number" style="margin-top:8px;" />
@@ -363,7 +393,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.4 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v2.5 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -373,7 +403,7 @@
 
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.4</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v2.5</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
@@ -381,5 +411,6 @@
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="presence.js"></script>
+<script src="extras.js"></script>
 </body>
 </html>

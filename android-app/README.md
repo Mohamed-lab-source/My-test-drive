@@ -206,6 +206,21 @@ Settings → **"Hey Jarvis"** → switch on **Listen for "Hey Jarvis"**. Then sa
 
 Microphone reliability: if the recognizer reports it's busy (common just after speech), Jarvis now retries once. A stalled Groq or ElevenLabs request times out instead of leaving him deaf to taps, and tapping the core while he's thinking says so.
 
+### 2.5 — ten more abilities
+
+| | Try saying |
+|---|---|
+| Interpreter | "Be my interpreter with this waiter" (Arabic ⇄ English, or French, Turkish, and more). Each side speaks in turn; say "stop" to end. |
+| Prayer times | "When is Maghrib?" Egyptian General Authority method. Settings → Prayer time notifications for an alert at each prayer. |
+| Spending | "I spent 200 pounds on lunch", "How much did I spend this week?", "Delete that last expense". Planner → Spending. |
+| Habits | "I went to the gym", "How's my gym streak?" Tick habits off in Planner → Habits. |
+| Important dates | "Omi's birthday is March 14th": a reminder the evening before and the morning of, every year. |
+| Goodnight / Good morning | "Goodnight, Jarvis, alarm at 7": Do Not Disturb, torch off, volume down, alarm, and tomorrow's rundown. "Good morning" reverses it and briefs you. |
+| Focus mode | "Focus for 45 minutes on the report": Do Not Disturb plus a countdown in the HUD, and a debrief when time's up. |
+| Saved spots | "Remember where I parked", later "Take me to my car". |
+| Read a link | Copy a link, then "Summarise this article". |
+| Find my phone | "Hey Jarvis, where are you?": full-volume chime and flashing torch. Tap the core to stop. Works offline. |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

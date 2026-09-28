@@ -1985,6 +1985,13 @@ async function stopSpeaking() {
 
 async function ask(text, { spoken = false } = {}) {
   if (busy) return null;
+  const quick = typeof fastCommand === "function" ? await fastCommand(text) : null;
+  if (quick) {
+    addMsg("user", text);
+    addMsg("assistant", quick);
+    if (spoken) await speakWithHud(quick);
+    return quick;
+  }
   if (!(await isOnline())) {
     const local = typeof tryLocalCommand === "function" ? await tryLocalCommand(text) : null;
     if (local) {
@@ -2372,6 +2379,7 @@ async function boot() {
   await safely("deep links", wireDeepLinks);
   await safely("voices", populateVoices);
   await safely("presence", initPresence);
+  await safely("extras", initExtras);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();
