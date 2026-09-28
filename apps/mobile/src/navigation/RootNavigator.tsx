@@ -10,6 +10,7 @@ import { FeatureTourScreen } from "../screens/FeatureTourScreen";
 import { RecipeListScreen } from "../screens/RecipeListScreen";
 import { RecipeDetailScreen } from "../screens/RecipeDetailScreen";
 import { ShoppingListScreen } from "../screens/ShoppingListScreen";
+import { ShoppingListDetailScreen } from "../screens/ShoppingListDetailScreen";
 import { CookModeScreen } from "../screens/CookModeScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
@@ -76,6 +77,11 @@ export function RootNavigator() {
         <Stack.Screen name="RecipeList" component={RecipeListScreen} options={{ title: t("recipeList.title") }} />
         <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: "" }} />
         <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: t("shoppingList.title") }} />
+        <Stack.Screen
+          name="ShoppingListDetail"
+          component={ShoppingListDetailScreen}
+          options={{ title: t("shoppingList.title") }}
+        />
         <Stack.Screen
           name="CookMode"
           component={CookModeScreen}

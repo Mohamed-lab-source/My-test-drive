@@ -21,6 +21,7 @@ export type RootStackParamList = {
     lightOnly?: boolean;
   };
   RecipeDetail: { slug: string };
+  ShoppingListDetail: { id: string };
   ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
   CookMode: {
     slug: string;

@@ -137,6 +137,17 @@ export type ShoppingListResult = {
   deliveryPartners: DeliveryPartner[];
 };
 
+export type ShoppingListDetail = {
+  id: string;
+  servings: number;
+  budget: number | null;
+  totalEstimatedCost: number;
+  withinBudget: boolean;
+  createdAt: string;
+  recipe: { slug: string; title: string; heroImageUrl: string };
+  items: { id: string; ingredientName: string; quantity: number; unit: string; estimatedCost: number }[];
+};
+
 export type NearbyStores = {
   mapsSearchUrl: string;
   deliveryPartners: DeliveryPartner[];

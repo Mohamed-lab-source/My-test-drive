@@ -203,3 +203,8 @@ authRouter.put("/me/password", requireAuth, async (req, res) => {
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
   res.json({ ok: true });
 });
+
+authRouter.delete("/me", requireAuth, async (req, res) => {
+  await prisma.user.delete({ where: { id: req.userId! } });
+  res.json({ ok: true });
+});

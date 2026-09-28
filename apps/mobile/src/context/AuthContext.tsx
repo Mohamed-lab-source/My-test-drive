@@ -1,7 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setAuthToken } from "../api/client";
-import { fetchMe, googleSignIn, login as apiLogin, signup as apiSignup, updatePreferences } from "../api/endpoints";
+import {
+  deleteAccount as apiDeleteAccount,
+  fetchMe,
+  googleSignIn,
+  login as apiLogin,
+  signup as apiSignup,
+  updatePreferences,
+} from "../api/endpoints";
 import type { Allergen, DietGoal, Preference, User } from "../api/types";
 
 const TOKEN_KEY = "cookmate.token";
@@ -14,6 +21,7 @@ type AuthContextValue = {
   signup: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   savePreferences: (patch: {
     dietGoal?: DietGoal;
     favoriteCuisineSlugs?: string[];
@@ -72,6 +80,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    await apiDeleteAccount();
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    setAuthToken(null);
+    setUser(null);
+  }, []);
+
   const savePreferences = useCallback(
     async (patch: { dietGoal?: DietGoal; favoriteCuisineSlugs?: string[]; allergies?: Allergen[] }) => {
       const preference = await updatePreferences(patch);
@@ -90,9 +105,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signup,
       loginWithGoogle,
       logout,
+      deleteAccount,
       savePreferences,
     }),
-    [user, isBootstrapping, login, signup, loginWithGoogle, logout, savePreferences]
+    [user, isBootstrapping, login, signup, loginWithGoogle, logout, deleteAccount, savePreferences]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

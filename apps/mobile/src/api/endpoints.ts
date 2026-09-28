@@ -5,6 +5,7 @@ import type {
   DietGoal,
   MyRating,
   NearbyStores,
+  ShoppingListDetail,
   PantryIngredient,
   PantryMatch,
   Preference,
@@ -49,6 +50,10 @@ export async function updatePreferences(patch: Partial<Preference> & { dietGoal?
 
 export async function changePassword(currentPassword: string, newPassword: string) {
   await api.put("/auth/me/password", { currentPassword, newPassword });
+}
+
+export async function deleteAccount() {
+  await api.delete("/auth/me");
 }
 
 export async function fetchCuisines() {
@@ -104,6 +109,11 @@ export async function fetchShoppingListHistory() {
   const { data } = await api.get<
     { id: string; servings: number; totalEstimatedCost: number; withinBudget: boolean; createdAt: string; recipe: { slug: string; title: string; heroImageUrl: string } }[]
   >("/shopping-lists");
+  return data;
+}
+
+export async function fetchShoppingListDetail(id: string) {
+  const { data } = await api.get<ShoppingListDetail>(`/shopping-lists/${id}`);
   return data;
 }
 

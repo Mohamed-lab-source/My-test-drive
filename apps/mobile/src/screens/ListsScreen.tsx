@@ -127,7 +127,11 @@ export function ListsScreen({ navigation }: Props) {
         ListEmptyComponent={!loading ? <Text style={styles.emptySubtitle}>{t("lists.empty")}</Text> : null}
         renderItem={({ item, index }) => (
           <FadeSlideIn index={index}>
-            <View style={styles.row}>
+            <AnimatedPressable
+              style={styles.row}
+              pressScale={0.98}
+              onPress={() => navigation.navigate("ShoppingListDetail", { id: item.id })}
+            >
               <View style={styles.thumb}>
                 <Text style={styles.thumbEmoji}>🍽️</Text>
               </View>
@@ -143,7 +147,7 @@ export function ListsScreen({ navigation }: Props) {
                   { backgroundColor: item.withinBudget ? colors.success : colors.danger },
                 ]}
               />
-            </View>
+            </AnimatedPressable>
           </FadeSlideIn>
         )}
       />

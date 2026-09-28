@@ -27,7 +27,7 @@ type Props = CompositeScreenProps<
 >;
 
 export function ProfileScreen({ navigation }: Props) {
-  const { user, isAuthenticated, logout, savePreferences } = useAuth();
+  const { user, isAuthenticated, logout, deleteAccount, savePreferences } = useAuth();
   const { t, locale, setLocale } = useLocale();
   const { colors, preference: themePreference, setPreference: setThemePreference, accent, setAccent } = useTheme();
   const { unitSystem, setUnitSystem } = useUnits();
@@ -188,6 +188,23 @@ export function ProfileScreen({ navigation }: Props) {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(t("profile.deleteAccountConfirmTitle"), t("profile.deleteAccountConfirmMessage"), [
+      { text: t("home.cancel"), style: "cancel" },
+      {
+        text: t("profile.deleteAccountConfirmButton"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteAccount();
+          } catch (error) {
+            Alert.alert(t("profile.errorSave"), apiErrorMessage(error));
+          }
+        },
+      },
+    ]);
+  };
+
   const toggleCuisine = async (slug: string) => {
     const next = favoriteCuisineSlugs.includes(slug)
       ? favoriteCuisineSlugs.filter((s) => s !== slug)
@@ -327,6 +344,9 @@ export function ProfileScreen({ navigation }: Props) {
 
         <View style={styles.logoutButton}>
           <PrimaryButton label={t("profile.logout")} variant="outline" onPress={logout} />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton label={t("profile.deleteAccount")} variant="outline" onPress={handleDeleteAccount} />
         </View>
       </ScrollView>
     </SafeAreaView>
