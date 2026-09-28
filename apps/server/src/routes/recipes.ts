@@ -124,6 +124,7 @@ export function localizeSummary(r: any, lang: Lang) {
     avgRating,
     ratingCount,
     costPerServing: estimateCostPerServing(r.ingredients, r.baseServings),
+    ingredientCount: r.ingredients.length,
     allergens: collectAllergens(r.ingredients),
     ...estimateNutritionSummary(r.ingredients, r.baseServings),
     cuisine: {
@@ -332,6 +333,31 @@ recipesRouter.get("/recipes/random", async (req, res) => {
   res.json({ slug: pick.slug });
 });
 
+/** Recipes with the most rating activity in the last 7 days, most-rated first. */
+recipesRouter.get("/recipes/trending", async (req, res) => {
+  const lang = parseLang(req.query.lang);
+  const since = new Date();
+  since.setDate(since.getDate() - 7);
+  const grouped = await prisma.rating.groupBy({
+    by: ["recipeId"],
+    where: { createdAt: { gte: since } },
+    _count: { recipeId: true },
+    orderBy: { _count: { recipeId: "desc" } },
+    take: 10,
+  });
+  if (grouped.length === 0) {
+    res.json([]);
+    return;
+  }
+  const recipes = await prisma.recipe.findMany({
+    where: { id: { in: grouped.map((g) => g.recipeId) } },
+    select: recipeSummarySelect(),
+  });
+  const byId = new Map(recipes.map((r) => [r.id, r]));
+  const ordered = grouped.map((g) => byId.get(g.recipeId)).filter((r): r is (typeof recipes)[number] => Boolean(r));
+  res.json(ordered.map((r) => localizeSummary(r, lang)));
+});
+
 recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   const lang = parseLang(req.query.lang);
   const goal = parseGoalSubstituteGoal(req.query.goal);
@@ -357,6 +383,10 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   const avgRating =
     ratingCount > 0 ? Math.round((recipe.ratings.reduce((sum, r) => sum + r.score, 0) / ratingCount) * 10) / 10 : null;
   const myRating = req.userId ? recipe.ratings.find((r) => r.userId === req.userId)?.score ?? null : null;
+  const ratingBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<1 | 2 | 3 | 4 | 5, number>;
+  for (const r of recipe.ratings) {
+    if (r.score >= 1 && r.score <= 5) ratingBreakdown[r.score as 1 | 2 | 3 | 4 | 5] += 1;
+  }
   const reviews = recipe.ratings
     .filter((r) => r.comment && r.comment.trim().length > 0)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
@@ -402,6 +432,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     tags: recipe.tags,
     avgRating,
     ratingCount,
+    ratingBreakdown,
     myRating,
     reviews,
     nutritionPerServing,

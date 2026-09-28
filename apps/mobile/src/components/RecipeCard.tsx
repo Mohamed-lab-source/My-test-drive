@@ -39,6 +39,7 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
             pressScale={0.85}
             haptic
             onPress={() => toggleFavorite(recipe)}
+            accessibilityLabel={t(favorited ? "recipeCard.removeFavorite" : "recipeCard.addFavorite")}
           >
             <Text style={styles.favoriteIcon}>{favorited ? "❤️" : "🤍"}</Text>
           </AnimatedPressable>

@@ -2,8 +2,26 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { requireAuth } from "../middleware/auth";
+import { localizeSummary, parseLang, recipeSummarySelect } from "./recipes";
 
 export const ratingsRouter = Router();
+
+ratingsRouter.get("/ratings/mine", requireAuth, async (req, res) => {
+  const lang = parseLang(req.query.lang);
+  const ratings = await prisma.rating.findMany({
+    where: { userId: req.userId! },
+    orderBy: { updatedAt: "desc" },
+    select: { score: true, comment: true, updatedAt: true, recipe: { select: recipeSummarySelect() } },
+  });
+  res.json(
+    ratings.map((r) => ({
+      score: r.score,
+      comment: r.comment,
+      ratedAt: r.updatedAt,
+      recipe: localizeSummary(r.recipe, lang),
+    }))
+  );
+});
 
 const rateSchema = z.object({
   score: z.number().int().min(1).max(5),

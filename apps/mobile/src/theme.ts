@@ -40,6 +40,32 @@ export const darkColors: ThemeColors = {
   chipBackground: "#2C241E",
 };
 
+export type AccentKey = "orange" | "green" | "blue" | "rose";
+
+/** Accent presets swap `primary`/`primaryDark` only -- every other token stays
+ * the same, so switching accents never breaks contrast against surfaces. */
+export const ACCENT_PRESETS: Record<
+  AccentKey,
+  { light: { primary: string; primaryDark: string }; dark: { primary: string; primaryDark: string } }
+> = {
+  orange: {
+    light: { primary: "#E8632C", primaryDark: "#C74E1D" },
+    dark: { primary: "#F2814A", primaryDark: "#FFA36E" },
+  },
+  green: {
+    light: { primary: "#2F8F5B", primaryDark: "#1F6E44" },
+    dark: { primary: "#4CB37A", primaryDark: "#7ED6A5" },
+  },
+  blue: {
+    light: { primary: "#2F6FE0", primaryDark: "#1E52B0" },
+    dark: { primary: "#5C96F5", primaryDark: "#8FB9FA" },
+  },
+  rose: {
+    light: { primary: "#D6437A", primaryDark: "#B02D60" },
+    dark: { primary: "#F06B9C", primaryDark: "#FF9BC0" },
+  },
+};
+
 export const spacing = (n: number) => n * 8;
 
 export const radius = {

@@ -29,17 +29,22 @@ export type RootStackParamList = {
     steps: RecipeStep[];
     ingredients: RecipeIngredient[];
     servings: number;
+    myRating?: number | null;
   };
   Login: undefined;
   Signup: undefined;
   Glossary: undefined;
   Notes: undefined;
+  MyReviews: undefined;
   Search: undefined;
   MealPlanner: undefined;
+  CookingCalendar: undefined;
   PantryFinder: undefined;
+  SubstitutionFinder: undefined;
   CustomizeHome: undefined;
   CookingStats: undefined;
   LeanMuscleMode: undefined;
+  WhatsNew: undefined;
 };
 
 declare global {

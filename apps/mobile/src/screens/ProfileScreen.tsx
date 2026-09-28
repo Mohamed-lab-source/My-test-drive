@@ -15,7 +15,8 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
-import { spacing, type ThemeColors } from "../theme";
+import { useTextSize } from "../context/TextSizeContext";
+import { ACCENT_PRESETS, spacing, type AccentKey, type ThemeColors } from "../theme";
 import { ALL_ALLERGENS } from "../utils/allergens";
 import type { TranslationKey } from "../i18n/translations";
 import type { Allergen, Cuisine, DietGoal } from "../api/types";
@@ -28,8 +29,9 @@ type Props = CompositeScreenProps<
 export function ProfileScreen({ navigation }: Props) {
   const { user, isAuthenticated, logout, savePreferences } = useAuth();
   const { t, locale, setLocale } = useLocale();
-  const { colors, preference: themePreference, setPreference: setThemePreference } = useTheme();
+  const { colors, preference: themePreference, setPreference: setThemePreference, accent, setAccent } = useTheme();
   const { unitSystem, setUnitSystem } = useUnits();
+  const { textSize, setTextSize } = useTextSize();
   const { displayStreak, longestStreak, totalCooked } = useCookStreak();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
@@ -61,10 +63,39 @@ export function ProfileScreen({ navigation }: Props) {
     </View>
   );
 
+  const accentSwitcher = (
+    <View style={styles.accentRow}>
+      {(Object.keys(ACCENT_PRESETS) as AccentKey[]).map((key) => (
+        <AnimatedPressable
+          key={key}
+          style={[
+            styles.accentSwatch,
+            { backgroundColor: ACCENT_PRESETS[key].light.primary },
+            accent === key && styles.accentSwatchSelected,
+          ]}
+          pressScale={0.9}
+          onPress={() => setAccent(key)}
+          accessibilityRole="button"
+          accessibilityLabel={t(`profile.accent.${key}` as TranslationKey)}
+        >
+          {accent === key ? <Text style={styles.accentCheck}>✓</Text> : null}
+        </AnimatedPressable>
+      ))}
+    </View>
+  );
+
   const unitsSwitcher = (
     <View style={styles.chipRow}>
       <Chip label={t("profile.unitsMetric")} selected={unitSystem === "metric"} onPress={() => setUnitSystem("metric")} />
       <Chip label={t("profile.unitsImperial")} selected={unitSystem === "imperial"} onPress={() => setUnitSystem("imperial")} />
+    </View>
+  );
+
+  const textSizeSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.textSizeSmall")} selected={textSize === "small"} onPress={() => setTextSize("small")} />
+      <Chip label={t("profile.textSizeMedium")} selected={textSize === "medium"} onPress={() => setTextSize("medium")} />
+      <Chip label={t("profile.textSizeLarge")} selected={textSize === "large"} onPress={() => setTextSize("large")} />
     </View>
   );
 
@@ -91,10 +122,14 @@ export function ProfileScreen({ navigation }: Props) {
           </View>
           <Text style={[styles.section, styles.languageSection]}>{t("profile.appearance")}</Text>
           {themeSwitcher}
+          <Text style={styles.section}>{t("profile.accentColor")}</Text>
+          {accentSwitcher}
           <Text style={styles.section}>{t("profile.language")}</Text>
           {languageSwitcher}
           <Text style={styles.section}>{t("profile.units")}</Text>
           {unitsSwitcher}
+          <Text style={styles.section}>{t("profile.textSize")}</Text>
+          {textSizeSwitcher}
           <View style={styles.buttonSpacing}>
             <PrimaryButton
               label={t("glossary.title")}
@@ -104,6 +139,20 @@ export function ProfileScreen({ navigation }: Props) {
           </View>
           <View style={styles.buttonSpacing}>
             <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
+          </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("myReviews.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("MyReviews")}
+            />
+          </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("whatsNew.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("WhatsNew")}
+            />
           </View>
           <View style={styles.buttonSpacing}>
             <PrimaryButton
@@ -216,12 +265,17 @@ export function ProfileScreen({ navigation }: Props) {
 
         <Text style={styles.section}>{t("profile.appearance")}</Text>
         {themeSwitcher}
+        <Text style={styles.section}>{t("profile.accentColor")}</Text>
+        {accentSwitcher}
 
         <Text style={styles.section}>{t("profile.language")}</Text>
         {languageSwitcher}
 
         <Text style={styles.section}>{t("profile.units")}</Text>
         {unitsSwitcher}
+
+        <Text style={styles.section}>{t("profile.textSize")}</Text>
+        {textSizeSwitcher}
 
         <View style={styles.buttonSpacing}>
           <PrimaryButton
@@ -232,6 +286,20 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
         <View style={styles.buttonSpacing}>
           <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("myReviews.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("MyReviews")}
+          />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("whatsNew.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("WhatsNew")}
+          />
         </View>
         <View style={styles.buttonSpacing}>
           <PrimaryButton
@@ -300,6 +368,18 @@ const createStyles = (colors: ThemeColors) =>
     section: { fontSize: 15, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
     languageSection: { marginTop: spacing(4) },
     chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
+    accentRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1.5) },
+    accentSwatch: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "transparent",
+    },
+    accentSwatchSelected: { borderColor: colors.text },
+    accentCheck: { color: "#fff", fontWeight: "800", fontSize: 15 },
     saving: { color: colors.textMuted, fontSize: 12, marginTop: spacing(1) },
     logoutButton: { marginTop: spacing(5) },
     loggedOut: { flexGrow: 1, padding: spacing(3), justifyContent: "center" },

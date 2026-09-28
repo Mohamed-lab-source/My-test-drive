@@ -46,6 +46,7 @@ export type RecipeSummary = {
   avgRating: number | null;
   ratingCount: number;
   costPerServing: number;
+  ingredientCount: number;
   allergens: Allergen[];
   caloriesPerServing: number;
   proteinPerServing: number;
@@ -84,11 +85,14 @@ export type Review = {
   comment: string;
 };
 
+export type RatingBreakdown = { 1: number; 2: number; 3: number; 4: number; 5: number };
+
 export type RecipeDetail = RecipeSummary & {
   ingredients: RecipeIngredient[];
   steps: RecipeStep[];
   nutritionPerServing: NutritionPerServing;
   myRating: number | null;
+  ratingBreakdown: RatingBreakdown;
   adaptedForGoal: DietGoal | null;
   reviews: Review[];
 };
@@ -97,6 +101,13 @@ export type RatingResult = {
   myScore: number;
   average: number;
   count: number;
+};
+
+export type MyRating = {
+  score: number;
+  comment: string | null;
+  ratedAt: string;
+  recipe: RecipeSummary;
 };
 
 export type ShoppingListItem = {
@@ -135,6 +146,7 @@ export type PantryIngredient = {
   id: string;
   name: string;
   category: string;
+  substitute: string | null;
 };
 
 export type PantryMatch = RecipeSummary & {

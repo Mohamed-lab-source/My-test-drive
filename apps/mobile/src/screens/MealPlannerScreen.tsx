@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -31,6 +32,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { useAuth } from "../context/AuthContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
+import { usePantryCheck } from "../context/PantryCheckContext";
 import { useUnits } from "../context/UnitsContext";
 import { formatQuantity } from "../utils/units";
 import { rankRecipes } from "../utils/rank";
@@ -45,6 +47,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "MealPlanner">;
 
 const DAYS_AHEAD = 7;
 const DEBOUNCE_MS = 350;
+const BUDGET_CAP_KEY = "cookmate.weeklyBudgetCap";
 
 function dateKeyFor(offset: number): string {
   const d = new Date();
@@ -72,23 +75,44 @@ export function MealPlannerScreen({ navigation }: Props) {
   const [autoFilling, setAutoFilling] = useState(false);
   const [aggregated, setAggregated] = useState<AggregatedItem[] | null>(null);
   const [totalCost, setTotalCost] = useState(0);
-  const [haveAlready, setHaveAlready] = useState<Set<string>>(new Set());
-
-  const toggleHaveAlready = (key: string) => {
-    setHaveAlready((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
+  const { isChecked: isHaveAlready, toggle: toggleHaveAlready } = usePantryCheck();
   const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
   const [mapsUrl, setMapsUrl] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [budgetCap, setBudgetCapState] = useState<number | null>(null);
+  const [budgetCapInput, setBudgetCapInput] = useState("");
 
   useEffect(() => {
     fetchDeliveryPartners().then(setDeliveryPartners).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    AsyncStorage.getItem(BUDGET_CAP_KEY)
+      .then((stored) => {
+        if (!stored) return;
+        const n = Number(stored);
+        if (!Number.isNaN(n) && n > 0) {
+          setBudgetCapState(n);
+          setBudgetCapInput(String(n));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const updateBudgetCap = (text: string) => {
+    setBudgetCapInput(text);
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setBudgetCapState(null);
+      AsyncStorage.removeItem(BUDGET_CAP_KEY).catch(() => {});
+      return;
+    }
+    const n = Number(trimmed);
+    if (!Number.isNaN(n) && n > 0) {
+      setBudgetCapState(n);
+      AsyncStorage.setItem(BUDGET_CAP_KEY, String(n)).catch(() => {});
+    }
+  };
 
   const handleShareList = async () => {
     if (!aggregated) return;
@@ -105,6 +129,34 @@ export function MealPlannerScreen({ navigation }: Props) {
     } catch {
       // User cancelled or share failed silently; nothing to recover.
     }
+  };
+
+  const shareWeek = async () => {
+    const lines = visibleDateKeys.map((dateKey, offset) => {
+      const recipe = plan[dateKey];
+      return `${weekdayLabel(offset, dateKey)}: ${recipe ? recipe.title : t("mealPlanner.shareWeekEmptyDay")}`;
+    });
+    const message = [t("mealPlanner.shareWeekTitle"), "", ...lines].join("\n");
+    try {
+      await Share.share({ message });
+    } catch {
+      // User cancelled or share failed silently; nothing to recover.
+    }
+  };
+
+  const repeatLastWeek = () => {
+    let applied = 0;
+    visibleDateKeys.forEach((dateKey) => {
+      if (plan[dateKey]) return;
+      const d = new Date(dateKey + "T00:00:00");
+      d.setDate(d.getDate() - 7);
+      const lastWeekRecipe = plan[d.toISOString().slice(0, 10)];
+      if (lastWeekRecipe) {
+        setPlan(dateKey, lastWeekRecipe);
+        applied += 1;
+      }
+    });
+    if (applied === 0) Alert.alert(t("mealPlanner.repeatLastWeekError"));
   };
 
   const findNearbyStores = async () => {
@@ -228,7 +280,6 @@ export function MealPlannerScreen({ navigation }: Props) {
       }
       setAggregated(Array.from(totals.values()).sort((a, b) => a.name.localeCompare(b.name)));
       setTotalCost(Math.round(cost * 100) / 100);
-      setHaveAlready(new Set());
     } finally {
       setGenerating(false);
     }
@@ -249,6 +300,11 @@ export function MealPlannerScreen({ navigation }: Props) {
             />
           </View>
         ) : null}
+        {visibleDateKeys.some((dateKey) => !plan[dateKey]) ? (
+          <View style={styles.autoFillButton}>
+            <PrimaryButton label={t("mealPlanner.repeatLastWeek")} variant="outline" onPress={repeatLastWeek} />
+          </View>
+        ) : null}
         <View style={styles.autoFillButton}>
           <PrimaryButton
             label={t("leanMuscle.title")}
@@ -256,6 +312,50 @@ export function MealPlannerScreen({ navigation }: Props) {
             onPress={() => navigation.navigate("LeanMuscleMode")}
           />
         </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
+            label={t("mealPlanner.viewCalendar")}
+            variant="outline"
+            onPress={() => navigation.navigate("CookingCalendar")}
+          />
+        </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton label={t("mealPlanner.shareWeek")} variant="outline" onPress={shareWeek} />
+        </View>
+
+        <Text style={[styles.label, { textAlign }]}>{t("mealPlanner.budgetCapLabel")}</Text>
+        <TextInput
+          style={[styles.input, { textAlign }]}
+          placeholder={t("mealPlanner.budgetCapPlaceholder")}
+          placeholderTextColor={colors.textMuted}
+          keyboardType="decimal-pad"
+          value={budgetCapInput}
+          onChangeText={updateBudgetCap}
+        />
+        {budgetCap && weeklyNutrition ? (
+          <View style={styles.budgetProgressWrap}>
+            <View style={styles.budgetProgressTrack}>
+              <View
+                style={[
+                  styles.budgetProgressFill,
+                  {
+                    width: `${Math.min(100, Math.round((weeklyNutrition.estimatedCost / budgetCap) * 100))}%`,
+                    backgroundColor:
+                      weeklyNutrition.estimatedCost > budgetCap ? colors.danger : colors.success,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.budgetProgressText}>
+              {t("mealPlanner.budgetCapProgress", { spent: weeklyNutrition.estimatedCost, cap: budgetCap })}
+            </Text>
+            {weeklyNutrition.estimatedCost > budgetCap ? (
+              <Text style={styles.budgetOverText}>
+                {t("mealPlanner.budgetCapOver", { amount: weeklyNutrition.estimatedCost - budgetCap })}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {weeklyNutrition ? (
           <View style={styles.nutritionRow}>
@@ -340,8 +440,8 @@ export function MealPlannerScreen({ navigation }: Props) {
             <Text style={styles.totalCost}>{t("mealPlanner.estimatedTotal", { amount: totalCost })}</Text>
             <Text style={[styles.pantryHint, { textAlign }]}>{t("shoppingList.pantryHint")}</Text>
             {aggregated.map((item) => {
-              const key = `${item.name}|${item.unit}`;
-              const have = haveAlready.has(key);
+              const key = item.name;
+              const have = isHaveAlready(key);
               return (
                 <AnimatedPressable
                   key={key}
@@ -445,6 +545,28 @@ const createStyles = (colors: ThemeColors) =>
     content: { padding: spacing(3), paddingBottom: spacing(6) },
     subtitle: { color: colors.textMuted, marginBottom: spacing(2), lineHeight: 20 },
     autoFillButton: { marginBottom: spacing(2) },
+    label: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: spacing(1) },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing(1.5),
+      paddingVertical: spacing(1.25),
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      marginBottom: spacing(1.5),
+    },
+    budgetProgressWrap: { marginBottom: spacing(2.5) },
+    budgetProgressTrack: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.chipBackground,
+      overflow: "hidden",
+    },
+    budgetProgressFill: { height: "100%", borderRadius: 5 },
+    budgetProgressText: { fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: "600" },
+    budgetOverText: { fontSize: 12, color: colors.danger, marginTop: 2, fontWeight: "700" },
     nutritionRow: {
       flexDirection: "row",
       backgroundColor: colors.chipBackground,

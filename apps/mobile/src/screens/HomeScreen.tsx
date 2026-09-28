@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -20,11 +21,19 @@ import { useCookStreak } from "../context/CookStreakContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useHomeLayout } from "../context/HomeLayoutContext";
 import { daysUntil, useLeftovers } from "../context/LeftoversContext";
+import { useToast } from "../context/ToastContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useLocale } from "../i18n/LocaleContext";
-import { fetchCuisines, fetchRandomRecipe, fetchRecipeDetail, fetchRecipes, fetchRecommended } from "../api/endpoints";
+import {
+  fetchCuisines,
+  fetchRandomRecipe,
+  fetchRecipeDetail,
+  fetchRecipes,
+  fetchRecommended,
+  fetchTrending,
+} from "../api/endpoints";
 import { apiErrorMessage } from "../api/client";
 import { boostByCookHistory, rankRecipes } from "../utils/rank";
 import { RecipeCard } from "../components/RecipeCard";
@@ -36,6 +45,8 @@ import { useTheme } from "../theme/ThemeContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
 import type { Cuisine, RecipeSummary } from "../api/types";
+
+const HOME_CACHE_KEY = "cookmate.homeCache";
 
 const RECOMMENDED_TITLE_KEY: Record<string, TranslationKey> = {
   LOSE_WEIGHT: "home.recommendedLoseWeight",
@@ -62,10 +73,11 @@ export function HomeScreen({ navigation }: Props) {
   const { displayStreak, cookCounts } = useCookStreak();
   const { favoriteRecipes } = useFavorites();
   const { isVisible: isSectionVisible } = useHomeLayout();
-  const { leftovers, removeLeftover } = useLeftovers();
+  const { leftovers, removeLeftover, restoreLeftover } = useLeftovers();
+  const { showToast } = useToast();
   const { plan } = useMealPlan();
   const { preference } = useLocalPreference();
-  const { recentRecipes, removeRecent, clearRecent } = useRecentlyViewed();
+  const { recentRecipes, addRecent, removeRecent, clearRecent } = useRecentlyViewed();
   const { t, locale } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -78,10 +90,12 @@ export function HomeScreen({ navigation }: Props) {
   const actionTileWidth = (windowWidth - spacing(3) * 2 - spacing(1.5) * 3) / 4;
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [recommended, setRecommended] = useState<RecipeSummary[]>([]);
+  const [showingOfflineCache, setShowingOfflineCache] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [surprising, setSurprising] = useState(false);
   const [cookingSlug, setCookingSlug] = useState<string | null>(null);
   const [dailyRecipe, setDailyRecipe] = useState<RecipeSummary | null>(null);
+  const [trending, setTrending] = useState<RecipeSummary[]>([]);
 
   useEffect(() => {
     const todayKey = new Date().toISOString().slice(0, 10);
@@ -91,18 +105,39 @@ export function HomeScreen({ navigation }: Props) {
       .catch(() => {});
   }, [locale]);
 
-  const load = useCallback(async () => {
-    const [cuisineList] = await Promise.all([fetchCuisines()]);
-    setCuisines(cuisineList);
+  useEffect(() => {
+    fetchTrending().then(setTrending).catch(() => {});
+  }, [locale]);
 
-    const knownRecipes = [...recentRecipes, ...favoriteRecipes];
-    if (isAuthenticated) {
-      const base = await fetchRecommended();
-      setRecommended(boostByCookHistory(base, cookCounts, knownRecipes));
-    } else {
-      const all = await fetchRecipes({});
-      const ranked = rankRecipes(all, preference.dietGoal, preference.favoriteCuisineSlugs).slice(0, 6);
-      setRecommended(boostByCookHistory(ranked, cookCounts, knownRecipes));
+  const load = useCallback(async () => {
+    try {
+      const [cuisineList] = await Promise.all([fetchCuisines()]);
+      const knownRecipes = [...recentRecipes, ...favoriteRecipes];
+      let nextRecommended: RecipeSummary[];
+      if (isAuthenticated) {
+        const base = await fetchRecommended();
+        nextRecommended = boostByCookHistory(base, cookCounts, knownRecipes);
+      } else {
+        const all = await fetchRecipes({});
+        const ranked = rankRecipes(all, preference.dietGoal, preference.favoriteCuisineSlugs).slice(0, 6);
+        nextRecommended = boostByCookHistory(ranked, cookCounts, knownRecipes);
+      }
+      setCuisines(cuisineList);
+      setRecommended(nextRecommended);
+      setShowingOfflineCache(false);
+      AsyncStorage.setItem(
+        HOME_CACHE_KEY,
+        JSON.stringify({ cuisines: cuisineList, recommended: nextRecommended })
+      ).catch(() => {});
+    } catch (error) {
+      const cached = await AsyncStorage.getItem(HOME_CACHE_KEY).catch(() => null);
+      if (cached) {
+        const parsed = JSON.parse(cached) as { cuisines: Cuisine[]; recommended: RecipeSummary[] };
+        setCuisines(parsed.cuisines ?? []);
+        setRecommended(parsed.recommended ?? []);
+        setShowingOfflineCache(true);
+      }
+      throw error;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, preference]);
@@ -141,6 +176,7 @@ export function HomeScreen({ navigation }: Props) {
         steps: detail.steps,
         ingredients: detail.ingredients,
         servings: detail.baseServings,
+        myRating: detail.myRating,
       });
     } catch (error) {
       Alert.alert(t("home.cookAgainError"), apiErrorMessage(error));
@@ -195,6 +231,12 @@ export function HomeScreen({ navigation }: Props) {
               </View>
               <Text style={styles.headline}>{t("home.headline")}</Text>
             </View>
+
+            {showingOfflineCache ? (
+              <View style={styles.offlineBanner}>
+                <Text style={styles.offlineBannerText}>{t("home.offlineBanner")}</Text>
+              </View>
+            ) : null}
 
             {todaysPlanRecipe ? (
               <AnimatedPressable
@@ -264,6 +306,28 @@ export function HomeScreen({ navigation }: Props) {
                 </FadeSlideIn>
               ))}
             </View>
+
+            {trending.length > 0 && isSectionVisible("trending") ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.trendingTitle")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentScroll}>
+                  {trending.map((r, i) => (
+                    <FadeSlideIn key={r.slug} index={i}>
+                      <AnimatedPressable
+                        style={styles.recentCard}
+                        pressScale={0.96}
+                        onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
+                      >
+                        <Text style={styles.recentEmoji}>{CUISINE_EMOJI[r.cuisine.slug] ?? "🍽️"}</Text>
+                        <Text style={styles.recentTitle} numberOfLines={2}>
+                          {r.title}
+                        </Text>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
 
             {dailyRecipe && isSectionVisible("recipeOfDay") ? (
               <>
@@ -346,6 +410,11 @@ export function HomeScreen({ navigation }: Props) {
                   onPress: () => navigation.navigate("PantryFinder"),
                 },
                 {
+                  key: "substitutionFinder",
+                  label: t("home.substitutionFinder"),
+                  onPress: () => navigation.navigate("SubstitutionFinder"),
+                },
+                {
                   key: "budgetPicks",
                   label: t("home.budgetPicks"),
                   onPress: () => navigation.navigate("RecipeList", { title: t("home.budgetTitle"), sortByCost: true }),
@@ -411,7 +480,13 @@ export function HomeScreen({ navigation }: Props) {
                         <AnimatedPressable
                           style={styles.leftoverDoneButton}
                           pressScale={0.85}
-                          onPress={() => removeLeftover(item.id)}
+                          onPress={() => {
+                            removeLeftover(item.id);
+                            showToast(t("home.leftoverRemovedToast"), {
+                              actionLabel: t("home.undo"),
+                              onAction: () => restoreLeftover(item),
+                            });
+                          }}
                           accessibilityLabel={t("home.leftoversMarkEaten")}
                         >
                           <Text style={styles.leftoverDoneText}>✓</Text>
@@ -442,7 +517,13 @@ export function HomeScreen({ navigation }: Props) {
                         <AnimatedPressable
                           style={styles.recentRemoveButton}
                           pressScale={0.85}
-                          onPress={() => removeRecent(r.slug)}
+                          onPress={() => {
+                            removeRecent(r.slug);
+                            showToast(t("home.recentRemovedToast"), {
+                              actionLabel: t("home.undo"),
+                              onAction: () => addRecent(r),
+                            });
+                          }}
                           accessibilityLabel={t("home.removeFromRecent")}
                         >
                           <Text style={styles.recentRemoveIcon}>✕</Text>
@@ -504,6 +585,14 @@ const createStyles = (colors: ThemeColors) =>
     },
     streakBadgeText: { fontSize: 12, fontWeight: "800", color: colors.primaryDark },
     headline: { color: colors.text, fontSize: 24, fontWeight: "800", marginTop: 4 },
+    offlineBanner: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing(1.5),
+      paddingVertical: spacing(1),
+      marginTop: spacing(1.5),
+    },
+    offlineBannerText: { color: colors.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
     todaysPlanCard: {
       flexDirection: "row",
       alignItems: "center",

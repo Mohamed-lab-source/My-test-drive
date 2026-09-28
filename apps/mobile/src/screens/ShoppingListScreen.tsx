@@ -24,6 +24,7 @@ import { PopOnChange } from "../components/PopOnChange";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
+import { usePantryCheck } from "../context/PantryCheckContext";
 import { formatQuantity } from "../utils/units";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { ShoppingListResult } from "../api/types";
@@ -42,19 +43,10 @@ export function ShoppingListScreen({ route, navigation }: Props) {
   const [result, setResult] = useState<ShoppingListResult | null>(null);
   const [mapsUrl, setMapsUrl] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
-  const [haveAlready, setHaveAlready] = useState<Set<string>>(new Set());
-
-  const toggleHaveAlready = (ingredientName: string) => {
-    setHaveAlready((prev) => {
-      const next = new Set(prev);
-      if (next.has(ingredientName)) next.delete(ingredientName);
-      else next.add(ingredientName);
-      return next;
-    });
-  };
+  const { isChecked, toggle: toggleHaveAlready, checkedCount } = usePantryCheck();
 
   const stillNeedCost = result
-    ? result.items.reduce((sum, item) => (haveAlready.has(item.ingredientName) ? sum : sum + item.estimatedCost), 0)
+    ? result.items.reduce((sum, item) => (isChecked(item.ingredientName) ? sum : sum + item.estimatedCost), 0)
     : 0;
 
   useEffect(() => {
@@ -68,7 +60,6 @@ export function ShoppingListScreen({ route, navigation }: Props) {
       const parsedBudget = budget.trim() ? Number(budget) : undefined;
       const data = await generateShoppingList(slug, servings, parsedBudget);
       setResult(data);
-      setHaveAlready(new Set());
     } catch (error) {
       Alert.alert(t("shoppingList.errorGenerate"), apiErrorMessage(error));
     } finally {
@@ -190,7 +181,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
               <Text style={[styles.sectionTitle, { textAlign }]}>
                 {t("shoppingList.listTitle", { count: result.servings })}
               </Text>
-              {haveAlready.size > 0 ? (
+              {checkedCount(result.items.map((item) => item.ingredientName)) > 0 ? (
                 <Text style={styles.stillNeedText}>
                   {t("shoppingList.stillNeed", { amount: stillNeedCost.toFixed(2) })}
                 </Text>
@@ -198,7 +189,7 @@ export function ShoppingListScreen({ route, navigation }: Props) {
             </View>
             <Text style={[styles.pantryHint, { textAlign }]}>{t("shoppingList.pantryHint")}</Text>
             {result.items.map((item, i) => {
-              const have = haveAlready.has(item.ingredientName);
+              const have = isChecked(item.ingredientName);
               return (
                 <FadeSlideIn key={item.ingredientName} index={i}>
                   <AnimatedPressable

@@ -16,6 +16,7 @@ import { useUnits } from "../context/UnitsContext";
 import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { useLeftovers } from "../context/LeftoversContext";
+import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
 import { intersectAllergens } from "../utils/allergens";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -27,14 +28,15 @@ const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 200, 365];
 
 export function CookModeScreen({ route, navigation }: Props) {
   useKeepAwake();
-  const { slug, title, cuisineSlug, steps, ingredients, servings } = route.params;
+  const { slug, title, cuisineSlug, steps, ingredients, servings, myRating } = route.params;
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
   const { user } = useAuth();
   const { recordCooked } = useCookStreak();
   const { addLeftover } = useLeftovers();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { scale: textScale } = useTextSize();
+  const styles = useMemo(() => createStyles(colors, textScale), [colors, textScale]);
   const [index, setIndex] = useState(0);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -94,7 +96,7 @@ export function CookModeScreen({ route, navigation }: Props) {
 
   const showDoneAlert = (streak: number) => {
     const message = streak > 1 ? t("cookMode.doneMessageStreak", { streak }) : t("cookMode.doneMessage");
-    Alert.alert(t("cookMode.doneTitle"), message, [
+    const buttons = [
       {
         text: t("cookMode.saveLeftovers"),
         onPress: () => {
@@ -102,8 +104,12 @@ export function CookModeScreen({ route, navigation }: Props) {
           navigation.goBack();
         },
       },
-      { text: t("cookMode.doneButton"), onPress: () => navigation.goBack() },
-    ]);
+    ];
+    if (!myRating) {
+      buttons.push({ text: t("cookMode.rateNow"), onPress: () => navigation.goBack() });
+    }
+    buttons.push({ text: t("cookMode.doneButton"), onPress: () => navigation.goBack() });
+    Alert.alert(t("cookMode.doneTitle"), message, buttons);
   };
 
   const goNext = () => {
@@ -124,7 +130,12 @@ export function CookModeScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <AnimatedPressable style={styles.iconButton} pressScale={0.9} onPress={confirmExit}>
+        <AnimatedPressable
+          style={styles.iconButton}
+          pressScale={0.9}
+          onPress={confirmExit}
+          accessibilityLabel={t("cookMode.exitTitle")}
+        >
           <Text style={styles.iconButtonText}>✕</Text>
         </AnimatedPressable>
         <Text style={styles.stepOf}>{t("cookMode.stepOf", { current: index + 1, total: steps.length })}</Text>
@@ -137,7 +148,12 @@ export function CookModeScreen({ route, navigation }: Props) {
           >
             <Text style={styles.iconButtonText}>{voiceEnabled ? (speaking ? "🔊" : "🔈") : "🔇"}</Text>
           </AnimatedPressable>
-          <AnimatedPressable style={styles.iconButton} pressScale={0.9} onPress={() => setIngredientsVisible(true)}>
+          <AnimatedPressable
+            style={styles.iconButton}
+            pressScale={0.9}
+            onPress={() => setIngredientsVisible(true)}
+            accessibilityLabel={t("cookMode.ingredients")}
+          >
             <Text style={styles.iconButtonText}>📋</Text>
           </AnimatedPressable>
         </View>
@@ -258,7 +274,7 @@ export function CookModeScreen({ route, navigation }: Props) {
   );
 }
 
-const createStyles = (colors: ThemeColors) =>
+const createStyles = (colors: ThemeColors, textScale: number) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     header: {
@@ -303,7 +319,13 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: spacing(2),
     },
     badgeText: { color: "#fff", fontWeight: "800", fontSize: 16 },
-    instruction: { fontSize: 22, lineHeight: 32, fontWeight: "600", color: colors.text, width: "100%" },
+    instruction: {
+      fontSize: 22 * textScale,
+      lineHeight: 32 * textScale,
+      fontWeight: "600",
+      color: colors.text,
+      width: "100%",
+    },
     footer: {
       flexDirection: "row",
       gap: spacing(1.5),
@@ -357,10 +379,10 @@ const createStyles = (colors: ThemeColors) =>
     },
     modalCheckboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
     modalCheckboxMark: { color: "#fff", fontSize: 11, fontWeight: "800" },
-    modalRowName: { color: colors.text, fontSize: 14 },
+    modalRowName: { color: colors.text, fontSize: 14 * textScale },
     modalRowNameWarning: { color: colors.danger, fontWeight: "700" },
     modalRowNameGathered: { color: colors.textMuted, textDecorationLine: "line-through" },
-    modalRowQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    modalRowQty: { color: colors.textMuted, fontSize: 14 * textScale, fontWeight: "600" },
     modalRowSubstitute: { color: colors.primaryDark, fontSize: 11, marginTop: 2 },
     modalRowAllergenNote: { color: colors.danger, fontSize: 11, fontWeight: "700", marginTop: 2 },
     modalClose: {

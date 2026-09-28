@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
@@ -23,6 +34,7 @@ import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useNotes } from "../context/NotesContext";
+import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
 import { intersectAllergens } from "../utils/allergens";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
@@ -51,7 +63,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { slug } = route.params;
   const { t, locale, isRTL } = useLocale();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { scale: textScale } = useTextSize();
+  const styles = useMemo(() => createStyles(colors, textScale), [colors, textScale]);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { unitSystem } = useUnits();
   const { isAuthenticated, user } = useAuth();
@@ -63,6 +76,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [noteText, setNoteText] = useState("");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [servings, setServings] = useState(1);
   const [sharing, setSharing] = useState(false);
   const [myRating, setMyRating] = useState<number | null>(null);
@@ -92,6 +106,16 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     setNoteText(getNote(slug));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchRecipeDetail(slug, hasBodyGoal && wantsAdapted ? myGoal : undefined)
+      .then((data) => {
+        setRecipe(data);
+        setMyRating(data.myRating);
+      })
+      .finally(() => setRefreshing(false));
+  };
 
   useEffect(() => {
     if (!recipe) return;
@@ -177,7 +201,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
-      <ScrollView>
+      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         <View style={styles.hero}>
           <FadeSlideIn>
             <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
@@ -190,6 +214,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               style={styles.favoriteButton}
               pressScale={0.85}
               onPress={() => toggleFavorite(recipe)}
+              accessibilityLabel={t(isFavorite(recipe.slug) ? "recipeCard.removeFavorite" : "recipeCard.addFavorite")}
             >
               <Text style={styles.favoriteIcon}>{isFavorite(recipe.slug) ? "❤️" : "🤍"}</Text>
             </AnimatedPressable>
@@ -207,12 +232,29 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           ) : null}
 
           {recipe.ratingCount > 0 ? (
-            <View style={styles.avgRatingRow}>
-              <StarRating value={recipe.avgRating ?? 0} size={16} />
-              <Text style={styles.avgRatingText}>
-                {recipe.avgRating?.toFixed(1)} · {t("recipeDetail.ratingCount", { count: recipe.ratingCount })}
-              </Text>
-            </View>
+            <>
+              <View style={styles.avgRatingRow}>
+                <StarRating value={recipe.avgRating ?? 0} size={16} />
+                <Text style={styles.avgRatingText}>
+                  {recipe.avgRating?.toFixed(1)} · {t("recipeDetail.ratingCount", { count: recipe.ratingCount })}
+                </Text>
+              </View>
+              <View style={styles.histogram}>
+                {([5, 4, 3, 2, 1] as const).map((star) => {
+                  const count = recipe.ratingBreakdown[star];
+                  const pct = recipe.ratingCount > 0 ? count / recipe.ratingCount : 0;
+                  return (
+                    <View key={star} style={styles.histogramRow}>
+                      <Text style={styles.histogramStarLabel}>{star}★</Text>
+                      <View style={styles.histogramTrack}>
+                        <View style={[styles.histogramFill, { width: `${Math.round(pct * 100)}%` }]} />
+                      </View>
+                      <Text style={styles.histogramCount}>{count}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
           ) : null}
 
           <View style={styles.metaRow}>
@@ -473,6 +515,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               steps: recipe.steps,
               ingredients: scaledIngredients,
               servings,
+              myRating,
             })
           }
         />
@@ -530,7 +573,7 @@ function MetaPill({ label, styles }: { label: string; styles: Styles }) {
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
+const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   skeletonTitle: { height: 24, width: "60%", marginTop: spacing(1), borderRadius: 6 },
   skeletonDescription: { height: 14, width: "90%", marginTop: spacing(1.5), borderRadius: 6 },
@@ -570,6 +613,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   allergenBannerText: { color: colors.danger, fontWeight: "700", fontSize: 13 },
   avgRatingRow: { flexDirection: "row", alignItems: "center", marginTop: spacing(1) },
   avgRatingText: { color: colors.textMuted, fontSize: 13, fontWeight: "600", marginStart: spacing(1) },
+  histogram: { marginTop: spacing(1.5) },
+  histogramRow: { flexDirection: "row", alignItems: "center", marginBottom: spacing(0.5) },
+  histogramStarLabel: { width: 26, fontSize: 11, color: colors.textMuted, fontWeight: "600" },
+  histogramTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.chipBackground,
+    overflow: "hidden",
+    marginHorizontal: spacing(1),
+  },
+  histogramFill: { height: "100%", backgroundColor: colors.primary, borderRadius: 3 },
+  histogramCount: { width: 24, fontSize: 11, color: colors.textMuted, textAlign: "right" },
   rateRow: { flexDirection: "row", alignItems: "center" },
   rateSpinner: { marginStart: spacing(1.5) },
   rateLoginHint: { color: colors.textMuted, fontSize: 13 },
@@ -627,10 +683,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  ingredientName: { color: colors.text, fontSize: 14 },
+  ingredientName: { color: colors.text, fontSize: 14 * textScale },
   ingredientNameWarning: { color: colors.danger, fontWeight: "700" },
   ingredientAllergenNote: { color: colors.danger, fontSize: 11, fontWeight: "700", marginTop: 2 },
-  ingredientQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+  ingredientQty: { color: colors.textMuted, fontSize: 14 * textScale, fontWeight: "600" },
   ingredientSubstitute: { color: colors.primaryDark, fontSize: 12, marginTop: 2 },
   ingredientAdaptedNote: { color: colors.secondary, fontSize: 12, fontWeight: "600", marginTop: 2 },
   adaptRow: { marginTop: spacing(1) },
@@ -682,7 +738,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   stepBadgeText: { color: "#fff", fontWeight: "800", fontSize: 12 },
   stepTimer: { color: colors.textMuted, fontSize: 12, fontWeight: "600" },
-  stepInstruction: { color: colors.text, marginTop: spacing(1), lineHeight: 20 },
+  stepInstruction: { color: colors.text, marginTop: spacing(1), lineHeight: 20 * textScale, fontSize: 14 * textScale },
   footer: {
     padding: spacing(2),
     backgroundColor: colors.background,

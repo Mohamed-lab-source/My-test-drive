@@ -8,7 +8,7 @@ export const pantryRouter = Router();
 pantryRouter.get("/ingredients", async (req, res) => {
   const lang = parseLang(req.query.lang);
   const ingredients = await prisma.ingredient.findMany({
-    select: { id: true, name: true, nameAr: true, category: true },
+    select: { id: true, name: true, nameAr: true, category: true, substituteEn: true, substituteAr: true },
     orderBy: { name: "asc" },
   });
   res.json(
@@ -16,6 +16,7 @@ pantryRouter.get("/ingredients", async (req, res) => {
       id: i.id,
       name: lang === "ar" ? i.nameAr ?? i.name : i.name,
       category: i.category,
+      substitute: (lang === "ar" ? i.substituteAr ?? i.substituteEn : i.substituteEn) ?? null,
     }))
   );
 });

@@ -39,6 +39,8 @@ type LeftoversContextValue = {
   leftovers: LeftoverEntry[];
   addLeftover: (recipe: { slug: string; title: string; cuisineSlug: string }, servings: number) => void;
   removeLeftover: (id: string) => void;
+  /** Re-inserts an exact previously-removed entry (used for "Undo remove"). */
+  restoreLeftover: (entry: LeftoverEntry) => void;
 };
 
 const LeftoversContext = createContext<LeftoversContextValue | undefined>(undefined);
@@ -91,9 +93,16 @@ export function LeftoversProvider({ children }: { children: React.ReactNode }) {
     [leftovers, persist]
   );
 
+  const restoreLeftover = useCallback(
+    (entry: LeftoverEntry) => {
+      persist([...leftovers, entry].sort((a, b) => a.useByDate.localeCompare(b.useByDate)));
+    },
+    [leftovers, persist]
+  );
+
   const value = useMemo(
-    () => ({ isLoading, leftovers, addLeftover, removeLeftover }),
-    [isLoading, leftovers, addLeftover, removeLeftover]
+    () => ({ isLoading, leftovers, addLeftover, removeLeftover, restoreLeftover }),
+    [isLoading, leftovers, addLeftover, removeLeftover, restoreLeftover]
   );
 
   return <LeftoversContext.Provider value={value}>{children}</LeftoversContext.Provider>;

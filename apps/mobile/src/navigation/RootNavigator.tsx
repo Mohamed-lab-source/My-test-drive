@@ -15,12 +15,16 @@ import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
 import { GlossaryScreen } from "../screens/GlossaryScreen";
 import { NotesListScreen } from "../screens/NotesListScreen";
+import { MyReviewsScreen } from "../screens/MyReviewsScreen";
 import { SearchScreen } from "../screens/SearchScreen";
 import { MealPlannerScreen } from "../screens/MealPlannerScreen";
+import { CookingCalendarScreen } from "../screens/CookingCalendarScreen";
 import { PantryFinderScreen } from "../screens/PantryFinderScreen";
+import { SubstitutionFinderScreen } from "../screens/SubstitutionFinderScreen";
 import { CustomizeHomeScreen } from "../screens/CustomizeHomeScreen";
 import { CookingStatsScreen } from "../screens/CookingStatsScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
+import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -88,6 +92,7 @@ export function RootNavigator() {
         />
         <Stack.Screen name="Glossary" component={GlossaryScreen} options={{ title: t("glossary.title") }} />
         <Stack.Screen name="Notes" component={NotesListScreen} options={{ title: t("notes.title") }} />
+        <Stack.Screen name="MyReviews" component={MyReviewsScreen} options={{ title: t("myReviews.title") }} />
         <Stack.Screen
           name="Search"
           component={SearchScreen}
@@ -99,9 +104,19 @@ export function RootNavigator() {
           options={{ title: t("mealPlanner.title") }}
         />
         <Stack.Screen
+          name="CookingCalendar"
+          component={CookingCalendarScreen}
+          options={{ title: t("cookingCalendar.title") }}
+        />
+        <Stack.Screen
           name="PantryFinder"
           component={PantryFinderScreen}
           options={{ title: t("pantryFinder.title") }}
+        />
+        <Stack.Screen
+          name="SubstitutionFinder"
+          component={SubstitutionFinderScreen}
+          options={{ title: t("substitutionFinder.title") }}
         />
         <Stack.Screen
           name="CustomizeHome"
@@ -118,6 +133,7 @@ export function RootNavigator() {
           component={LeanMuscleModeScreen}
           options={{ title: t("leanMuscle.title") }}
         />
+        <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

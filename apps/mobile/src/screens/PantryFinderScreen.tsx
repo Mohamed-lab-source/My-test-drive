@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchIngredients, matchPantryRecipes } from "../api/endpoints";
@@ -15,6 +16,7 @@ import type { PantryIngredient, PantryMatch } from "../api/types";
 type Props = NativeStackScreenProps<RootStackParamList, "PantryFinder">;
 
 const DEBOUNCE_MS = 400;
+const PANTRY_STORAGE_KEY = "cookmate.pantrySelectedIds";
 
 export function PantryFinderScreen({ navigation }: Props) {
   const { t, isRTL } = useLocale();
@@ -30,7 +32,16 @@ export function PantryFinderScreen({ navigation }: Props) {
 
   useEffect(() => {
     fetchIngredients().then(setAllIngredients).catch(() => {});
+    AsyncStorage.getItem(PANTRY_STORAGE_KEY)
+      .then((stored) => {
+        if (stored) setSelectedIds(JSON.parse(stored));
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem(PANTRY_STORAGE_KEY, JSON.stringify(selectedIds)).catch(() => {});
+  }, [selectedIds]);
 
   useEffect(() => {
     if (selectedIds.length === 0) {

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -17,6 +17,7 @@ import type { Difficulty, DishTag, RecipeSummary } from "../api/types";
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
 const LIGHT_CALORIE_THRESHOLD = 400;
+const FEW_INGREDIENTS_THRESHOLD = 6;
 
 export function RecipeListScreen({ route, navigation }: Props) {
   const { cuisineSlug, tag: initialTag, dishType, title, sortByCost, sortByRating, lightOnly: initialLightOnly } =
@@ -32,8 +33,10 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const [hideAllergens, setHideAllergens] = useState(false);
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | undefined>(undefined);
   const [lightOnly, setLightOnly] = useState(!!initialLightOnly);
+  const [fewIngredientsOnly, setFewIngredientsOnly] = useState(false);
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const myAllergies = user?.preference?.allergies ?? [];
   const allergenFiltered = hideAllergens
@@ -42,9 +45,12 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const difficultyFiltered = difficultyFilter
     ? allergenFiltered.filter((r) => r.difficulty === difficultyFilter)
     : allergenFiltered;
-  const filteredRecipes = lightOnly
+  const lightFiltered = lightOnly
     ? difficultyFiltered.filter((r) => r.caloriesPerServing <= LIGHT_CALORIE_THRESHOLD)
     : difficultyFiltered;
+  const filteredRecipes = fewIngredientsOnly
+    ? lightFiltered.filter((r) => r.ingredientCount <= FEW_INGREDIENTS_THRESHOLD)
+    : lightFiltered;
 
   const displayRecipes =
     sortMode === "cheapest"
@@ -84,6 +90,13 @@ export function RecipeListScreen({ route, navigation }: Props) {
       .then(setRecipes)
       .finally(() => setLoading(false));
   }, [cuisineSlug, activeTag, dishType, locale]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType })
+      .then(setRecipes)
+      .finally(() => setRefreshing(false));
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -130,6 +143,11 @@ export function RecipeListScreen({ route, navigation }: Props) {
           selected={lightOnly}
           onPress={() => setLightOnly((v) => !v)}
         />
+        <Chip
+          label={t("recipeList.filter.fewIngredients")}
+          selected={fewIngredientsOnly}
+          onPress={() => setFewIngredientsOnly((v) => !v)}
+        />
       </View>
       {loading ? (
         <View style={styles.listContent}>
@@ -150,6 +168,7 @@ export function RecipeListScreen({ route, navigation }: Props) {
             />
           )}
           ListEmptyComponent={<Text style={styles.empty}>{t("recipeList.empty")}</Text>}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
     </SafeAreaView>

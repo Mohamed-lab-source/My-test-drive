@@ -11,6 +11,9 @@ import { MealPlanProvider } from "./src/context/MealPlanContext";
 import { CookStreakProvider } from "./src/context/CookStreakContext";
 import { LeftoversProvider } from "./src/context/LeftoversContext";
 import { HomeLayoutProvider } from "./src/context/HomeLayoutContext";
+import { TextSizeProvider } from "./src/context/TextSizeContext";
+import { ToastProvider } from "./src/context/ToastContext";
+import { PantryCheckProvider } from "./src/context/PantryCheckContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -40,7 +43,13 @@ export default function App() {
                         <CookStreakProvider>
                           <LeftoversProvider>
                             <HomeLayoutProvider>
-                              <AppShell />
+                              <TextSizeProvider>
+                                <ToastProvider>
+                                  <PantryCheckProvider>
+                                    <AppShell />
+                                  </PantryCheckProvider>
+                                </ToastProvider>
+                              </TextSizeProvider>
                             </HomeLayoutProvider>
                           </LeftoversProvider>
                         </CookStreakProvider>
