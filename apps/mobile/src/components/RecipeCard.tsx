@@ -5,13 +5,12 @@ import { FadeSlideIn } from "./FadeSlideIn";
 import { StarRating } from "./StarRating";
 import { useTheme } from "../theme/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { useAuth } from "../context/AuthContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useToast } from "../context/ToastContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
-import { intersectAllergens } from "../utils/allergens";
+import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import type { TranslationKey } from "../i18n/translations";
 import type { RecipeSummary } from "../api/types";
 
@@ -29,7 +28,7 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { setPlan } = useMealPlan();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const myAllergies = useMyAllergies();
   const favorited = isFavorite(recipe.slug);
 
   const addToTodaysPlan = () => {
@@ -38,7 +37,7 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
     showToast(t("recipeCard.addedToPlanToast", { title: recipe.title }));
   };
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
-  const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
+  const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   return (
     <FadeSlideIn index={index}>
       <AnimatedPressable style={styles.card} onPress={onPress} pressScale={0.98} accessibilityRole="button">

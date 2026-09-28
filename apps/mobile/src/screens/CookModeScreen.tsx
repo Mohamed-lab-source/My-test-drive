@@ -13,12 +13,11 @@ import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
-import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { useLeftovers } from "../context/LeftoversContext";
 import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
-import { intersectAllergens } from "../utils/allergens";
+import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
 
@@ -32,7 +31,7 @@ export function CookModeScreen({ route, navigation }: Props) {
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
-  const { user } = useAuth();
+  const myAllergies = useMyAllergies();
   const { recordCooked } = useCookStreak();
   const { addLeftover } = useLeftovers();
   const { scale: textScale } = useTextSize();
@@ -216,7 +215,7 @@ export function CookModeScreen({ route, navigation }: Props) {
             </Text>
             <ScrollView style={styles.modalList}>
               {ingredients.map((ing) => {
-                const ingredientConflicts = intersectAllergens(ing.allergens, user?.preference?.allergies ?? []);
+                const ingredientConflicts = intersectAllergens(ing.allergens, myAllergies);
                 const isGathered = gathered.has(ing.name);
                 return (
                 <AnimatedPressable

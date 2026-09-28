@@ -1,18 +1,20 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { DietGoal } from "../api/types";
+import type { Allergen, DietGoal } from "../api/types";
 
 const STORAGE_KEY = "cookmate.localPreference";
 
 export type LocalPreference = {
   dietGoal: DietGoal;
   favoriteCuisineSlugs: string[];
+  allergies: Allergen[];
   onboarded: boolean;
 };
 
 const DEFAULT_PREFERENCE: LocalPreference = {
   dietGoal: "NONE",
   favoriteCuisineSlugs: [],
+  allergies: [],
   onboarded: false,
 };
 

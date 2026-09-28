@@ -7,10 +7,9 @@ import { fetchRecipes } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { useAuth } from "../context/AuthContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { pickLeanMuscleWeek, LEAN_MUSCLE_TARGETS } from "../utils/leanMuscle";
-import { intersectAllergens } from "../utils/allergens";
+import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { useLocale } from "../i18n/LocaleContext";
 import type { TranslationKey } from "../i18n/translations";
@@ -30,7 +29,7 @@ function dateKeyFor(offset: number): string {
 export function LeanMuscleModeScreen({ navigation }: Props) {
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const myAllergies = useMyAllergies();
   const { plan, setPlan } = useMealPlan();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [generating, setGenerating] = useState(false);
@@ -60,7 +59,6 @@ export function LeanMuscleModeScreen({ navigation }: Props) {
     setGenerating(true);
     try {
       const allRecipes = await fetchRecipes({});
-      const myAllergies = user?.preference?.allergies ?? [];
       const safeRecipes =
         myAllergies.length > 0
           ? allRecipes.filter((r) => intersectAllergens(r.allergens, myAllergies).length === 0)

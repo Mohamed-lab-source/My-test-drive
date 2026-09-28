@@ -36,7 +36,7 @@ import { useRecentlyViewed } from "../context/RecentlyViewedContext";
 import { useNotes } from "../context/NotesContext";
 import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
-import { intersectAllergens } from "../utils/allergens";
+import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
@@ -69,6 +69,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { unitSystem } = useUnits();
   const { isAuthenticated, user } = useAuth();
   const { preference: localPreference } = useLocalPreference();
+  const myAllergies = useMyAllergies();
   const { addRecent } = useRecentlyViewed();
   const { plan, setPlan } = useMealPlan();
   const { cookCountFor } = useCookStreak();
@@ -158,7 +159,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const textAlign = isRTL ? "right" : "left";
-  const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
+  const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   const cookCount = cookCountFor(recipe.slug);
 
   const handleShareText = async () => {
@@ -367,7 +368,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             {t("recipeDetail.ingredientsFor", { count: servings })}
           </Text>
           {scaledIngredients.map((ing, i) => {
-            const ingredientConflicts = intersectAllergens(ing.allergens, user?.preference?.allergies ?? []);
+            const ingredientConflicts = intersectAllergens(ing.allergens, myAllergies);
             return (
             <FadeSlideIn key={ing.name} index={i}>
               <View style={styles.ingredientCell}>

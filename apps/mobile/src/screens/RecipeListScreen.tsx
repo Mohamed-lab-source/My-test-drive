@@ -7,10 +7,9 @@ import { fetchRecipes } from "../api/endpoints";
 import { RecipeCard } from "../components/RecipeCard";
 import { RecipeCardSkeleton } from "../components/Skeleton";
 import { Chip } from "../components/Chip";
-import { useAuth } from "../context/AuthContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
-import { intersectAllergens } from "../utils/allergens";
+import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { spacing, type ThemeColors } from "../theme";
 import type { Difficulty, DishTag, RecipeSummary } from "../api/types";
 
@@ -24,7 +23,6 @@ export function RecipeListScreen({ route, navigation }: Props) {
     route.params;
   const { t, locale } = useLocale();
   const { colors } = useTheme();
-  const { user } = useAuth();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTag, setActiveTag] = useState<DishTag | undefined>(initialTag as DishTag | undefined);
   const [sortMode, setSortMode] = useState<"none" | "cheapest" | "topRated" | "fastest">(
@@ -38,7 +36,7 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const myAllergies = user?.preference?.allergies ?? [];
+  const myAllergies = useMyAllergies();
   const allergenFiltered = hideAllergens
     ? recipes.filter((r) => intersectAllergens(r.allergens, myAllergies).length === 0)
     : recipes;

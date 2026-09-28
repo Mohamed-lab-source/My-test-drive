@@ -16,6 +16,7 @@ const en = {
   "onboarding.goal.gainWeight": "Gain weight",
   "onboarding.goal.gainWeight.blurb": "Calorie-dense, hearty plates",
   "onboarding.favoriteCuisines": "Favorite cuisines",
+  "onboarding.allergiesQuestion": "Any allergies we should warn you about?",
   "onboarding.cta": "Let's cook",
 
   "featureTour.skip": "Skip",
@@ -467,6 +468,7 @@ const ar: Record<keyof typeof en, string> = {
   "onboarding.goal.gainWeight": "زيادة الوزن",
   "onboarding.goal.gainWeight.blurb": "أطباق دسمة وعالية السعرات",
   "onboarding.favoriteCuisines": "المطابخ المفضلة",
+  "onboarding.allergiesQuestion": "هل لديك أي حساسية يجب أن نحذّرك منها؟",
   "onboarding.cta": "لنبدأ الطبخ",
 
   "featureTour.skip": "تخطي",

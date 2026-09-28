@@ -9,8 +9,10 @@ import { fetchCuisines } from "../api/endpoints";
 import { Chip } from "../components/Chip";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useTheme } from "../theme/ThemeContext";
+import { ALL_ALLERGENS } from "../utils/allergens";
 import { spacing, type ThemeColors } from "../theme";
-import type { Cuisine, DietGoal } from "../api/types";
+import type { TranslationKey } from "../i18n/translations";
+import type { Allergen, Cuisine, DietGoal } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
@@ -22,6 +24,7 @@ export function OnboardingScreen({ navigation }: Props) {
   const [dietGoal, setDietGoal] = useState<DietGoal>("NONE");
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [selectedAllergies, setSelectedAllergies] = useState<Allergen[]>([]);
 
   const GOALS: { value: DietGoal; label: string; blurb: string }[] = [
     { value: "NONE", label: t("onboarding.goal.none"), blurb: t("onboarding.goal.none.blurb") },
@@ -38,8 +41,19 @@ export function OnboardingScreen({ navigation }: Props) {
     setSelectedCuisines((prev) => (prev.includes(slug) ? prev.filter((c) => c !== slug) : [...prev, slug]));
   };
 
+  const toggleAllergy = (allergen: Allergen) => {
+    setSelectedAllergies((prev) =>
+      prev.includes(allergen) ? prev.filter((a) => a !== allergen) : [...prev, allergen]
+    );
+  };
+
   const finish = async () => {
-    await setPreference({ dietGoal, favoriteCuisineSlugs: selectedCuisines, onboarded: true });
+    await setPreference({
+      dietGoal,
+      favoriteCuisineSlugs: selectedCuisines,
+      allergies: selectedAllergies,
+      onboarded: true,
+    });
     navigation.replace("FeatureTour");
   };
 
@@ -72,6 +86,18 @@ export function OnboardingScreen({ navigation }: Props) {
               label={c.name}
               selected={selectedCuisines.includes(c.slug)}
               onPress={() => toggleCuisine(c.slug)}
+            />
+          ))}
+        </View>
+
+        <Text style={[styles.section, { textAlign }]}>{t("onboarding.allergiesQuestion")}</Text>
+        <View style={styles.row}>
+          {ALL_ALLERGENS.map((a) => (
+            <Chip
+              key={a}
+              label={t(`allergen.${a}` as TranslationKey)}
+              selected={selectedAllergies.includes(a)}
+              onPress={() => toggleAllergy(a)}
             />
           ))}
         </View>
