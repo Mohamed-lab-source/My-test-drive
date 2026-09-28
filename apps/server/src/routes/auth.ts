@@ -174,3 +174,32 @@ authRouter.put("/me/preferences", requireAuth, async (req, res) => {
   });
   res.json(preference);
 });
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+authRouter.put("/me/password", requireAuth, async (req, res) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  if (!user.passwordHash) {
+    res.status(400).json({ error: "This account signs in with Google and has no password to change" });
+    return;
+  }
+  if (!(await verifyPassword(parsed.data.currentPassword, user.passwordHash))) {
+    res.status(401).json({ error: "Current password is incorrect" });
+    return;
+  }
+  const passwordHash = await hashPassword(parsed.data.newPassword);
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+  res.json({ ok: true });
+});

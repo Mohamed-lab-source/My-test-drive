@@ -161,6 +161,27 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
   const cookCount = cookCountFor(recipe.slug);
 
+  const handleShareText = async () => {
+    const ingredientLines = scaledIngredients.map(
+      (ing) => `- ${formatQuantity(ing.quantity, ing.unit, unitSystem)} ${ing.name}`
+    );
+    const stepLines = recipe.steps.map((s) => `${s.order}. ${s.instruction}`);
+    const message = [
+      recipe.title,
+      "",
+      t("recipeDetail.ingredientsFor", { count: servings }),
+      ...ingredientLines,
+      "",
+      t("recipeDetail.steps"),
+      ...stepLines,
+    ].join("\n");
+    try {
+      await Share.share({ message });
+    } catch {
+      // User cancelled or share failed silently; nothing to recover.
+    }
+  };
+
   const handleShare = async () => {
     setSharing(true);
     try {
@@ -535,6 +556,9 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
         <View style={styles.shareButton}>
           <PrimaryButton label={t("share.button")} onPress={handleShare} loading={sharing} variant="outline" />
+        </View>
+        <View style={styles.shareButton}>
+          <PrimaryButton label={t("share.textButton")} onPress={handleShareText} variant="outline" />
         </View>
       </View>
     </SafeAreaView>

@@ -33,6 +33,7 @@ export type RootStackParamList = {
   };
   Login: undefined;
   Signup: undefined;
+  ChangePassword: undefined;
   Glossary: undefined;
   Notes: undefined;
   MyReviews: undefined;

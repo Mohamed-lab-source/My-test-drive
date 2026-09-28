@@ -8,14 +8,16 @@ type Props = {
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
 };
 
-export function Chip({ label, selected, onPress }: Props) {
+export function Chip({ label, selected, onPress, onLongPress }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <AnimatedPressable
       onPress={onPress}
+      onLongPress={onLongPress}
       pressScale={0.93}
       style={[styles.chip, selected && styles.chipSelected]}
       accessibilityRole="button"

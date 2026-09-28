@@ -6,6 +6,8 @@ import { StarRating } from "./StarRating";
 import { useTheme } from "../theme/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../context/AuthContext";
+import { useMealPlan } from "../context/MealPlanContext";
+import { useToast } from "../context/ToastContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
@@ -25,8 +27,16 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useLocale();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { setPlan } = useMealPlan();
+  const { showToast } = useToast();
   const { user } = useAuth();
   const favorited = isFavorite(recipe.slug);
+
+  const addToTodaysPlan = () => {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    setPlan(todayKey, recipe);
+    showToast(t("recipeCard.addedToPlanToast", { title: recipe.title }));
+  };
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const conflictingAllergens = intersectAllergens(recipe.allergens, user?.preference?.allergies ?? []);
   return (
@@ -34,6 +44,15 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
       <AnimatedPressable style={styles.card} onPress={onPress} pressScale={0.98} accessibilityRole="button">
         <View style={styles.imagePlaceholder}>
           <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+          <AnimatedPressable
+            style={styles.planButton}
+            pressScale={0.85}
+            haptic
+            onPress={addToTodaysPlan}
+            accessibilityLabel={t("recipeCard.addToPlan")}
+          >
+            <Text style={styles.planIcon}>📅</Text>
+          </AnimatedPressable>
           <AnimatedPressable
             style={styles.favoriteButton}
             pressScale={0.85}
@@ -120,6 +139,18 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: "center",
     },
     favoriteIcon: { fontSize: 15 },
+    planButton: {
+      position: "absolute",
+      top: spacing(1),
+      start: spacing(1),
+      width: 32,
+      height: 32,
+      borderRadius: radius.pill,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    planIcon: { fontSize: 14 },
     body: {
       padding: spacing(1.5),
     },

@@ -39,6 +39,7 @@ export function CookModeScreen({ route, navigation }: Props) {
   const styles = useMemo(() => createStyles(colors, textScale), [colors, textScale]);
   const [index, setIndex] = useState(0);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
+  const [allStepsVisible, setAllStepsVisible] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [gathered, setGathered] = useState<Set<string>>(new Set());
@@ -156,6 +157,14 @@ export function CookModeScreen({ route, navigation }: Props) {
           >
             <Text style={styles.iconButtonText}>📋</Text>
           </AnimatedPressable>
+          <AnimatedPressable
+            style={[styles.iconButton, styles.voiceButtonSpacing]}
+            pressScale={0.9}
+            onPress={() => setAllStepsVisible(true)}
+            accessibilityLabel={t("cookMode.viewAllSteps")}
+          >
+            <Text style={styles.iconButtonText}>📖</Text>
+          </AnimatedPressable>
         </View>
       </View>
 
@@ -252,6 +261,37 @@ export function CookModeScreen({ route, navigation }: Props) {
               })}
             </ScrollView>
             <AnimatedPressable style={styles.modalClose} pressScale={0.96} onPress={() => setIngredientsVisible(false)}>
+              <Text style={styles.modalCloseText}>{t("cookMode.close")}</Text>
+            </AnimatedPressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={allStepsVisible} animationType="slide" transparent onRequestClose={() => setAllStepsVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={[styles.modalTitle, { textAlign }]}>{title}</Text>
+            <Text style={[styles.modalSubtitle, { textAlign }]}>{t("cookMode.viewAllSteps")}</Text>
+            <ScrollView style={styles.modalList}>
+              {steps.map((s) => (
+                <AnimatedPressable
+                  key={s.order}
+                  style={styles.modalCell}
+                  pressScale={0.99}
+                  onPress={() => {
+                    setIndex(s.order - 1);
+                    setAllStepsVisible(false);
+                  }}
+                >
+                  <View style={styles.modalRow}>
+                    <Text style={[styles.modalRowName, s.order - 1 === index && styles.modalRowCurrent]}>
+                      {s.order}. {s.instruction}
+                    </Text>
+                  </View>
+                </AnimatedPressable>
+              ))}
+            </ScrollView>
+            <AnimatedPressable style={styles.modalClose} pressScale={0.96} onPress={() => setAllStepsVisible(false)}>
               <Text style={styles.modalCloseText}>{t("cookMode.close")}</Text>
             </AnimatedPressable>
           </View>
@@ -382,6 +422,7 @@ const createStyles = (colors: ThemeColors, textScale: number) =>
     modalRowName: { color: colors.text, fontSize: 14 * textScale },
     modalRowNameWarning: { color: colors.danger, fontWeight: "700" },
     modalRowNameGathered: { color: colors.textMuted, textDecorationLine: "line-through" },
+    modalRowCurrent: { color: colors.primaryDark, fontWeight: "800" },
     modalRowQty: { color: colors.textMuted, fontSize: 14 * textScale, fontWeight: "600" },
     modalRowSubstitute: { color: colors.primaryDark, fontSize: 11, marginTop: 2 },
     modalRowAllergenNote: { color: colors.danger, fontSize: 11, fontWeight: "700", marginTop: 2 },

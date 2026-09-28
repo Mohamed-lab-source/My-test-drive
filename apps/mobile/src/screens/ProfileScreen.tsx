@@ -315,6 +315,13 @@ export function ProfileScreen({ navigation }: Props) {
             onPress={() => navigation.navigate("CustomizeHome")}
           />
         </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("changePassword.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("ChangePassword")}
+          />
+        </View>
 
         {saving ? <Text style={styles.saving}>{t("profile.saving")}</Text> : null}
 

@@ -47,6 +47,10 @@ export async function updatePreferences(patch: Partial<Preference> & { dietGoal?
   return data;
 }
 
+export async function changePassword(currentPassword: string, newPassword: string) {
+  await api.put("/auth/me/password", { currentPassword, newPassword });
+}
+
 export async function fetchCuisines() {
   const { data } = await api.get<Cuisine[]>("/cuisines");
   return data;
