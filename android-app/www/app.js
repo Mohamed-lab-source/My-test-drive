@@ -901,19 +901,58 @@ async function ensureContactsPermission() {
 }
 
 async function findContact(name) {
+  const raw = String(name || "").trim();
+  // Given a number instead of a name? Just use it.
+  if (/^[\d\s+()\-.]+$/.test(raw) && raw.replace(/\D/g, "").length >= 6) return { displayName: raw, phone: raw.replace(/[^\d+]/g, "") };
   const granted = await ensureContactsPermission();
   if (!granted) throw new Error("Contacts permission is off. Ask the user to grant it: long-press the Jarvis icon → App info → Permissions → Contacts → Allow. Or give a phone number directly instead.");
-  if (!contactsCache) {
+  const loadContacts = async () => {
     const result = await Contacts.getContacts({ projection: { name: true, phones: true } });
     contactsCache = result.contacts || [];
+  };
+  if (!contactsCache) await loadContacts();
+  let ranked = rankContacts(contactsCache, raw);
+  if (!ranked.length) { await loadContacts(); ranked = rankContacts(contactsCache, raw); } // added since we last looked?
+  if (!ranked.length) throw new Error(`No contact found matching "${raw}". Try their full name or give a phone number.`);
+  const top = ranked[0];
+  const tied = ranked.filter(r => r.score === top.score);
+  if (top.score < 100 && tied.length > 1) {
+    throw new Error(`Several contacts match "${raw}": ${tied.slice(0, 5).map(r => r.display).join(", ")}. Ask which one they mean.`);
   }
-  const needle = name.trim().toLowerCase();
-  const matches = contactsCache.filter(c => (c.name?.display || "").toLowerCase().includes(needle));
-  if (!matches.length) throw new Error(`No contact found matching "${name}". Try their full name or give a phone number.`);
-  const best = matches[0];
-  const phone = best.phones && best.phones[0] && best.phones[0].number;
-  if (!phone) throw new Error(`Found ${best.name?.display} but they have no phone number saved.`);
-  return { displayName: best.name?.display, phone };
+  const phone = top.contact.phones[0].number;
+  return { displayName: top.display, phone };
+}
+
+// Exact name beats "whole word" beats "starts with" beats "contains":
+// "mom" means the contact called Mom, not "Salma's Mom".
+function contactDisplay(c) {
+  const n = c.name || {};
+  return (n.display || [n.given, n.middle, n.family].filter(Boolean).join(" ") || "").trim();
+}
+function normName(s) {
+  return String(s).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s']/gu, " ").replace(/\s+/g, " ").trim();
+}
+function rankContacts(contacts, query) {
+  const q = normName(query).replace(/^my /, "");
+  if (!q) return [];
+  const out = [];
+  for (const c of contacts) {
+    if (!(c.phones && c.phones[0] && c.phones[0].number)) continue;
+    const display = contactDisplay(c);
+    const d = normName(display);
+    if (!d) continue;
+    const words = d.split(" ");
+    let score = 0;
+    if (d === q) score = 100;
+    else if (words.includes(q) && words.length === 1) score = 100;
+    else if (d.startsWith(q + " ")) score = 70;
+    else if (words.includes(q)) score = 60;
+    else if (d.startsWith(q)) score = 50;
+    else if (d.includes(q)) score = 30;
+    if (score) out.push({ contact: c, display, score });
+  }
+  return out.sort((a, b) => b.score - a.score || a.display.length - b.display.length);
 }
 
 /* ---------------------------------------------------------------------- *
@@ -1708,6 +1747,8 @@ let lastTurnGroups = new Set();
 function pickToolGroups(userText) {
   const groups = new Set(lastTurnGroups); // follow-ups ("and tomorrow?") keep the last turn's tools
   for (const [g, def] of Object.entries(TOOL_GROUPS)) if (def.match.test(userText)) groups.add(g);
+  // A bare phone number is almost always "call/text this".
+  if (/(\+?\d[\d\s\-()]{6,}\d)/.test(userText)) groups.add("comms");
   // Running a protocol can touch anything.
   const lower = userText.toLowerCase();
   if (state.protocols.some(p => lower.includes(p.name.toLowerCase()))) Object.keys(TOOL_GROUPS).forEach(g => groups.add(g));
@@ -1812,6 +1853,8 @@ async function runAgentTurn(userText) {
     { role: "user", content: userText },
   ];
   const groups = pickToolGroups(userText);
+  const keywordGroups = new Set([...groups].filter(g => !lastTurnGroups.has(g) || TOOL_GROUPS[g].match.test(userText)));
+  const reloaded = new Set();
   const usedGroups = new Set();
   let shrunk = false;
   let guard = 0;
@@ -1826,6 +1869,12 @@ async function runAgentTurn(userText) {
         messages = [messages[0], ...trimHistory(state.chatHistory.slice(-4)), ...messages.slice(1 + state.chatHistory.length)];
         continue;
       }
+      // The model reached for a tool that wasn't sent this turn: load its group and try again.
+      const missing = msg.match(/attempted to call tool '([\w-]+)' which was not in request\.tools/);
+      if (missing) {
+        const g = groupOfTool(missing[1]);
+        if (g && !reloaded.has(g)) { reloaded.add(g); groups.add(g); continue; }
+      }
       if (msg.includes("NO_API_KEY")) {
         return { text: `I'm without a mind at the moment, ${state.address}. Add a Groq API key in Settings and I'll be right with you.`, messages };
       }
@@ -1839,7 +1888,7 @@ async function runAgentTurn(userText) {
       if (msg.includes("RATE_LIMIT") || msg.includes("TOO_LARGE")) {
         return { text: `I'm thinking faster than the free tier allows, ${state.address}. Give me a minute and ask again.`, messages };
       }
-      return { text: `I'm having trouble reaching my own thoughts, ${state.address}. ${e.message}`, messages };
+      return { text: `I'm having trouble reaching my own thoughts, ${state.address}. (${msg.replace(/\{[\s\S]*$/, "").slice(0, 120).trim()})`, messages };
     }
     const msg = data.choices && data.choices[0] && data.choices[0].message;
     if (!msg) return { text: "Nothing came back. Try me again in a moment.", messages };
@@ -1869,7 +1918,9 @@ async function runAgentTurn(userText) {
     }
     const text = collapseRepeats(msg.content || "") || "…";
     messages.push({ role: "assistant", content: text });
-    lastTurnGroups = usedGroups;
+    // Carry what this turn needed into the next (a reply like "his number is 010…" needs the same tools),
+    // without letting the loaded set grow turn after turn.
+    lastTurnGroups = new Set([...keywordGroups, ...usedGroups, ...reloaded]);
     return { text, messages };
   }
   return { text: "That one's gone round in circles. Let's try it a simpler way.", messages };
