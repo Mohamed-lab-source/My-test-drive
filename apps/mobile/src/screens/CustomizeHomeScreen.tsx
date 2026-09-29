@@ -12,6 +12,7 @@ import type { TranslationKey } from "../i18n/translations";
 type Props = NativeStackScreenProps<RootStackParamList, "CustomizeHome">;
 
 const SECTION_LABEL_KEYS: Record<HomeSectionKey, TranslationKey> = {
+  cookTonight: "customizeHome.cookTonight",
   recipeOfDay: "customizeHome.recipeOfDay",
   browseByMealType: "customizeHome.browseByMealType",
   leftovers: "customizeHome.leftovers",

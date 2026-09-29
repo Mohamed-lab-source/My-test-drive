@@ -210,10 +210,14 @@ export function HomeScreen({ navigation }: Props) {
     return [...cuisines].sort((a, b) => Number(favSet.has(b.slug)) - Number(favSet.has(a.slug)));
   }, [cuisines, favoriteCuisineSlugs]);
 
+  const showCookTonight = !todaysPlanRecipe && recommended.length > 0 && isSectionVisible("cookTonight");
+  const cookTonightPick = showCookTonight ? recommended[0] : null;
+  const displayedRecommended = cookTonightPick ? recommended.slice(1) : recommended;
+
   return (
     <SafeAreaView style={styles.safe}>
       <FlatList
-        data={recommended}
+        data={displayedRecommended}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListHeaderComponent={
@@ -236,6 +240,30 @@ export function HomeScreen({ navigation }: Props) {
               <View style={styles.offlineBanner}>
                 <Text style={styles.offlineBannerText}>{t("home.offlineBanner")}</Text>
               </View>
+            ) : null}
+
+            {cookTonightPick ? (
+              <AnimatedPressable
+                style={styles.cookTonightCard}
+                pressScale={0.98}
+                onPress={() => navigation.navigate("RecipeDetail", { slug: cookTonightPick.slug })}
+              >
+                <Text style={styles.cookTonightLabel}>{t("home.cookTonightLabel")}</Text>
+                <View style={styles.cookTonightRow}>
+                  <Text style={styles.cookTonightEmoji}>{CUISINE_EMOJI[cookTonightPick.cuisine.slug] ?? "🍽️"}</Text>
+                  <View style={styles.cookTonightTextCol}>
+                    <Text style={styles.cookTonightTitle} numberOfLines={1}>
+                      {cookTonightPick.title}
+                    </Text>
+                    <Text style={styles.cookTonightMeta}>
+                      {t("home.cookTonightMeta", {
+                        minutes: cookTonightPick.prepMinutes + cookTonightPick.cookMinutes,
+                        cuisine: cookTonightPick.cuisine.name,
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              </AnimatedPressable>
             ) : null}
 
             {todaysPlanRecipe ? (
@@ -615,6 +643,21 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: spacing(1.5),
     },
     offlineBannerText: { color: colors.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
+    cookTonightCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing(1.75),
+      marginTop: spacing(2),
+      ...shadow.card,
+    },
+    cookTonightLabel: { color: colors.primaryDark, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+    cookTonightRow: { flexDirection: "row", alignItems: "center", marginTop: spacing(1) },
+    cookTonightEmoji: { fontSize: 34, marginEnd: spacing(1.5) },
+    cookTonightTextCol: { flex: 1 },
+    cookTonightTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
+    cookTonightMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
     todaysPlanCard: {
       flexDirection: "row",
       alignItems: "center",

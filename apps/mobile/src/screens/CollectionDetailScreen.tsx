@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, FlatList, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -39,6 +39,16 @@ export function CollectionDetailScreen({ route, navigation }: Props) {
     const name = nameInput.trim();
     if (name && name !== collection.name) await rename(collection.id, name).catch(() => {});
     setRenaming(false);
+  };
+
+  const handleShare = async () => {
+    const lines = collection.recipes.map((r) => `- ${r.title}`);
+    const message = [collection.name, "", ...lines].join("\n");
+    try {
+      await Share.share({ message });
+    } catch {
+      // User cancelled or share failed silently; nothing to recover.
+    }
   };
 
   const handleDelete = () => {
@@ -86,6 +96,9 @@ export function CollectionDetailScreen({ route, navigation }: Props) {
                   }}
                 >
                   <Text style={styles.actionLink}>{t("collections.rename")}</Text>
+                </AnimatedPressable>
+                <AnimatedPressable pressScale={0.92} onPress={handleShare}>
+                  <Text style={styles.actionLink}>{t("share.button")}</Text>
                 </AnimatedPressable>
                 <AnimatedPressable pressScale={0.92} onPress={handleDelete}>
                   <Text style={[styles.actionLink, styles.deleteLink]}>{t("collections.delete")}</Text>

@@ -24,7 +24,7 @@ const en = {
   "featureTour.next": "Next",
   "featureTour.getStarted": "Let's cook",
   "featureTour.browse.title": "Find something to cook",
-  "featureTour.browse.body": "Browse 200+ recipes across 10+ cuisines, or search by name, ingredient, or narrow results to one cuisine. Filter by meal type, or tell Home what you're craving -- spicy, comforting, quick or light. Check what's trending this week, and use the Substitution Finder when you're missing an ingredient.",
+  "featureTour.browse.body": "Home leads with a single \"Cook Tonight\" pick chosen for you -- no more scrolling to decide. Browse 200+ recipes across 10+ cuisines, or search by name, ingredient, or narrow results to one cuisine. Filter by meal type, or tell Home what you're craving -- spicy, comforting, quick or light. Check what's trending this week, and use the Substitution Finder when you're missing an ingredient.",
   "featureTour.daily.title": "Recipe of the day",
   "featureTour.daily.body": "A fresh featured recipe every day on Home, plus a Surprise Me button any time you want something random.",
   "featureTour.filters.title": "Sort it your way",
@@ -34,7 +34,7 @@ const en = {
   "featureTour.reviews.title": "Ratings & reviews",
   "featureTour.reviews.body": "Rate any recipe you've cooked and leave a review. See what other home cooks thought before you start, browse everything you've rated in My Reviews, and check the star-by-star breakdown on any recipe.",
   "featureTour.saved.title": "Save it for later",
-  "featureTour.saved.body": "Favorite recipes, jot personal notes on any dish, pick up right where you left off with Recently Viewed, and share a recipe's full ingredient and step list as text to send to anyone. Sort your favorites A-Z or by recently added, and clear them all at once from Lists. Organize recipes into custom Collections -- like \"Weeknight dinners\" or \"Meal prep\" -- from any recipe's detail page.",
+  "featureTour.saved.body": "Favorite recipes, jot personal notes on any dish, pick up right where you left off with Recently Viewed, and share a recipe's full ingredient and step list as text to send to anyone. Sort your favorites A-Z or by recently added, and clear them all at once from Lists. Organize recipes into custom Collections -- like \"Weeknight dinners\" or \"Meal prep\" -- from any recipe's detail page, and share a whole collection as a text list.",
   "featureTour.mealPlan.title": "Plan your week",
   "featureTour.mealPlan.body": "Fill the next 7 days with recipes -- or let Auto-fill do it for you, or repeat last week in one tap. Quick-add any recipe to today's plan right from its card, share the week as text, and set a weekly grocery budget cap. A monthly Cooking Calendar shows your planned and actually-cooked days at a glance. Want to lose fat and build muscle at the same time? Lean & Muscle Mode builds you a full week of easy, high-protein, low-fat meals in one tap.",
   "featureTour.shopping.title": "One shopping list",
@@ -58,6 +58,7 @@ const en = {
   "customizeHome.recentlyViewed": "🕒 Recently viewed",
   "customizeHome.trending": "🔥 Trending this week",
   "customizeHome.recentlyCooked": "👩‍🍳 Recently cooked",
+  "customizeHome.cookTonight": "🍳 Cook Tonight hero pick",
 
   "cookingStats.title": "📊 Cooking stats",
   "cookingStats.last14Days": "{count}/14 days cooked",
@@ -181,6 +182,8 @@ const en = {
 
   "home.trendingTitle": "🔥 Trending this week",
   "home.recentlyCookedTitle": "👩‍🍳 Recently cooked",
+  "home.cookTonightLabel": "COOK TONIGHT",
+  "home.cookTonightMeta": "{minutes} min · {cuisine}",
 
   "substitutionFinder.title": "Substitution Finder",
   "substitutionFinder.searchPlaceholder": "Search an ingredient…",
@@ -498,7 +501,7 @@ const ar: Record<keyof typeof en, string> = {
   "featureTour.next": "التالي",
   "featureTour.getStarted": "لنبدأ الطبخ",
   "featureTour.browse.title": "ابحث عما تريد طبخه",
-  "featureTour.browse.body": "تصفح أكثر من 200 وصفة من أكثر من 10 مطابخ، ابحثي بالاسم أو بمكوّن لديكِ، أو ضيّقي نتائج البحث بمطبخ واحد. صفِّ حسب نوع الوجبة، أو أخبري الصفحة الرئيسية بما تشتهين -- حار، مريح، سريع أو خفيف. تحققي من الرائج هذا الأسبوع، واستخدمي بديل المكونات عندما ينقصكِ شيء.",
+  "featureTour.browse.body": "تبدأ الصفحة الرئيسية باقتراح واحد \"اطبخي هذا المساء\" مُختار لكِ -- لا داعي للتمرير للاختيار. تصفح أكثر من 200 وصفة من أكثر من 10 مطابخ، ابحثي بالاسم أو بمكوّن لديكِ، أو ضيّقي نتائج البحث بمطبخ واحد. صفِّ حسب نوع الوجبة، أو أخبري الصفحة الرئيسية بما تشتهين -- حار، مريح، سريع أو خفيف. تحققي من الرائج هذا الأسبوع، واستخدمي بديل المكونات عندما ينقصكِ شيء.",
   "featureTour.daily.title": "وصفة اليوم",
   "featureTour.daily.body": "وصفة مميزة جديدة كل يوم على الصفحة الرئيسية، بالإضافة إلى زر \"فاجئني\" في أي وقت تريدين فيه شيئاً عشوائياً.",
   "featureTour.filters.title": "رتّبها بطريقتك",
@@ -508,7 +511,7 @@ const ar: Record<keyof typeof en, string> = {
   "featureTour.reviews.title": "التقييمات والمراجعات",
   "featureTour.reviews.body": "قيّمي أي وصفة طبختِها واتركي مراجعة. شاهدي رأي الطهاة الآخرين قبل أن تبدئي، تصفحي كل ما قيّمتِه في \"تقييماتي\"، وتحققي من توزيع التقييمات نجمة بنجمة في أي وصفة.",
   "featureTour.saved.title": "احفظيها لوقت لاحق",
-  "featureTour.saved.body": "أضيفي الوصفات للمفضلة، دوّني ملاحظات شخصية على أي طبق، تابعي من حيث توقفتِ مع \"المشاهدة مؤخراً\"، وشاركي قائمة المكونات والخطوات الكاملة لأي وصفة كنص لإرسالها لأي شخص. رتّبي مفضلاتك أبجدياً أو حسب الأحدث إضافة، وامسحيها كلها دفعة واحدة من \"القوائم\". نظّمي الوصفات في مجموعات مخصصة -- مثل \"عشاء أيام الأسبوع\" أو \"تحضير الوجبات\" -- من صفحة أي وصفة.",
+  "featureTour.saved.body": "أضيفي الوصفات للمفضلة، دوّني ملاحظات شخصية على أي طبق، تابعي من حيث توقفتِ مع \"المشاهدة مؤخراً\"، وشاركي قائمة المكونات والخطوات الكاملة لأي وصفة كنص لإرسالها لأي شخص. رتّبي مفضلاتك أبجدياً أو حسب الأحدث إضافة، وامسحيها كلها دفعة واحدة من \"القوائم\". نظّمي الوصفات في مجموعات مخصصة -- مثل \"عشاء أيام الأسبوع\" أو \"تحضير الوجبات\" -- من صفحة أي وصفة، وشاركي مجموعة كاملة كقائمة نصية.",
   "featureTour.mealPlan.title": "خطّطي لأسبوعك",
   "featureTour.mealPlan.body": "املئي الأيام السبعة القادمة بالوصفات -- أو دعي التعبئة التلقائية تفعل ذلك من أجلك، أو كرّري الأسبوع الماضي بضغطة واحدة. أضيفي أي وصفة إلى خطة اليوم مباشرة من بطاقتها، شاركي خطة الأسبوع كنص، وحددي سقف ميزانية أسبوعية للبقالة. تقويم الطبخ الشهري يعرض أيامكِ المخططة والتي طبختِ فيها فعلاً بنظرة واحدة. تريدين خسارة الدهون وبناء العضلات معاً؟ وضع الرشاقة والعضلات يبني لكِ أسبوعاً كاملاً من الوجبات السهلة، عالية البروتين، وقليلة الدهون بضغطة واحدة.",
   "featureTour.shopping.title": "قائمة تسوق واحدة",
@@ -532,6 +535,7 @@ const ar: Record<keyof typeof en, string> = {
   "customizeHome.recentlyViewed": "🕒 المشاهدة مؤخراً",
   "customizeHome.trending": "🔥 الرائج هذا الأسبوع",
   "customizeHome.recentlyCooked": "👩‍🍳 طُبخ مؤخراً",
+  "customizeHome.cookTonight": "🍳 اقتراح اطبخي هذا المساء",
 
   "cookingStats.title": "📊 إحصائيات الطبخ",
   "cookingStats.last14Days": "{count}/14 يوم تم الطبخ فيه",
@@ -655,6 +659,8 @@ const ar: Record<keyof typeof en, string> = {
 
   "home.trendingTitle": "🔥 الرائج هذا الأسبوع",
   "home.recentlyCookedTitle": "👩‍🍳 طُبخ مؤخراً",
+  "home.cookTonightLabel": "اطبخي هذا المساء",
+  "home.cookTonightMeta": "{minutes} دقيقة · {cuisine}",
 
   "substitutionFinder.title": "بديل المكونات",
   "substitutionFinder.searchPlaceholder": "ابحث عن مكوّن…",

@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const STORAGE_KEY = "cookmate.homeLayout.hiddenSections";
 
 export type HomeSectionKey =
+  | "cookTonight"
   | "recipeOfDay"
   | "browseByMealType"
   | "leftovers"
@@ -12,6 +13,7 @@ export type HomeSectionKey =
   | "trending";
 
 export const HOME_SECTION_KEYS: HomeSectionKey[] = [
+  "cookTonight",
   "recipeOfDay",
   "browseByMealType",
   "leftovers",
