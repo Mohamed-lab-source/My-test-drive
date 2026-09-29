@@ -30,13 +30,18 @@ export default function JournalScreen() {
 
   const [mood, setMood] = useState<JournalMood | null>(todayEntry?.mood ?? null);
   const [note, setNote] = useState(todayEntry?.note ?? '');
+  const [gratitude, setGratitude] = useState<string[]>(() => {
+    const lines = (todayEntry?.gratitude ?? '').split('\n');
+    return [lines[0] ?? '', lines[1] ?? '', lines[2] ?? ''];
+  });
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     if (!mood) return;
     setSaving(true);
     try {
-      await setTodayMood(mood, note || null);
+      const lines = gratitude.map((g) => g.trim()).filter(Boolean);
+      await setTodayMood(mood, note || null, lines.length ? lines.join('\n') : null);
     } finally {
       setSaving(false);
     }
@@ -82,6 +87,17 @@ export default function JournalScreen() {
             ))}
           </View>
           <TextField placeholder="Anything on your mind? (optional)" value={note} onChangeText={setNote} multiline />
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+            Three things I'm grateful for
+          </Text>
+          {gratitude.map((g, i) => (
+            <TextField
+              key={i}
+              placeholder={`${i + 1}.`}
+              value={g}
+              onChangeText={(v) => setGratitude((prev) => prev.map((x, j) => (j === i ? v : x)))}
+            />
+          ))}
           <Button title="Save" onPress={handleSave} disabled={!mood} loading={saving} />
         </Card>
 
@@ -134,6 +150,13 @@ export default function JournalScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>{formatDateKey(entry.date)}</Text>
                     {entry.note ? <Text style={[typography.body, { color: colors.label }]}>{entry.note}</Text> : null}
+                    {entry.gratitude
+                      ? entry.gratitude.split('\n').map((line, j) => (
+                          <Text key={j} style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                            🤲 {line}
+                          </Text>
+                        ))
+                      : null}
                   </View>
                 </View>
               );

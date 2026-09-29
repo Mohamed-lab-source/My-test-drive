@@ -11,6 +11,7 @@ import { ProgressRing } from '../../../src/ui/ProgressRing';
 import { Icon } from '../../../src/ui/Icon';
 import { PrayerTracker } from '../../../src/features/life/PrayerTracker';
 import { WishlistRow } from '../../../src/features/life/WishlistRow';
+import { QadaCard } from '../../../src/features/life/QadaCard';
 import { PrayerHistory } from '../../../src/features/life/PrayerHistory';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { IconCircle } from '../../../src/ui/IconCircle';
@@ -61,15 +62,25 @@ export default function LifeScreen() {
           <LifeLink icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
           <LifeLink icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
         </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <LifeLink icon="moon.fill" label="Fasting" color={colors.purple} onPress={() => router.push('/life/fasting')} />
           <LifeLink icon="gift.fill" label="Occasions" color={colors.pink} onPress={() => router.push('/life/occasions')} />
           <LifeLink icon="safari.fill" label="Prayer times" color={colors.teal} onPress={() => router.push('/life/prayer-times')} />
+          <LifeLink icon="sun.haze.fill" label="Adhkar" color={colors.yellow} onPress={() => router.push('/life/adhkar')} />
+        </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <LifeLink icon="calendar.badge.clock" label="Hijri calendar" color={colors.brown} onPress={() => router.push('/life/hijri-calendar')} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
           <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <PrayerHistory />
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <QadaCard />
         </View>
 
         {topGoal ? (

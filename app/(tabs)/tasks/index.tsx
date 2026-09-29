@@ -15,6 +15,7 @@ import { TaskRow } from '../../../src/features/tasks/TaskRow';
 import { AddTaskSheet } from '../../../src/features/tasks/AddTaskSheet';
 import { TaskDetailSheet } from '../../../src/features/tasks/TaskDetailSheet';
 import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
+import { PlanDaySheet } from '../../../src/features/tasks/PlanDaySheet';
 import { Icon } from '../../../src/ui/Icon';
 import { TextField } from '../../../src/ui/TextField';
 import { parseQuickTask } from '../../../src/utils/quickAdd';
@@ -61,6 +62,7 @@ export default function TasksScreen() {
   const [segment, setSegment] = useState(0);
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [addVisible, setAddVisible] = useState(false);
+  const [planVisible, setPlanVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [focusTask, setFocusTask] = useState<Task | null>(null);
 
@@ -116,6 +118,9 @@ export default function TasksScreen() {
           subtitle="Your personal secretary"
           trailing={
             <View style={{ flexDirection: 'row' }}>
+              <Pressable onPress={() => router.push('/tasks/focus')} hitSlop={8} style={{ marginRight: spacing.md }}>
+                <Icon name="timer" size={22} color={colors.blue} />
+              </Pressable>
               <Pressable onPress={() => router.push('/tasks/agenda')} hitSlop={8} style={{ marginRight: spacing.md }}>
                 <Icon name="calendar" size={22} color={colors.blue} />
               </Pressable>
@@ -183,6 +188,15 @@ export default function TasksScreen() {
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
+          {segment === 0 ? (
+            <Pressable
+              onPress={() => setPlanVisible(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginBottom: spacing.sm }}
+            >
+              <Icon name="sun.max.fill" size={16} color={colors.orange} />
+              <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Plan my day</Text>
+            </Pressable>
+          ) : null}
           {segment === 3 && filtered.length > 0 ? (
             <Pressable onPress={handleClearCompleted} style={{ alignSelf: 'flex-end', marginBottom: spacing.sm }}>
               <Text style={[typography.subhead, { color: colors.red }]}>Clear completed</Text>
@@ -218,6 +232,7 @@ export default function TasksScreen() {
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />
       <AddTaskSheet visible={addVisible} onClose={() => setAddVisible(false)} />
+      <PlanDaySheet visible={planVisible} onClose={() => setPlanVisible(false)} />
       <TaskDetailSheet
         task={detailTask}
         visible={!!detailTask}

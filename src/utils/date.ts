@@ -60,3 +60,9 @@ export function daysUntilAnnual(month: number, day: number, now: Date = new Date
   if (next < today) next = new Date(today.getFullYear() + 1, month - 1, day);
   return Math.round((next.getTime() - today.getTime()) / 86400000);
 }
+
+// 'HH:MM' (24h) → a locale time like "7:00 AM".
+export function formatClock(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}

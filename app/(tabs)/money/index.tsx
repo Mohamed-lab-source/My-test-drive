@@ -14,6 +14,7 @@ import { formatMoney } from '../../../src/utils/money';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
+import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
 import type { Transaction } from '../../../src/db/types';
 
 function QuickLink({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
@@ -71,7 +72,7 @@ export default function MoneyScreen() {
               {accounts.filter((a) => !a.is_archived).map((a) => (
                 <Pressable
                   key={a.id}
-                  onPress={() => router.push('/money/accounts')}
+                  onPress={() => router.push({ pathname: '/money/account/[id]', params: { id: a.id } })}
                   style={{
                     backgroundColor: a.color + '18',
                     borderRadius: 14,
@@ -89,10 +90,15 @@ export default function MoneyScreen() {
           </Card>
         </View>
 
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <SafeToSpendCard />
+        </View>
+
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <QuickLink icon="exclamationmark.triangle.fill" label="Debts" color={colors.red} onPress={() => router.push('/money/debts')} />
           <QuickLink icon="repeat" label="Subscriptions" color={colors.purple} onPress={() => router.push('/money/subscriptions')} />
           <QuickLink icon="target" label="Savings" color={colors.green} onPress={() => router.push('/money/savings')} />
+          <QuickLink icon="calendar" label="Bills" color={colors.indigo} onPress={() => router.push('/money/bills-calendar')} />
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <QuickLink icon="chart.pie.fill" label="Budgets" color={colors.orange} onPress={() => router.push('/money/budgets')} />

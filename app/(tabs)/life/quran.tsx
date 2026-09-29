@@ -11,6 +11,7 @@ import { Button } from '../../../src/ui/Button';
 import { formatDateKey, formatDateShort } from '../../../src/utils/date';
 import { estimatePaceCompletionDate } from '../../../src/utils/projection';
 import { QURAN_PAGES } from '../../../src/db/types';
+import { juzEndPage, juzForPage } from '../../../src/utils/quran';
 
 const QUICK_PAGES = [1, 2, 5, 10, 20];
 
@@ -50,6 +51,12 @@ export default function QuranScreen() {
           <Text style={[typography.title3, { color: colors.label, marginTop: spacing.md }]}>
             {complete ? 'Khatm complete — mabrook! 🎉' : `Page ${read} of ${QURAN_PAGES}`}
           </Text>
+          {!complete ? (
+            <Text style={[typography.subhead, { color: colors.green, marginTop: 4, fontWeight: '600' }]}>
+              Next: page {read + 1} · Juz {juzForPage(read + 1)} · {juzEndPage(juzForPage(read + 1)) - read} page
+              {juzEndPage(juzForPage(read + 1)) - read === 1 ? '' : 's'} to finish this juz
+            </Text>
+          ) : null}
           {finishDate ? (
             <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 4 }]}>
               At this pace, you'll finish around {formatDateShort(finishDate)}

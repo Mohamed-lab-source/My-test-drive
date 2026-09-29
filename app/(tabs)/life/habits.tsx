@@ -15,13 +15,17 @@ import { showUndoDelete } from '../../../src/ui/undo';
 import { AddHabitSheet } from '../../../src/features/life/AddHabitSheet';
 import * as habitsRepo from '../../../src/db/repositories/habits';
 import { todayKey } from '../../../src/db/client';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
+import { HABIT_REMINDER_TIMES, requestNotificationPermission } from '../../../src/notifications/scheduler';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import { formatClock } from '../../../src/utils/date';
 import type { Habit } from '../../../src/db/types';
 
 const WEEKS = 5;
 
 function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) {
   const { colors, typography, spacing } = useTheme();
-  const { streaks, todayLogs, isHabitDoneToday, toggleHabit } = useHabitsStore();
+  const { streaks, todayLogs, isHabitDoneToday, toggleHabit, setHabitReminder } = useHabitsStore();
   const [expanded, setExpanded] = useState(false);
   const [history, setHistory] = useState<Record<string, number>>({});
 
@@ -70,6 +74,17 @@ function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) 
         {expanded ? (
           <View style={{ marginTop: spacing.md }}>
             <Heatmap values={history} color={habit.color} weeks={WEEKS} />
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>
+              Daily reminder
+            </Text>
+            <ChipSelector
+              options={[{ id: 'none', label: 'None' }, ...HABIT_REMINDER_TIMES.map((t) => ({ id: t, label: formatClock(t) }))]}
+              selectedId={habit.remind_time ?? 'none'}
+              onSelect={async (id) => {
+                if (id !== 'none' && !useSettingsStore.getState().notificationsEnabled) await requestNotificationPermission();
+                setHabitReminder(habit.id, id === 'none' ? null : id);
+              }}
+            />
           </View>
         ) : null}
       </Card>

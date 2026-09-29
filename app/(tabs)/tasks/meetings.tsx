@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Platform, Linking, Alert } from 'react-native';
+import { Icon } from '../../../src/ui/Icon';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
@@ -11,6 +12,16 @@ import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { showUndoDelete } from '../../../src/ui/undo';
 import { formatDateLong, formatTime } from '../../../src/utils/date';
 import { AddMeetingSheet } from '../../../src/features/tasks/AddMeetingSheet';
+
+// A link (video call) opens directly; anything else is searched in Maps.
+function openLocation(location: string) {
+  const url = /^https?:\/\//i.test(location)
+    ? location
+    : Platform.OS === 'ios'
+      ? `http://maps.apple.com/?q=${encodeURIComponent(location)}`
+      : `geo:0,0?q=${encodeURIComponent(location)}`;
+  Linking.openURL(url).catch(() => Alert.alert('Could not open', location));
+}
 
 export default function MeetingsScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -44,6 +55,11 @@ export default function MeetingsScreen() {
                       <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>{m.location}</Text>
                     ) : null}
                   </View>
+                  {m.location ? (
+                    <Pressable onPress={() => openLocation(m.location!)} hitSlop={10} style={{ marginLeft: spacing.sm }}>
+                      <Icon name={/^https?:\/\//i.test(m.location) ? 'link' : 'map.fill'} size={22} color={colors.blue} />
+                    </Pressable>
+                  ) : null}
                 </Card>
               </Pressable>
             </SwipeableRow>

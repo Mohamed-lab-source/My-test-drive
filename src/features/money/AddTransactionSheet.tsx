@@ -11,6 +11,7 @@ import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
+import { frequentTransactions, type FrequentTemplate } from '../../utils/frequent';
 import type { Transaction, TransactionType } from '../../db/types';
 
 interface AddTransactionSheetProps {
@@ -23,7 +24,7 @@ const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
 export function AddTransactionSheet({ visible, onClose, editing }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, categories, addTransaction, updateTransaction, addDebt } = useFinanceStore();
+  const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt } = useFinanceStore();
   const currency = useSettingsStore((s) => s.currency);
   const defaultAccountId = useSettingsStore((s) => s.defaultAccountId);
 
@@ -38,6 +39,15 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
   const [splitWith, setSplitWith] = useState('');
   const [previewVisible, setPreviewVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const frequent = useMemo(() => (editing ? [] : frequentTransactions(transactions)), [transactions, editing]);
+
+  const applyTemplate = (t: FrequentTemplate) => {
+    setTypeIndex(TYPES.indexOf(t.type));
+    setAmount(String(fromMinorUnits(t.amount)));
+    setCategoryId(t.categoryId);
+    if (accounts.some((a) => a.id === t.accountId && !a.is_archived)) setAccountId(t.accountId);
+    setNote(t.note ?? '');
+  };
 
   const activeAccounts = useMemo(
     () => accounts.filter((a) => !a.is_archived || a.id === editing?.account_id || a.id === editing?.transfer_to_account_id),
@@ -137,6 +147,30 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
         <View style={{ marginBottom: spacing.md }}>
           <SegmentedControl options={['Expense', 'Income', 'Transfer']} selectedIndex={typeIndex} onChange={setTypeIndex} />
         </View>
+
+        {frequent.length > 0 ? (
+          <View style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+              Frequent
+            </Text>
+            <ChipSelector
+              options={frequent.map((t) => {
+                const cat = categories.find((c) => c.id === t.categoryId);
+                return {
+                  id: t.key,
+                  label: `${t.note ?? cat?.name ?? 'Untitled'} · ${formatMoney(t.amount, currency)}`,
+                  color: cat?.color,
+                  icon: cat?.icon,
+                };
+              })}
+              selectedId={null}
+              onSelect={(id) => {
+                const t = frequent.find((f) => f.key === id);
+                if (t) applyTemplate(t);
+              }}
+            />
+          </View>
+        ) : null}
 
         <TextField
           label="Amount"

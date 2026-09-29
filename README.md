@@ -46,6 +46,11 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Tap a category in Analytics for its 6-month spending trend
 - Search the full transaction history by note
 - More currencies: KWD, QAR, BHD, OMR, JOD, INR, PKR, MYR, IDR
+- Bill calendar — every recurring due date in a month grid, with totals going out and coming in
+- Frequent transactions: one-tap chips in the add sheet for things you log repeatedly
+- Account detail screen with its transactions (including incoming transfers) and this month's in/out
+- Safe to spend today (budget left ÷ days left) and no-spend days this month
+- Savings rate and emergency runway in Analytics; share a month summary as text
 
 **Tasks**
 - Today / Backlog / All views, with unfinished "Today" tasks rolling into Backlog automatically
@@ -60,6 +65,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Task reminders (in 1 hour / this evening / tomorrow 9 AM)
 - Tap a meeting to edit it, with a configurable reminder lead time and notes
 - Filter tasks by project; subtask progress (e.g. 2/5) on each task row
+- Plan my day: pick backlog tasks for today
+- Duplicate a task along with its subtasks
+- Focus stats: today, last 7 days chart, streak and most-focused tasks
+- Open a meeting's location in Maps, or its link if it's a video call
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -75,12 +84,20 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Occasions — birthdays and anniversaries sorted by how soon they are, with a yearly reminder on the day
 - Prayer times screen — today's times with sunrise and the last third of the night, a 7-day timetable, and the Qibla bearing
 - Jumu'ah reminder on Fridays, an hour before Dhuhr
-- 30-day mood trend in the journal
+- 30-day mood trend in the journal, plus three gratitude lines per day
+- Morning and evening adhkar checklists
+- Hijri calendar with key Islamic days and what's coming up
+- Qada counter for make-up prayers
+- Quran position: next page, juz, and pages left in the juz
+- Daily habit reminders at a chosen time
+- Sunnah fast reminders the evening before the white days, Arafah and Ashura
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
 - Getting started checklist for new accounts (dismissible)
 - Suhoor / iftar countdown during Ramadan
+- Verse of the day
+- Optional 8 AM morning briefing and 9 PM journal check-in notifications
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood

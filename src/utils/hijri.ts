@@ -75,3 +75,59 @@ export function formatHijri(date: Date, offsetDays = 0): string {
   const h = toHijri(date, offsetDays);
   return `${h.day} ${HIJRI_MONTHS[h.month - 1]} ${h.year} AH`;
 }
+
+export interface HijriDay {
+  date: Date;
+  hijri: HijriDate;
+}
+
+// Every Gregorian day in the Hijri month that contains `anchor`, found by
+// walking back to day 1 and forward until the month changes.
+export function getHijriMonthDays(anchor: Date, offsetDays = 0): HijriDay[] {
+  const start = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), 12);
+  const month = toHijri(start, offsetDays).month;
+  while (toHijri(new Date(start.getTime() - 86400000), offsetDays).month === month) start.setDate(start.getDate() - 1);
+  const days: HijriDay[] = [];
+  const cursor = new Date(start);
+  for (let i = 0; i < 31; i++) {
+    const hijri = toHijri(cursor, offsetDays);
+    if (hijri.month !== month) break;
+    days.push({ date: new Date(cursor), hijri });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
+export type IslamicDayKind = 'eid' | 'fast' | 'season';
+
+// Widely observed days only; the white days (13–15) are marked every month
+// except Dhu al-Hijjah, when the 13th is a day of Tashreeq.
+export function islamicDay(h: HijriDate): { label: string; kind: IslamicDayKind } | null {
+  const { month: m, day: d } = h;
+  if (m === 1 && d === 1) return { label: 'Islamic New Year', kind: 'season' };
+  if (m === 1 && d === 9) return { label: "Tasu'a", kind: 'fast' };
+  if (m === 1 && d === 10) return { label: 'Ashura', kind: 'fast' };
+  if (m === 9 && d === 1) return { label: 'Ramadan begins', kind: 'season' };
+  if (m === 9 && d >= 21) return { label: 'Last ten nights', kind: 'season' };
+  if (m === 10 && d === 1) return { label: 'Eid al-Fitr', kind: 'eid' };
+  if (m === 12 && d === 9) return { label: 'Day of Arafah', kind: 'fast' };
+  if (m === 12 && d === 10) return { label: 'Eid al-Adha', kind: 'eid' };
+  if (m === 12 && d >= 11 && d <= 13) return { label: 'Days of Tashreeq', kind: 'eid' };
+  if (m === 12 && d < 9) return { label: 'First ten days', kind: 'season' };
+  if (d >= 13 && d <= 15) return { label: 'White days', kind: 'fast' };
+  return null;
+}
+
+// Upcoming notable days (excluding white days) within `days` of `from`.
+export function upcomingIslamicDays(from: Date, days: number, offsetDays = 0): { date: Date; label: string }[] {
+  const out: { date: Date; label: string }[] = [];
+  let lastLabel = '';
+  for (let i = 0; i < days; i++) {
+    const date = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i, 12);
+    const info = islamicDay(toHijri(date, offsetDays));
+    // Multi-day seasons only list their first day.
+    if (info && info.label !== 'White days' && info.label !== lastLabel) out.push({ date, label: info.label });
+    lastLabel = info?.label ?? '';
+  }
+  return out;
+}

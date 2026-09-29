@@ -270,6 +270,20 @@ CREATE TABLE IF NOT EXISTS occasions (
   kind TEXT NOT NULL CHECK (kind IN ('birthday', 'anniversary', 'other')),
   created_at TEXT NOT NULL
 );
+
+-- id = '<date>-<session>'; done holds a JSON array of completed adhkar ids.
+CREATE TABLE IF NOT EXISTS adhkar_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  session TEXT NOT NULL CHECK (session IN ('morning', 'evening')),
+  done TEXT NOT NULL DEFAULT '[]'
+);
+
+-- One row per prayer (id = the prayer name): make-up prayers still owed.
+CREATE TABLE IF NOT EXISTS qada_counts (
+  id TEXT PRIMARY KEY NOT NULL,
+  owed INTEGER NOT NULL DEFAULT 0
+);
 `;
 
 // Columns added to already-shipped tables after their initial release. A
@@ -292,4 +306,6 @@ export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: stri
     column: 'auto_post',
     ddl: 'ALTER TABLE recurring_rules ADD COLUMN auto_post INTEGER NOT NULL DEFAULT 0',
   },
+  { table: 'habits', column: 'remind_time', ddl: 'ALTER TABLE habits ADD COLUMN remind_time TEXT' },
+  { table: 'journal_entries', column: 'gratitude', ddl: 'ALTER TABLE journal_entries ADD COLUMN gratitude TEXT' },
 ];

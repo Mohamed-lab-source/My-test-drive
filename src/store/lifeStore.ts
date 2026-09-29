@@ -34,7 +34,7 @@ interface LifeState {
   togglePrayer: (prayer: Prayer, completed: boolean) => Promise<void>;
   isPrayerDone: (prayer: Prayer) => boolean;
 
-  setTodayMood: (mood: JournalMood, note: string | null) => Promise<void>;
+  setTodayMood: (mood: JournalMood, note: string | null, gratitude?: string | null) => Promise<void>;
 }
 
 export const useLifeStore = create<LifeState>((set, get) => ({
@@ -120,8 +120,8 @@ export const useLifeStore = create<LifeState>((set, get) => ({
     return get().todayPrayerLogs.some((p) => p.prayer === prayer && p.completed === 1);
   },
 
-  setTodayMood: async (mood, note) => {
-    await journalRepo.setJournalEntry(todayKey(), mood, note);
+  setTodayMood: async (mood, note, gratitude = null) => {
+    await journalRepo.setJournalEntry(todayKey(), mood, note, gratitude);
     await get().refreshJournal();
   },
 }));

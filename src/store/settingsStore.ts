@@ -22,6 +22,12 @@ interface SettingsState {
   setJumuahReminder: (v: boolean) => void;
   gettingStartedDismissed: boolean;
   setGettingStartedDismissed: (v: boolean) => void;
+  sunnahFastReminders: boolean;
+  setSunnahFastReminders: (v: boolean) => void;
+  morningBriefing: boolean;
+  setMorningBriefing: (v: boolean) => void;
+  eveningJournal: boolean;
+  setEveningJournal: (v: boolean) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -49,6 +55,12 @@ export const useSettingsStore = create<SettingsState>()(
       setJumuahReminder: (v) => set({ jumuahReminder: v }),
       gettingStartedDismissed: false,
       setGettingStartedDismissed: (v) => set({ gettingStartedDismissed: v }),
+      sunnahFastReminders: false,
+      setSunnahFastReminders: (v) => set({ sunnahFastReminders: v }),
+      morningBriefing: false,
+      setMorningBriefing: (v) => set({ morningBriefing: v }),
+      eveningJournal: false,
+      setEveningJournal: (v) => set({ eveningJournal: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

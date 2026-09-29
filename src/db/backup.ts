@@ -26,6 +26,8 @@ const TABLES = [
   'networth_snapshots',
   'fasting_logs',
   'occasions',
+  'adhkar_logs',
+  'qada_counts',
 ];
 
 export async function exportAllData(): Promise<string> {

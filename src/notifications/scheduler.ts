@@ -3,7 +3,9 @@ import * as Notifications from 'expo-notifications';
 import { useSettingsStore } from '../store/settingsStore';
 import { findPrayerCity, getPrayerSchedule, type PrayerCity } from '../utils/prayerTimes';
 import { todayKey } from '../db/client';
-import type { Debt, Meeting, Occasion, RecurringRule, Task } from '../db/types';
+import type { Debt, Habit, Meeting, Occasion, RecurringRule, Task } from '../db/types';
+import { islamicDay, toHijri, HIJRI_MONTHS } from '../utils/hijri';
+import { localDateKey } from '../utils/date';
 import { listOccasions } from '../db/repositories/occasions';
 
 const CHANNEL_ID = 'anchor-reminders';
@@ -255,4 +257,124 @@ export async function cancelOccasionReminder(id: string): Promise<void> {
 
 export async function rescheduleOccasionReminders(): Promise<void> {
   for (const o of await listOccasions()) await scheduleOccasionReminder(o);
+}
+
+// ---------- Habit reminders (daily, at the habit's chosen time) ----------
+export const HABIT_REMINDER_TIMES = ['07:00', '12:00', '18:00', '21:00'];
+
+function habitReminderId(habitId: string): string {
+  return `habit-${habitId}`;
+}
+
+export async function scheduleHabitReminder(habit: Habit): Promise<void> {
+  await cancelHabitReminder(habit.id);
+  if (!habit.remind_time || habit.is_archived) return;
+  if (!(await areNotificationsEnabled())) return;
+  const [hour, minute] = habit.remind_time.split(':').map(Number);
+  await Notifications.scheduleNotificationAsync({
+    identifier: habitReminderId(habit.id),
+    content: { title: habit.name, body: 'Keep your streak going' },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
+  });
+}
+
+export async function cancelHabitReminder(habitId: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(habitReminderId(habitId)).catch(() => {});
+}
+
+export async function rescheduleHabitReminders(habits: Habit[]): Promise<void> {
+  for (const h of habits) await scheduleHabitReminder(h);
+}
+
+// ---------- Sunnah fast reminders (evening before) ----------
+const SUNNAH_PREFIX = 'sunnahfast-';
+const SUNNAH_DAYS_AHEAD = 60;
+const SUNNAH_REMINDER_HOUR = 20;
+
+export async function rescheduleSunnahFastReminders(): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => n.identifier.startsWith(SUNNAH_PREFIX))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+  );
+  const { sunnahFastReminders, hijriOffset } = useSettingsStore.getState();
+  if (!sunnahFastReminders || !(await areNotificationsEnabled())) return;
+
+  const now = new Date();
+  let previous = '';
+  for (let i = 1; i <= SUNNAH_DAYS_AHEAD; i++) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 12);
+    const hijri = toHijri(day, hijriOffset);
+    const info = islamicDay(hijri);
+    const label = info?.kind === 'fast' ? info.label : '';
+    // One reminder per run of fasting days (e.g. the three white days).
+    if (label && label !== previous && !(label === 'Ashura' && previous === "Tasu'a")) {
+      const fireAt = new Date(day.getFullYear(), day.getMonth(), day.getDate() - 1, SUNNAH_REMINDER_HOUR);
+      if (fireAt.getTime() > now.getTime()) {
+        const body =
+          label === 'White days'
+            ? `The white days (13–15 ${HIJRI_MONTHS[hijri.month - 1]}) start tomorrow`
+            : label === "Tasu'a"
+              ? "Tasu'a and Ashura are tomorrow and the day after"
+              : `${label} is tomorrow`;
+        await Notifications.scheduleNotificationAsync({
+          identifier: `${SUNNAH_PREFIX}${todayKey(day)}`,
+          content: { title: 'Sunnah fast tomorrow', body: `${body} — set your suhoor alarm.` },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireAt, channelId: CHANNEL_ID },
+        });
+      }
+    }
+    previous = label;
+  }
+}
+
+// ---------- Morning briefing & evening journal ----------
+const BRIEFING_ID = 'morning-briefing';
+const BRIEFING_HOUR = 8;
+const JOURNAL_ID = 'evening-journal';
+const JOURNAL_HOUR = 21;
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+// Content is computed now for the next 8 AM, so this is re-run on every
+// launch (and whenever the data behind it changes enough to matter).
+export async function scheduleMorningBriefing(data: { tasks: Task[]; meetings: Meeting[]; rules: RecurringRule[] }): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(BRIEFING_ID).catch(() => {});
+  if (!useSettingsStore.getState().morningBriefing || !(await areNotificationsEnabled())) return;
+
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), BRIEFING_HOUR);
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
+  const key = todayKey(target);
+
+  const tasks = data.tasks.filter((t) => t.status !== 'done' && (t.scheduled_date === key || t.status === 'in_progress'));
+  const meetings = data.meetings.filter((m) => localDateKey(m.start_at) === key);
+  const bills = data.rules.filter((r) => r.is_active && !r.is_paused && r.type === 'expense' && localDateKey(r.next_due_date) <= key);
+  const parts = [
+    tasks.length ? plural(tasks.length, 'task') : null,
+    meetings.length ? plural(meetings.length, 'meeting') : null,
+    bills.length ? `${plural(bills.length, 'bill')} due` : null,
+  ].filter(Boolean);
+
+  await Notifications.scheduleNotificationAsync({
+    identifier: BRIEFING_ID,
+    content: {
+      title: 'Good morning',
+      body: parts.length ? `Today: ${parts.join(', ')}.` : 'A clear day — plan something from your backlog?',
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: target, channelId: CHANNEL_ID },
+  });
+}
+
+export async function scheduleEveningJournal(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(JOURNAL_ID).catch(() => {});
+  if (!useSettingsStore.getState().eveningJournal || !(await areNotificationsEnabled())) return;
+  await Notifications.scheduleNotificationAsync({
+    identifier: JOURNAL_ID,
+    content: { title: 'How was today?', body: "Take a moment to log your mood and what you're grateful for." },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: JOURNAL_HOUR, minute: 0, channelId: CHANNEL_ID },
+  });
 }

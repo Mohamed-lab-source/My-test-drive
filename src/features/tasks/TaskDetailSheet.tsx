@@ -65,6 +65,7 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
   const { colors, typography, spacing } = useTheme();
   const updateTask = useProductivityStore((s) => s.updateTask);
   const removeTask = useProductivityStore((s) => s.removeTask);
+  const duplicateTask = useProductivityStore((s) => s.duplicateTask);
   const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
   const setTaskReminder = useProductivityStore((s) => s.setTaskReminder);
   const liveRemindAt = useProductivityStore((s) => s.tasks.find((t) => t.id === task?.id)?.remind_at ?? null);
@@ -234,6 +235,15 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
           title="Start focus timer"
           variant="secondary"
           onPress={() => onStartFocus(task)}
+          style={{ marginBottom: spacing.sm }}
+        />
+        <Button
+          title="Duplicate task"
+          variant="secondary"
+          onPress={async () => {
+            await duplicateTask(task.id);
+            onClose();
+          }}
           style={{ marginBottom: spacing.sm }}
         />
         <Button title="Delete task" variant="destructive" onPress={handleDelete} style={{ marginBottom: spacing.xl }} />

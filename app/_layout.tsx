@@ -18,6 +18,7 @@ import {
   rescheduleAllReminders,
   rescheduleOccasionReminders,
 } from '../src/notifications/scheduler';
+import { rescheduleExtraReminders } from '../src/notifications/extras';
 import { settingsHydrated } from '../src/store/settingsStore';
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 
@@ -63,6 +64,7 @@ function AppShell() {
         );
         await reschedulePrayerAlerts();
         await rescheduleOccasionReminders();
+        await rescheduleExtraReminders();
       })
       .catch((e) => {
         console.error('Failed to hydrate app state', e);

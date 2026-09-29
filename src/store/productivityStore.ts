@@ -27,6 +27,7 @@ interface ProductivityState {
   updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
   toggleTaskDone: (id: string, isDone: boolean) => Promise<void>;
   removeTask: (id: string) => Promise<void>;
+  duplicateTask: (id: string) => Promise<void>;
   rescheduleTask: (id: string, target: repo.RescheduleTarget) => Promise<void>;
   clearCompleted: () => Promise<Task[]>;
   logFocusSession: (taskId: string | null, minutes: number) => Promise<void>;
@@ -80,6 +81,11 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
     await get().refreshTasks();
     const task = get().tasks.find((t) => t.id === id);
     if (task) scheduleTaskReminder(task);
+  },
+  duplicateTask: async (id) => {
+    await repo.duplicateTask(id);
+    await get().refreshTasks();
+    await get().refreshSubtaskCounts();
   },
   removeTask: async (id) => {
     await repo.deleteTask(id);

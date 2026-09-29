@@ -10,6 +10,7 @@ export default function TasksLayout() {
       <Stack.Screen name="meetings" />
       <Stack.Screen name="projects" />
       <Stack.Screen name="agenda" />
+      <Stack.Screen name="focus" />
     </Stack>
   );
 }

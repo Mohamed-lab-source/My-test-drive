@@ -196,6 +196,8 @@ export interface Habit {
   color: string;
   is_archived: number;
   sort_order: number;
+  // 'HH:MM' local time for a daily reminder, or null for none.
+  remind_time?: string | null;
   created_at: string;
 }
 
@@ -212,6 +214,8 @@ export interface JournalEntry {
   date: string;
   mood: JournalMood;
   note: string | null;
+  // Newline-separated gratitude lines.
+  gratitude?: string | null;
   created_at: string;
 }
 
@@ -266,4 +270,18 @@ export interface Occasion {
   day: number;
   kind: OccasionKind;
   created_at: string;
+}
+
+export type AdhkarSession = 'morning' | 'evening';
+
+export interface AdhkarLog {
+  id: string;
+  date: string;
+  session: AdhkarSession;
+  done: string;
+}
+
+export interface QadaCount {
+  id: Prayer;
+  owed: number;
 }

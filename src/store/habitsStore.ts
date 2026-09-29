@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { todayKey } from '../db/client';
 import type { Habit, HabitLog } from '../db/types';
 import * as repo from '../db/repositories/habits';
+import { cancelHabitReminder, scheduleHabitReminder } from '../notifications/scheduler';
 
 interface HabitState {
   loaded: boolean;
@@ -14,6 +15,7 @@ interface HabitState {
 
   addHabit: (input: Parameters<typeof repo.createHabit>[0]) => Promise<void>;
   removeHabit: (id: string) => Promise<void>;
+  setHabitReminder: (id: string, time: string | null) => Promise<void>;
   toggleHabit: (habitId: string, completed: boolean) => Promise<void>;
   isHabitDoneToday: (habitId: string) => boolean;
 }
@@ -40,11 +42,22 @@ export const useHabitsStore = create<HabitState>((set, get) => ({
   },
 
   addHabit: async (input) => {
-    await repo.createHabit(input);
-    set({ habits: await repo.listHabits() });
+    const id = await repo.createHabit(input);
+    const habits = await repo.listHabits();
+    set({ habits });
+    const created = habits.find((h) => h.id === id);
+    if (created) scheduleHabitReminder(created);
     await get().refreshToday();
   },
+  setHabitReminder: async (id, time) => {
+    await repo.updateHabit(id, { remind_time: time });
+    const habits = await repo.listHabits();
+    set({ habits });
+    const habit = habits.find((h) => h.id === id);
+    if (habit) await scheduleHabitReminder(habit);
+  },
   removeHabit: async (id) => {
+    await cancelHabitReminder(id);
     await repo.deleteHabit(id);
     set({ habits: await repo.listHabits() });
     await get().refreshToday();

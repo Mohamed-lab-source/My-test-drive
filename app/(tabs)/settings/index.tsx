@@ -25,6 +25,7 @@ import {
   rescheduleAllReminders,
   rescheduleOccasionReminders,
 } from '../../../src/notifications/scheduler';
+import { rescheduleExtraReminders } from '../../../src/notifications/extras';
 import { PRAYER_CITIES } from '../../../src/utils/prayerTimes';
 import { formatHijri } from '../../../src/utils/hijri';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
@@ -80,7 +81,27 @@ export default function SettingsScreen() {
     setHijriOffset,
     jumuahReminder,
     setJumuahReminder,
+    sunnahFastReminders,
+    setSunnahFastReminders,
+    morningBriefing,
+    setMorningBriefing,
+    eveningJournal,
+    setEveningJournal,
   } = useSettingsStore();
+
+  // Shared by the opt-in reminder toggles: ask for permission first, then
+  // store the preference and re-arm everything that depends on it.
+  const toggleWithPermission = async (value: boolean, apply: (v: boolean) => void) => {
+    if (value && !notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert('Permission needed', 'Enable notifications for Anchor in your device Settings first.');
+        return;
+      }
+    }
+    apply(value);
+    await rescheduleExtraReminders();
+  };
 
   const handleTogglePrayerAlerts = async (value: boolean) => {
     if (value && !notificationsEnabled) {
@@ -172,6 +193,7 @@ export default function SettingsScreen() {
       useFinanceStore.getState().debts
     );
     await reschedulePrayerAlerts();
+    await rescheduleExtraReminders();
   };
 
   const handleToggleBiometric = async (value: boolean) => {
@@ -266,6 +288,15 @@ export default function SettingsScreen() {
               </View>
               <Switch value={jumuahReminder} disabled={!prayerCityId} onValueChange={handleToggleJumuah} />
             </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Sunnah fast reminders</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
+                  Evening before the white days, Arafah and Ashura
+                </Text>
+              </View>
+              <Switch value={sunnahFastReminders} onValueChange={(v) => toggleWithPermission(v, setSunnahFastReminders)} />
+            </View>
             <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>
               Hijri date adjustment · {formatHijri(new Date(), hijriOffset)}
             </Text>
@@ -314,9 +345,21 @@ export default function SettingsScreen() {
             <ListRow
               title="Reminders"
               subtitle="Meeting and bill-due notifications"
-              isLast={!biometricAvailable}
               leading={<IconCircle name="bell.fill" color={colors.red} size={32} />}
               trailing={<Switch value={notificationsEnabled} onValueChange={handleToggleNotifications} />}
+            />
+            <ListRow
+              title="Morning briefing"
+              subtitle="8 AM: today's tasks, meetings and bills"
+              leading={<IconCircle name="sun.max.fill" color={colors.orange} size={32} />}
+              trailing={<Switch value={morningBriefing} onValueChange={(v) => toggleWithPermission(v, setMorningBriefing)} />}
+            />
+            <ListRow
+              title="Evening check-in"
+              subtitle="9 PM: log your mood and gratitude"
+              isLast={!biometricAvailable}
+              leading={<IconCircle name="text.book.closed.fill" color={colors.indigo} size={32} />}
+              trailing={<Switch value={eveningJournal} onValueChange={(v) => toggleWithPermission(v, setEveningJournal)} />}
             />
             {biometricAvailable ? (
               <ListRow

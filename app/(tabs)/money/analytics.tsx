@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -7,6 +7,7 @@ import { useSettingsStore } from '../../../src/store/settingsStore';
 import { Card } from '../../../src/ui/Card';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { EmptyState } from '../../../src/ui/EmptyState';
+import { Icon } from '../../../src/ui/Icon';
 import { formatMoney } from '../../../src/utils/money';
 import { formatDateKey, formatDateShort, localDateKey } from '../../../src/utils/date';
 import { forecastCashFlow } from '../../../src/utils/forecast';
@@ -108,10 +109,33 @@ export default function AnalyticsScreen() {
   const thisMonth = monthlyTrend[monthlyTrend.length - 1];
   const lastMonth = monthlyTrend[monthlyTrend.length - 2];
   const spendChange = lastMonth.expense > 0 ? (thisMonth.expense - lastMonth.expense) / lastMonth.expense : null;
+  const savingsRate = thisMonth.income > 0 ? (thisMonth.income - thisMonth.expense) / thisMonth.income : null;
+  // Months of expenses the cash/bank/savings balances would cover, using the
+  // average of the previous months that had any spending.
+  const pastExpenses = monthlyTrend.slice(0, -1).map((m) => m.expense).filter((e) => e > 0);
+  const avgMonthlyExpense = pastExpenses.length ? pastExpenses.reduce((a, b) => a + b, 0) / pastExpenses.length : 0;
+  const liquid = accounts
+    .filter((a) => !a.is_archived && a.type !== 'credit')
+    .reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
+  const runwayMonths = avgMonthlyExpense > 0 ? liquid / avgMonthlyExpense : null;
+
   const biggestExpense = useMemo(
     () => monthTx.filter((t) => t.type === 'expense').sort((a, b) => b.amount - a.amount)[0],
     [monthTx]
   );
+
+  const shareSummary = () => {
+    const monthName = new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const lines = [
+      `${monthName} so far`,
+      `Income: ${formatMoney(thisMonth.income, currency)}`,
+      `Spent: ${formatMoney(thisMonth.expense, currency)}`,
+      `Net: ${formatMoney(thisMonth.income - thisMonth.expense, currency)}`,
+      savingsRate !== null ? `Savings rate: ${Math.round(savingsRate * 100)}%` : null,
+      ...categoryBreakdown.slice(0, 3).map((c) => `• ${c.category?.name ?? 'Uncategorized'}: ${formatMoney(c.amount, currency)}`),
+    ].filter(Boolean);
+    Share.share({ message: lines.join('\n') });
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -204,7 +228,33 @@ export default function AnalyticsScreen() {
                   {formatMoney(thisMonth.income - thisMonth.expense, currency)}
                 </Text>
               </Text>
+              <Pressable onPress={shareSummary} style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                <Icon name="square.and.arrow.up" size={16} color={colors.blue} />
+                <Text style={[typography.subhead, { color: colors.blue, marginLeft: 6 }]}>Share summary</Text>
+              </Pressable>
             </Card>
+
+            <View style={{ flexDirection: 'row', marginBottom: spacing.lg, marginHorizontal: -4 }}>
+              <Card style={{ flex: 1, marginHorizontal: 4 }}>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Savings rate</Text>
+                <Text
+                  style={[
+                    typography.title2,
+                    { color: savingsRate === null ? colors.tertiaryLabel : savingsRate >= 0 ? colors.green : colors.red, marginTop: 2 },
+                  ]}
+                >
+                  {savingsRate === null ? '—' : `${Math.round(savingsRate * 100)}%`}
+                </Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>of this month's income</Text>
+              </Card>
+              <Card style={{ flex: 1, marginHorizontal: 4 }}>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Emergency runway</Text>
+                <Text style={[typography.title2, { color: colors.label, marginTop: 2 }]}>
+                  {runwayMonths === null ? '—' : `${runwayMonths.toFixed(1)} mo`}
+                </Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>of spending in cash & savings</Text>
+              </Card>
+            </View>
 
             <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>
               Income vs. expense — last 6 months

@@ -69,6 +69,28 @@ export async function createTask(
 }
 
 export const updateTask = (id: string, patch: Partial<Task>) => updateRow('tasks', id, patch);
+
+// Copies a task (as not-done, without its reminder) along with its subtasks.
+export async function duplicateTask(id: string): Promise<string | null> {
+  const task = await getRow<Task>('tasks', id);
+  if (!task) return null;
+  const copyId = await createTask({
+    project_id: task.project_id,
+    title: `${task.title} (copy)`,
+    notes: task.notes,
+    status: task.status === 'done' ? 'todo' : task.status,
+    priority: task.priority,
+    due_date: task.due_date,
+    scheduled_date: task.status === 'done' ? todayKey() : task.scheduled_date,
+    sort_order: Date.now(),
+    repeat_frequency: task.repeat_frequency,
+    repeat_interval: task.repeat_interval,
+  });
+  for (const sub of await listSubtasks(id)) {
+    await insertRow('subtasks', { id: newId(), task_id: copyId, title: sub.title, is_done: 0, sort_order: sub.sort_order });
+  }
+  return copyId;
+}
 export const deleteTask = (id: string) => deleteRow('tasks', id);
 export const reorderTasks = (a: Task, b: Task) => swapSortOrder('tasks', a, b);
 

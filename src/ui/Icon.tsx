@@ -93,6 +93,14 @@ const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   'sunrise.fill': 'partly-sunny',
   'checklist': 'checkbox',
   'arrow.up.right': 'navigate',
+  'minus.circle': 'remove-circle-outline',
+  'calendar.badge.clock': 'calendar-number',
+  'sun.haze.fill': 'sunny',
+  'timer': 'timer',
+  'map.fill': 'map',
+  'doc.on.doc': 'copy',
+  'quote.opening': 'chatbox-ellipses',
+  'hand.raised.fill': 'hand-right',
 };
 
 interface IconProps {

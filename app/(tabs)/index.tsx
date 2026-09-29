@@ -12,6 +12,7 @@ import { IconCircle } from '../../src/ui/IconCircle';
 import { Icon } from '../../src/ui/Icon';
 import { PrayerTracker } from '../../src/features/life/PrayerTracker';
 import { RamadanCard } from '../../src/features/home/RamadanCard';
+import { VerseCard } from '../../src/features/home/VerseCard';
 import { GettingStartedCard } from '../../src/features/home/GettingStartedCard';
 import { AddTransactionSheet } from '../../src/features/money/AddTransactionSheet';
 import { AddTaskSheet } from '../../src/features/tasks/AddTaskSheet';
@@ -135,6 +136,7 @@ export default function HomeScreen() {
         <View style={{ paddingHorizontal: spacing.lg }}>
           <GettingStartedCard />
           <RamadanCard />
+          <VerseCard />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

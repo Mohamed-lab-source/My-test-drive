@@ -71,6 +71,9 @@ export const listTransactionsInRange = (startIso: string, endIso: string) =>
 export const searchTransactionsByNote = (query: string) =>
   whereRows<Transaction>('transactions', 'note LIKE ?', [`%${query}%`], 'date DESC, created_at DESC');
 
+export const listIncomingTransfers = (accountId: string) =>
+  whereRows<Transaction>('transactions', "type = 'transfer' AND transfer_to_account_id = ?", [accountId], 'date DESC');
+
 export const listTransactionsForAccount = (accountId: string) =>
   whereRows<Transaction>('transactions', 'account_id = ?', [accountId], 'date DESC');
 

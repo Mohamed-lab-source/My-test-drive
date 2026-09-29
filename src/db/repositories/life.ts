@@ -1,6 +1,17 @@
 import { getDb, newId, nowIso, todayKey } from '../client';
-import { allRows, deleteRow, insertRow, updateRow, whereRows } from '../helpers';
-import type { DhikrLog, FastKind, FastingLog, Prayer, PrayerLog, QuranLog, WishlistItem } from '../types';
+import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
+import type {
+  AdhkarLog,
+  AdhkarSession,
+  DhikrLog,
+  FastKind,
+  FastingLog,
+  Prayer,
+  PrayerLog,
+  QadaCount,
+  QuranLog,
+  WishlistItem,
+} from '../types';
 import { PRAYERS } from '../types';
 
 // ---------- Wishlist / ideas ----------
@@ -109,4 +120,36 @@ export async function setFast(date: string, kind: FastKind | null): Promise<void
   } else {
     await insertRow('fasting_logs', { id: newId(), date, kind });
   }
+}
+
+// ---------- Morning / evening adhkar ----------
+export async function getAdhkarDone(date: string, session: AdhkarSession): Promise<string[]> {
+  const row = await getRow<AdhkarLog>('adhkar_logs', `${date}-${session}`);
+  try {
+    return row ? (JSON.parse(row.done) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setAdhkarDone(date: string, session: AdhkarSession, done: string[]): Promise<void> {
+  const id = `${date}-${session}`;
+  const json = JSON.stringify(done);
+  if (await getRow<AdhkarLog>('adhkar_logs', id)) await updateRow('adhkar_logs', id, { done: json });
+  else await insertRow('adhkar_logs', { id, date, session, done: json });
+}
+
+// ---------- Qada (make-up prayers owed) ----------
+export async function getQadaCounts(): Promise<Record<Prayer, number>> {
+  const rows = await allRows<QadaCount>('qada_counts', 'id ASC');
+  const counts = Object.fromEntries(PRAYERS.map((p) => [p, 0])) as Record<Prayer, number>;
+  for (const r of rows) if (r.id in counts) counts[r.id] = r.owed;
+  return counts;
+}
+
+export async function adjustQada(prayer: Prayer, delta: number): Promise<void> {
+  const row = await getRow<QadaCount>('qada_counts', prayer);
+  const owed = Math.max(0, (row?.owed ?? 0) + delta);
+  if (row) await updateRow('qada_counts', prayer, { owed });
+  else await insertRow('qada_counts', { id: prayer, owed });
 }
