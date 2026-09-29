@@ -274,6 +274,7 @@ const en = {
   "recipeList.filter.spicy": "Spicy",
   "recipeList.filter.comfort": "Comfort",
   "recipeList.empty": "No recipes match these filters yet.",
+  "recipeList.loadError": "Couldn't load recipes. Check your connection.",
 
   "recipeDetail.nutrition": "Nutrition (per serving)",
   "recipeDetail.calories": "Calories",
@@ -421,6 +422,7 @@ const en = {
   "search.title": "Search recipes",
   "search.placeholder": "Search recipes by name…",
   "search.empty": "No recipes found.",
+  "search.error": "Search failed. Check your connection and try again.",
   "search.recentSearches": "Recent searches",
   "search.clearRecent": "Clear",
   "search.allCuisines": "All cuisines",
@@ -759,6 +761,7 @@ const ar: Record<keyof typeof en, string> = {
   "recipeList.filter.spicy": "حار",
   "recipeList.filter.comfort": "مريح",
   "recipeList.empty": "لا توجد وصفات تطابق هذه الفلاتر بعد.",
+  "recipeList.loadError": "تعذّر تحميل الوصفات. تحقّقي من الاتصال بالإنترنت.",
 
   "recipeDetail.nutrition": "القيمة الغذائية (لكل حصة)",
   "recipeDetail.calories": "سعرات حرارية",
@@ -906,6 +909,7 @@ const ar: Record<keyof typeof en, string> = {
   "search.title": "بحث عن وصفات",
   "search.placeholder": "ابحث عن وصفة بالاسم…",
   "search.empty": "لم يتم العثور على وصفات.",
+  "search.error": "فشل البحث. تحقّقي من الاتصال بالإنترنت وحاولي مرة أخرى.",
   "search.recentSearches": "عمليات بحث سابقة",
   "search.clearRecent": "مسح",
   "search.allCuisines": "كل المطابخ",

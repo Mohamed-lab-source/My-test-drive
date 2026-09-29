@@ -35,6 +35,7 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const myAllergies = useMyAllergies();
   const allergenFiltered = hideAllergens
@@ -82,17 +83,30 @@ export function RecipeListScreen({ route, navigation }: Props) {
     navigation.setOptions({ title });
   }, [navigation, title]);
 
-  useEffect(() => {
+  const loadRecipes = () => {
     setLoading(true);
     fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType })
-      .then(setRecipes)
+      .then((data) => {
+        setRecipes(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadRecipes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuisineSlug, activeTag, dishType, locale]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType })
-      .then(setRecipes)
+      .then((data) => {
+        setRecipes(data);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true))
       .finally(() => setRefreshing(false));
   };
 
@@ -165,7 +179,16 @@ export function RecipeListScreen({ route, navigation }: Props) {
               onPress={() => navigation.navigate("RecipeDetail", { slug: item.slug })}
             />
           )}
-          ListEmptyComponent={<Text style={styles.empty}>{t("recipeList.empty")}</Text>}
+          ListEmptyComponent={
+            loadError ? (
+              <View style={styles.errorState}>
+                <Text style={styles.empty}>{t("recipeList.loadError")}</Text>
+                <Chip label={t("recipeDetail.retry")} onPress={loadRecipes} />
+              </View>
+            ) : (
+              <Text style={styles.empty}>{t("recipeList.empty")}</Text>
+            )
+          }
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
@@ -180,4 +203,5 @@ const createStyles = (colors: ThemeColors) =>
     filterRowSecondary: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: spacing(3) },
     listContent: { padding: spacing(3), paddingTop: spacing(1) },
     empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
+    errorState: { alignItems: "center", gap: spacing(1.5) },
   });

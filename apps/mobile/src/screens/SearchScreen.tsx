@@ -26,6 +26,7 @@ export function SearchScreen({ navigation }: Props) {
   const [results, setResults] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [cuisineFilter, setCuisineFilter] = useState<string | undefined>(undefined);
@@ -77,7 +78,13 @@ export function SearchScreen({ navigation }: Props) {
         .then((data) => {
           setResults(data);
           setSearched(true);
+          setSearchError(false);
           saveSearch(q);
+        })
+        .catch(() => {
+          setResults([]);
+          setSearched(true);
+          setSearchError(true);
         })
         .finally(() => setLoading(false));
     }, DEBOUNCE_MS);
@@ -145,7 +152,9 @@ export function SearchScreen({ navigation }: Props) {
             />
           )}
           ListEmptyComponent={
-            searched ? <Text style={styles.empty}>{t("search.empty")}</Text> : null
+            searched ? (
+              <Text style={styles.empty}>{t(searchError ? "search.error" : "search.empty")}</Text>
+            ) : null
           }
         />
       )}
