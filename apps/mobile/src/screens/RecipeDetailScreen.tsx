@@ -31,6 +31,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { useToast } from "../context/ToastContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
@@ -68,6 +69,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { scale: textScale } = useTextSize();
   const styles = useMemo(() => createStyles(colors, textScale), [colors, textScale]);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { showToast } = useToast();
   const { unitSystem } = useUnits();
   const { isAuthenticated, user } = useAuth();
   const { preference: localPreference } = useLocalPreference();
@@ -89,6 +91,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [reviewText, setReviewText] = useState("");
   const [similarRecipes, setSimilarRecipes] = useState<RecipeSummary[]>([]);
   const shareCardRef = useRef<View>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const ratingSectionY = useRef(0);
 
   const myGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : localPreference.dietGoal;
   const hasBodyGoal = BODY_GOALS.includes(myGoal);
@@ -130,6 +134,16 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipe?.slug, locale]);
 
+  useEffect(() => {
+    if (!recipe || !route.params.focusRating) return;
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: ratingSectionY.current, animated: true });
+    }, 300);
+    navigation.setParams({ focusRating: undefined });
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe, route.params.focusRating]);
+
   const scaledIngredients = useMemo(() => {
     if (!recipe) return [];
     const scale = servings / recipe.baseServings;
@@ -166,6 +180,17 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   const cookCount = cookCountFor(recipe.slug);
   const myCollections = collectionsContaining(recipe.slug);
+
+  const handleToggleFavorite = () => {
+    const wasFavorited = isFavorite(recipe.slug);
+    toggleFavorite(recipe);
+    if (wasFavorited) {
+      showToast(t("recipeCard.removedFavoriteToast", { title: recipe.title }), {
+        actionLabel: t("home.undo"),
+        onAction: () => toggleFavorite(recipe),
+      });
+    }
+  };
 
   const handleShareText = async () => {
     const ingredientLines = scaledIngredients.map(
@@ -228,7 +253,10 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      <ScrollView
+        ref={scrollViewRef}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <View style={styles.hero}>
           <FadeSlideIn>
             <Text style={styles.heroEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
@@ -240,7 +268,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             <AnimatedPressable
               style={styles.favoriteButton}
               pressScale={0.85}
-              onPress={() => toggleFavorite(recipe)}
+              onPress={handleToggleFavorite}
               accessibilityLabel={t(isFavorite(recipe.slug) ? "recipeCard.removeFavorite" : "recipeCard.addFavorite")}
             >
               <Text style={styles.favoriteIcon}>{isFavorite(recipe.slug) ? "❤️" : "🤍"}</Text>
@@ -468,6 +496,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             })}
           </View>
 
+          <View onLayout={(e) => (ratingSectionY.current = e.nativeEvent.layout.y)}>
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.rateThis")}</Text>
           {isAuthenticated ? (
             <>
@@ -487,6 +516,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           ) : (
             <Text style={[styles.rateLoginHint, { textAlign }]}>{t("recipeDetail.rateLoginHint")}</Text>
           )}
+          </View>
 
           {recipe.reviews.length > 0 ? (
             <>

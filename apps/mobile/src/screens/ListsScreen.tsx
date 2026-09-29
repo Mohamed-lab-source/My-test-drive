@@ -9,6 +9,7 @@ import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCollections } from "../context/CollectionsContext";
+import { useToast } from "../context/ToastContext";
 import { deleteShoppingList, fetchShoppingListHistory } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
@@ -30,8 +31,15 @@ type Segment = "favorites" | "collections" | "shoppingLists";
 export function ListsScreen({ navigation }: Props) {
   const { isAuthenticated } = useAuth();
   const { favoriteRecipes, isLoading: favoritesLoading, toggleFavorite, refresh: refreshFavorites } = useFavorites();
-  const { collections, isLoading: collectionsLoading, create: createCollection, remove: removeCollection, refresh: refreshCollections } =
-    useCollections();
+  const {
+    collections,
+    isLoading: collectionsLoading,
+    create: createCollection,
+    remove: removeCollection,
+    addRecipe: addRecipeToCollection,
+    refresh: refreshCollections,
+  } = useCollections();
+  const { showToast } = useToast();
   const [refreshingFavorites, setRefreshingFavorites] = useState(false);
   const [refreshingCollections, setRefreshingCollections] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
@@ -112,9 +120,30 @@ export function ListsScreen({ navigation }: Props) {
   };
 
   const handleDeleteCollection = (id: string) => {
+    const target = collections.find((c) => c.id === id);
     Alert.alert(t("collections.deleteConfirmTitle"), t("collections.deleteConfirmMessage"), [
       { text: t("home.cancel"), style: "cancel" },
-      { text: t("collections.delete"), style: "destructive", onPress: () => removeCollection(id).catch(() => {}) },
+      {
+        text: t("collections.delete"),
+        style: "destructive",
+        onPress: () => {
+          removeCollection(id)
+            .then(() => {
+              if (!target) return;
+              showToast(t("collections.deletedToast", { name: target.name }), {
+                actionLabel: t("home.undo"),
+                onAction: () => {
+                  createCollection(target.name)
+                    .then((restored) =>
+                      Promise.all(target.recipes.map((r) => addRecipeToCollection(restored.id, r)))
+                    )
+                    .catch(() => {});
+                },
+              });
+            })
+            .catch(() => {});
+        },
+      },
     ]);
   };
 

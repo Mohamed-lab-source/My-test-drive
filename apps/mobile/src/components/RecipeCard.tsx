@@ -37,6 +37,16 @@ export function RecipeCard({ recipe, onPress, onLongPress, index = 0 }: Props) {
     setPlan(todayKey, recipe);
     showToast(t("recipeCard.addedToPlanToast", { title: recipe.title }));
   };
+  const handleToggleFavorite = () => {
+    const wasFavorited = favorited;
+    toggleFavorite(recipe);
+    if (wasFavorited) {
+      showToast(t("recipeCard.removedFavoriteToast", { title: recipe.title }), {
+        actionLabel: t("home.undo"),
+        onAction: () => toggleFavorite(recipe),
+      });
+    }
+  };
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   return (
@@ -63,7 +73,7 @@ export function RecipeCard({ recipe, onPress, onLongPress, index = 0 }: Props) {
             style={styles.favoriteButton}
             pressScale={0.85}
             haptic
-            onPress={() => toggleFavorite(recipe)}
+            onPress={handleToggleFavorite}
             accessibilityLabel={t(favorited ? "recipeCard.removeFavorite" : "recipeCard.addFavorite")}
           >
             <Text style={styles.favoriteIcon}>{favorited ? "❤️" : "🤍"}</Text>

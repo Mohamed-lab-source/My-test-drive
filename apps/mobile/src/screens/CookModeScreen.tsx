@@ -106,7 +106,10 @@ export function CookModeScreen({ route, navigation }: Props) {
       },
     ];
     if (!myRating) {
-      buttons.push({ text: t("cookMode.rateNow"), onPress: () => navigation.goBack() });
+      buttons.push({
+        text: t("cookMode.rateNow"),
+        onPress: () => navigation.navigate("RecipeDetail", { slug, focusRating: true }),
+      });
     }
     buttons.push({ text: t("cookMode.doneButton"), onPress: () => navigation.goBack() });
     Alert.alert(t("cookMode.doneTitle"), message, buttons);

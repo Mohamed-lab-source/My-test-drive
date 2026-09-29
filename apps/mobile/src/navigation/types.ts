@@ -20,7 +20,7 @@ export type RootStackParamList = {
     sortByRating?: boolean;
     lightOnly?: boolean;
   };
-  RecipeDetail: { slug: string };
+  RecipeDetail: { slug: string; focusRating?: boolean };
   ShoppingListDetail: { id: string };
   CollectionDetail: { id: string };
   ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
