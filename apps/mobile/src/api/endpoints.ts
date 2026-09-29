@@ -1,0 +1,187 @@
+import { api } from "./client";
+import type {
+  Collection,
+  Cuisine,
+  DeliveryPartner,
+  DietGoal,
+  MyRating,
+  NearbyStores,
+  ShoppingListDetail,
+  PantryIngredient,
+  PantryMatch,
+  Preference,
+  RatingResult,
+  RecipeDetail,
+  RecipeSummary,
+  ShoppingListResult,
+  User,
+} from "./types";
+
+export async function signup(email: string, password: string, name: string) {
+  const { data } = await api.post<{ token: string; user: User }>("/auth/signup", {
+    email,
+    password,
+    name,
+  });
+  return data;
+}
+
+export async function login(email: string, password: string) {
+  const { data } = await api.post<{ token: string; user: User }>("/auth/login", {
+    email,
+    password,
+  });
+  return data;
+}
+
+export async function googleSignIn(idToken: string) {
+  const { data } = await api.post<{ token: string; user: User }>("/auth/google", { idToken });
+  return data;
+}
+
+export async function fetchMe() {
+  const { data } = await api.get<User>("/auth/me");
+  return data;
+}
+
+export async function updatePreferences(patch: Partial<Preference> & { dietGoal?: DietGoal }) {
+  const { data } = await api.put<Preference>("/auth/me/preferences", patch);
+  return data;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  await api.put("/auth/me/password", { currentPassword, newPassword });
+}
+
+export async function deleteAccount() {
+  await api.delete("/auth/me");
+}
+
+export async function fetchCuisines() {
+  const { data } = await api.get<Cuisine[]>("/cuisines");
+  return data;
+}
+
+export async function fetchRecipes(params: { cuisine?: string; tag?: string; dishType?: string; q?: string }) {
+  const { data } = await api.get<RecipeSummary[]>("/recipes", { params });
+  return data;
+}
+
+export async function fetchRecommended() {
+  const { data } = await api.get<RecipeSummary[]>("/recipes/recommended");
+  return data;
+}
+
+export async function fetchTrending() {
+  const { data } = await api.get<RecipeSummary[]>("/recipes/trending");
+  return data;
+}
+
+export async function fetchRandomRecipe(params?: {
+  cuisine?: string;
+  tag?: string;
+  dishType?: string;
+  seed?: string;
+}) {
+  const { data } = await api.get<{ slug: string }>("/recipes/random", { params });
+  return data;
+}
+
+export async function fetchRecipeDetail(slug: string, goal?: DietGoal) {
+  const params = goal && goal !== "NONE" ? { goal } : undefined;
+  const { data } = await api.get<RecipeDetail>(`/recipes/${slug}`, { params });
+  return data;
+}
+
+export async function fetchDeliveryPartners() {
+  const { data } = await api.get<DeliveryPartner[]>("/delivery-partners");
+  return data;
+}
+
+export async function generateShoppingList(slug: string, servings: number, budget?: number) {
+  const { data } = await api.post<ShoppingListResult>(`/recipes/${slug}/shopping-list`, {
+    servings,
+    budget,
+  });
+  return data;
+}
+
+export async function fetchShoppingListHistory() {
+  const { data } = await api.get<
+    { id: string; servings: number; totalEstimatedCost: number; withinBudget: boolean; createdAt: string; recipe: { slug: string; title: string; heroImageUrl: string } }[]
+  >("/shopping-lists");
+  return data;
+}
+
+export async function fetchShoppingListDetail(id: string) {
+  const { data } = await api.get<ShoppingListDetail>(`/shopping-lists/${id}`);
+  return data;
+}
+
+export async function deleteShoppingList(id: string) {
+  await api.delete(`/shopping-lists/${id}`);
+}
+
+export async function fetchNearbyStores(lat?: number, lng?: number) {
+  const { data } = await api.get<NearbyStores>("/nearby-stores", { params: { lat, lng } });
+  return data;
+}
+
+export async function fetchFavorites() {
+  const { data } = await api.get<RecipeSummary[]>("/favorites");
+  return data;
+}
+
+export async function addFavorite(slug: string) {
+  await api.post(`/favorites/${slug}`);
+}
+
+export async function removeFavorite(slug: string) {
+  await api.delete(`/favorites/${slug}`);
+}
+
+export async function rateRecipe(slug: string, score: number, comment?: string) {
+  const { data } = await api.post<RatingResult>(`/recipes/${slug}/ratings`, { score, comment });
+  return data;
+}
+
+export async function fetchMyRatings() {
+  const { data } = await api.get<MyRating[]>("/ratings/mine");
+  return data;
+}
+
+export async function fetchIngredients() {
+  const { data } = await api.get<PantryIngredient[]>("/ingredients");
+  return data;
+}
+
+export async function matchPantryRecipes(ingredientIds: string[]) {
+  const { data } = await api.post<PantryMatch[]>("/recipes/pantry-match", { ingredientIds });
+  return data;
+}
+
+export async function fetchCollections() {
+  const { data } = await api.get<Collection[]>("/collections");
+  return data;
+}
+
+export async function createCollection(name: string) {
+  const { data } = await api.post<Collection>("/collections", { name });
+  return data;
+}
+
+export async function renameCollection(id: string, name: string) {
+  await api.put(`/collections/${id}`, { name });
+}
+
+export async function deleteCollection(id: string) {
+  await api.delete(`/collections/${id}`);
+}
+
+export async function addRecipeToCollection(id: string, slug: string) {
+  await api.post(`/collections/${id}/recipes/${slug}`);
+}
+
+export async function removeRecipeFromCollection(id: string, slug: string) {
+  await api.delete(`/collections/${id}/recipes/${slug}`);
+}

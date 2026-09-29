@@ -1,0 +1,17 @@
+{
+  "name": "cookmate",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "server:dev": "npm run dev -w apps/server",
+    "server:build": "npm run build -w apps/server",
+    "server:typecheck": "npm run typecheck -w apps/server",
+    "prisma:migrate": "npm run prisma:migrate -w apps/server",
+    "prisma:seed": "npm run prisma:seed -w apps/server",
+    "mobile:start": "npm run start -w apps/mobile",
+    "mobile:typecheck": "npm run typecheck -w apps/mobile"
+  }
+}

@@ -1,0 +1,461 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import type { CompositeScreenProps } from "@react-navigation/native";
+import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { MainTabParamList, RootStackParamList } from "../navigation/types";
+import { useAuth } from "../context/AuthContext";
+import { useCookStreak } from "../context/CookStreakContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { useCollections } from "../context/CollectionsContext";
+import { apiErrorMessage } from "../api/client";
+import { fetchCuisines } from "../api/endpoints";
+import { AnimatedPressable } from "../components/AnimatedPressable";
+import { Chip } from "../components/Chip";
+import { PrimaryButton } from "../components/PrimaryButton";
+import { useLocale } from "../i18n/LocaleContext";
+import { useTheme } from "../theme/ThemeContext";
+import { useUnits } from "../context/UnitsContext";
+import { useTextSize } from "../context/TextSizeContext";
+import { useWhatsNew } from "../context/WhatsNewContext";
+import { ACCENT_PRESETS, spacing, type AccentKey, type ThemeColors } from "../theme";
+import { ALL_ALLERGENS } from "../utils/allergens";
+import type { TranslationKey } from "../i18n/translations";
+import type { Allergen, Cuisine, DietGoal } from "../api/types";
+
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, "Profile">,
+  NativeStackScreenProps<RootStackParamList>
+>;
+
+export function ProfileScreen({ navigation }: Props) {
+  const { user, isAuthenticated, logout, deleteAccount, savePreferences } = useAuth();
+  const { t, locale, setLocale } = useLocale();
+  const { colors, preference: themePreference, setPreference: setThemePreference, accent, setAccent } = useTheme();
+  const { unitSystem, setUnitSystem } = useUnits();
+  const { textSize, setTextSize } = useTextSize();
+  const { hasUnseen: hasUnseenWhatsNew } = useWhatsNew();
+  const { displayStreak, longestStreak, totalCooked } = useCookStreak();
+  const { favoriteRecipes } = useFavorites();
+  const { collections } = useCollections();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [saving, setSaving] = useState(false);
+  const [cuisines, setCuisines] = useState<Cuisine[]>([]);
+
+  const GOALS: { value: DietGoal; label: string }[] = [
+    { value: "NONE", label: t("onboarding.goal.none") },
+    { value: "LOSE_WEIGHT", label: t("onboarding.goal.loseWeight") },
+    { value: "BUILD_MUSCLE", label: t("onboarding.goal.buildMuscle") },
+    { value: "GAIN_WEIGHT", label: t("onboarding.goal.gainWeight") },
+  ];
+
+  useEffect(() => {
+    fetchCuisines().then(setCuisines).catch(() => {});
+  }, [locale]);
+
+  const languageSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label="English" selected={locale === "en"} onPress={() => setLocale("en")} />
+      <Chip label="العربية" selected={locale === "ar"} onPress={() => setLocale("ar")} />
+    </View>
+  );
+
+  const themeSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.themeLight")} selected={themePreference === "light"} onPress={() => setThemePreference("light")} />
+      <Chip label={t("profile.themeDark")} selected={themePreference === "dark"} onPress={() => setThemePreference("dark")} />
+      <Chip label={t("profile.themeSystem")} selected={themePreference === "system"} onPress={() => setThemePreference("system")} />
+    </View>
+  );
+
+  const accentSwitcher = (
+    <View style={styles.accentRow}>
+      {(Object.keys(ACCENT_PRESETS) as AccentKey[]).map((key) => (
+        <AnimatedPressable
+          key={key}
+          style={[
+            styles.accentSwatch,
+            { backgroundColor: ACCENT_PRESETS[key].light.primary },
+            accent === key && styles.accentSwatchSelected,
+          ]}
+          pressScale={0.9}
+          onPress={() => setAccent(key)}
+          accessibilityRole="button"
+          accessibilityLabel={t(`profile.accent.${key}` as TranslationKey)}
+        >
+          {accent === key ? <Text style={styles.accentCheck}>✓</Text> : null}
+        </AnimatedPressable>
+      ))}
+    </View>
+  );
+
+  const unitsSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.unitsMetric")} selected={unitSystem === "metric"} onPress={() => setUnitSystem("metric")} />
+      <Chip label={t("profile.unitsImperial")} selected={unitSystem === "imperial"} onPress={() => setUnitSystem("imperial")} />
+    </View>
+  );
+
+  const textSizeSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.textSizeSmall")} selected={textSize === "small"} onPress={() => setTextSize("small")} />
+      <Chip label={t("profile.textSizeMedium")} selected={textSize === "medium"} onPress={() => setTextSize("medium")} />
+      <Chip label={t("profile.textSizeLarge")} selected={textSize === "large"} onPress={() => setTextSize("large")} />
+    </View>
+  );
+
+  if (!isAuthenticated || !user) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.loggedOut}>
+          <Text style={styles.headline}>{t("profile.saveTitle")}</Text>
+          <Text style={styles.subtitle}>{t("profile.saveSubtitle")}</Text>
+          <AnimatedPressable pressScale={0.98} onPress={() => navigation.navigate("CookingStats")}>
+            <StreakStats
+              displayStreak={displayStreak}
+              longestStreak={longestStreak}
+              totalCooked={totalCooked}
+              favoritesCount={favoriteRecipes.length}
+              collectionsCount={collections.length}
+              t={t}
+              styles={styles}
+            />
+          </AnimatedPressable>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton label={t("profile.login")} onPress={() => navigation.navigate("Login")} />
+          </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton label={t("profile.createAccount")} variant="outline" onPress={() => navigation.navigate("Signup")} />
+          </View>
+          <Text style={[styles.section, styles.languageSection]}>{t("profile.appearance")}</Text>
+          {themeSwitcher}
+          <Text style={styles.section}>{t("profile.accentColor")}</Text>
+          {accentSwitcher}
+          <Text style={styles.section}>{t("profile.language")}</Text>
+          {languageSwitcher}
+          <Text style={styles.section}>{t("profile.units")}</Text>
+          {unitsSwitcher}
+          <Text style={styles.section}>{t("profile.textSize")}</Text>
+          {textSizeSwitcher}
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("glossary.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("Glossary")}
+            />
+          </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
+          </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("myReviews.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("MyReviews")}
+            />
+          </View>
+          <View style={[styles.buttonSpacing, styles.badgeAnchor]}>
+            <PrimaryButton
+              label={t("whatsNew.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("WhatsNew")}
+            />
+            {hasUnseenWhatsNew ? <View style={styles.unseenDot} /> : null}
+          </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("profile.appTour")}
+              variant="outline"
+              onPress={() => navigation.navigate("FeatureTour", { onFinishGoBack: true })}
+            />
+          </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton
+              label={t("customizeHome.title")}
+              variant="outline"
+              onPress={() => navigation.navigate("CustomizeHome")}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  const dietGoal = user.preference?.dietGoal ?? "NONE";
+  const favoriteCuisineSlugs = user.preference?.favoriteCuisineSlugs ?? [];
+  const allergies = user.preference?.allergies ?? [];
+
+  const updateGoal = async (goal: DietGoal) => {
+    setSaving(true);
+    try {
+      await savePreferences({ dietGoal: goal });
+    } catch (error) {
+      Alert.alert(t("profile.errorSave"), apiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t("profile.deleteAccountConfirmTitle"), t("profile.deleteAccountConfirmMessage"), [
+      { text: t("home.cancel"), style: "cancel" },
+      {
+        text: t("profile.deleteAccountConfirmButton"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteAccount();
+          } catch (error) {
+            Alert.alert(t("profile.errorSave"), apiErrorMessage(error));
+          }
+        },
+      },
+    ]);
+  };
+
+  const toggleCuisine = async (slug: string) => {
+    const next = favoriteCuisineSlugs.includes(slug)
+      ? favoriteCuisineSlugs.filter((s) => s !== slug)
+      : [...favoriteCuisineSlugs, slug];
+    setSaving(true);
+    try {
+      await savePreferences({ favoriteCuisineSlugs: next });
+    } catch (error) {
+      Alert.alert(t("profile.errorSave"), apiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleAllergy = async (allergen: Allergen) => {
+    const next = allergies.includes(allergen)
+      ? allergies.filter((a) => a !== allergen)
+      : [...allergies, allergen];
+    setSaving(true);
+    try {
+      await savePreferences({ allergies: next });
+    } catch (error) {
+      Alert.alert(t("profile.errorSave"), apiErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.headline}>{user.name}</Text>
+        <Text style={styles.subtitle}>{user.email}</Text>
+
+        <AnimatedPressable pressScale={0.98} onPress={() => navigation.navigate("CookingStats")}>
+          <StreakStats
+            displayStreak={displayStreak}
+            longestStreak={longestStreak}
+            totalCooked={totalCooked}
+            favoritesCount={favoriteRecipes.length}
+            collectionsCount={collections.length}
+            t={t}
+            styles={styles}
+          />
+        </AnimatedPressable>
+
+        <Text style={styles.section}>{t("profile.dietGoal")}</Text>
+        <View style={styles.chipRow}>
+          {GOALS.map((g) => (
+            <Chip key={g.value} label={g.label} selected={dietGoal === g.value} onPress={() => updateGoal(g.value)} />
+          ))}
+        </View>
+
+        <Text style={styles.section}>{t("profile.favoriteCuisines")}</Text>
+        <View style={styles.chipRow}>
+          {cuisines.map((c) => (
+            <Chip
+              key={c.slug}
+              label={c.name}
+              selected={favoriteCuisineSlugs.includes(c.slug)}
+              onPress={() => toggleCuisine(c.slug)}
+            />
+          ))}
+        </View>
+
+        <Text style={styles.section}>{t("profile.allergies")}</Text>
+        <View style={styles.chipRow}>
+          {ALL_ALLERGENS.map((a) => (
+            <Chip
+              key={a}
+              label={t(`allergen.${a}` as TranslationKey)}
+              selected={allergies.includes(a)}
+              onPress={() => toggleAllergy(a)}
+            />
+          ))}
+        </View>
+
+        <Text style={styles.section}>{t("profile.appearance")}</Text>
+        {themeSwitcher}
+        <Text style={styles.section}>{t("profile.accentColor")}</Text>
+        {accentSwitcher}
+
+        <Text style={styles.section}>{t("profile.language")}</Text>
+        {languageSwitcher}
+
+        <Text style={styles.section}>{t("profile.units")}</Text>
+        {unitsSwitcher}
+
+        <Text style={styles.section}>{t("profile.textSize")}</Text>
+        {textSizeSwitcher}
+
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("glossary.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("Glossary")}
+          />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton label={t("notes.title")} variant="outline" onPress={() => navigation.navigate("Notes")} />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("myReviews.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("MyReviews")}
+          />
+        </View>
+        <View style={[styles.buttonSpacing, styles.badgeAnchor]}>
+          <PrimaryButton
+            label={t("whatsNew.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("WhatsNew")}
+          />
+          {hasUnseenWhatsNew ? <View style={styles.unseenDot} /> : null}
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("profile.appTour")}
+            variant="outline"
+            onPress={() => navigation.navigate("FeatureTour", { onFinishGoBack: true })}
+          />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("customizeHome.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("CustomizeHome")}
+          />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("changePassword.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("ChangePassword")}
+          />
+        </View>
+
+        {saving ? <Text style={styles.saving}>{t("profile.saving")}</Text> : null}
+
+        <View style={styles.logoutButton}>
+          <PrimaryButton label={t("profile.logout")} variant="outline" onPress={logout} />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton label={t("profile.deleteAccount")} variant="outline" onPress={handleDeleteAccount} />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+type Styles = ReturnType<typeof createStyles>;
+
+function StreakStats({
+  displayStreak,
+  longestStreak,
+  totalCooked,
+  favoritesCount,
+  collectionsCount,
+  t,
+  styles,
+}: {
+  displayStreak: number;
+  longestStreak: number;
+  totalCooked: number;
+  favoritesCount: number;
+  collectionsCount: number;
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+  styles: Styles;
+}) {
+  return (
+    <View style={styles.streakRow}>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>🔥 {displayStreak}</Text>
+        <Text style={styles.streakLabel}>{t("profile.streakCurrent")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{longestStreak}</Text>
+        <Text style={styles.streakLabel}>{t("profile.streakLongest")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{totalCooked}</Text>
+        <Text style={styles.streakLabel}>{t("profile.streakTotal")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{favoritesCount}</Text>
+        <Text style={styles.streakLabel}>{t("profile.statFavorites")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{collectionsCount}</Text>
+        <Text style={styles.streakLabel}>{t("profile.statCollections")}</Text>
+      </View>
+    </View>
+  );
+}
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing(3) },
+    headline: { fontSize: 22, fontWeight: "800", color: colors.text },
+    subtitle: { color: colors.textMuted, marginTop: 4 },
+    section: { fontSize: 15, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
+    languageSection: { marginTop: spacing(4) },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
+    accentRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1.5) },
+    accentSwatch: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "transparent",
+    },
+    accentSwatchSelected: { borderColor: colors.text },
+    accentCheck: { color: "#fff", fontWeight: "800", fontSize: 15 },
+    saving: { color: colors.textMuted, fontSize: 12, marginTop: spacing(1) },
+    logoutButton: { marginTop: spacing(5) },
+    loggedOut: { flexGrow: 1, padding: spacing(3), justifyContent: "center" },
+    buttonSpacing: { marginTop: spacing(2) },
+    badgeAnchor: { position: "relative" },
+    unseenDot: {
+      position: "absolute",
+      top: -2,
+      end: -2,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.danger,
+      borderWidth: 1.5,
+      borderColor: colors.background,
+    },
+    streakRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      backgroundColor: colors.chipBackground,
+      borderRadius: 14,
+      marginTop: spacing(2.5),
+      paddingVertical: spacing(1.5),
+    },
+    streakStat: { width: "33.33%", alignItems: "center", marginBottom: spacing(1) },
+    streakValue: { fontSize: 18, fontWeight: "800", color: colors.primaryDark },
+    streakLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2, textAlign: "center" },
+  });
