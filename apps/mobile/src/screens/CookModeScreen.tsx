@@ -114,7 +114,7 @@ export function CookModeScreen({ route, navigation }: Props) {
 
   const goNext = () => {
     if (isLast) {
-      const streak = recordCooked(slug);
+      const streak = recordCooked({ slug, title, cuisineSlug });
       if (STREAK_MILESTONES.includes(streak)) {
         setCelebrationStreak(streak);
       } else {

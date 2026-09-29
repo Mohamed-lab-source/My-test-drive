@@ -118,6 +118,17 @@ export function ListsScreen({ navigation }: Props) {
     ]);
   };
 
+  const monthSpending = useMemo(() => {
+    const now = new Date();
+    const total = history
+      .filter((h) => {
+        const d = new Date(h.createdAt);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      })
+      .reduce((sum, h) => sum + h.totalEstimatedCost, 0);
+    return Math.round(total * 100) / 100;
+  }, [history]);
+
   const header = (
     <View style={styles.header}>
       <Text style={styles.headline}>{t("tabs.lists")}</Text>
@@ -300,6 +311,12 @@ export function ListsScreen({ navigation }: Props) {
         ListHeaderComponent={
           <View>
             {header}
+            {history.length > 0 ? (
+              <View style={styles.spendingBanner}>
+                <Text style={styles.spendingLabel}>{t("lists.spendingThisMonth")}</Text>
+                <Text style={styles.spendingValue}>{t("lists.spendingAmount", { amount: monthSpending })}</Text>
+              </View>
+            ) : null}
             <Text style={styles.sectionTitle}>{t("lists.headline")}</Text>
           </View>
         }
@@ -394,6 +411,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   newCollectionButtonDisabled: { opacity: 0.5 },
   newCollectionButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   sectionTitle: { fontSize: 18, fontWeight: "800", color: colors.text, marginBottom: spacing(2) },
+  spendingBanner: {
+    backgroundColor: colors.chipBackground,
+    borderRadius: radius.md,
+    padding: spacing(2),
+    marginBottom: spacing(2),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  spendingLabel: { fontSize: 13, fontWeight: "600", color: colors.textMuted },
+  spendingValue: { fontSize: 16, fontWeight: "800", color: colors.primaryDark },
   row: {
     flexDirection: "row",
     alignItems: "center",

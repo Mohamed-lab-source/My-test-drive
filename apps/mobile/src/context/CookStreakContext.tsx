@@ -4,6 +4,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const STORAGE_KEY = "cookmate.cookStreak";
 
 const COOK_LOG_MAX_DAYS = 90;
+const RECENTLY_COOKED_MAX = 15;
+
+export type CookedRecipeRef = { slug: string; title: string; cuisineSlug: string };
+export type RecentlyCookedEntry = CookedRecipeRef & { date: string };
 
 type StreakState = {
   currentStreak: number;
@@ -13,6 +17,8 @@ type StreakState = {
   cookCounts: Record<string, number>;
   /** Unique YYYY-MM-DD days cooked, ascending, capped to the last COOK_LOG_MAX_DAYS entries. */
   cookLog: string[];
+  /** Most-recently-cooked recipes, most recent first, deduped by slug, capped to RECENTLY_COOKED_MAX. */
+  recentlyCooked: RecentlyCookedEntry[];
 };
 
 const DEFAULT_STATE: StreakState = {
@@ -22,6 +28,7 @@ const DEFAULT_STATE: StreakState = {
   lastCookedDate: null,
   cookCounts: {},
   cookLog: [],
+  recentlyCooked: [],
 };
 
 function todayKey(): string {
@@ -45,10 +52,11 @@ type CookStreakContextValue = {
   totalCooked: number;
   cookedToday: boolean;
   /** Records today's cook, updating the streak and the per-recipe cook count. Safe to call more than once in a day. Returns the resulting streak length. */
-  recordCooked: (slug: string) => number;
+  recordCooked: (recipe: CookedRecipeRef) => number;
   cookCountFor: (slug: string) => number;
   cookCounts: Record<string, number>;
   cookLog: string[];
+  recentlyCooked: RecentlyCookedEntry[];
 };
 
 const CookStreakContext = createContext<CookStreakContextValue | undefined>(undefined);
@@ -68,17 +76,26 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
     })();
   }, []);
 
-  const recordCooked = useCallback((slug: string) => {
+  const recordCooked = useCallback((recipe: CookedRecipeRef) => {
     const today = todayKey();
     let resultStreak = state.currentStreak;
     setState((prev) => {
-      const nextCookCounts = { ...prev.cookCounts, [slug]: (prev.cookCounts[slug] ?? 0) + 1 };
+      const nextCookCounts = { ...prev.cookCounts, [recipe.slug]: (prev.cookCounts[recipe.slug] ?? 0) + 1 };
       const nextCookLog = prev.cookLog.includes(today)
         ? prev.cookLog
         : [...prev.cookLog, today].slice(-COOK_LOG_MAX_DAYS);
+      const nextRecentlyCooked = [
+        { ...recipe, date: today },
+        ...prev.recentlyCooked.filter((r) => r.slug !== recipe.slug),
+      ].slice(0, RECENTLY_COOKED_MAX);
       if (prev.lastCookedDate === today) {
         resultStreak = prev.currentStreak;
-        const next: StreakState = { ...prev, cookCounts: nextCookCounts, cookLog: nextCookLog };
+        const next: StreakState = {
+          ...prev,
+          cookCounts: nextCookCounts,
+          cookLog: nextCookLog,
+          recentlyCooked: nextRecentlyCooked,
+        };
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
         return next;
       }
@@ -91,6 +108,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
         lastCookedDate: today,
         cookCounts: nextCookCounts,
         cookLog: nextCookLog,
+        recentlyCooked: nextRecentlyCooked,
       };
       resultStreak = nextStreak;
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
@@ -117,6 +135,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       cookCountFor,
       cookCounts: state.cookCounts,
       cookLog: state.cookLog,
+      recentlyCooked: state.recentlyCooked,
     }),
     [
       isLoading,
@@ -125,6 +144,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       state.totalCooked,
       state.cookCounts,
       state.cookLog,
+      state.recentlyCooked,
       cookedToday,
       recordCooked,
       cookCountFor,

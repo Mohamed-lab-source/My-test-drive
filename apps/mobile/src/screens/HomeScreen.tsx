@@ -70,7 +70,7 @@ type Props = CompositeScreenProps<
 
 export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
-  const { displayStreak, cookCounts } = useCookStreak();
+  const { displayStreak, cookCounts, recentlyCooked } = useCookStreak();
   const { favoriteRecipes } = useFavorites();
   const { isVisible: isSectionVisible } = useHomeLayout();
   const { leftovers, removeLeftover, restoreLeftover } = useLeftovers();
@@ -319,6 +319,28 @@ export function HomeScreen({ navigation }: Props) {
                         onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
                       >
                         <Text style={styles.recentEmoji}>{CUISINE_EMOJI[r.cuisine.slug] ?? "🍽️"}</Text>
+                        <Text style={styles.recentTitle} numberOfLines={2}>
+                          {r.title}
+                        </Text>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
+
+            {recentlyCooked.length > 0 && isSectionVisible("recentlyCooked") ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.recentlyCookedTitle")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentScroll}>
+                  {recentlyCooked.map((r, i) => (
+                    <FadeSlideIn key={r.slug} index={i}>
+                      <AnimatedPressable
+                        style={styles.recentCard}
+                        pressScale={0.96}
+                        onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
+                      >
+                        <Text style={styles.recentEmoji}>{CUISINE_EMOJI[r.cuisineSlug] ?? "🍽️"}</Text>
                         <Text style={styles.recentTitle} numberOfLines={2}>
                           {r.title}
                         </Text>
