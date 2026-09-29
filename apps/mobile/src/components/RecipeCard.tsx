@@ -17,11 +17,12 @@ import type { RecipeSummary } from "../api/types";
 type Props = {
   recipe: RecipeSummary;
   onPress: () => void;
+  onLongPress?: () => void;
   /** Position within its list, used to stagger the entrance animation. */
   index?: number;
 };
 
-export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
+export function RecipeCard({ recipe, onPress, onLongPress, index = 0 }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { t } = useLocale();
@@ -40,7 +41,13 @@ export function RecipeCard({ recipe, onPress, index = 0 }: Props) {
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   return (
     <FadeSlideIn index={index}>
-      <AnimatedPressable style={styles.card} onPress={onPress} pressScale={0.98} accessibilityRole="button">
+      <AnimatedPressable
+        style={styles.card}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        pressScale={0.98}
+        accessibilityRole="button"
+      >
         <View style={styles.imagePlaceholder}>
           <Text style={styles.imagePlaceholderEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
           <AnimatedPressable

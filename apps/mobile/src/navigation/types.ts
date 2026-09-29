@@ -22,6 +22,7 @@ export type RootStackParamList = {
   };
   RecipeDetail: { slug: string };
   ShoppingListDetail: { id: string };
+  CollectionDetail: { id: string };
   ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
   CookMode: {
     slug: string;

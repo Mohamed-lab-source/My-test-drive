@@ -10,6 +10,7 @@ import { deliveryRouter } from "./routes/delivery";
 import { favoritesRouter } from "./routes/favorites";
 import { ratingsRouter } from "./routes/ratings";
 import { pantryRouter } from "./routes/pantry";
+import { collectionsRouter } from "./routes/collections";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/api", deliveryRouter);
 app.use("/api", favoritesRouter);
 app.use("/api", ratingsRouter);
 app.use("/api", pantryRouter);
+app.use("/api", collectionsRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });

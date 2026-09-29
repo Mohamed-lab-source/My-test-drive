@@ -15,6 +15,7 @@ import { TextSizeProvider } from "./src/context/TextSizeContext";
 import { ToastProvider } from "./src/context/ToastContext";
 import { PantryCheckProvider } from "./src/context/PantryCheckContext";
 import { WhatsNewProvider } from "./src/context/WhatsNewContext";
+import { CollectionsProvider } from "./src/context/CollectionsContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -48,7 +49,9 @@ export default function App() {
                                 <ToastProvider>
                                   <PantryCheckProvider>
                                     <WhatsNewProvider>
-                                      <AppShell />
+                                      <CollectionsProvider>
+                                        <AppShell />
+                                      </CollectionsProvider>
                                     </WhatsNewProvider>
                                   </PantryCheckProvider>
                                 </ToastProvider>

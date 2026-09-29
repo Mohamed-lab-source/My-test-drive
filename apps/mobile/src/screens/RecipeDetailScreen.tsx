@@ -24,6 +24,7 @@ import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
 import { SkeletonBlock } from "../components/Skeleton";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
+import { AddToCollectionModal } from "../components/AddToCollectionModal";
 import { StarRating } from "../components/StarRating";
 import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "../context/AuthContext";
@@ -80,6 +81,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [servings, setServings] = useState(1);
   const [sharing, setSharing] = useState(false);
+  const [collectionModalVisible, setCollectionModalVisible] = useState(false);
   const [myRating, setMyRating] = useState<number | null>(null);
   const [rating, setRating] = useState(false);
   const [reviewText, setReviewText] = useState("");
@@ -561,7 +563,22 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
         <View style={styles.shareButton}>
           <PrimaryButton label={t("share.textButton")} onPress={handleShareText} variant="outline" />
         </View>
+        {isAuthenticated ? (
+          <View style={styles.shareButton}>
+            <PrimaryButton
+              label={t("collections.addToTitle")}
+              variant="outline"
+              onPress={() => setCollectionModalVisible(true)}
+            />
+          </View>
+        ) : null}
       </View>
+
+      <AddToCollectionModal
+        visible={collectionModalVisible}
+        onClose={() => setCollectionModalVisible(false)}
+        recipe={recipe}
+      />
     </SafeAreaView>
   );
 }

@@ -137,6 +137,13 @@ export type ShoppingListResult = {
   deliveryPartners: DeliveryPartner[];
 };
 
+export type Collection = {
+  id: string;
+  name: string;
+  createdAt: string;
+  recipes: RecipeSummary[];
+};
+
 export type ShoppingListDetail = {
   id: string;
   servings: number;

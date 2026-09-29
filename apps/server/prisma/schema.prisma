@@ -55,6 +55,7 @@ model User {
   shoppingLists ShoppingList[]
   favorites     Favorite[]
   ratings       Rating[]
+  collections   Collection[]
 }
 
 model Preference {
@@ -96,6 +97,7 @@ model Recipe {
   shoppingLists ShoppingList[]
   favoritedBy   Favorite[]
   ratings       Rating[]
+  collections   CollectionRecipe[]
   createdAt     DateTime           @default(now())
 }
 
@@ -202,6 +204,29 @@ model Rating {
 
   @@unique([userId, recipeId])
   @@index([recipeId])
+}
+
+model Collection {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime           @default(now())
+  recipes   CollectionRecipe[]
+
+  @@index([userId])
+}
+
+model CollectionRecipe {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  recipeId     String
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  addedAt      DateTime   @default(now())
+
+  @@unique([collectionId, recipeId])
+  @@index([collectionId])
 }
 
 model DeliveryPartner {

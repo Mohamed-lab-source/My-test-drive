@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type {
+  Collection,
   Cuisine,
   DeliveryPartner,
   DietGoal,
@@ -157,4 +158,30 @@ export async function fetchIngredients() {
 export async function matchPantryRecipes(ingredientIds: string[]) {
   const { data } = await api.post<PantryMatch[]>("/recipes/pantry-match", { ingredientIds });
   return data;
+}
+
+export async function fetchCollections() {
+  const { data } = await api.get<Collection[]>("/collections");
+  return data;
+}
+
+export async function createCollection(name: string) {
+  const { data } = await api.post<Collection>("/collections", { name });
+  return data;
+}
+
+export async function renameCollection(id: string, name: string) {
+  await api.put(`/collections/${id}`, { name });
+}
+
+export async function deleteCollection(id: string) {
+  await api.delete(`/collections/${id}`);
+}
+
+export async function addRecipeToCollection(id: string, slug: string) {
+  await api.post(`/collections/${id}/recipes/${slug}`);
+}
+
+export async function removeRecipeFromCollection(id: string, slug: string) {
+  await api.delete(`/collections/${id}/recipes/${slug}`);
 }
