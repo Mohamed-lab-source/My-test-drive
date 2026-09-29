@@ -25,6 +25,7 @@ import { PopOnChange } from "../components/PopOnChange";
 import { SkeletonBlock } from "../components/Skeleton";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { AddToCollectionModal } from "../components/AddToCollectionModal";
+import { useCollections } from "../context/CollectionsContext";
 import { StarRating } from "../components/StarRating";
 import { useLocale } from "../i18n/LocaleContext";
 import { useAuth } from "../context/AuthContext";
@@ -82,6 +83,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [servings, setServings] = useState(1);
   const [sharing, setSharing] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
+  const { collectionsContaining } = useCollections();
   const [myRating, setMyRating] = useState<number | null>(null);
   const [rating, setRating] = useState(false);
   const [reviewText, setReviewText] = useState("");
@@ -163,6 +165,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const textAlign = isRTL ? "right" : "left";
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   const cookCount = cookCountFor(recipe.slug);
+  const myCollections = collectionsContaining(recipe.slug);
 
   const handleShareText = async () => {
     const ingredientLines = scaledIngredients.map(
@@ -572,6 +575,13 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             />
           </View>
         ) : null}
+        {isAuthenticated && myCollections.length > 0 ? (
+          <View style={styles.collectionChipsRow}>
+            {myCollections.map((c) => (
+              <Chip key={c.id} label={c.name} onPress={() => navigation.navigate("CollectionDetail", { id: c.id })} />
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <AddToCollectionModal
@@ -788,5 +798,6 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
     borderTopColor: colors.border,
   },
   shareButton: { marginTop: spacing(1.5) },
+  collectionChipsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing(1.5) },
   offScreen: { position: "absolute", top: -9999, left: 0, opacity: 0 },
 });
