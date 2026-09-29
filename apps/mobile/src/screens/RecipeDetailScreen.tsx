@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -46,6 +47,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { DietGoal, RecipeDetail, RecipeSummary } from "../api/types";
 
+const RECIPE_CACHE_PREFIX = "cookmate.recipeDetailCache.";
 const BODY_GOALS: DietGoal[] = ["LOSE_WEIGHT", "BUILD_MUSCLE", "GAIN_WEIGHT"];
 const SERVINGS_PRESETS = [2, 4, 6, 8];
 const MEAL_PLAN_DAYS_AHEAD = 7;
@@ -90,6 +92,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [rating, setRating] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [similarRecipes, setSimilarRecipes] = useState<RecipeSummary[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  const [showingOfflineCache, setShowingOfflineCache] = useState(false);
   const shareCardRef = useRef<View>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const ratingSectionY = useRef(0);
@@ -98,16 +102,37 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const hasBodyGoal = BODY_GOALS.includes(myGoal);
   const [wantsAdapted, setWantsAdapted] = useState(true);
 
-  useEffect(() => {
+  const cacheKey = `${RECIPE_CACHE_PREFIX}${locale}.${slug}`;
+
+  const loadRecipe = () => {
     setLoading(true);
+    setLoadError(false);
     fetchRecipeDetail(slug, hasBodyGoal && wantsAdapted ? myGoal : undefined)
       .then((data) => {
         setRecipe(data);
         setServings((prev) => (prev === 1 ? data.baseServings : prev));
         setMyRating(data.myRating);
+        setShowingOfflineCache(false);
         addRecent(data);
+        AsyncStorage.setItem(cacheKey, JSON.stringify(data)).catch(() => {});
+      })
+      .catch(async () => {
+        const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+        if (cached) {
+          const data = JSON.parse(cached) as RecipeDetail;
+          setRecipe(data);
+          setServings((prev) => (prev === 1 ? data.baseServings : prev));
+          setMyRating(data.myRating);
+          setShowingOfflineCache(true);
+        } else {
+          setLoadError(true);
+        }
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadRecipe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, locale, hasBodyGoal, wantsAdapted, myGoal]);
 
@@ -152,6 +177,20 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
       quantity: round2(ing.quantity * scale),
     }));
   }, [recipe, servings]);
+
+  if (!loading && loadError && !recipe) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["bottom"]}>
+        <View style={styles.errorState}>
+          <Text style={styles.errorTitle}>{t("recipeDetail.loadErrorTitle")}</Text>
+          <Text style={styles.errorSubtitle}>{t("recipeDetail.loadErrorSubtitle")}</Text>
+          <View style={styles.errorButton}>
+            <PrimaryButton label={t("recipeDetail.retry")} onPress={loadRecipe} />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading || !recipe) {
     return (
@@ -263,6 +302,11 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           </FadeSlideIn>
         </View>
         <View style={styles.content}>
+          {showingOfflineCache ? (
+            <View style={styles.offlineBanner}>
+              <Text style={styles.offlineBannerText}>{t("recipeDetail.offlineBanner")}</Text>
+            </View>
+          ) : null}
           <View style={styles.titleRow}>
             <Text style={[styles.title, styles.titleFlex, { textAlign }]}>{recipe.title}</Text>
             <AnimatedPressable
@@ -829,5 +873,17 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
   },
   shareButton: { marginTop: spacing(1.5) },
   collectionChipsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing(1.5) },
+  offlineBanner: {
+    backgroundColor: colors.chipBackground,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing(1.5),
+    paddingVertical: spacing(1),
+    marginBottom: spacing(1.5),
+  },
+  offlineBannerText: { color: colors.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
+  errorState: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing(4) },
+  errorTitle: { fontSize: 18, fontWeight: "800", color: colors.text, textAlign: "center" },
+  errorSubtitle: { color: colors.textMuted, textAlign: "center", marginTop: spacing(1), lineHeight: 20 },
+  errorButton: { marginTop: spacing(3), width: "100%" },
   offScreen: { position: "absolute", top: -9999, left: 0, opacity: 0 },
 });
