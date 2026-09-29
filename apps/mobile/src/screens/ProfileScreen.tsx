@@ -7,6 +7,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { useCollections } from "../context/CollectionsContext";
 import { apiErrorMessage } from "../api/client";
 import { fetchCuisines } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
@@ -35,6 +37,8 @@ export function ProfileScreen({ navigation }: Props) {
   const { textSize, setTextSize } = useTextSize();
   const { hasUnseen: hasUnseenWhatsNew } = useWhatsNew();
   const { displayStreak, longestStreak, totalCooked } = useCookStreak();
+  const { favoriteRecipes } = useFavorites();
+  const { collections } = useCollections();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
@@ -112,6 +116,8 @@ export function ProfileScreen({ navigation }: Props) {
               displayStreak={displayStreak}
               longestStreak={longestStreak}
               totalCooked={totalCooked}
+              favoritesCount={favoriteRecipes.length}
+              collectionsCount={collections.length}
               t={t}
               styles={styles}
             />
@@ -247,6 +253,8 @@ export function ProfileScreen({ navigation }: Props) {
             displayStreak={displayStreak}
             longestStreak={longestStreak}
             totalCooked={totalCooked}
+            favoritesCount={favoriteRecipes.length}
+            collectionsCount={collections.length}
             t={t}
             styles={styles}
           />
@@ -363,12 +371,16 @@ function StreakStats({
   displayStreak,
   longestStreak,
   totalCooked,
+  favoritesCount,
+  collectionsCount,
   t,
   styles,
 }: {
   displayStreak: number;
   longestStreak: number;
   totalCooked: number;
+  favoritesCount: number;
+  collectionsCount: number;
   t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
   styles: Styles;
 }) {
@@ -385,6 +397,14 @@ function StreakStats({
       <View style={styles.streakStat}>
         <Text style={styles.streakValue}>{totalCooked}</Text>
         <Text style={styles.streakLabel}>{t("profile.streakTotal")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{favoritesCount}</Text>
+        <Text style={styles.streakLabel}>{t("profile.statFavorites")}</Text>
+      </View>
+      <View style={styles.streakStat}>
+        <Text style={styles.streakValue}>{collectionsCount}</Text>
+        <Text style={styles.streakLabel}>{t("profile.statCollections")}</Text>
       </View>
     </View>
   );
@@ -429,12 +449,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     streakRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
       backgroundColor: colors.chipBackground,
       borderRadius: 14,
       marginTop: spacing(2.5),
       paddingVertical: spacing(1.5),
     },
-    streakStat: { flex: 1, alignItems: "center" },
+    streakStat: { width: "33.33%", alignItems: "center", marginBottom: spacing(1) },
     streakValue: { fontSize: 18, fontWeight: "800", color: colors.primaryDark },
     streakLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2, textAlign: "center" },
   });
