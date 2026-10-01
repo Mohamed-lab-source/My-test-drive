@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -21,6 +21,7 @@ import {
 import { rescheduleExtraReminders } from '../src/notifications/extras';
 import { settingsHydrated } from '../src/store/settingsStore';
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
+import { useSmsStore } from '../src/sms/smsStore';
 
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();
@@ -56,6 +57,11 @@ function AppShell() {
       .then(async () => {
         setDataReady(true);
         await settingsHydrated();
+        // Bank SMS: pick up any new debit alerts (no-op unless turned on).
+        useSmsStore
+          .getState()
+          .scan()
+          .catch((e) => console.warn('Bank SMS scan failed', e));
         await rescheduleAllReminders(
           useProductivityStore.getState().meetings,
           useFinanceStore.getState().recurringRules,
@@ -70,6 +76,15 @@ function AppShell() {
         console.error('Failed to hydrate app state', e);
         setDataReady(true);
       });
+  }, []);
+
+  // Re-check bank SMS each time the app comes back to the foreground, so a
+  // card payment made a minute ago is waiting when you open Anchor.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') useSmsStore.getState().scan().catch(() => {});
+    });
+    return () => sub.remove();
   }, []);
 
   // Once signed in, pull any data synced from other devices down into local

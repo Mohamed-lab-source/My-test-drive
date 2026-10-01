@@ -8,6 +8,7 @@ import { Card } from '../../../src/ui/Card';
 import { TextField } from '../../../src/ui/TextField';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 import { convertToBase } from '../../../src/db/repositories/fx';
+import { SadaqahCard } from '../../../src/features/money/SadaqahCard';
 
 const ZAKAT_RATE = 0.025;
 
@@ -21,10 +22,13 @@ function Row({ label, value, color }: { label: string; value: string; color?: st
   );
 }
 
+const NISAB_GOLD_GRAMS = 85;
+
 export default function ZakatScreen() {
   const { colors, typography, spacing } = useTheme();
   const { accounts, debts, fxRates } = useFinanceStore();
-  const { currency, zakatNisab, setZakatNisab } = useSettingsStore();
+  const { currency, zakatNisab, setZakatNisab, goldPricePerGram, setGoldPricePerGram } = useSettingsStore();
+  const [goldInput, setGoldInput] = useState(goldPricePerGram > 0 ? String(goldPricePerGram) : '');
 
   const [nisabInput, setNisabInput] = useState(zakatNisab > 0 ? String(zakatNisab) : '');
   const [otherAssets, setOtherAssets] = useState('');
@@ -77,7 +81,22 @@ export default function ZakatScreen() {
 
         <Card style={{ marginBottom: spacing.md }}>
           <TextField
-            label={`Nisab value (${currency})`}
+            label={`Gold price per gram, 24k (${currency})`}
+            placeholder="Optional — fills in the nisab below"
+            keyboardType="decimal-pad"
+            value={goldInput}
+            onChangeText={(v) => {
+              setGoldInput(v);
+              const price = Number(v);
+              if (price > 0) setNisabInput((price * NISAB_GOLD_GRAMS).toFixed(2));
+            }}
+            onBlur={() => {
+              setGoldPricePerGram(Number(goldInput) || 0);
+              setZakatNisab(Number(nisabInput) || 0);
+            }}
+          />
+          <TextField
+            label={`Nisab value (${currency}) — ${NISAB_GOLD_GRAMS}g of gold`}
             placeholder="Value of 85g gold today"
             keyboardType="decimal-pad"
             value={nisabInput}
@@ -109,6 +128,8 @@ export default function ZakatScreen() {
           <View style={{ height: 0.5, backgroundColor: colors.separator, marginVertical: spacing.xs }} />
           <Row label="Zakatable wealth" value={formatMoney(net, currency)} />
         </Card>
+
+        <SadaqahCard />
 
         <Text style={[typography.caption1, { color: colors.tertiaryLabel }]}>
           Zakat is due on wealth at or above nisab held for one lunar year (hawl). This is an estimate from your balances in

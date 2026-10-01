@@ -51,6 +51,12 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Account detail screen with its transactions (including incoming transfers) and this month's in/out
 - Safe to spend today (budget left ÷ days left) and no-spend days this month
 - Savings rate and emergency runway in Analytics; share a month summary as text
+- **Bank SMS (Android)** — reads debit alerts from chosen senders (default: HSBC) on launch and whenever the app returns to the foreground; parses amount, currency, merchant and card digits (English and Arabic), guesses a category, and queues each debit in a review inbox. Nothing is added until you confirm; ATM withdrawals become a transfer into Cash. Messages are filtered by sender in native code, stay on the device, and are never synced or backed up. Native code lives in `modules/anchor-sms`.
+- Shopping list with estimated prices; tick an item off and log it as an expense in one tap
+- Suggested budgets from your 3-month average spend
+- Money tools: instalment calculator and a currency converter using your saved rates
+- Gold price per gram → nisab (85 g) on the Zakat screen, plus a Sadaqah tracker with a monthly goal
+- Spending insights: categories running above or below your usual pace this month
 
 **Tasks**
 - Today / Backlog / All views, with unfinished "Today" tasks rolling into Backlog automatically
@@ -69,6 +75,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Duplicate a task along with its subtasks
 - Focus stats: today, last 7 days chart, streak and most-focused tasks
 - Open a meeting's location in Maps, or its link if it's a video call
+- Kanban board (Backlog → To do → In progress → Done)
+- Routines: saved task lists added to today in one tap
+- Create a follow-up task from a meeting
+- Tasks completed per day (last 14 days) on the Focus screen
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -91,6 +101,11 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Quran position: next page, juz, and pages left in the juz
 - Daily habit reminders at a chosen time
 - Sunnah fast reminders the evening before the white days, Arafah and Ashura
+- Health: water (daily goal, optional reminders every 2 hours), sleep and weight logs with charts
+- Sunnah prayers tracker (rawatib, Duha, Tahajjud, Witr)
+- Reading list with page progress
+- Countdowns to events, the nearest one shown on Home
+- Quick notes with pinning and search
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
@@ -98,6 +113,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Suhoor / iftar countdown during Ramadan
 - Verse of the day
 - Optional 8 AM morning briefing and 9 PM journal check-in notifications
+- Customize Home: hide any card you don't use
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood
@@ -147,4 +163,6 @@ src/theme/            colors, typography, spacing, ThemeProvider
 src/ui/               reusable design-system components
 src/features/         feature-specific components (add sheets, rows) grouped by domain
 src/widgets/          Android home-screen widgets (Prayers, Today, Net worth)
+src/sms/              bank SMS parsing, scanning and review store
+modules/anchor-sms/   local Expo native module that reads the SMS inbox (Android)
 ```

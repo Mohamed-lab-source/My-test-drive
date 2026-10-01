@@ -28,6 +28,15 @@ const TABLES = [
   'occasions',
   'adhkar_logs',
   'qada_counts',
+  'shopping_items',
+  'routines',
+  'water_logs',
+  'sleep_logs',
+  'weight_logs',
+  'sunnah_prayer_logs',
+  'books',
+  'countdowns',
+  'notes',
 ];
 
 export async function exportAllData(): Promise<string> {

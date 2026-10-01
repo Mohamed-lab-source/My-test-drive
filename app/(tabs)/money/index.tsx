@@ -15,6 +15,8 @@ import { convertToBase } from '../../../src/db/repositories/fx';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
+import { useSmsStore } from '../../../src/sms/smsStore';
+import { Icon } from '../../../src/ui/Icon';
 import type { Transaction } from '../../../src/db/types';
 
 function QuickLink({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
@@ -45,6 +47,11 @@ export default function MoneyScreen() {
   const currency = useSettingsStore((s) => s.currency);
   const { accounts, transactions, fxRates } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
+  const smsPending = useSmsStore((s) => s.pending.length);
+  const refreshSms = useSmsStore((s) => s.refresh);
+  useEffect(() => {
+    refreshSms();
+  }, [refreshSms]);
   const [editing, setEditing] = useState<Transaction | null>(null);
 
   // Opened via the Net worth widget's "+" button (anchor://money?action=add-expense).
@@ -90,6 +97,18 @@ export default function MoneyScreen() {
           </Card>
         </View>
 
+        {smsPending > 0 ? (
+          <Pressable onPress={() => router.push('/money/sms-inbox')} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+            <Card style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.orange + '1F' }}>
+              <Icon name="banknote.fill" size={22} color={colors.orange} />
+              <Text style={[typography.headline, { color: colors.label, flex: 1, marginLeft: spacing.sm }]}>
+                {smsPending} bank debit{smsPending === 1 ? '' : 's'} to review
+              </Text>
+              <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
+            </Card>
+          </Pressable>
+        ) : null}
+
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <SafeToSpendCard />
         </View>
@@ -100,11 +119,17 @@ export default function MoneyScreen() {
           <QuickLink icon="target" label="Savings" color={colors.green} onPress={() => router.push('/money/savings')} />
           <QuickLink icon="calendar" label="Bills" color={colors.indigo} onPress={() => router.push('/money/bills-calendar')} />
         </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <QuickLink icon="chart.pie.fill" label="Budgets" color={colors.orange} onPress={() => router.push('/money/budgets')} />
           <QuickLink icon="chart.bar.fill" label="Analytics" color={colors.teal} onPress={() => router.push('/money/analytics')} />
           <QuickLink icon="building.columns.fill" label="Accounts" color={colors.blue} onPress={() => router.push('/money/accounts')} />
           <QuickLink icon="hands.sparkles.fill" label="Zakat" color={colors.mint} onPress={() => router.push('/money/zakat')} />
+        </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <QuickLink icon="banknote.fill" label="Bank SMS" color={colors.red} onPress={() => router.push('/money/sms-inbox')} />
+          <QuickLink icon="cart.badge.plus" label="Shopping" color={colors.green} onPress={() => router.push('/money/shopping')} />
+          <QuickLink icon="function" label="Tools" color={colors.gray} onPress={() => router.push('/money/tools')} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}>

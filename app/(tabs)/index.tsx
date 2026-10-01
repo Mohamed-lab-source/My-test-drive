@@ -13,6 +13,9 @@ import { Icon } from '../../src/ui/Icon';
 import { PrayerTracker } from '../../src/features/life/PrayerTracker';
 import { RamadanCard } from '../../src/features/home/RamadanCard';
 import { VerseCard } from '../../src/features/home/VerseCard';
+import { CountdownCard } from '../../src/features/home/CountdownCard';
+import { WaterCard } from '../../src/features/home/WaterCard';
+import { CustomizeHomeSheet } from '../../src/features/home/CustomizeHomeSheet';
 import { GettingStartedCard } from '../../src/features/home/GettingStartedCard';
 import { AddTransactionSheet } from '../../src/features/money/AddTransactionSheet';
 import { AddTaskSheet } from '../../src/features/tasks/AddTaskSheet';
@@ -51,6 +54,9 @@ export default function HomeScreen() {
   const hijriOffset = useSettingsStore((s) => s.hijriOffset);
   const [expenseVisible, setExpenseVisible] = useState(false);
   const [taskVisible, setTaskVisible] = useState(false);
+  const [customizeVisible, setCustomizeVisible] = useState(false);
+  const hiddenHomeCards = useSettingsStore((s) => s.hiddenHomeCards);
+  const show = (id: string) => !hiddenHomeCards.includes(id);
   const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory } = useFinanceStore();
   const { tasks, meetings } = useProductivityStore();
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
@@ -136,10 +142,13 @@ export default function HomeScreen() {
         <View style={{ paddingHorizontal: spacing.lg }}>
           <GettingStartedCard />
           <RamadanCard />
-          <VerseCard />
+          {show('countdown') ? <CountdownCard /> : null}
+          {show('verse') ? <VerseCard /> : null}
+          {show('water') ? <WaterCard /> : null}
         </View>
 
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+        {show('networth') ? (
+<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Pressable onPress={() => router.push('/money')}>
             <Card>
               <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Net worth</Text>
@@ -170,8 +179,10 @@ export default function HomeScreen() {
             </Card>
           </Pressable>
         </View>
+        ) : null}
 
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        {show('stats') ? (
+<View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
             <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>This month</Text>
             <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{formatMoney(monthSpend, currency)}</Text>
@@ -185,8 +196,10 @@ export default function HomeScreen() {
             <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{prayerStreak}</Text>
           </Card>
         </View>
+        ) : null}
 
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+        {show('review') ? (
+<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Pressable onPress={() => router.push('/review')}>
             <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
               <IconCircle name="chart.line.uptrend.xyaxis" color={colors.purple} size={36} />
@@ -198,12 +211,16 @@ export default function HomeScreen() {
             </Card>
           </Pressable>
         </View>
+        ) : null}
 
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+        {show('prayers') ? (
+<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <PrayerTracker />
         </View>
+        ) : null}
 
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+        {show('today') ? (
+<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <Text style={[typography.title3, { color: colors.label }]}>Today</Text>
             <Pressable onPress={() => router.push('/tasks')}>
@@ -254,8 +271,9 @@ export default function HomeScreen() {
             </Card>
           )}
         </View>
+        ) : null}
 
-        {upcomingBills.length > 0 && (
+        {show('bills') && upcomingBills.length > 0 && (
           <View style={{ paddingHorizontal: spacing.lg }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
               <Text style={[typography.title3, { color: colors.label }]}>Upcoming bills</Text>
@@ -290,7 +308,12 @@ export default function HomeScreen() {
             </Card>
           </View>
         )}
+
+        <Pressable onPress={() => setCustomizeVisible(true)} style={{ alignSelf: 'center', marginTop: spacing.lg, padding: spacing.sm }}>
+          <Text style={[typography.subhead, { color: colors.blue }]}>Customize Home</Text>
+        </Pressable>
       </ScrollView>
+      <CustomizeHomeSheet visible={customizeVisible} onClose={() => setCustomizeVisible(false)} />
       <AddTransactionSheet visible={expenseVisible} onClose={() => setExpenseVisible(false)} />
       <AddTaskSheet visible={taskVisible} onClose={() => setTaskVisible(false)} />
     </View>

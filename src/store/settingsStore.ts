@@ -28,6 +28,24 @@ interface SettingsState {
   setMorningBriefing: (v: boolean) => void;
   eveningJournal: boolean;
   setEveningJournal: (v: boolean) => void;
+  goldPricePerGram: number;
+  setGoldPricePerGram: (v: number) => void;
+  sadaqahGoal: number;
+  setSadaqahGoal: (v: number) => void;
+  waterGoal: number;
+  setWaterGoal: (v: number) => void;
+  waterReminders: boolean;
+  setWaterReminders: (v: boolean) => void;
+  hiddenHomeCards: string[];
+  toggleHomeCard: (id: string) => void;
+  smsImportEnabled: boolean;
+  setSmsImportEnabled: (v: boolean) => void;
+  smsSenders: string[];
+  setSmsSenders: (v: string[]) => void;
+  smsLastScan: number;
+  setSmsLastScan: (v: number) => void;
+  smsAccountId: string | null;
+  setSmsAccountId: (id: string | null) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -61,6 +79,27 @@ export const useSettingsStore = create<SettingsState>()(
       setMorningBriefing: (v) => set({ morningBriefing: v }),
       eveningJournal: false,
       setEveningJournal: (v) => set({ eveningJournal: v }),
+      goldPricePerGram: 0,
+      setGoldPricePerGram: (v) => set({ goldPricePerGram: v }),
+      sadaqahGoal: 0,
+      setSadaqahGoal: (v) => set({ sadaqahGoal: v }),
+      waterGoal: 8,
+      setWaterGoal: (v) => set({ waterGoal: v }),
+      waterReminders: false,
+      setWaterReminders: (v) => set({ waterReminders: v }),
+      hiddenHomeCards: [],
+      toggleHomeCard: (id) =>
+        set((s) => ({
+          hiddenHomeCards: s.hiddenHomeCards.includes(id) ? s.hiddenHomeCards.filter((c) => c !== id) : [...s.hiddenHomeCards, id],
+        })),
+      smsImportEnabled: false,
+      setSmsImportEnabled: (v) => set({ smsImportEnabled: v }),
+      smsSenders: ['HSBC'],
+      setSmsSenders: (v) => set({ smsSenders: v }),
+      smsLastScan: 0,
+      setSmsLastScan: (v) => set({ smsLastScan: v }),
+      smsAccountId: null,
+      setSmsAccountId: (id) => set({ smsAccountId: id }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

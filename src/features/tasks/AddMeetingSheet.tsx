@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { ChipSelector } from '../../ui/ChipSelector';
@@ -28,6 +28,25 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
   const { colors, typography, spacing } = useTheme();
   const addMeeting = useProductivityStore((s) => s.addMeeting);
   const updateMeeting = useProductivityStore((s) => s.updateMeeting);
+  const addTask = useProductivityStore((s) => s.addTask);
+
+  // Turns the meeting into a to-do for tomorrow, carrying its notes along.
+  const createFollowUp = async () => {
+    if (!editing) return;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    await addTask({
+      project_id: null,
+      title: `Follow up: ${editing.title}`,
+      notes: notes.trim() || null,
+      status: 'todo',
+      priority: 'medium',
+      due_date: null,
+      scheduled_date: todayKey(tomorrow),
+      sort_order: Date.now(),
+    });
+    Alert.alert('Follow-up added', 'A task for tomorrow is in your Tasks list.');
+  };
 
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
@@ -99,6 +118,9 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
         </View>
         <TextField label="Notes" placeholder="Agenda, links, dial-in…" value={notes} onChangeText={setNotes} multiline />
         <Button title={editing ? 'Save' : 'Add meeting'} onPress={handleSave} disabled={!canSave} loading={saving} />
+        {editing ? (
+          <Button title="Create follow-up task" variant="secondary" onPress={createFollowUp} style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+        ) : null}
       </ScrollView>
     </Sheet>
   );

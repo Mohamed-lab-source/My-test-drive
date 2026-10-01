@@ -285,3 +285,86 @@ export interface QadaCount {
   id: Prayer;
   owed: number;
 }
+
+export interface ShoppingItem {
+  id: string;
+  title: string;
+  est_amount: number | null;
+  category_id: string | null;
+  is_done: number;
+  created_at: string;
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  items: string;
+  created_at: string;
+}
+
+export interface WaterLog {
+  id: string;
+  count: number;
+}
+
+export interface SleepLog {
+  id: string;
+  hours: number;
+}
+
+export interface WeightLog {
+  id: string;
+  kg: number;
+}
+
+export type SunnahPrayerKind = 'fajr_before' | 'duha' | 'dhuhr_rawatib' | 'maghrib_after' | 'isha_after' | 'tahajjud' | 'witr';
+
+export interface SunnahPrayerLog {
+  id: string;
+  date: string;
+  kind: SunnahPrayerKind;
+}
+
+export type BookStatus = 'want' | 'reading' | 'finished';
+
+export interface Book {
+  id: string;
+  title: string;
+  author: string | null;
+  total_pages: number;
+  pages_read: number;
+  status: BookStatus;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface Countdown {
+  id: string;
+  title: string;
+  date: string;
+  created_at: string;
+}
+
+export interface Note {
+  id: string;
+  body: string;
+  pinned: number;
+  updated_at: string;
+  created_at: string;
+}
+
+export type SmsImportStatus = 'pending' | 'added' | 'dismissed';
+
+export interface SmsImport {
+  id: string;
+  sms_date: string;
+  sender: string;
+  body: string;
+  amount: number;
+  currency: string;
+  merchant: string | null;
+  card_last4: string | null;
+  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit';
+  status: SmsImportStatus;
+  created_at: string;
+}

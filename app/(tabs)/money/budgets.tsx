@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { Icon } from '../../../src/ui/Icon';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import * as financeRepo from '../../../src/db/repositories/finance';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -18,7 +21,39 @@ import type { Budget } from '../../../src/db/types';
 
 export default function BudgetsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { budgets, categories, transactions, removeBudget, refreshBudgets } = useFinanceStore();
+  const { budgets, categories, transactions, removeBudget, refreshBudgets, setBudget } = useFinanceStore();
+  const currency = useSettingsStore((s) => s.currency);
+
+  // Averages each expense category over the last three full months and
+  // proposes that (rounded up to a whole 10) as its budget. Categories that
+  // already have a budget are left alone.
+  const suggestBudgets = async () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString();
+    const end = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const txs = (await financeRepo.listTransactionsInRange(start, end)).filter((t) => t.type === 'expense' && t.category_id);
+    const totals = new Map<string, number>();
+    for (const t of txs) totals.set(t.category_id!, (totals.get(t.category_id!) ?? 0) + t.amount);
+    const existing = new Set(budgets.map((b) => b.category_id));
+    const suggestions = Array.from(totals.entries())
+      .filter(([id]) => !existing.has(id))
+      .map(([id, total]) => ({ id, limit: Math.ceil(total / 3 / 1000) * 1000 }))
+      .filter((s) => s.limit > 0);
+    if (suggestions.length === 0) {
+      Alert.alert('No suggestions', 'Anchor needs some spending in the last three months for categories without a budget yet.');
+      return;
+    }
+    const lines = suggestions.map((s) => `${categories.find((c) => c.id === s.id)?.name ?? 'Category'}: ${formatMoney(s.limit, currency)}`);
+    Alert.alert('Suggested budgets', `Based on your 3-month average:\n\n${lines.join('\n')}`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Add all',
+        onPress: async () => {
+          for (const s of suggestions) await setBudget(s.id, s.limit, currency);
+        },
+      },
+    ]);
+  };
   const [addVisible, setAddVisible] = useState(false);
 
   const handleDelete = async (budget: Budget) => {
@@ -44,6 +79,10 @@ export default function BudgetsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Budgets" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <Pressable onPress={suggestBudgets} style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginBottom: spacing.sm }}>
+          <Icon name="sparkles" size={16} color={colors.blue} />
+          <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Suggest from my spending</Text>
+        </Pressable>
         {rows.length === 0 ? (
           <EmptyState icon="chart.pie.fill" title="No budgets yet" message="Set a monthly limit for a spending category." />
         ) : (

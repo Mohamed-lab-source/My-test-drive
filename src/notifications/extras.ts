@@ -9,6 +9,7 @@ import {
   rescheduleSunnahFastReminders,
   scheduleEveningJournal,
   scheduleMorningBriefing,
+  scheduleWaterReminders,
 } from './scheduler';
 
 export async function rescheduleExtraReminders(): Promise<void> {
@@ -17,4 +18,5 @@ export async function rescheduleExtraReminders(): Promise<void> {
   await rescheduleSunnahFastReminders();
   await scheduleMorningBriefing({ tasks, meetings, rules: useFinanceStore.getState().recurringRules });
   await scheduleEveningJournal();
+  await scheduleWaterReminders();
 }

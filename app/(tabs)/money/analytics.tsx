@@ -11,6 +11,7 @@ import { Icon } from '../../../src/ui/Icon';
 import { formatMoney } from '../../../src/utils/money';
 import { formatDateKey, formatDateShort, localDateKey } from '../../../src/utils/date';
 import { forecastCashFlow } from '../../../src/utils/forecast';
+import { spendingInsights } from '../../../src/utils/insights';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import * as repo from '../../../src/db/repositories/finance';
 import type { Transaction } from '../../../src/db/types';
@@ -109,6 +110,8 @@ export default function AnalyticsScreen() {
   const thisMonth = monthlyTrend[monthlyTrend.length - 1];
   const lastMonth = monthlyTrend[monthlyTrend.length - 2];
   const spendChange = lastMonth.expense > 0 ? (thisMonth.expense - lastMonth.expense) / lastMonth.expense : null;
+  const insights = useMemo(() => spendingInsights(sixMonthTx), [sixMonthTx]);
+
   const savingsRate = thisMonth.income > 0 ? (thisMonth.income - thisMonth.expense) / thisMonth.income : null;
   // Months of expenses the cash/bank/savings balances would cover, using the
   // average of the previous months that had any spending.
@@ -233,6 +236,31 @@ export default function AnalyticsScreen() {
                 <Text style={[typography.subhead, { color: colors.blue, marginLeft: 6 }]}>Share summary</Text>
               </Pressable>
             </Card>
+
+            {insights.length > 0 ? (
+              <>
+                <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Insights</Text>
+                <Card style={{ marginBottom: spacing.lg }}>
+                  {insights.map((ins) => {
+                    const cat = categories.find((c) => c.id === ins.categoryId);
+                    const up = ins.change > 0;
+                    return (
+                      <View key={ins.categoryId} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5 }}>
+                        <Text style={{ fontSize: 16, marginRight: spacing.sm }}>{up ? '📈' : '📉'}</Text>
+                        <Text style={[typography.subhead, { color: colors.label, flex: 1 }]}>
+                          <Text style={{ fontWeight: '700' }}>{cat?.name ?? 'A category'}</Text> is{' '}
+                          {ins.spent === 0 ? 'untouched so far' : `${Math.round(Math.abs(ins.change) * 100)}% ${up ? 'above' : 'below'} your usual pace`}
+                        </Text>
+                        <Text style={[typography.caption1, { color: up ? colors.red : colors.green }]}>{formatMoney(ins.spent, currency)}</Text>
+                      </View>
+                    );
+                  })}
+                  <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 4 }]}>
+                    Compared with your 3-month average, adjusted for how far into the month we are.
+                  </Text>
+                </Card>
+              </>
+            ) : null}
 
             <View style={{ flexDirection: 'row', marginBottom: spacing.lg, marginHorizontal: -4 }}>
               <Card style={{ flex: 1, marginHorizontal: 4 }}>

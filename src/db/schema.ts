@@ -284,6 +284,88 @@ CREATE TABLE IF NOT EXISTS qada_counts (
   id TEXT PRIMARY KEY NOT NULL,
   owed INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS shopping_items (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  est_amount INTEGER,
+  category_id TEXT,
+  is_done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- items holds a JSON array of task titles added together in one tap.
+CREATE TABLE IF NOT EXISTS routines (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  items TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL
+);
+
+-- The next three are keyed by the 'YYYY-MM-DD' date: one row per day.
+CREATE TABLE IF NOT EXISTS water_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sleep_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  hours REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS weight_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  kg REAL NOT NULL
+);
+
+-- id = '<date>-<kind>'.
+CREATE TABLE IF NOT EXISTS sunnah_prayer_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  kind TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS books (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  author TEXT,
+  total_pages INTEGER NOT NULL DEFAULT 0,
+  pages_read INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL CHECK (status IN ('want', 'reading', 'finished')),
+  finished_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS countdowns (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  date TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- Debits read from bank SMS, waiting for review. Device-only: never synced
+-- or included in backups, since bodies are raw messages.
+CREATE TABLE IF NOT EXISTS sms_imports (
+  id TEXT PRIMARY KEY NOT NULL,
+  sms_date TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  body TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  merchant TEXT,
+  card_last4 TEXT,
+  kind TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'added', 'dismissed')),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS notes (
+  id TEXT PRIMARY KEY NOT NULL,
+  body TEXT NOT NULL,
+  pinned INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 `;
 
 // Columns added to already-shipped tables after their initial release. A

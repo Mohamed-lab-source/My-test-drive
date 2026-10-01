@@ -40,6 +40,15 @@ export const SYNCED_TABLES = [
   'occasions',
   'adhkar_logs',
   'qada_counts',
+  'shopping_items',
+  'routines',
+  'water_logs',
+  'sleep_logs',
+  'weight_logs',
+  'sunnah_prayer_logs',
+  'books',
+  'countdowns',
+  'notes',
 ] as const;
 
 let currentUid: string | null = null;
@@ -50,7 +59,8 @@ export function setSyncUser(uid: string | null): void {
 
 registerSyncHooks({
   onWrite(table, id, data, deleted) {
-    if (!currentUid || !id) return;
+    // Device-only tables (e.g. imported bank SMS) never leave the phone.
+    if (!currentUid || !id || !(SYNCED_TABLES as readonly string[]).includes(table)) return;
     const db = getFirestore();
     const ref = doc(db, 'users', currentUid, table, id);
     if (deleted) {

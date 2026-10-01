@@ -378,3 +378,19 @@ export async function scheduleEveningJournal(): Promise<void> {
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: JOURNAL_HOUR, minute: 0, channelId: CHANNEL_ID },
   });
 }
+
+// ---------- Water reminders ----------
+const WATER_PREFIX = 'water-';
+const WATER_HOURS = [9, 11, 13, 15, 17, 19, 21];
+
+export async function scheduleWaterReminders(): Promise<void> {
+  await Promise.all(WATER_HOURS.map((h) => Notifications.cancelScheduledNotificationAsync(`${WATER_PREFIX}${h}`).catch(() => {})));
+  if (!useSettingsStore.getState().waterReminders || !(await areNotificationsEnabled())) return;
+  for (const hour of WATER_HOURS) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${WATER_PREFIX}${hour}`,
+      content: { title: 'Time for some water 💧', body: 'Tap to log a glass in Anchor' },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0, channelId: CHANNEL_ID },
+    });
+  }
+}

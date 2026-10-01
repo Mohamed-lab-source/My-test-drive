@@ -32,7 +32,13 @@ function LifeLink({ icon, label, color, onPress }: { icon: string; label: string
       }}
     >
       <IconCircle name={icon} color={color} size={40} />
-      <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>{label}</Text>
+      <Text
+        style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -68,9 +74,15 @@ export default function LifeScreen() {
           <LifeLink icon="safari.fill" label="Prayer times" color={colors.teal} onPress={() => router.push('/life/prayer-times')} />
           <LifeLink icon="sun.haze.fill" label="Adhkar" color={colors.yellow} onPress={() => router.push('/life/adhkar')} />
         </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <LifeLink icon="calendar.badge.clock" label="Hijri calendar" color={colors.brown} onPress={() => router.push('/life/hijri-calendar')} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <LifeLink icon="drop.fill" label="Health" color={colors.cyan} onPress={() => router.push('/life/health')} />
+          <LifeLink icon="sparkles" label="Sunnah prayers" color={colors.green} onPress={() => router.push('/life/sunnah-prayers')} />
+          <LifeLink icon="bookmark.fill" label="Reading" color={colors.orange} onPress={() => router.push('/life/books')} />
+        </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <LifeLink icon="hourglass" label="Countdowns" color={colors.indigo} onPress={() => router.push('/life/countdowns')} />
+          <LifeLink icon="doc.text.fill" label="Notes" color={colors.gray} onPress={() => router.push('/life/notes')} />
           <View style={{ flex: 1, marginHorizontal: 4 }} />
           <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>

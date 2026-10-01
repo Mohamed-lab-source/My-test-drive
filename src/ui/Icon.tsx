@@ -101,6 +101,15 @@ const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   'doc.on.doc': 'copy',
   'quote.opening': 'chatbox-ellipses',
   'hand.raised.fill': 'hand-right',
+  'bookmark.fill': 'bookmark',
+  'hourglass': 'hourglass',
+  'drop.fill': 'water',
+  'cart.badge.plus': 'basket',
+  'square.grid.2x2': 'grid',
+  'list.star': 'list-circle',
+  'function': 'calculator',
+  'eye.slash': 'eye-off',
+  'eye': 'eye',
 };
 
 interface IconProps {

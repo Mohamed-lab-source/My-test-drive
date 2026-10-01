@@ -8,6 +8,7 @@ import * as repo from '../../../src/db/repositories/productivity';
 import { todayKey } from '../../../src/db/client';
 import { localDateKey } from '../../../src/utils/date';
 import type { FocusSession } from '../../../src/db/types';
+import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
 
 const DAYS = 7;
 const CHART_HEIGHT = 100;
@@ -48,6 +49,14 @@ export default function FocusStatsScreen() {
     if (!byDay.get(key)) break;
     streak++;
   }
+
+  const completed = useMemo(() => {
+    const days = lastDays(14, todayKey);
+    const counts = new Map<string, number>();
+    for (const t of tasks) if (t.completed_at) counts.set(localDateKey(t.completed_at), (counts.get(localDateKey(t.completed_at)) ?? 0) + 1);
+    return days.map((d) => ({ ...d, value: counts.get(d.key) ?? 0 }));
+  }, [tasks]);
+  const completedTotal = completed.reduce((s, d) => s + d.value, 0);
 
   const topTasks = useMemo(() => {
     const m = new Map<string, number>();
@@ -101,6 +110,14 @@ export default function FocusStatsScreen() {
               </Text>
             ))}
           </View>
+        </Card>
+
+        <Card style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.headline, { color: colors.label }]}>Tasks completed</Text>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
+            {completedTotal} in the last 14 days · {(completedTotal / 14).toFixed(1)} a day
+          </Text>
+          <MiniBars data={completed} color={colors.green} />
         </Card>
 
         <Card>

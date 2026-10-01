@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Share, Alert, TextInput, Switch } from 'react-native';
+import { View, Text, ScrollView, Share, Alert, TextInput, Switch, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -87,6 +87,9 @@ export default function SettingsScreen() {
     setMorningBriefing,
     eveningJournal,
     setEveningJournal,
+    waterReminders,
+    setWaterReminders,
+    smsImportEnabled,
   } = useSettingsStore();
 
   // Shared by the opt-in reminder toggles: ask for permission first, then
@@ -354,6 +357,21 @@ export default function SettingsScreen() {
               leading={<IconCircle name="sun.max.fill" color={colors.orange} size={32} />}
               trailing={<Switch value={morningBriefing} onValueChange={(v) => toggleWithPermission(v, setMorningBriefing)} />}
             />
+            <ListRow
+              title="Water reminders"
+              subtitle="Every 2 hours, 9 AM – 9 PM"
+              leading={<IconCircle name="drop.fill" color={colors.cyan} size={32} />}
+              trailing={<Switch value={waterReminders} onValueChange={(v) => toggleWithPermission(v, setWaterReminders)} />}
+            />
+            {Platform.OS === 'android' ? (
+              <ListRow
+                title="Bank SMS"
+                subtitle={smsImportEnabled ? 'On — debits wait for review in Money' : 'Read debit alerts (e.g. HSBC) from SMS'}
+                leading={<IconCircle name="banknote.fill" color={colors.green} size={32} />}
+                onPress={() => router.push('/money/sms-inbox')}
+                showChevron
+              />
+            ) : null}
             <ListRow
               title="Evening check-in"
               subtitle="9 PM: log your mood and gratitude"

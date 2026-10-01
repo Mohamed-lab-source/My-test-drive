@@ -118,6 +118,12 @@ export default function TasksScreen() {
           subtitle="Your personal secretary"
           trailing={
             <View style={{ flexDirection: 'row' }}>
+              <Pressable onPress={() => router.push('/tasks/board')} hitSlop={8} style={{ marginRight: spacing.md }}>
+                <Icon name="square.grid.2x2" size={22} color={colors.blue} />
+              </Pressable>
+              <Pressable onPress={() => router.push('/tasks/routines')} hitSlop={8} style={{ marginRight: spacing.md }}>
+                <Icon name="list.star" size={22} color={colors.blue} />
+              </Pressable>
               <Pressable onPress={() => router.push('/tasks/focus')} hitSlop={8} style={{ marginRight: spacing.md }}>
                 <Icon name="timer" size={22} color={colors.blue} />
               </Pressable>

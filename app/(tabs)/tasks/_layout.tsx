@@ -11,6 +11,8 @@ export default function TasksLayout() {
       <Stack.Screen name="projects" />
       <Stack.Screen name="agenda" />
       <Stack.Screen name="focus" />
+      <Stack.Screen name="board" />
+      <Stack.Screen name="routines" />
     </Stack>
   );
 }
