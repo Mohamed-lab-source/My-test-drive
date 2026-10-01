@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -16,6 +16,8 @@ import { showUndoDelete } from '../../../src/ui/undo';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import type { RecurringFrequency } from '../../../src/db/types';
+import { detectRecurring } from '../../../src/utils/recurringDetect';
+import { advanceDueDate } from '../../../src/db/repositories/finance';
 
 const PER_YEAR: Record<RecurringFrequency, number> = { daily: 365, weekly: 52, monthly: 12, yearly: 1 };
 
@@ -30,7 +32,14 @@ export default function SubscriptionsScreen() {
     setRecurringAutoPost,
     refreshRecurring,
     fxRates,
+    transactions,
+    addRecurringRule,
   } = useFinanceStore();
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  const suggestions = useMemo(
+    () => detectRecurring(transactions, recurringRules).filter((s) => !dismissed.includes(s.key)),
+    [transactions, recurringRules, dismissed]
+  );
   const currency = useSettingsStore((s) => s.currency);
   const [addVisible, setAddVisible] = useState(false);
 
@@ -60,6 +69,45 @@ export default function SubscriptionsScreen() {
             </Text>
           </Card>
         ) : null}
+
+        {suggestions.map((sug) => (
+          <Card key={sug.key} style={{ marginBottom: spacing.md, borderWidth: 1, borderColor: colors.purple + '55' }}>
+            <Text style={[typography.footnote, { color: colors.purple, fontWeight: '600' }]}>LOOKS RECURRING</Text>
+            <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>
+              {sug.name} · {formatMoney(sug.amount, sug.currency)} a month
+            </Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+              Charged {sug.count} times, about a month apart. Track it to get reminders and see it in forecasts.
+            </Text>
+            <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+              <Button
+                title="Track it"
+                onPress={() =>
+                  addRecurringRule({
+                    name: sug.name,
+                    type: 'expense',
+                    amount: sug.amount,
+                    currency: sug.currency,
+                    category_id: sug.categoryId,
+                    account_id: sug.accountId,
+                    frequency: 'monthly',
+                    interval_count: 1,
+                    start_date: sug.lastDate,
+                    next_due_date: advanceDueDate(sug.lastDate, 'monthly', 1),
+                    end_date: null,
+                    is_subscription: 1,
+                    icon: 'repeat',
+                    color: '#AF52DE',
+                    reminder_days_before: 1,
+                    notes: null,
+                  })
+                }
+                style={{ flex: 1, marginRight: spacing.sm }}
+              />
+              <Button title="Not recurring" variant="secondary" onPress={() => setDismissed((d) => [...d, sug.key])} style={{ flex: 1 }} />
+            </View>
+          </Card>
+        ))}
 
         {recurringRules.length === 0 ? (
           <EmptyState icon="repeat" title="No recurring items" message="Track subscriptions, rent, salary, or any repeating expense." />

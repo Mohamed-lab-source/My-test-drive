@@ -9,6 +9,7 @@ import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import * as repo from '../../db/repositories/productivity';
 import { todayKey } from '../../db/client';
 import { formatDateKey, formatRelativeDay, formatTime } from '../../utils/date';
@@ -66,6 +67,8 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
   const updateTask = useProductivityStore((s) => s.updateTask);
   const removeTask = useProductivityStore((s) => s.removeTask);
   const duplicateTask = useProductivityStore((s) => s.duplicateTask);
+  const topTask = useSettingsStore((s) => s.topTask);
+  const setTopTask = useSettingsStore((s) => s.setTopTask);
   const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
   const setTaskReminder = useProductivityStore((s) => s.setTaskReminder);
   const liveRemindAt = useProductivityStore((s) => s.tasks.find((t) => t.id === task?.id)?.remind_at ?? null);
@@ -237,6 +240,18 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
           onPress={() => onStartFocus(task)}
           style={{ marginBottom: spacing.sm }}
         />
+        {task.status !== 'done' ? (
+          <Button
+            title={topTask?.id === task.id && topTask.date === todayKey() ? "Remove as today's top task" : "Make today's top task 🐸"}
+            variant="secondary"
+            onPress={() => {
+              const isTop = topTask?.id === task.id && topTask.date === todayKey();
+              setTopTask(isTop ? null : { id: task.id, date: todayKey() });
+              onClose();
+            }}
+            style={{ marginBottom: spacing.sm }}
+          />
+        ) : null}
         <Button
           title="Duplicate task"
           variant="secondary"

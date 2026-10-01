@@ -359,6 +359,16 @@ CREATE TABLE IF NOT EXISTS sms_imports (
   created_at TEXT NOT NULL
 );
 
+-- times holds a JSON array of 'HH:MM' daily reminder times.
+CREATE TABLE IF NOT EXISTS medications (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  dose TEXT,
+  times TEXT NOT NULL DEFAULT '[]',
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY NOT NULL,
   body TEXT NOT NULL,

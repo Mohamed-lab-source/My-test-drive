@@ -46,6 +46,24 @@ interface SettingsState {
   setSmsLastScan: (v: number) => void;
   smsAccountId: string | null;
   setSmsAccountId: (id: string | null) => void;
+  smsInstantAlerts: boolean;
+  setSmsInstantAlerts: (v: boolean) => void;
+  smsAutoAddKnown: boolean;
+  setSmsAutoAddKnown: (v: boolean) => void;
+  smsReadCredits: boolean;
+  setSmsReadCredits: (v: boolean) => void;
+  netWorthGoal: number;
+  setNetWorthGoal: (v: number) => void;
+  quranDailyGoal: number;
+  setQuranDailyGoal: (v: number) => void;
+  weightGoal: number;
+  setWeightGoal: (v: number) => void;
+  bedtime: string | null;
+  setBedtime: (v: string | null) => void;
+  topTask: { id: string; date: string } | null;
+  setTopTask: (v: { id: string; date: string } | null) => void;
+  lockTimeoutMinutes: number;
+  setLockTimeoutMinutes: (v: number) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -100,6 +118,24 @@ export const useSettingsStore = create<SettingsState>()(
       setSmsLastScan: (v) => set({ smsLastScan: v }),
       smsAccountId: null,
       setSmsAccountId: (id) => set({ smsAccountId: id }),
+      smsInstantAlerts: true,
+      setSmsInstantAlerts: (v) => set({ smsInstantAlerts: v }),
+      smsAutoAddKnown: false,
+      setSmsAutoAddKnown: (v) => set({ smsAutoAddKnown: v }),
+      smsReadCredits: false,
+      setSmsReadCredits: (v) => set({ smsReadCredits: v }),
+      netWorthGoal: 0,
+      setNetWorthGoal: (v) => set({ netWorthGoal: v }),
+      quranDailyGoal: 0,
+      setQuranDailyGoal: (v) => set({ quranDailyGoal: v }),
+      weightGoal: 0,
+      setWeightGoal: (v) => set({ weightGoal: v }),
+      bedtime: null,
+      setBedtime: (v) => set({ bedtime: v }),
+      topTask: null,
+      setTopTask: (v) => set({ topTask: v }),
+      lockTimeoutMinutes: 0,
+      setLockTimeoutMinutes: (v) => set({ lockTimeoutMinutes: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

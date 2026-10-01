@@ -16,6 +16,7 @@ import { VerseCard } from '../../src/features/home/VerseCard';
 import { CountdownCard } from '../../src/features/home/CountdownCard';
 import { WaterCard } from '../../src/features/home/WaterCard';
 import { CustomizeHomeSheet } from '../../src/features/home/CustomizeHomeSheet';
+import { NextPrayerChip } from '../../src/features/home/NextPrayerChip';
 import { GettingStartedCard } from '../../src/features/home/GettingStartedCard';
 import { AddTransactionSheet } from '../../src/features/money/AddTransactionSheet';
 import { AddTaskSheet } from '../../src/features/tasks/AddTaskSheet';
@@ -66,10 +67,15 @@ export default function HomeScreen() {
     0
   );
   const todayStr = todayKey();
-  const todayTasks = useMemo(
-    () => tasks.filter((t) => t.status !== 'done' && (t.scheduled_date === todayStr || t.status === 'in_progress')),
-    [tasks, todayStr]
-  );
+  const topTask = useSettingsStore((s) => s.topTask);
+  const topTaskId = topTask && topTask.date === todayStr ? topTask.id : null;
+  // Today's top task (if any) leads the list, even if it's scheduled elsewhere.
+  const todayTasks = useMemo(() => {
+    const list = tasks.filter(
+      (t) => t.status !== 'done' && (t.scheduled_date === todayStr || t.status === 'in_progress' || t.id === topTaskId)
+    );
+    return list.sort((a, b) => Number(b.id === topTaskId) - Number(a.id === topTaskId));
+  }, [tasks, todayStr, topTaskId]);
   const todayMeetings = useMemo(
     () => meetings.filter((m) => localDateKey(m.start_at) === todayStr),
     [meetings, todayStr]
@@ -126,6 +132,7 @@ export default function HomeScreen() {
               {greeting()} · {formatHijri(new Date(), hijriOffset)}
             </Text>
             <Text style={[typography.largeTitle, { color: colors.label }]}>Anchor</Text>
+            <NextPrayerChip />
           </View>
           <Pressable onPress={() => router.push('/search')} hitSlop={10} style={{ paddingBottom: 8 }}>
             <Icon name="magnifyingglass" size={22} color={colors.secondaryLabel} />
@@ -262,7 +269,11 @@ export default function HomeScreen() {
                     borderBottomColor: colors.separator,
                   }}
                 >
-                  <Icon name="circle" size={18} color={colors.gray3} />
+                  {t.id === topTaskId ? (
+                    <Text style={{ fontSize: 16 }}>🐸</Text>
+                  ) : (
+                    <Icon name="circle" size={18} color={colors.gray3} />
+                  )}
                   <Text style={[typography.body, { color: colors.label, marginLeft: spacing.sm }]} numberOfLines={1}>
                     {t.title}
                   </Text>

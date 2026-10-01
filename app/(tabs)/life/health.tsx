@@ -12,14 +12,16 @@ import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import * as repo from '../../../src/db/repositories/health';
 import { todayKey } from '../../../src/db/client';
-import { formatDateKey } from '../../../src/utils/date';
+import { formatClock, formatDateKey } from '../../../src/utils/date';
+import { requestNotificationPermission, scheduleBedtimeReminder } from '../../../src/notifications/scheduler';
 import type { SleepLog, WaterLog, WeightLog } from '../../../src/db/types';
 
 const SLEEP_OPTIONS = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9];
 
 export default function HealthScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { waterGoal, setWaterGoal } = useSettingsStore();
+  const { waterGoal, setWaterGoal, bedtime, setBedtime, weightGoal, setWeightGoal, notificationsEnabled } = useSettingsStore();
+  const [goalInput, setGoalInput] = useState(weightGoal > 0 ? String(weightGoal) : '');
   const today = todayKey();
   const week = lastDays(7, todayKey);
   const [water, setWater] = useState<WaterLog[]>([]);
@@ -115,6 +117,16 @@ export default function HealthScreen() {
           <View style={{ marginTop: spacing.md }}>
             <MiniBars data={sleepWeek} color={colors.indigo} max={9} />
           </View>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>Bedtime reminder</Text>
+          <ChipSelector
+            options={[{ id: 'off', label: 'Off' }, ...['21:30', '22:00', '22:30', '23:00', '23:30'].map((t) => ({ id: t, label: formatClock(t) }))]}
+            selectedId={bedtime ?? 'off'}
+            onSelect={async (id) => {
+              if (id !== 'off' && !notificationsEnabled) await requestNotificationPermission();
+              setBedtime(id === 'off' ? null : id);
+              await scheduleBedtimeReminder();
+            }}
+          />
         </Card>
 
         <Card>
@@ -123,6 +135,13 @@ export default function HealthScreen() {
             {latestWeight ? `${latestWeight.kg} kg on ${formatDateKey(latestWeight.id)}` : 'Log your weight to see the trend.'}
             {weightChange !== null ? ` · ${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} kg over 90 days` : ''}
           </Text>
+          {weightGoal > 0 && latestWeight ? (
+            <Text style={[typography.subhead, { color: Math.abs(latestWeight.kg - weightGoal) < 0.05 ? colors.green : colors.pink, marginBottom: spacing.sm, fontWeight: '600' }]}>
+              {Math.abs(latestWeight.kg - weightGoal) < 0.05
+                ? 'At your goal 🎉'
+                : `${Math.abs(latestWeight.kg - weightGoal).toFixed(1)} kg to your ${weightGoal} kg goal`}
+            </Text>
+          ) : null}
           {weight.length >= 2 ? (
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 60, marginBottom: spacing.sm }}>
               {weight.slice(-30).map((w) => (
@@ -145,6 +164,14 @@ export default function HealthScreen() {
             </View>
             <Button title="Save" onPress={saveWeight} disabled={!(Number(weightInput.replace(',', '.')) > 0)} style={{ paddingHorizontal: spacing.lg }} />
           </View>
+          <TextField
+            label="Goal (kg)"
+            placeholder="Optional"
+            keyboardType="decimal-pad"
+            value={goalInput}
+            onChangeText={setGoalInput}
+            onBlur={() => setWeightGoal(Number(goalInput.replace(',', '.')) || 0)}
+          />
         </Card>
       </ScrollView>
     </View>

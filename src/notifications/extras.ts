@@ -10,7 +10,10 @@ import {
   scheduleEveningJournal,
   scheduleMorningBriefing,
   scheduleWaterReminders,
+  rescheduleMedicationReminders,
+  scheduleBedtimeReminder,
 } from './scheduler';
+import { listMedications, medicationTimes } from '../db/repositories/health';
 
 export async function rescheduleExtraReminders(): Promise<void> {
   const { tasks, meetings } = useProductivityStore.getState();
@@ -19,4 +22,6 @@ export async function rescheduleExtraReminders(): Promise<void> {
   await scheduleMorningBriefing({ tasks, meetings, rules: useFinanceStore.getState().recurringRules });
   await scheduleEveningJournal();
   await scheduleWaterReminders();
+  await rescheduleMedicationReminders(await listMedications(), medicationTimes);
+  await scheduleBedtimeReminder();
 }

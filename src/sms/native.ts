@@ -10,6 +10,8 @@ export interface RawSms {
 
 interface AnchorSmsModule {
   hasPermission(): boolean;
+  hasReceivePermission(): boolean;
+  configureAlerts(enabled: boolean, senders: string[]): void;
   readInbox(sinceMillis: number, senderKeywords: string[], limit: number): Promise<RawSms[]>;
 }
 
@@ -26,15 +28,33 @@ export function hasSmsPermission(): boolean {
   }
 }
 
+// READ_SMS is needed for the inbox scan; RECEIVE_SMS only for the instant
+// alert, so declining that one still leaves the review inbox working.
 export async function requestSmsPermission(): Promise<boolean> {
   if (!native) return false;
-  const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.READ_SMS, {
-    title: 'Read bank SMS',
-    message: 'Anchor reads debit alerts from the senders you choose (e.g. HSBC) to suggest expenses. Other messages are never read or stored.',
-    buttonPositive: 'Allow',
-    buttonNegative: 'Not now',
-  });
-  return result === PermissionsAndroid.RESULTS.GRANTED;
+  const result = await PermissionsAndroid.requestMultiple([
+    PermissionsAndroid.PERMISSIONS.READ_SMS,
+    PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
+  ]);
+  return result[PermissionsAndroid.PERMISSIONS.READ_SMS] === PermissionsAndroid.RESULTS.GRANTED;
+}
+
+export function hasReceivePermission(): boolean {
+  try {
+    return !!native?.hasReceivePermission();
+  } catch {
+    return false;
+  }
+}
+
+// Hands the user's choices to the native SMS receiver, which runs without
+// the app and can't read the JS settings store.
+export function configureSmsAlerts(enabled: boolean, senders: string[]): void {
+  try {
+    native?.configureAlerts(enabled, senders);
+  } catch (e) {
+    console.warn('Could not configure SMS alerts', e);
+  }
 }
 
 export async function readBankSms(sinceMillis: number, senders: string[], limit = 500): Promise<RawSms[]> {

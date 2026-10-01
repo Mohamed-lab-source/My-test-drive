@@ -3,18 +3,29 @@ import { View, Text, Pressable, AppState, type AppStateStatus } from 'react-nati
 import { Icon } from '../ui/Icon';
 import { useTheme } from '../theme/ThemeProvider';
 import { isBiometricLockEnabled, authenticate } from './biometricLock';
+import { useSettingsStore } from '../store/settingsStore';
 
 // Locks the app behind Face ID/fingerprint when enabled in Settings: locked
-// on first mount and again every time the app returns from the background.
+// on first mount and again when the app returns from the background after
+// the chosen timeout (immediately by default).
 export function BiometricLockGate({ children }: { children: React.ReactNode }) {
   const { colors, typography, spacing } = useTheme();
   const [locked, setLocked] = useState(false);
   const [checked, setChecked] = useState(false);
   const appState = useRef<AppStateStatus>(AppState.currentState);
+  const leftAt = useRef<number | null>(null);
+  // The system unlock prompt itself backgrounds the app on some phones;
+  // ignore those transitions so it can't re-lock in a loop.
+  const authenticating = useRef(false);
 
   const tryUnlock = async () => {
-    const ok = await authenticate();
-    setLocked(!ok);
+    authenticating.current = true;
+    try {
+      const ok = await authenticate();
+      setLocked(!ok);
+    } finally {
+      authenticating.current = false;
+    }
   };
 
   useEffect(() => {
@@ -27,13 +38,23 @@ export function BiometricLockGate({ children }: { children: React.ReactNode }) {
     });
 
     const sub = AppState.addEventListener('change', (next) => {
+      if (authenticating.current) {
+        appState.current = next;
+        return;
+      }
+      if (next.match(/inactive|background/) && leftAt.current === null) leftAt.current = Date.now();
       if (appState.current.match(/inactive|background/) && next === 'active') {
-        isBiometricLockEnabled().then((enabled) => {
-          if (enabled) {
-            setLocked(true);
-            tryUnlock();
-          }
-        });
+        const away = leftAt.current ? Date.now() - leftAt.current : 0;
+        leftAt.current = null;
+        const timeoutMs = useSettingsStore.getState().lockTimeoutMinutes * 60000;
+        if (away >= timeoutMs) {
+          isBiometricLockEnabled().then((enabled) => {
+            if (enabled) {
+              setLocked(true);
+              tryUnlock();
+            }
+          });
+        }
       }
       appState.current = next;
     });

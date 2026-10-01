@@ -153,3 +153,25 @@ export async function adjustQada(prayer: Prayer, delta: number): Promise<void> {
   if (row) await updateRow('qada_counts', prayer, { owed });
   else await insertRow('qada_counts', { id: prayer, owed });
 }
+
+// Pages read per day (across every khatm) since a date key.
+export async function quranPagesByDateSince(sinceKey: string): Promise<Record<string, number>> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ date: string; pages: number }>(
+    'SELECT date, SUM(pages) AS pages FROM quran_logs WHERE date >= ? GROUP BY date',
+    [sinceKey]
+  );
+  return Object.fromEntries(rows.map((r) => [r.date, r.pages]));
+}
+
+// Make-up fasts owed live alongside the prayer qada counts (row id 'fasts').
+export async function getFastsOwed(): Promise<number> {
+  return (await getRow<{ id: string; owed: number }>('qada_counts', 'fasts'))?.owed ?? 0;
+}
+
+export async function adjustFastsOwed(delta: number): Promise<void> {
+  const row = await getRow<{ id: string; owed: number }>('qada_counts', 'fasts');
+  const owed = Math.max(0, (row?.owed ?? 0) + delta);
+  if (row) await updateRow('qada_counts', 'fasts', { owed });
+  else await insertRow('qada_counts', { id: 'fasts', owed });
+}

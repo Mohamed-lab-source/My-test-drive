@@ -58,6 +58,18 @@ class AnchorSmsModule : Module() {
       granted()
     }
 
+    Function("hasReceivePermission") {
+      context.checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+    }
+
+    Function("configureAlerts") { enabled: Boolean, senders: List<String> ->
+      context.getSharedPreferences(AlertPrefs.NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(AlertPrefs.ENABLED, enabled)
+        .putString(AlertPrefs.SENDERS, senders.joinToString("\n"))
+        .apply()
+    }
+
     AsyncFunction("readInbox") { sinceMillis: Double, senderKeywords: List<String>, limit: Int ->
       val keywords = senderKeywords.map { it.trim() }.filter { it.isNotEmpty() }
       if (granted()) queryInbox(sinceMillis.toLong(), keywords, limit) else emptyList()

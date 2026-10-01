@@ -5,6 +5,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
 import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
+import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { Icon } from '../../../src/ui/Icon';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
@@ -30,7 +31,9 @@ export default function ProjectsScreen() {
           <EmptyState icon="folder.fill" title="No projects" message="Group related tasks together, like a wedding or a move." />
         ) : (
           projects.map((project, i) => {
-            const taskCount = tasks.filter((t) => t.project_id === project.id && t.status !== 'done').length;
+            const projectTasks = tasks.filter((t) => t.project_id === project.id);
+            const taskCount = projectTasks.filter((t) => t.status !== 'done').length;
+            const doneCount = projectTasks.length - taskCount;
             return (
               <SwipeableRow key={project.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(project) }]}>
                 <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
@@ -39,7 +42,13 @@ export default function ProjectsScreen() {
                     <Text style={[typography.headline, { color: colors.label }]}>{project.name}</Text>
                     <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
                       {taskCount} open task{taskCount === 1 ? '' : 's'}
+                      {projectTasks.length > 0 ? ` · ${Math.round((doneCount / projectTasks.length) * 100)}% done` : ''}
                     </Text>
+                    {projectTasks.length > 0 ? (
+                      <View style={{ marginTop: 6 }}>
+                        <ProgressBar progress={doneCount / projectTasks.length} color={project.color} />
+                      </View>
+                    ) : null}
                   </View>
                   <View>
                     <Pressable onPress={() => moveProject(project.id, 'up')} disabled={i === 0} hitSlop={6}>

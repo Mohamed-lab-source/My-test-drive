@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Platform, Switch } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -10,9 +10,9 @@ import { TextField } from '../../../src/ui/TextField';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
-import { useSmsStore, smsTargetAccount } from '../../../src/sms/smsStore';
+import { useSmsStore, smsTargetAccount, syncSmsAlertConfig } from '../../../src/sms/smsStore';
 import { guessCategory } from '../../../src/sms/categorize';
-import { hasSmsPermission, isSmsReadingAvailable, requestSmsPermission } from '../../../src/sms/native';
+import { hasReceivePermission, hasSmsPermission, isSmsReadingAvailable, requestSmsPermission } from '../../../src/sms/native';
 import { formatMoney } from '../../../src/utils/money';
 import { formatRelativeDay, formatTime, localDateKey } from '../../../src/utils/date';
 import type { SmsImport } from '../../../src/db/types';
@@ -20,7 +20,20 @@ import type { SmsImport } from '../../../src/db/types';
 export default function SmsInboxScreen() {
   const { colors, typography, spacing } = useTheme();
   const { accounts, categories, transactions } = useFinanceStore();
-  const { smsImportEnabled, setSmsImportEnabled, smsSenders, setSmsSenders, setSmsLastScan, setSmsAccountId } = useSettingsStore();
+  const {
+    smsImportEnabled,
+    setSmsImportEnabled,
+    smsSenders,
+    setSmsSenders,
+    setSmsLastScan,
+    setSmsAccountId,
+    smsInstantAlerts,
+    setSmsInstantAlerts,
+    smsAutoAddKnown,
+    setSmsAutoAddKnown,
+    smsReadCredits,
+    setSmsReadCredits,
+  } = useSettingsStore();
   const { pending, scanning, scan, refresh, add, dismiss } = useSmsStore();
   const [sendersInput, setSendersInput] = useState(smsSenders.join(', '));
   const [picked, setPicked] = useState<Record<string, string | null>>({});
@@ -34,14 +47,17 @@ export default function SmsInboxScreen() {
   const account = smsTargetAccount(accounts);
   const expenseCats = categories.filter((c) => c.kind !== 'income' && !c.is_archived);
   const guesses = useMemo(
-    () => Object.fromEntries(pending.map((p) => [p.id, guessCategory(p.merchant, categories, transactions)])),
+    () =>
+      Object.fromEntries(
+        pending.map((p) => [p.id, p.kind === 'credit' ? null : guessCategory(p.merchant, categories, transactions)])
+      ),
     [pending, categories, transactions]
   );
   const categoryFor = (p: SmsImport) => (p.id in picked ? picked[p.id] : guesses[p.id]);
 
   // Flags a debit that matches something already logged by hand that day.
   const looksLogged = (p: SmsImport) =>
-    transactions.some((t) => t.type === 'expense' && t.amount === p.amount && localDateKey(t.date) === localDateKey(p.sms_date));
+    transactions.some((t) => t.type === (p.kind === 'credit' ? 'income' : 'expense') && t.amount === p.amount && localDateKey(t.date) === localDateKey(p.sms_date));
 
   const enable = async () => {
     const granted = await requestSmsPermission();
@@ -51,6 +67,7 @@ export default function SmsInboxScreen() {
       return;
     }
     setSmsImportEnabled(true);
+    syncSmsAlertConfig();
     const found = await scan();
     Alert.alert('Bank SMS on', found ? `Found ${found} debit${found === 1 ? '' : 's'} from the last 30 days to review.` : 'No debits found in the last 30 days yet. New ones will appear here whenever you open Anchor.');
   };
@@ -61,6 +78,12 @@ export default function SmsInboxScreen() {
       .map((s) => s.trim())
       .filter(Boolean);
     setSmsSenders(list.length ? list : ['HSBC']);
+    syncSmsAlertConfig();
+  };
+
+  const toggle = (apply: (v: boolean) => void) => (v: boolean) => {
+    apply(v);
+    syncSmsAlertConfig();
   };
 
   const handleAdd = async (p: SmsImport) => {
@@ -125,22 +148,54 @@ export default function SmsInboxScreen() {
             onSelect={setSmsAccountId}
           />
           {active ? (
-            <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
-              <Pressable onPress={() => scan()} disabled={scanning} style={{ marginRight: spacing.lg }}>
-                <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>{scanning ? 'Scanning…' : 'Scan now'}</Text>
-              </Pressable>
-              <Pressable
-                onPress={async () => {
-                  saveSenders();
-                  setSmsLastScan(0);
-                  const found = await scan();
-                  Alert.alert('Rescanned', found ? `Found ${found} new debit${found === 1 ? '' : 's'}.` : 'No new debits in the last 30 days.');
-                }}
-                disabled={scanning}
-              >
-                <Text style={[typography.subhead, { color: colors.blue }]}>Rescan last 30 days</Text>
-              </Pressable>
-            </View>
+            <>
+              {[
+                {
+                  label: 'Instant alerts',
+                  hint: hasReceivePermission()
+                    ? 'A notification the moment a debit SMS arrives, even when Anchor is closed'
+                    : 'Needs the "receive SMS" permission — turn Bank SMS off and on to grant it',
+                  value: smsInstantAlerts,
+                  onChange: toggle(setSmsInstantAlerts),
+                },
+                {
+                  label: 'Auto-add known merchants',
+                  hint: "Skip review for places you've confirmed before, using the same category",
+                  value: smsAutoAddKnown,
+                  onChange: toggle(setSmsAutoAddKnown),
+                },
+                {
+                  label: 'Also read money in',
+                  hint: 'Salary, transfers received and refunds, added as income',
+                  value: smsReadCredits,
+                  onChange: toggle(setSmsReadCredits),
+                },
+              ].map((o) => (
+                <View key={o.label} style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={[typography.body, { color: colors.label }]}>{o.label}</Text>
+                    <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>{o.hint}</Text>
+                  </View>
+                  <Switch value={o.value} onValueChange={o.onChange} />
+                </View>
+              ))}
+              <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
+                <Pressable onPress={() => scan()} disabled={scanning} style={{ marginRight: spacing.lg }}>
+                  <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>{scanning ? 'Scanning…' : 'Scan now'}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={async () => {
+                    saveSenders();
+                    setSmsLastScan(0);
+                    const found = await scan();
+                    Alert.alert('Rescanned', found ? `Found ${found} new debit${found === 1 ? '' : 's'}.` : 'No new debits in the last 30 days.');
+                  }}
+                  disabled={scanning}
+                >
+                  <Text style={[typography.subhead, { color: colors.blue }]}>Rescan last 30 days</Text>
+                </Pressable>
+              </View>
+            </>
           ) : null}
         </Card>
 
@@ -167,14 +222,17 @@ export default function SmsInboxScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                       <View style={{ flex: 1 }}>
                         <Text style={[typography.headline, { color: colors.label }]} numberOfLines={1}>
-                          {p.merchant ?? (p.kind === 'withdrawal' ? 'ATM withdrawal' : 'Card payment')}
+                          {p.merchant ?? (p.kind === 'withdrawal' ? 'ATM withdrawal' : p.kind === 'credit' ? 'Money received' : 'Card payment')}
                         </Text>
                         <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
                           {formatRelativeDay(p.sms_date)} · {formatTime(p.sms_date)}
                           {p.card_last4 ? ` · card •${p.card_last4}` : ''}
                         </Text>
                       </View>
-                      <Text style={[typography.title3, { color: colors.red }]}>−{formatMoney(p.amount, p.currency)}</Text>
+                      <Text style={[typography.title3, { color: p.kind === 'credit' ? colors.green : colors.red }]}>
+                        {p.kind === 'credit' ? '+' : '−'}
+                        {formatMoney(p.amount, p.currency)}
+                      </Text>
                     </View>
                     <Pressable onPress={() => setExpanded(expanded === p.id ? null : p.id)}>
                       <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: spacing.xs }]} numberOfLines={expanded === p.id ? undefined : 2}>
@@ -191,7 +249,17 @@ export default function SmsInboxScreen() {
                         Charged in {p.currency}; your bank may convert it to {account!.currency} — edit the amount after adding if needed.
                       </Text>
                     ) : null}
-                    {p.kind === 'withdrawal' && accounts.some((a) => a.type === 'cash' && !a.is_archived) ? (
+                    {p.kind === 'credit' ? (
+                      <View style={{ marginTop: spacing.sm }}>
+                        <ChipSelector
+                          options={categories
+                            .filter((c) => c.kind !== 'expense' && !c.is_archived)
+                            .map((c) => ({ id: c.id, label: c.name, color: c.color, icon: c.icon }))}
+                          selectedId={categoryFor(p) ?? null}
+                          onSelect={(id) => setPicked((prev) => ({ ...prev, [p.id]: id }))}
+                        />
+                      </View>
+                    ) : p.kind === 'withdrawal' && accounts.some((a) => a.type === 'cash' && !a.is_archived) ? (
                       <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
                         Will be added as a transfer into your Cash account.
                       </Text>

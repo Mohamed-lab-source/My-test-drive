@@ -1,5 +1,6 @@
-import { deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
-import type { SleepLog, SunnahPrayerKind, SunnahPrayerLog, WaterLog, WeightLog } from '../types';
+import { newId, nowIso } from '../client';
+import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
+import type { Medication, SleepLog, SunnahPrayerKind, SunnahPrayerLog, WaterLog, WeightLog } from '../types';
 
 type DayTable = 'water_logs' | 'sleep_logs' | 'weight_logs';
 
@@ -36,4 +37,20 @@ export async function setSunnahPrayer(date: string, kind: SunnahPrayerKind, done
   const exists = !!(await getRow('sunnah_prayer_logs', id));
   if (done && !exists) await insertRow('sunnah_prayer_logs', { id, date, kind });
   if (!done && exists) await deleteRow('sunnah_prayer_logs', id);
+}
+
+// ---------- Medications ----------
+export const listMedications = () => allRows<Medication>('medications', 'created_at ASC');
+export async function createMedication(name: string, dose: string | null, times: string[]): Promise<void> {
+  await insertRow('medications', { id: newId(), name, dose, times: JSON.stringify(times), is_active: 1, created_at: nowIso() });
+}
+export const setMedicationActive = (id: string, active: boolean) => updateRow('medications', id, { is_active: active ? 1 : 0 });
+export const deleteMedication = (id: string) => deleteRow('medications', id);
+export function medicationTimes(m: Medication): string[] {
+  try {
+    const parsed = JSON.parse(m.times);
+    return Array.isArray(parsed) ? parsed.filter((t) => typeof t === 'string' && /^\d{2}:\d{2}$/.test(t)) : [];
+  } catch {
+    return [];
+  }
 }

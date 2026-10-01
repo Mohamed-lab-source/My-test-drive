@@ -10,12 +10,14 @@ import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
-import { formatMoney } from '../../../src/utils/money';
+import { formatMoney, fromMinorUnits, toMinorUnits } from '../../../src/utils/money';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
 import { useSmsStore } from '../../../src/sms/smsStore';
+import { ProgressBar } from '../../../src/ui/ProgressBar';
+import { TextField } from '../../../src/ui/TextField';
 import { Icon } from '../../../src/ui/Icon';
 import type { Transaction } from '../../../src/db/types';
 
@@ -47,6 +49,9 @@ export default function MoneyScreen() {
   const currency = useSettingsStore((s) => s.currency);
   const { accounts, transactions, fxRates } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
+  const { netWorthGoal, setNetWorthGoal } = useSettingsStore();
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalInput, setGoalInput] = useState('');
   const smsPending = useSmsStore((s) => s.pending.length);
   const refreshSms = useSmsStore((s) => s.refresh);
   useEffect(() => {
@@ -75,6 +80,41 @@ export default function MoneyScreen() {
             <Text style={[typography.largeTitle, { color: colors.label, marginTop: 4 }]}>
               {formatMoney(netWorth, currency)}
             </Text>
+            {editingGoal ? (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: spacing.sm }}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <TextField placeholder={`Goal in ${currency}`} keyboardType="decimal-pad" value={goalInput} onChangeText={setGoalInput} autoFocus />
+                </View>
+                <Pressable
+                  onPress={() => {
+                    setNetWorthGoal(toMinorUnits(Number(goalInput) || 0));
+                    setEditingGoal(false);
+                  }}
+                  style={{ paddingTop: 12 }}
+                >
+                  <Text style={[typography.headline, { color: colors.blue }]}>Save</Text>
+                </Pressable>
+              </View>
+            ) : netWorthGoal > 0 ? (
+              <Pressable
+                onPress={() => {
+                  setGoalInput(String(fromMinorUnits(netWorthGoal)));
+                  setEditingGoal(true);
+                }}
+                style={{ marginTop: spacing.sm }}
+              >
+                <ProgressBar progress={Math.max(0, Math.min(1, netWorth / netWorthGoal))} color={colors.green} />
+                <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                  {netWorth >= netWorthGoal
+                    ? `Goal of ${formatMoney(netWorthGoal, currency)} reached 🎉`
+                    : `${Math.round((netWorth / netWorthGoal) * 100)}% of your ${formatMoney(netWorthGoal, currency)} goal · ${formatMoney(netWorthGoal - netWorth, currency)} to go`}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => setEditingGoal(true)} style={{ marginTop: 4 }}>
+                <Text style={[typography.footnote, { color: colors.blue }]}>Set a net worth goal</Text>
+              </Pressable>
+            )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }}>
               {accounts.filter((a) => !a.is_archived).map((a) => (
                 <Pressable

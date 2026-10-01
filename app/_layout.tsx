@@ -21,7 +21,7 @@ import {
 import { rescheduleExtraReminders } from '../src/notifications/extras';
 import { settingsHydrated } from '../src/store/settingsStore';
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
-import { useSmsStore } from '../src/sms/smsStore';
+import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
 
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();
@@ -58,6 +58,7 @@ function AppShell() {
         setDataReady(true);
         await settingsHydrated();
         // Bank SMS: pick up any new debit alerts (no-op unless turned on).
+        syncSmsAlertConfig();
         useSmsStore
           .getState()
           .scan()

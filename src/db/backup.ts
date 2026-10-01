@@ -37,6 +37,7 @@ const TABLES = [
   'books',
   'countdowns',
   'notes',
+  'medications',
 ];
 
 export async function exportAllData(): Promise<string> {

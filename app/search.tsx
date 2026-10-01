@@ -15,6 +15,10 @@ const TYPE_META: Record<SearchResultType, { icon: string; color: string; route: 
   task: { icon: 'checkmark.circle.fill', color: '#007AFF', route: '/tasks' },
   meeting: { icon: 'calendar', color: '#5856D6', route: '/tasks/meetings' },
   wishlist: { icon: 'lightbulb.fill', color: '#FF9500', route: '/life/wishlist' },
+  note: { icon: 'doc.text.fill', color: '#8E8E93', route: '/life/notes' },
+  book: { icon: 'bookmark.fill', color: '#FF9500', route: '/life/books' },
+  shopping: { icon: 'cart.fill', color: '#34C759', route: '/money/shopping' },
+  countdown: { icon: 'hourglass', color: '#5856D6', route: '/life/countdowns' },
 };
 
 export default function SearchScreen() {
@@ -36,7 +40,7 @@ export default function SearchScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
         <View style={{ flex: 1 }}>
           <TextField
-            placeholder="Search transactions, tasks, meetings, ideas"
+            placeholder="Search money, tasks, notes, books…"
             value={query}
             onChangeText={setQuery}
             autoFocus

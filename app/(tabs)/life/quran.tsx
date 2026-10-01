@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -12,6 +12,13 @@ import { formatDateKey, formatDateShort } from '../../../src/utils/date';
 import { estimatePaceCompletionDate } from '../../../src/utils/projection';
 import { QURAN_PAGES } from '../../../src/db/types';
 import { juzEndPage, juzForPage } from '../../../src/utils/quran';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
+import { ProgressBar } from '../../../src/ui/ProgressBar';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import * as lifeRepo from '../../../src/db/repositories/life';
+import { todayKey } from '../../../src/db/client';
+
+const GOALS = [0, 2, 4, 5, 10, 20];
 
 const QUICK_PAGES = [1, 2, 5, 10, 20];
 
@@ -19,6 +26,26 @@ export default function QuranScreen() {
   const { colors, typography, spacing, radius } = useTheme();
   const { quranKhatm, quranLogs, logQuranPages, startNewKhatm } = useLifeStore();
   const [custom, setCustom] = useState('');
+  const { quranDailyGoal, setQuranDailyGoal } = useSettingsStore();
+  const [byDate, setByDate] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const since = new Date();
+    since.setDate(since.getDate() - 400);
+    lifeRepo.quranPagesByDateSince(todayKey(since)).then(setByDate);
+  }, [quranLogs]);
+
+  const todayPages = byDate[todayKey()] ?? 0;
+  // Consecutive days meeting the goal; today only counts once it's met.
+  let goalStreak = 0;
+  if (quranDailyGoal > 0) {
+    const now = new Date();
+    for (let i = todayPages >= quranDailyGoal ? 0 : 1; i < 400; i++) {
+      const key = todayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i));
+      if ((byDate[key] ?? 0) < quranDailyGoal) break;
+      goalStreak++;
+    }
+  }
 
   const read = Math.min(QURAN_PAGES, quranLogs.reduce((sum, l) => sum + l.pages, 0));
   const remaining = QURAN_PAGES - read;
@@ -62,6 +89,33 @@ export default function QuranScreen() {
               At this pace, you'll finish around {formatDateShort(finishDate)}
             </Text>
           ) : null}
+        </Card>
+
+        <Card style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.headline, { color: colors.label }]}>Daily goal</Text>
+          {quranDailyGoal > 0 ? (
+            <View style={{ marginVertical: spacing.sm }}>
+              <ProgressBar progress={Math.min(1, todayPages / quranDailyGoal)} color={colors.green} />
+              <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                {todayPages >= quranDailyGoal ? '✅ Done for today' : `${todayPages} of ${quranDailyGoal} pages today`}
+                {goalStreak > 0 ? ` · 🔥 ${goalStreak} day${goalStreak === 1 ? '' : 's'} in a row` : ''}
+              </Text>
+              {quranDailyGoal > 0 && !complete ? (
+                <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>
+                  At {quranDailyGoal} pages a day you'd finish this khatm in {Math.ceil(remaining / quranDailyGoal)} days
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginVertical: spacing.xs }]}>
+              Set a pages-per-day goal to track a daily streak. 20 pages a day finishes a khatm in a month.
+            </Text>
+          )}
+          <ChipSelector
+            options={GOALS.map((g) => ({ id: String(g), label: g === 0 ? 'Off' : `${g} pages` }))}
+            selectedId={String(quranDailyGoal)}
+            onSelect={(id) => setQuranDailyGoal(Number(id))}
+          />
         </Card>
 
         {complete ? (

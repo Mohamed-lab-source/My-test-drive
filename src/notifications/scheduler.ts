@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { useSettingsStore } from '../store/settingsStore';
 import { findPrayerCity, getPrayerSchedule, type PrayerCity } from '../utils/prayerTimes';
 import { todayKey } from '../db/client';
-import type { Debt, Habit, Meeting, Occasion, RecurringRule, Task } from '../db/types';
+import type { Debt, Habit, Medication, Meeting, Occasion, RecurringRule, Task } from '../db/types';
 import { islamicDay, toHijri, HIJRI_MONTHS } from '../utils/hijri';
 import { localDateKey } from '../utils/date';
 import { listOccasions } from '../db/repositories/occasions';
@@ -393,4 +393,43 @@ export async function scheduleWaterReminders(): Promise<void> {
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0, channelId: CHANNEL_ID },
     });
   }
+}
+
+// ---------- Medication reminders ----------
+const MED_PREFIX = 'med-';
+
+export async function rescheduleMedicationReminders(meds: Medication[], timesOf: (m: Medication) => string[]): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => n.identifier.startsWith(MED_PREFIX))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+  );
+  if (!(await areNotificationsEnabled())) return;
+  for (const m of meds) {
+    if (!m.is_active) continue;
+    for (const time of timesOf(m)) {
+      const [hour, minute] = time.split(':').map(Number);
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${MED_PREFIX}${m.id}-${time}`,
+        content: { title: `💊 ${m.name}`, body: m.dose ? `Time to take ${m.dose}` : 'Time to take your medication' },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
+      });
+    }
+  }
+}
+
+// ---------- Bedtime ----------
+const BEDTIME_ID = 'bedtime';
+
+export async function scheduleBedtimeReminder(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(BEDTIME_ID).catch(() => {});
+  const { bedtime } = useSettingsStore.getState();
+  if (!bedtime || !(await areNotificationsEnabled())) return;
+  const [hour, minute] = bedtime.split(':').map(Number);
+  await Notifications.scheduleNotificationAsync({
+    identifier: BEDTIME_ID,
+    content: { title: 'Time to wind down 🌙', body: 'Put the phone away, read your evening adhkar and get some rest.' },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
+  });
 }

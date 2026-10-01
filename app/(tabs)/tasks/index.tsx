@@ -16,6 +16,7 @@ import { AddTaskSheet } from '../../../src/features/tasks/AddTaskSheet';
 import { TaskDetailSheet } from '../../../src/features/tasks/TaskDetailSheet';
 import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
 import { PlanDaySheet } from '../../../src/features/tasks/PlanDaySheet';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 import { Icon } from '../../../src/ui/Icon';
 import { TextField } from '../../../src/ui/TextField';
 import { parseQuickTask } from '../../../src/utils/quickAdd';
@@ -61,6 +62,9 @@ export default function TasksScreen() {
         : 'Unscheduled';
   const [segment, setSegment] = useState(0);
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState('');
+  const topTaskSetting = useSettingsStore((s) => s.topTask);
   const [addVisible, setAddVisible] = useState(false);
   const [planVisible, setPlanVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
@@ -94,13 +98,21 @@ export default function TasksScreen() {
 
   // A deleted project falls back to showing everything.
   const activeProject = projectFilter === 'all' || projectFilter === 'none' || projects.some((p) => p.id === projectFilter) ? projectFilter : 'all';
-  const filtered = useMemo(
-    () =>
-      activeProject === 'all'
-        ? bySegment
-        : bySegment.filter((t) => (activeProject === 'none' ? !t.project_id : t.project_id === activeProject)),
-    [bySegment, activeProject]
-  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    // A search looks across every task, whatever tab is selected.
+    const base = q
+      ? tasks.filter((t) => t.title.toLowerCase().includes(q) || (t.notes ?? '').toLowerCase().includes(q))
+      : bySegment;
+    return activeProject === 'all'
+      ? base
+      : base.filter((t) => (activeProject === 'none' ? !t.project_id : t.project_id === activeProject));
+  }, [bySegment, activeProject, query, tasks]);
+
+  const topTask =
+    topTaskSetting && topTaskSetting.date === todayKey()
+      ? tasks.find((t) => t.id === topTaskSetting.id && t.status !== 'done') ?? null
+      : null;
 
   const handleClearCompleted = async () => {
     const removed = await clearCompleted();
@@ -194,13 +206,31 @@ export default function TasksScreen() {
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg }}>
-          {segment === 0 ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
             <Pressable
-              onPress={() => setPlanVisible(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginBottom: spacing.sm }}
+              onPress={() => {
+                setSearching((v) => !v);
+                setQuery('');
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
             >
-              <Icon name="sun.max.fill" size={16} color={colors.orange} />
-              <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Plan my day</Text>
+              <Icon name="magnifyingglass" size={16} color={colors.blue} />
+              <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>{searching ? 'Close search' : 'Search'}</Text>
+            </Pressable>
+            {segment === 0 ? (
+              <Pressable onPress={() => setPlanVisible(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon name="sun.max.fill" size={16} color={colors.orange} />
+                <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Plan my day</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          {searching ? <TextField placeholder="Search all tasks" value={query} onChangeText={setQuery} autoFocus /> : null}
+          {segment === 0 && topTask && !query ? (
+            <Pressable onPress={() => setDetailTask(topTask)}>
+              <Card style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.green + '66' }}>
+                <Text style={[typography.caption1, { color: colors.green, fontWeight: '700' }]}>🐸 TODAY'S TOP TASK</Text>
+                <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{topTask.title}</Text>
+              </Card>
             </Pressable>
           ) : null}
           {segment === 3 && filtered.length > 0 ? (

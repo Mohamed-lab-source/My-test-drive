@@ -364,7 +364,16 @@ export interface SmsImport {
   currency: string;
   merchant: string | null;
   card_last4: string | null;
-  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit';
+  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit' | 'credit';
   status: SmsImportStatus;
+  created_at: string;
+}
+
+export interface Medication {
+  id: string;
+  name: string;
+  dose: string | null;
+  times: string;
+  is_active: number;
   created_at: string;
 }

@@ -52,6 +52,9 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Safe to spend today (budget left ÷ days left) and no-spend days this month
 - Savings rate and emergency runway in Analytics; share a month summary as text
 - **Bank SMS (Android)** — reads debit alerts from chosen senders (default: HSBC) on launch and whenever the app returns to the foreground; parses amount, currency, merchant and card digits (English and Arabic), guesses a category, and queues each debit in a review inbox. Nothing is added until you confirm; ATM withdrawals become a transfer into Cash. Messages are filtered by sender in native code, stay on the device, and are never synced or backed up. Native code lives in `modules/anchor-sms`.
+- Bank SMS extras: an instant "new card payment" notification from a native SMS receiver (works while Anchor is closed), auto-add for merchants you've confirmed before, and optional reading of money in (salary, transfers, refunds) as income
+- Subscription detector: spots monthly repeating charges and offers to track them
+- Top places this month, a daily spending heatmap, and a net worth goal with progress
 - Shopping list with estimated prices; tick an item off and log it as an expense in one tap
 - Suggested budgets from your 3-month average spend
 - Money tools: instalment calculator and a currency converter using your saved rates
@@ -79,6 +82,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Routines: saved task lists added to today in one tap
 - Create a follow-up task from a meeting
 - Tasks completed per day (last 14 days) on the Focus screen
+- Project progress bars, search across all tasks, and a daily "top task" pinned on Tasks and Home
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -106,6 +110,11 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Reading list with page progress
 - Countdowns to events, the nearest one shown on Home
 - Quick notes with pinning and search
+- Quran daily pages goal with a streak
+- After-salah tasbih sequence (33 / 33 / 33 + tahlil)
+- Ramadan 30-day grid and a make-up fasts owed counter
+- Medication reminders at chosen times
+- Habit completion for the month, bedtime reminder, weight goal
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
@@ -114,6 +123,9 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Verse of the day
 - Optional 8 AM morning briefing and 9 PM journal check-in notifications
 - Customize Home: hide any card you don't use
+- Next-prayer countdown chip under the title
+- Global search also covers notes, books, shopping and countdowns
+- Biometric lock timeout (immediately / 1 / 5 / 15 minutes)
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood

@@ -7,7 +7,7 @@ export interface ParsedDebit {
   currency: string;
   merchant: string | null;
   cardLast4: string | null;
-  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit';
+  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit' | 'credit';
 }
 
 const CURRENCY_ALIASES: Record<string, string> = {
@@ -114,4 +114,19 @@ export function parseDebitSms(raw: string): ParsedDebit | null {
         : 'debit';
 
   return { ...money, merchant: findMerchant(text), cardLast4: findCard(text), kind };
+}
+
+// Money coming in: salary, transfers received, deposits and refunds.
+export function parseCreditSms(raw: string): ParsedDebit | null {
+  const text = normalizeDigits(raw).replace(/\s+/g, ' ').trim();
+  if (IGNORE.test(text)) return null;
+  if (!CREDIT.test(text)) return null;
+  // "Payment received for your credit card" is you paying the bank — skip.
+  if (/credit card payment|card payment/i.test(text)) return null;
+  const money = findAmount(text);
+  if (!money) return null;
+  const from = text.match(/\bfrom\s+(.{2,40}?)(?=\s+(?:on|dated|to|ref|reference|into)\b|\s*[.,;]\s|\s*[.,;]?$)/i);
+  const source = from && !/your|account|card|\d{4,}/i.test(from[1]) ? from[1].trim() : null;
+  const label = /salary|payroll|راتب/i.test(text) ? 'Salary' : /refund|مرتجع|استرداد/i.test(text) ? 'Refund' : source;
+  return { ...money, merchant: label, cardLast4: findCard(text), kind: 'credit' };
 }

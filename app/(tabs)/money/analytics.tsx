@@ -8,6 +8,7 @@ import { Card } from '../../../src/ui/Card';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { Icon } from '../../../src/ui/Icon';
+import { Heatmap } from '../../../src/ui/Heatmap';
 import { formatMoney } from '../../../src/utils/money';
 import { formatDateKey, formatDateShort, localDateKey } from '../../../src/utils/date';
 import { forecastCashFlow } from '../../../src/utils/forecast';
@@ -111,6 +112,35 @@ export default function AnalyticsScreen() {
   const lastMonth = monthlyTrend[monthlyTrend.length - 2];
   const spendChange = lastMonth.expense > 0 ? (thisMonth.expense - lastMonth.expense) / lastMonth.expense : null;
   const insights = useMemo(() => spendingInsights(sixMonthTx), [sixMonthTx]);
+
+  // Where the money went this month, by the note/merchant on each expense.
+  const topMerchants = useMemo(() => {
+    const m = new Map<string, { name: string; amount: number; count: number }>();
+    for (const t of monthTx) {
+      if (t.type !== 'expense' || !t.note?.trim()) continue;
+      const key = t.note.trim().toLowerCase();
+      const cur = m.get(key) ?? { name: t.note.trim(), amount: 0, count: 0 };
+      cur.amount += convertToBase(t.amount, t.currency, currency, fxRates);
+      cur.count++;
+      m.set(key, cur);
+    }
+    return Array.from(m.values())
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  }, [monthTx, currency, fxRates]);
+
+  // Daily spend over the last 5 weeks, scaled to the biggest day.
+  const dailySpend = useMemo(() => {
+    const byDay: Record<string, number> = {};
+    for (const t of sixMonthTx) {
+      if (t.type !== 'expense') continue;
+      const key = localDateKey(t.date);
+      byDay[key] = (byDay[key] ?? 0) + convertToBase(t.amount, t.currency, currency, fxRates);
+    }
+    const max = Math.max(1, ...Object.values(byDay));
+    const hasData = Object.keys(byDay).length > 0;
+    return { values: Object.fromEntries(Object.entries(byDay).map(([k, v]) => [k, Math.max(0.15, v / max)])), max: hasData ? max : 0 };
+  }, [sixMonthTx, currency, fxRates]);
 
   const savingsRate = thisMonth.income > 0 ? (thisMonth.income - thisMonth.expense) / thisMonth.income : null;
   // Months of expenses the cash/bank/savings balances would cover, using the
@@ -235,6 +265,32 @@ export default function AnalyticsScreen() {
                 <Icon name="square.and.arrow.up" size={16} color={colors.blue} />
                 <Text style={[typography.subhead, { color: colors.blue, marginLeft: 6 }]}>Share summary</Text>
               </Pressable>
+            </Card>
+
+            {topMerchants.length > 0 ? (
+              <>
+                <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Top places this month</Text>
+                <Card style={{ marginBottom: spacing.lg }}>
+                  {topMerchants.map((m, i) => (
+                    <View key={m.name} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5 }}>
+                      <Text style={[typography.subhead, { color: colors.tertiaryLabel, width: 22 }]}>{i + 1}</Text>
+                      <Text style={[typography.body, { color: colors.label, flex: 1 }]} numberOfLines={1}>
+                        {m.name}
+                      </Text>
+                      <Text style={[typography.caption1, { color: colors.secondaryLabel, marginRight: spacing.sm }]}>×{m.count}</Text>
+                      <Text style={[typography.subhead, { color: colors.label, fontWeight: '600' }]}>{formatMoney(m.amount, currency)}</Text>
+                    </View>
+                  ))}
+                </Card>
+              </>
+            ) : null}
+
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Daily spending</Text>
+            <Card style={{ marginBottom: spacing.lg }}>
+              <Heatmap values={dailySpend.values} color={colors.red} weeks={5} />
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>
+                {dailySpend.max > 0 ? `Darker days cost more · biggest day ${formatMoney(dailySpend.max, currency)}` : 'No spending logged yet.'}
+              </Text>
             </Card>
 
             {insights.length > 0 ? (

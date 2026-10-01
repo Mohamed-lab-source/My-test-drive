@@ -31,6 +31,15 @@ function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) 
 
   const done = isHabitDoneToday(habit.id);
   const streak = streaks[habit.id] ?? 0;
+  const [monthDone, setMonthDone] = useState(0);
+  const dayOfMonth = new Date().getDate();
+
+  useEffect(() => {
+    const now = new Date();
+    habitsRepo
+      .listHabitLogsSince(habit.id, todayKey(new Date(now.getFullYear(), now.getMonth(), 1)))
+      .then((logs) => setMonthDone(logs.length));
+  }, [todayLogs, habit.id]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -73,6 +82,10 @@ function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) 
         </View>
         {expanded ? (
           <View style={{ marginTop: spacing.md }}>
+            <Text style={[typography.subhead, { color: colors.label, marginBottom: spacing.sm }]}>
+              This month: <Text style={{ fontWeight: '700' }}>{monthDone}</Text> of {dayOfMonth} days (
+              {Math.round((monthDone / dayOfMonth) * 100)}%)
+            </Text>
             <Heatmap values={history} color={habit.color} weeks={WEEKS} />
             <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>
               Daily reminder

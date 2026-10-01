@@ -90,6 +90,8 @@ export default function SettingsScreen() {
     waterReminders,
     setWaterReminders,
     smsImportEnabled,
+    lockTimeoutMinutes,
+    setLockTimeoutMinutes,
   } = useSettingsStore();
 
   // Shared by the opt-in reminder toggles: ask for permission first, then
@@ -387,6 +389,21 @@ export default function SettingsScreen() {
                 leading={<IconCircle name="lock.fill" color={colors.gray} size={32} />}
                 trailing={<Switch value={biometricOn} onValueChange={handleToggleBiometric} />}
               />
+            ) : null}
+            {biometricAvailable && biometricOn ? (
+              <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6 }]}>Lock again after</Text>
+                <ChipSelector
+                  options={[
+                    { id: '0', label: 'Immediately' },
+                    { id: '1', label: '1 min' },
+                    { id: '5', label: '5 min' },
+                    { id: '15', label: '15 min' },
+                  ]}
+                  selectedId={String(lockTimeoutMinutes)}
+                  onSelect={(id) => setLockTimeoutMinutes(Number(id))}
+                />
+              </View>
             ) : null}
           </Card>
         </View>

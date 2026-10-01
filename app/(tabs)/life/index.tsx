@@ -83,7 +83,7 @@ export default function LifeScreen() {
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <LifeLink icon="hourglass" label="Countdowns" color={colors.indigo} onPress={() => router.push('/life/countdowns')} />
           <LifeLink icon="doc.text.fill" label="Notes" color={colors.gray} onPress={() => router.push('/life/notes')} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <LifeLink icon="heart.fill" label="Medications" color={colors.red} onPress={() => router.push('/life/medications')} />
           <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 
