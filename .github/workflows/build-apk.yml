@@ -73,6 +73,13 @@ jobs:
       - name: Sync Capacitor Android project
         run: npx cap sync android
 
+      # Offline Jarvis voice engine (sherpa-onnx, Apache-2.0). Fetched at build
+      # time rather than committed: the AAR is 40 MB.
+      - name: Fetch sherpa-onnx (offline voice engine)
+        run: |
+          mkdir -p android/app/libs
+          curl -fsSL -o android/app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.14/sherpa-onnx-1.12.14.aar
+
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 

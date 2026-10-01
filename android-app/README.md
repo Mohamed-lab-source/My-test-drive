@@ -300,6 +300,14 @@ A new **Trackers** tab brings everything together: water, medications, habits, b
 | On this day | "What happened on this day?" |
 | Catch me up | "Catch me up": messages, missed calls, emails, overdue reminders, triggered alerts and tracker items since you last opened Jarvis. |
 
+### 3.1 — offline Jarvis voice ("Daniel")
+
+Settings → **Offline Jarvis voice: Daniel** → Download (about 117 MB, once). From then on Jarvis speaks in a British male neural voice that runs entirely on the phone: no internet, no limits, no ElevenLabs quota. Speed is adjustable, and there's a Test button. Arabic replies still use ElevenLabs (if on) or the phone's Arabic voice.
+
+- Voice: Kokoro v1.0 "bm_daniel" (Apache-2.0), int8, run with sherpa-onnx (Apache-2.0).
+- The pack is built by `.github/workflows/voice-pack.yml` (English-only subset of the upstream sherpa-onnx Kokoro pack) and published under the `jarvis-voice` release.
+- The APK now targets 64-bit phones (arm64-v8a) only, to keep it small.
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

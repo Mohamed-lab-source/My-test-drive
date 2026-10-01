@@ -2473,6 +2473,7 @@ async function boot() {
   await safely("trackers", initTrackers);
   await safely("stark", initStark);
   await safely("ops", initOps);
+  await safely("voice", initVoice);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();

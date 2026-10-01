@@ -1035,4 +1035,68 @@ public class DeviceActionsPlugin extends Plugin {
         } catch (Exception ignored) {}
         call.resolve();
     }
+
+    /* ---------------- Offline voice (Kokoro "Daniel") ---------------- */
+
+    private static final java.util.concurrent.ExecutorService voiceExec = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static int voiceSeq = 0;
+
+    @PluginMethod
+    public void voiceStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("installed", KokoroVoice.installed(getContext()));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void voiceDownload(PluginCall call) {
+        String url = call.getString("url", "");
+        new Thread(() -> {
+            try {
+                KokoroVoice.download(getContext(), url, pct -> {
+                    JSObject p = new JSObject();
+                    p.put("percent", pct);
+                    notifyListeners("voiceProgress", p);
+                });
+                call.resolve();
+            } catch (Throwable t) {
+                call.reject(t.getMessage() != null ? t.getMessage() : t.toString());
+            }
+        }, "jarvis-voice-download").start();
+    }
+
+    @PluginMethod
+    public void voiceWarmup(PluginCall call) {
+        voiceExec.execute(() -> {
+            try { KokoroVoice.engine(getContext()); call.resolve(); }
+            catch (Throwable t) { call.reject(String.valueOf(t.getMessage())); }
+        });
+    }
+
+    @PluginMethod
+    public void voiceSpeak(PluginCall call) {
+        String text = call.getString("text", "");
+        int speaker = call.getInt("speaker", 24);
+        float speed = call.getFloat("speed", 1.0f);
+        if (!KokoroVoice.installed(getContext())) { call.reject("NOT_INSTALLED"); return; }
+        voiceExec.execute(() -> {
+            try {
+                java.io.File f = KokoroVoice.synthesize(getContext(), text, speaker, speed, "kokoro-" + ((voiceSeq++) % 6) + ".wav");
+                JSObject ret = new JSObject();
+                ret.put("path", f.getAbsolutePath());
+                call.resolve(ret);
+            } catch (Throwable t) {
+                call.reject(t.getMessage() != null ? t.getMessage() : t.toString());
+            }
+        });
+    }
+
+    @PluginMethod
+    public void voiceDelete(PluginCall call) {
+        voiceExec.execute(() -> {
+            KokoroVoice.release();
+            KokoroVoice.deleteRecursive(KokoroVoice.packDir(getContext()));
+            call.resolve();
+        });
+    }
 }

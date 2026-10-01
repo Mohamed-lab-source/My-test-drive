@@ -416,6 +416,22 @@
       </div>
 
       <div class="field">
+        <label>Offline Jarvis voice: Daniel <span class="status-pill" id="offlineVoiceStatus">not downloaded</span></label>
+        <div class="hint">A British male neural voice that runs entirely on your phone: no internet, no limits, no ElevenLabs quota. One-time download of about 117 MB (Wi-Fi recommended). Arabic replies still use ElevenLabs or the phone voice.</div>
+        <button class="wide-btn accent" id="offlineVoiceDownloadBtn" style="margin-top:8px;">Download Daniel's voice (117 MB)</button>
+        <label class="toggle-row" style="margin-top:10px;">
+          <span><b>Use the offline voice</b></span>
+          <span class="toggle-switch"><input type="checkbox" id="offlineVoiceToggle" /><span class="toggle-track"></span></span>
+        </label>
+        <label style="margin-top:8px;">Speed <span id="offlineVoiceSpeedValue" class="status-pill">1.00</span></label>
+        <input type="range" id="offlineVoiceSpeed" min="0.8" max="1.25" step="0.05" value="1.0" style="width:100%;" />
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="wide-btn" id="offlineVoiceTestBtn" style="margin:0;">▶️ Test Daniel</button>
+          <button class="wide-btn danger" id="offlineVoiceDeleteBtn" style="margin:0;" hidden>Remove</button>
+        </div>
+      </div>
+
+      <div class="field">
         <label>Premium Voice (optional)</label>
         <label class="toggle-row">
           <span>
@@ -494,7 +510,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v3.0.1 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v3.1 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -511,7 +527,7 @@
 
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v3.0</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v3.1</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
@@ -525,5 +541,6 @@
 <script src="trackers.js"></script>
 <script src="stark.js"></script>
 <script src="ops.js"></script>
+<script src="voice.js"></script>
 </body>
 </html>

@@ -1,0 +1,46 @@
+name: Build Jarvis voice pack
+
+# Packs the offline "Daniel" voice (Kokoro v1.0, int8, via sherpa-onnx) into a
+# zip the app downloads once. Only English: the Chinese dictionaries and
+# non-English pronunciation data in the upstream pack are left out.
+# Kokoro: Apache-2.0 (hexgrad/Kokoro-82M). Packaging: k2-fsa/sherpa-onnx.
+
+on:
+  push:
+    branches:
+      - claude/jarvis-x1kpna
+      - main
+    paths:
+      - ".github/workflows/voice-pack.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assemble the English Daniel pack
+        run: |
+          set -euo pipefail
+          curl -fsSL -o kokoro.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2
+          tar xjf kokoro.tar.bz2
+          S=kokoro-int8-multi-lang-v1_0
+          P=jarvis-voice-daniel
+          mkdir -p "$P/espeak-ng-data"
+          cp "$S/model.int8.onnx" "$S/voices.bin" "$S/tokens.txt" "$S/lexicon-gb-en.txt" "$S/LICENSE" "$P/"
+          for f in $(ls "$S/espeak-ng-data" | grep -v '_dict$'); do cp -r "$S/espeak-ng-data/$f" "$P/espeak-ng-data/"; done
+          cp "$S/espeak-ng-data/en_dict" "$P/espeak-ng-data/"
+          echo "speaker=24 (bm_daniel) lang=en lexicon=lexicon-gb-en.txt" > "$P/VOICE.txt"
+          zip -qr jarvis-voice-daniel.zip "$P"
+          ls -la jarvis-voice-daniel.zip
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: jarvis-voice
+          name: Jarvis offline voice pack
+          body: "Offline British male voice (Kokoro v1.0 'Daniel', int8) for Jarvis. Downloaded by the app from Settings."
+          files: jarvis-voice-daniel.zip
+          prerelease: true
