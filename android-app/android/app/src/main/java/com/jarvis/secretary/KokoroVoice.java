@@ -29,7 +29,22 @@ import java.util.zip.ZipInputStream;
  */
 final class KokoroVoice {
     static final String PACK = "jarvis-voice-daniel";
+    private static final String GUARD = "jarvis_voice_guard";
     private static OfflineTts tts;
+
+    /*
+     * Crash guard. If the native engine dies while loading (it can exit the
+     * whole process on a bad config), the flag set just before loading is
+     * still set on the next launch: Jarvis then turns the offline voice off
+     * instead of crashing again on every start.
+     */
+    static boolean crashedWhileLoading(Context ctx) {
+        return ctx.getSharedPreferences(GUARD, Context.MODE_PRIVATE).getBoolean("loading", false);
+    }
+
+    static void clearCrashFlag(Context ctx) {
+        ctx.getSharedPreferences(GUARD, Context.MODE_PRIVATE).edit().putBoolean("loading", false).commit();
+    }
 
     interface Progress { void update(int percent); }
 
@@ -99,8 +114,9 @@ final class KokoroVoice {
         if (!installed(ctx)) throw new IOException("The voice pack looks incomplete; try again.");
     }
 
-    static synchronized OfflineTts engine(Context ctx) {
+    static synchronized OfflineTts engine(Context ctx) throws IOException {
         if (tts != null) return tts;
+        if (crashedWhileLoading(ctx)) throw new IOException("ENGINE_CRASHED");
         File d = packDir(ctx);
         OfflineTtsKokoroModelConfig kokoro = new OfflineTtsKokoroModelConfig();
         kokoro.setModel(new File(d, "model.int8.onnx").getAbsolutePath());
@@ -115,7 +131,10 @@ final class KokoroVoice {
         OfflineTtsConfig config = new OfflineTtsConfig();
         config.setModel(model);
         config.setMaxNumSentences(1);
+        android.content.SharedPreferences guard = ctx.getSharedPreferences(GUARD, Context.MODE_PRIVATE);
+        guard.edit().putBoolean("loading", true).commit(); // written to disk before the risky part
         tts = new OfflineTts(null, config); // null asset manager = load from files
+        guard.edit().putBoolean("loading", false).commit();
         return tts;
     }
 

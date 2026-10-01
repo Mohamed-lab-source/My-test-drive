@@ -83,9 +83,22 @@ function renderVoiceStatus(extra) {
   if (toggle) { toggle.checked = !!state.offlineVoice; toggle.disabled = !offlineVoiceReady; }
 }
 
+let offlineVoiceCrashed = false;
 async function refreshVoiceStatus() {
-  try { offlineVoiceReady = !!(await DeviceActions.voiceStatus()).installed; } catch { offlineVoiceReady = false; }
-  renderVoiceStatus();
+  try {
+    const st = await DeviceActions.voiceStatus();
+    offlineVoiceReady = !!st.installed;
+    offlineVoiceCrashed = !!st.crashed;
+  } catch { offlineVoiceReady = false; }
+  // The engine took the app down while loading last time: switch it off rather than crash again.
+  if (offlineVoiceCrashed && state.offlineVoice) {
+    state.offlineVoice = false;
+    store.set("offlineVoice", false);
+    setTimeout(() => {
+      addMsg("assistant", `My offline voice failed to start on this phone, ${state.address}, so I've switched back to the regular voice. You can try it again from Settings.`);
+    }, 1500);
+  }
+  renderVoiceStatus(offlineVoiceCrashed ? "failed to start" : undefined);
 }
 
 async function downloadOfflineVoice() {
@@ -98,8 +111,7 @@ async function downloadOfflineVoice() {
     state.offlineVoice = true;
     store.set("offlineVoice", true);
     renderVoiceStatus();
-    DeviceActions.voiceWarmup().catch(() => {});
-    toast("Daniel is installed. Jarvis now speaks offline.");
+    toast("Daniel is installed. Tap Test to hear him; Jarvis now speaks offline.");
     logActivity("OFFLINE VOICE INSTALLED");
   } catch (e) {
     renderVoiceStatus("download failed");
@@ -118,7 +130,7 @@ async function initVoice() {
     });
   } catch {}
   await refreshVoiceStatus();
-  if (state.offlineVoice && offlineVoiceReady) DeviceActions.voiceWarmup().catch(() => {}); // load the model before he first speaks
+  // No loading at startup: the engine loads the first time Jarvis speaks.
 
   const dl = document.getElementById("offlineVoiceDownloadBtn");
   if (dl) dl.addEventListener("click", () => {
@@ -136,7 +148,11 @@ async function initVoice() {
   if (toggle) toggle.addEventListener("change", () => {
     state.offlineVoice = toggle.checked;
     store.set("offlineVoice", state.offlineVoice);
-    if (state.offlineVoice) DeviceActions.voiceWarmup().catch(() => {});
+    if (state.offlineVoice && offlineVoiceCrashed) {
+      // A deliberate retry after a failed start.
+      offlineVoiceCrashed = false;
+      DeviceActions.voiceClearCrash().catch(() => {});
+    }
     renderVoiceStatus();
   });
   const speed = document.getElementById("offlineVoiceSpeed");
@@ -150,6 +166,7 @@ async function initVoice() {
   const test = document.getElementById("offlineVoiceTestBtn");
   if (test) test.addEventListener("click", async () => {
     if (!offlineVoiceReady) { toast("Download the voice first."); return; }
+    if (offlineVoiceCrashed) { offlineVoiceCrashed = false; await DeviceActions.voiceClearCrash().catch(() => {}); }
     test.disabled = true;
     try {
       if (speakingNow) await stopSpeaking();

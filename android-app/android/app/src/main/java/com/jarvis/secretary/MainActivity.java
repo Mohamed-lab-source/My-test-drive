@@ -33,6 +33,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(DeviceActionsPlugin.class);
         super.onCreate(savedInstanceState);
+        showLastCrash();
     }
 
     // BridgeActivity also routes the launch intent through here from onCreate,
@@ -58,6 +59,25 @@ public class MainActivity extends BridgeActivity {
     public void onPause() {
         inForeground = false;
         super.onPause();
+    }
+
+    /** If Jarvis crashed last time, show why (with a Copy button) so it can be reported. */
+    private void showLastCrash() {
+        final android.content.SharedPreferences p = getSharedPreferences(JarvisApp.PREFS, MODE_PRIVATE);
+        final String trace = p.getString("trace", null);
+        if (trace == null) return;
+        p.edit().remove("trace").apply();
+        try {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Jarvis crashed last time")
+                .setMessage("Please send a screenshot (or tap Copy and paste it) so it can be fixed:\n\n" + (trace.length() > 1500 ? trace.substring(0, 1500) + "…" : trace))
+                .setPositiveButton("Copy", (d, w) -> {
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                    if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Jarvis crash", trace));
+                })
+                .setNegativeButton("Close", null)
+                .show();
+        } catch (Exception ignored) {}
     }
 
     private static String actionFor(Intent intent) {

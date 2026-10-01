@@ -1045,7 +1045,14 @@ public class DeviceActionsPlugin extends Plugin {
     public void voiceStatus(PluginCall call) {
         JSObject ret = new JSObject();
         ret.put("installed", KokoroVoice.installed(getContext()));
+        ret.put("crashed", KokoroVoice.crashedWhileLoading(getContext()));
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void voiceClearCrash(PluginCall call) {
+        KokoroVoice.clearCrashFlag(getContext());
+        call.resolve();
     }
 
     @PluginMethod

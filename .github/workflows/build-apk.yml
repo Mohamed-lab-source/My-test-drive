@@ -78,7 +78,7 @@ jobs:
       - name: Fetch sherpa-onnx (offline voice engine)
         run: |
           mkdir -p android/app/libs
-          curl -fsSL -o android/app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.14/sherpa-onnx-1.12.14.aar
+          curl -fsSL -o android/app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.26/sherpa-onnx-1.12.26.aar
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
