@@ -308,6 +308,12 @@ Settings → **Offline Jarvis voice: Daniel** → Download (about 117 MB, once).
 - The pack is built by `.github/workflows/voice-pack.yml` (English-only subset of the upstream sherpa-onnx Kokoro pack) and published under the `jarvis-voice` release.
 - The APK now targets 64-bit phones (arm64-v8a) only, to keep it small.
 
+### 3.2 — Hub mode (tablet on a stand)
+
+Settings → **Hub mode**. The app fills the screen with a JARVIS dashboard: big clock, date and Hijri date, weather, today's schedule, the next prayer, and a glance at your reminders and water. The screen is kept awake, and "Hey Jarvis" is switched on so you can talk to it from across the room (and have it play music or the Qur'an). Tap the glowing core to talk, or the ✕ to leave.
+
+Fully on-device — nothing is shared between devices here. (Syncing your Jarvis across phone and tablet, and presence-triggered routines, are planned next.)
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

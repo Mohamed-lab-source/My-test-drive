@@ -152,6 +152,32 @@
     </div>
   </section>
 
+  <!-- HUB MODE (full-screen dashboard overlay) -->
+  <section class="hub-view" id="hubView" hidden>
+    <button class="hub-exit" id="hubExit" title="Exit hub mode">✕</button>
+    <div class="hub-main">
+      <div class="hub-clock" id="hubClock">--:--</div>
+      <div class="hub-date" id="hubDate">—</div>
+      <div class="hub-hijri" id="hubHijri"></div>
+      <div class="hub-greeting" id="hubGreeting"></div>
+    </div>
+    <div class="hub-side">
+      <div class="hub-card hub-weather" id="hubWeather" hidden>
+        <div class="hub-weather-temp" id="hubWeatherTemp">--°</div>
+        <div class="hub-dim" id="hubWeatherDesc">—</div>
+      </div>
+      <div class="hub-card">
+        <div class="hub-label">TODAY</div>
+        <div id="hubEvents"><div class="hub-dim">—</div></div>
+        <div class="hub-prayer-row" id="hubPrayerRow" hidden><span class="hub-label">NEXT PRAYER</span> <span id="hubPrayer"></span></div>
+      </div>
+      <div class="hub-glance" id="hubGlance"></div>
+    </div>
+    <button class="hub-talk" id="hubTalk" aria-label="Talk to Jarvis">
+      <span class="ring ring-outer"></span><span class="ring ring-mid"></span><span class="core"></span>
+    </button>
+  </section>
+
   <!-- SETTINGS (overlay) -->
   <section class="view" id="settingsView" style="position:absolute; inset:0; background:var(--bg); z-index:20;">
     <div class="topbar">
@@ -416,6 +442,16 @@
       </div>
 
       <div class="field">
+        <label class="toggle-row">
+          <span>
+            <b>Hub mode</b> (tablet on a stand)
+            <div class="hint" style="margin-top:2px;">A full-screen dashboard: clock, weather, your day, next prayer, kept awake, with "Hey Jarvis" listening. Tap the ✕ to leave.</div>
+          </span>
+          <span class="toggle-switch"><input type="checkbox" id="hubModeToggle" /><span class="toggle-track"></span></span>
+        </label>
+      </div>
+
+      <div class="field">
         <label>Offline Jarvis voice: Daniel <span class="status-pill" id="offlineVoiceStatus">not downloaded</span></label>
         <div class="hint">A British male neural voice that runs entirely on your phone: no internet, no limits, no ElevenLabs quota. One-time download of about 117 MB (Wi-Fi recommended). Arabic replies still use ElevenLabs or the phone voice.</div>
         <button class="wide-btn accent" id="offlineVoiceDownloadBtn" style="margin-top:8px;">Download Daniel's voice (117 MB)</button>
@@ -510,7 +546,7 @@
       </div>
 
       <button class="wide-btn danger" id="resetBtn">Reset All Data</button>
-      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v3.1.2 · your keys are stored only on this device.</div>
+      <div class="hint" style="text-align:center; margin-top:10px;">Jarvis v3.2 · your keys are stored only on this device.</div>
     </div>
   </section>
 
@@ -527,7 +563,7 @@
 
 <div class="boot-overlay" id="bootOverlay" hidden>
   <div class="boot-title">J.A.R.V.I.S.</div>
-  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v3.1</div>
+  <div class="boot-sub">JUST A RATHER VERY INTELLIGENT SYSTEM · v3.2</div>
   <div class="boot-log"></div>
   <div class="boot-skip">tap to skip</div>
 </div>
@@ -542,5 +578,6 @@
 <script src="stark.js"></script>
 <script src="ops.js"></script>
 <script src="voice.js"></script>
+<script src="hub.js"></script>
 </body>
 </html>
