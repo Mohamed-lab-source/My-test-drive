@@ -774,3 +774,6 @@ svg.spark polyline { vector-effect: non-scaling-stroke; fill: none; stroke: var(
 .hub-talk .core { position: absolute; inset: 30px; border-radius: 50%; background: radial-gradient(circle, var(--core-hot) 0%, var(--accent) 55%, rgba(var(--accent-rgb), 0.2) 100%); box-shadow: 0 0 22px 6px var(--accent-glow); }
 .hub-exit { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); font-size: 18px; z-index: 2; }
 @media (prefers-reduced-motion: reduce) { .hub-talk .ring { animation: none; } }
+
+/* ---- 3.3: runnable protocol chips ---- */
+.run-protocols { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

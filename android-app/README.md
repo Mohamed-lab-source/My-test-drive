@@ -314,6 +314,17 @@ Settings → **Hub mode**. The app fills the screen with a JARVIS dashboard: big
 
 Fully on-device — nothing is shared between devices here. (Syncing your Jarvis across phone and tablet, and presence-triggered routines, are planned next.)
 
+### 3.3 — the Lab pack
+
+| | Try saying |
+|---|---|
+| Custom protocols | "Make a workshop protocol: Do Not Disturb on, volume 70, play focus music, and say 'Workshop online'". Then "Run workshop". Saved protocols also appear as one-tap buttons in the Planner. |
+| Unit converter | "Convert 5 km to miles", "100 Fahrenheit in Celsius", "1 feddan in square metres" (offline) |
+| Azkar & tasbeeh | "Morning azkar", "Evening azkar"; "Tasbeeh" counts one each time (buzzes at 33) |
+| Decisions | "Flip a coin", "Roll a die", "Pick between koshary, pizza or shawarma" |
+| Passwords | "Generate a strong password", "Give me a 4-word passphrase" (made on the phone, never stored) |
+| Dates | "How many days until 20 December?", "What day is 2027-01-01?", "How old is someone born 1998-03-14?" |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:
