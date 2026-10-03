@@ -1,0 +1,142 @@
+import React, { useMemo, useState } from 'react';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { Icon } from '../../../src/ui/Icon';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import * as financeRepo from '../../../src/db/repositories/finance';
+import { NavHeader } from '../../../src/ui/NavHeader';
+import { useTheme } from '../../../src/theme/ThemeProvider';
+import { useFinanceStore } from '../../../src/store/financeStore';
+import { Card } from '../../../src/ui/Card';
+import { IconCircle } from '../../../src/ui/IconCircle';
+import { ProgressBar } from '../../../src/ui/ProgressBar';
+import { EmptyState } from '../../../src/ui/EmptyState';
+import { FAB } from '../../../src/ui/FAB';
+import { SwipeableRow } from '../../../src/ui/SwipeableRow';
+import { formatMoney } from '../../../src/utils/money';
+import { localDateKey } from '../../../src/utils/date';
+import { todayKey } from '../../../src/db/client';
+import { AddBudgetSheet } from '../../../src/features/money/AddBudgetSheet';
+import { showUndoDelete } from '../../../src/ui/undo';
+import type { Budget } from '../../../src/db/types';
+
+export default function BudgetsScreen() {
+  const { colors, typography, spacing } = useTheme();
+  const { budgets, categories, transactions, removeBudget, refreshBudgets, setBudget } = useFinanceStore();
+  const currency = useSettingsStore((s) => s.currency);
+
+  // Averages each expense category over the last three full months and
+  // proposes that (rounded up to a whole 10) as its budget. Categories that
+  // already have a budget are left alone.
+  const suggestBudgets = async () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString();
+    const end = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const txs = (await financeRepo.listTransactionsInRange(start, end)).filter((t) => t.type === 'expense' && t.category_id);
+    const totals = new Map<string, number>();
+    for (const t of txs) totals.set(t.category_id!, (totals.get(t.category_id!) ?? 0) + t.amount);
+    const existing = new Set(budgets.map((b) => b.category_id));
+    const suggestions = Array.from(totals.entries())
+      .filter(([id]) => !existing.has(id))
+      .map(([id, total]) => ({ id, limit: Math.ceil(total / 3 / 1000) * 1000 }))
+      .filter((s) => s.limit > 0);
+    if (suggestions.length === 0) {
+      Alert.alert('No suggestions', 'Anchor needs some spending in the last three months for categories without a budget yet.');
+      return;
+    }
+    const lines = suggestions.map((s) => `${categories.find((c) => c.id === s.id)?.name ?? 'Category'}: ${formatMoney(s.limit, currency)}`);
+    Alert.alert('Suggested budgets', `Based on your 3-month average:\n\n${lines.join('\n')}`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Add all',
+        onPress: async () => {
+          for (const s of suggestions) await setBudget(s.id, s.limit, currency);
+        },
+      },
+    ]);
+  };
+  const [addVisible, setAddVisible] = useState(false);
+
+  const handleDelete = async (budget: Budget) => {
+    await removeBudget(budget.id);
+    showUndoDelete('budgets', budget, 'Budget deleted', refreshBudgets);
+  };
+
+  const monthStart = todayKey().slice(0, 8) + '01';
+  const nowDate = new Date();
+  const daysInMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0).getDate();
+  const monthElapsed = nowDate.getDate() / daysInMonth;
+  const daysLeft = daysInMonth - nowDate.getDate() + 1;
+
+  const rows = useMemo(
+    () =>
+      budgets.map((budget) => {
+        const category = categories.find((c) => c.id === budget.category_id);
+        const spend = transactions
+          .filter((t) => t.category_id === budget.category_id && t.type === 'expense' && localDateKey(t.date) >= monthStart)
+          .reduce((sum, t) => sum + t.amount, 0);
+        return { budget, category, spend, progress: budget.monthly_limit > 0 ? spend / budget.monthly_limit : 0 };
+      }),
+    [budgets, categories, transactions, monthStart]
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
+      <NavHeader title="Budgets" />
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <Pressable onPress={suggestBudgets} style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginBottom: spacing.sm }}>
+          <Icon name="sparkles" size={16} color={colors.blue} />
+          <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Suggest from my spending</Text>
+        </Pressable>
+        {rows.length === 0 ? (
+          <EmptyState icon="chart.pie.fill" title="No budgets yet" message="Set a monthly limit for a spending category." />
+        ) : (
+          rows.map(({ budget, category, spend, progress }) => (
+            <SwipeableRow key={budget.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(budget) }]}>
+              <Card style={{ marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <IconCircle name={category?.icon ?? 'ellipsis.circle.fill'} color={category?.color ?? colors.gray} />
+                  <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                    <Text style={[typography.headline, { color: colors.label }]}>{category?.name ?? 'Unknown'}</Text>
+                    <Text style={[typography.footnote, { color: progress > 1 ? colors.red : colors.secondaryLabel }]}>
+                      {formatMoney(spend, budget.currency)} of {formatMoney(budget.monthly_limit, budget.currency)}
+                    </Text>
+                  </View>
+                  {progress > 1 ? (
+                    <Text style={[typography.caption1, { color: colors.red, fontWeight: '700' }]}>Over</Text>
+                  ) : progress > monthElapsed + 0.1 ? (
+                    <Text style={[typography.caption1, { color: colors.orange, fontWeight: '700' }]}>Ahead of pace</Text>
+                  ) : (
+                    <Text style={[typography.caption1, { color: colors.green, fontWeight: '600' }]}>On track</Text>
+                  )}
+                </View>
+                <View style={{ marginTop: spacing.sm }}>
+                  <ProgressBar progress={Math.min(1, progress)} color={progress > 1 ? colors.red : category?.color ?? colors.blue} />
+                  {/* Where spending "should" be by today if spread evenly. */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      left: `${Math.min(100, monthElapsed * 100)}%`,
+                      top: -3,
+                      bottom: -3,
+                      width: 2,
+                      backgroundColor: colors.label,
+                      opacity: 0.35,
+                    }}
+                  />
+                </View>
+                {progress <= 1 && budget.monthly_limit > spend ? (
+                  <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                    {formatMoney(Math.floor((budget.monthly_limit - spend) / daysLeft), budget.currency)} a day left for {daysLeft} day
+                    {daysLeft === 1 ? '' : 's'}
+                  </Text>
+                ) : null}
+              </Card>
+            </SwipeableRow>
+          ))
+        )}
+      </ScrollView>
+      <FAB onPress={() => setAddVisible(true)} />
+      <AddBudgetSheet visible={addVisible} onClose={() => setAddVisible(false)} />
+    </View>
+  );
+}
