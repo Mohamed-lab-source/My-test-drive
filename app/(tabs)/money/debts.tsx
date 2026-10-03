@@ -11,7 +11,7 @@ import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { Button } from '../../../src/ui/Button';
-import { formatMoney } from '../../../src/utils/money';
+import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 import { formatDateShort, formatRelativeDay, isOverdue } from '../../../src/utils/date';
 import { estimatePaceCompletionDate } from '../../../src/utils/projection';
 import { AddDebtSheet } from '../../../src/features/money/AddDebtSheet';
@@ -19,6 +19,10 @@ import { AmountPromptSheet } from '../../../src/features/money/AmountPromptSheet
 import { showUndoDelete } from '../../../src/ui/undo';
 import * as financeRepo from '../../../src/db/repositories/finance';
 import type { Debt } from '../../../src/db/types';
+import { planDebtPayoff, type DebtStrategy } from '../../../src/utils/debtPlan';
+import { TextField } from '../../../src/ui/TextField';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 function DebtCard({ debt, onPay, onDelete }: { debt: Debt; onPay: () => void; onDelete: () => void }) {
   const { colors, typography, spacing } = useTheme();
@@ -80,6 +84,9 @@ export default function DebtsScreen() {
   const { debts, payDebt, removeDebt, refreshDebts } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
   const [payingDebt, setPayingDebt] = useState<Debt | null>(null);
+  const currency = useSettingsStore((s) => s.currency);
+  const [monthlyInput, setMonthlyInput] = useState('');
+  const [strategy, setStrategy] = useState<DebtStrategy>('snowball');
 
   const iOwe = debts.filter((d) => d.direction === 'i_owe' && d.status !== 'paid');
   const owedToMe = debts.filter((d) => d.direction === 'owed_to_me' && d.status !== 'paid');
@@ -106,6 +113,33 @@ export default function DebtsScreen() {
               <>
                 <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>I owe</Text>
                 {iOwe.map(renderDebt)}
+                {iOwe.length > 1 || monthlyInput ? (
+                  <Card style={{ marginBottom: spacing.sm }}>
+                    <Text style={[typography.headline, { color: colors.label }]}>Payoff planner</Text>
+                    <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
+                      How much can you put toward these each month?
+                    </Text>
+                    <TextField placeholder={`Monthly amount (${currency})`} keyboardType="decimal-pad" value={monthlyInput} onChangeText={setMonthlyInput} />
+                    <ChipSelector
+                      options={[
+                        { id: 'snowball', label: 'Smallest first' },
+                        { id: 'due', label: 'Earliest due first' },
+                      ]}
+                      selectedId={strategy}
+                      onSelect={(id) => setStrategy(id as DebtStrategy)}
+                    />
+                    {planDebtPayoff(iOwe, toMinorUnits(Number(monthlyInput) || 0), strategy).map((step, i, arr) => (
+                      <View key={step.debt.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, marginTop: i === 0 ? spacing.sm : 0 }}>
+                        <Text style={[typography.body, { color: colors.label }]}>
+                          {i + 1}. {step.debt.person_name}
+                        </Text>
+                        <Text style={[typography.body, { color: i === arr.length - 1 ? colors.green : colors.secondaryLabel, fontWeight: i === arr.length - 1 ? '700' : '400' }]}>
+                          {new Date(new Date().getFullYear(), new Date().getMonth() + step.paidOffMonth, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                    ))}
+                  </Card>
+                ) : null}
               </>
             )}
             {owedToMe.length > 0 && (

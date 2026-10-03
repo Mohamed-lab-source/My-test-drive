@@ -130,3 +130,21 @@ export function parseCreditSms(raw: string): ParsedDebit | null {
   const label = /salary|payroll|راتب/i.test(text) ? 'Salary' : /refund|مرتجع|استرداد/i.test(text) ? 'Refund' : source;
   return { ...money, merchant: label, cardLast4: findCard(text), kind: 'credit' };
 }
+
+// "Available balance EGP 20,000.00" → the balance the bank reports after
+// this transaction (credit-card "available limit" is deliberately ignored).
+export function parseReportedBalance(raw: string): { amount: number; currency: string } | null {
+  const text = normalizeDigits(raw).replace(/\s+/g, ' ');
+  const m =
+    text.match(new RegExp(`(?:available|avail\\.?|current|ledger|account)?\\s*bal(?:ance)?\\.?\\s*(?:is|:|of)?\\s*${CUR}\\s?${AMT}`, 'i')) ??
+    text.match(new RegExp(`(?:available|avail\\.?|current)?\\s*bal(?:ance)?\\.?\\s*(?:is|:|of)?\\s*${AMT}\\s?${CUR}`, 'i')) ??
+    text.match(new RegExp(`(?:الرصيد|رصيد)(?:\\s*(?:المتاح|الحالي))?\\s*:?\\s*${AMT}\\s?${CUR}`));
+  if (!m) return null;
+  // Group order differs between the currency-first and amount-first forms.
+  const [a, b] = [m[1], m[2]];
+  const amountStr = /\d/.test(a) ? a : b;
+  const curStr = /\d/.test(a) ? b : a;
+  const value = Number(amountStr.replace(/,/g, ''));
+  if (!(value >= 0)) return null;
+  return { amount: Math.round(value * 100), currency: toCode(curStr) };
+}

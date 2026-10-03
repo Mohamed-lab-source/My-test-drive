@@ -175,3 +175,5 @@ export async function adjustFastsOwed(delta: number): Promise<void> {
   if (row) await updateRow('qada_counts', 'fasts', { owed });
   else await insertRow('qada_counts', { id: 'fasts', owed });
 }
+
+export const listDhikrSince = (sinceKey: string) => whereRows<DhikrLog>('dhikr_logs', 'date >= ?', [sinceKey], 'date ASC');

@@ -13,6 +13,7 @@ import { formatMoney } from '../../../src/utils/money';
 import { formatDateShort } from '../../../src/utils/date';
 import { estimatePaceCompletionDate, monthlyAmountNeeded } from '../../../src/utils/projection';
 import { AddSavingsGoalSheet } from '../../../src/features/money/AddSavingsGoalSheet';
+import { RoundUpCard } from '../../../src/features/money/RoundUpCard';
 import { AmountPromptSheet } from '../../../src/features/money/AmountPromptSheet';
 import { showUndoDelete } from '../../../src/ui/undo';
 import * as financeRepo from '../../../src/db/repositories/finance';
@@ -89,6 +90,7 @@ export default function SavingsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Savings Goals" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <RoundUpCard />
         {savingsGoals.length === 0 ? (
           <EmptyState icon="target" title="No savings goals" message="Set a goal for your wedding, a big purchase, or an emergency fund." />
         ) : (

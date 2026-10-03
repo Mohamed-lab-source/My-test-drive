@@ -92,6 +92,45 @@ export default function QuranScreen() {
         </Card>
 
         <Card style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Juz map</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -2 }}>
+            {Array.from({ length: 30 }, (_, i) => {
+              const juz = i + 1;
+              const start = juz === 1 ? 1 : 22 + (juz - 2) * 20;
+              const end = juzEndPage(juz);
+              const fill = Math.max(0, Math.min(1, (read - start + 1) / (end - start + 1)));
+              return (
+                <View key={juz} style={{ width: '10%', padding: 2 }}>
+                  <View
+                    style={{
+                      aspectRatio: 1,
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      backgroundColor: colors.tertiaryFill,
+                      justifyContent: 'flex-end',
+                    }}
+                  >
+                    <View style={{ height: `${fill * 100}%`, backgroundColor: colors.green, opacity: fill >= 1 ? 1 : 0.6 }} />
+                    <Text
+                      style={{
+                        position: 'absolute',
+                        alignSelf: 'center',
+                        top: '28%',
+                        fontSize: 11,
+                        fontWeight: '600',
+                        color: fill >= 0.6 ? '#fff' : colors.secondaryLabel,
+                      }}
+                    >
+                      {juz}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </Card>
+
+        <Card style={{ marginBottom: spacing.md }}>
           <Text style={[typography.headline, { color: colors.label }]}>Daily goal</Text>
           {quranDailyGoal > 0 ? (
             <View style={{ marginVertical: spacing.sm }}>

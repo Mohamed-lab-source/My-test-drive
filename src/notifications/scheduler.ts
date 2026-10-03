@@ -433,3 +433,79 @@ export async function scheduleBedtimeReminder(): Promise<void> {
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
   });
 }
+
+// ---------- Islamic occasions, Mon/Thu fasts, zakat hawl ----------
+const ISLAMIC_PREFIXES = ['occ-', 'monthu-', 'hawl-'];
+const OCCASION_LABELS = new Set(['Ramadan begins', 'Eid al-Fitr', 'Eid al-Adha', 'Islamic New Year', 'Last ten nights']);
+
+async function scheduleAt(identifier: string, date: Date, title: string, body: string): Promise<void> {
+  if (date.getTime() <= Date.now()) return;
+  await Notifications.scheduleNotificationAsync({
+    identifier,
+    content: { title, body },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: CHANNEL_ID },
+  });
+}
+
+export async function rescheduleIslamicReminders(): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => ISLAMIC_PREFIXES.some((p) => n.identifier.startsWith(p)))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+  );
+  const { occasionReminders, monThuReminders, zakatHawl, hijriOffset } = useSettingsStore.getState();
+  if (!(await areNotificationsEnabled())) return;
+  const now = new Date();
+  const day = (offset: number, hour: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, hour);
+
+  if (occasionReminders) {
+    let previous = '';
+    for (let i = 0; i <= 400; i++) {
+      const date = day(i, 12);
+      const info = islamicDay(toHijri(date, hijriOffset));
+      const label = info && OCCASION_LABELS.has(info.label) ? info.label : '';
+      if (label && label !== previous) {
+        const key = todayKey(date);
+        if (label === 'Ramadan begins') {
+          await scheduleAt(`occ-${key}-eve`, day(i - 1, 20), 'Ramadan starts tomorrow 🌙', 'Ramadan Mubarak — set your suhoor alarm tonight.');
+        } else if (label === 'Last ten nights') {
+          await scheduleAt(`occ-${key}`, day(i, 17), 'The last ten nights begin tonight', 'Seek Laylat al-Qadr in the odd nights.');
+        } else if (label.startsWith('Eid')) {
+          await scheduleAt(`occ-${key}`, day(i, 8), `${label} Mubarak 🎉`, 'Taqabbal Allahu minna wa minkum.');
+        } else {
+          await scheduleAt(`occ-${key}`, day(i, 9), label, `Today is the ${label}.`);
+        }
+      }
+      previous = label;
+    }
+  }
+
+  if (monThuReminders) {
+    // Sunday and Wednesday evenings for the next four weeks.
+    for (let i = 0; i < 28; i++) {
+      const eve = day(i, 20);
+      const dow = eve.getDay();
+      if (dow !== 0 && dow !== 3) continue;
+      const tomorrow = dow === 0 ? 'Monday' : 'Thursday';
+      await scheduleAt(`monthu-${todayKey(eve)}`, eve, `Fast tomorrow? (${tomorrow})`, `${tomorrow} is a sunnah fasting day — set your suhoor alarm.`);
+    }
+  }
+
+  if (zakatHawl) {
+    // The next Gregorian day that falls on the chosen Hijri month/day.
+    for (let i = 0; i <= 400; i++) {
+      const date = day(i, 9);
+      const h = toHijri(date, hijriOffset);
+      if (h.month === zakatHawl.month && h.day === zakatHawl.day) {
+        await scheduleAt(
+          `hawl-${todayKey(date)}`,
+          date,
+          'Your zakat year is complete',
+          'A lunar year has passed on your savings — open Anchor to calculate your zakat.'
+        );
+        break;
+      }
+    }
+  }
+}

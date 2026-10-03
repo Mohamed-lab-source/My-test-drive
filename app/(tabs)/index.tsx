@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePullToRefresh } from '../../src/ui/usePullToRefresh';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../src/store/financeStore';
 import { useProductivityStore } from '../../src/store/productivityStore';
@@ -17,6 +18,8 @@ import { CountdownCard } from '../../src/features/home/CountdownCard';
 import { WaterCard } from '../../src/features/home/WaterCard';
 import { CustomizeHomeSheet } from '../../src/features/home/CustomizeHomeSheet';
 import { NextPrayerChip } from '../../src/features/home/NextPrayerChip';
+import { TodayRingsCard } from '../../src/features/home/TodayRingsCard';
+import { useBalanceFormatter } from '../../src/ui/useMoney';
 import { GettingStartedCard } from '../../src/features/home/GettingStartedCard';
 import { AddTransactionSheet } from '../../src/features/money/AddTransactionSheet';
 import { AddTaskSheet } from '../../src/features/tasks/AddTaskSheet';
@@ -50,6 +53,7 @@ function greeting(): string {
 export default function HomeScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const { refreshing, onRefresh } = usePullToRefresh();
   const router = useRouter();
   const currency = useSettingsStore((s) => s.currency);
   const hijriOffset = useSettingsStore((s) => s.hijriOffset);
@@ -58,6 +62,7 @@ export default function HomeScreen() {
   const [customizeVisible, setCustomizeVisible] = useState(false);
   const hiddenHomeCards = useSettingsStore((s) => s.hiddenHomeCards);
   const show = (id: string) => !hiddenHomeCards.includes(id);
+  const balance = useBalanceFormatter();
   const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory } = useFinanceStore();
   const { tasks, meetings } = useProductivityStore();
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
@@ -116,7 +121,10 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={insets.top} />}
+      >
         <View
           style={{
             flexDirection: 'row',
@@ -149,6 +157,7 @@ export default function HomeScreen() {
         <View style={{ paddingHorizontal: spacing.lg }}>
           <GettingStartedCard />
           <RamadanCard />
+          {show('rings') ? <TodayRingsCard /> : null}
           {show('countdown') ? <CountdownCard /> : null}
           {show('verse') ? <VerseCard /> : null}
           {show('water') ? <WaterCard /> : null}
@@ -159,7 +168,7 @@ export default function HomeScreen() {
           <Pressable onPress={() => router.push('/money')}>
             <Card>
               <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Net worth</Text>
-              <Text style={[typography.title1, { color: colors.label, marginTop: 4 }]}>{formatMoney(netWorth, currency)}</Text>
+              <Text style={[typography.title1, { color: colors.label, marginTop: 4 }]}>{balance(netWorth, currency)}</Text>
               {openDebts.length > 0 ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
                   <Icon name="exclamationmark.triangle.fill" size={14} color={colors.orange} />
@@ -192,7 +201,7 @@ export default function HomeScreen() {
 <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
             <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>This month</Text>
-            <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{formatMoney(monthSpend, currency)}</Text>
+            <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{balance(monthSpend, currency)}</Text>
           </Card>
           <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
             <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Due today</Text>

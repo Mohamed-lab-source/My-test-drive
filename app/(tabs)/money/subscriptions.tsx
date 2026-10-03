@@ -53,6 +53,10 @@ export default function SubscriptionsScreen() {
   const yearlyTotal = recurringRules
     .filter((r) => r.type === 'expense' && r.is_active && !r.is_paused)
     .reduce((sum, r) => sum + convertToBase(r.amount, r.currency, currency, fxRates) * PER_YEAR[r.frequency], 0);
+  const yearlyIncome = recurringRules
+    .filter((r) => r.type === 'income' && r.is_active && !r.is_paused)
+    .reduce((sum, r) => sum + convertToBase(r.amount, r.currency, currency, fxRates) * PER_YEAR[r.frequency], 0);
+  const leftMonthly = Math.round((yearlyIncome - yearlyTotal) / 12);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -67,6 +71,16 @@ export default function SubscriptionsScreen() {
             <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
               {formatMoney(Math.round(yearlyTotal), currency)} a year · paused items excluded
             </Text>
+            {yearlyIncome > 0 ? (
+              <View style={{ marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                  Regular income {formatMoney(Math.round(yearlyIncome / 12), currency)}/month
+                </Text>
+                <Text style={[typography.headline, { color: leftMonthly >= 0 ? colors.green : colors.red, marginTop: 2 }]}>
+                  {formatMoney(leftMonthly, currency)} a month left after fixed costs
+                </Text>
+              </View>
+            ) : null}
           </Card>
         ) : null}
 

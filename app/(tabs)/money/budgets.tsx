@@ -62,6 +62,10 @@ export default function BudgetsScreen() {
   };
 
   const monthStart = todayKey().slice(0, 8) + '01';
+  const nowDate = new Date();
+  const daysInMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0).getDate();
+  const monthElapsed = nowDate.getDate() / daysInMonth;
+  const daysLeft = daysInMonth - nowDate.getDate() + 1;
 
   const rows = useMemo(
     () =>
@@ -99,11 +103,33 @@ export default function BudgetsScreen() {
                   </View>
                   {progress > 1 ? (
                     <Text style={[typography.caption1, { color: colors.red, fontWeight: '700' }]}>Over</Text>
-                  ) : null}
+                  ) : progress > monthElapsed + 0.1 ? (
+                    <Text style={[typography.caption1, { color: colors.orange, fontWeight: '700' }]}>Ahead of pace</Text>
+                  ) : (
+                    <Text style={[typography.caption1, { color: colors.green, fontWeight: '600' }]}>On track</Text>
+                  )}
                 </View>
                 <View style={{ marginTop: spacing.sm }}>
                   <ProgressBar progress={Math.min(1, progress)} color={progress > 1 ? colors.red : category?.color ?? colors.blue} />
+                  {/* Where spending "should" be by today if spread evenly. */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      left: `${Math.min(100, monthElapsed * 100)}%`,
+                      top: -3,
+                      bottom: -3,
+                      width: 2,
+                      backgroundColor: colors.label,
+                      opacity: 0.35,
+                    }}
+                  />
                 </View>
+                {progress <= 1 && budget.monthly_limit > spend ? (
+                  <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                    {formatMoney(Math.floor((budget.monthly_limit - spend) / daysLeft), budget.currency)} a day left for {daysLeft} day
+                    {daysLeft === 1 ? '' : 's'}
+                  </Text>
+                ) : null}
               </Card>
             </SwipeableRow>
           ))

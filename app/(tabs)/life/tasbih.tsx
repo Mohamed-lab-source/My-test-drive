@@ -8,6 +8,7 @@ import { useLifeStore } from '../../../src/store/lifeStore';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import * as repo from '../../../src/db/repositories/life';
 import { todayKey } from '../../../src/db/client';
+import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
 
 const TARGETS = [33, 99, 100];
 
@@ -43,6 +44,11 @@ export default function TasbihScreen() {
   const [target, setTarget] = useState(33);
   const [mode, setMode] = useState<'free' | 'salah'>('free');
   const [salahPos, setSalahPos] = useState(0);
+  const [history, setHistory] = useState<Record<string, number>>({});
+  const week = lastDays(7, todayKey);
+  useEffect(() => {
+    repo.listDhikrSince(week[0].key).then((rows) => setHistory(Object.fromEntries(rows.map((r) => [r.date, r.count]))));
+  }, []);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(total);
   const scale = useSharedValue(1);
@@ -180,6 +186,14 @@ export default function TasbihScreen() {
         <Pressable onPress={reset} hitSlop={10} style={{ marginTop: spacing.md }}>
           <Text style={[typography.subhead, { color: colors.red }]}>Reset today</Text>
         </Pressable>
+        <View style={{ alignSelf: 'stretch', marginTop: spacing.xl }}>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs }]}>Last 7 days</Text>
+          <MiniBars
+            data={week.map((d) => ({ ...d, value: d.key === todayKey() ? total : history[d.key] ?? 0 }))}
+            color={colors.mint}
+            height={50}
+          />
+        </View>
       </View>
     </View>
   );

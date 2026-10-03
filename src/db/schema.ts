@@ -400,4 +400,6 @@ export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: stri
   },
   { table: 'habits', column: 'remind_time', ddl: 'ALTER TABLE habits ADD COLUMN remind_time TEXT' },
   { table: 'journal_entries', column: 'gratitude', ddl: 'ALTER TABLE journal_entries ADD COLUMN gratitude TEXT' },
+  { table: 'sms_imports', column: 'balance', ddl: 'ALTER TABLE sms_imports ADD COLUMN balance INTEGER' },
+  { table: 'sms_imports', column: 'balance_currency', ddl: 'ALTER TABLE sms_imports ADD COLUMN balance_currency TEXT' },
 ];

@@ -1,31 +1,31 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
 import { Icon } from '../../ui/Icon';
 import { ProgressBar } from '../../ui/ProgressBar';
 import { useSettingsStore } from '../../store/settingsStore';
-import * as repo from '../../db/repositories/health';
-import { todayKey } from '../../db/client';
+import { useWaterStore } from '../../store/waterStore';
 
 export function WaterCard() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
   const goal = useSettingsStore((s) => s.waterGoal);
-  const [count, setCount] = useState(0);
+  const count = useWaterStore((s) => s.count);
+  const { load, add } = useWaterStore.getState();
 
-  const load = useCallback(() => repo.getWater(todayKey()).then(setCount), []);
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const addGlass = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await repo.setWater(todayKey(), count + 1);
-    if (count + 1 === goal) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await load();
+    const next = await add(1);
+    if (next === goal) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   return (

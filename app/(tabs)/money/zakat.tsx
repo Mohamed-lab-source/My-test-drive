@@ -9,6 +9,7 @@ import { TextField } from '../../../src/ui/TextField';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { SadaqahCard } from '../../../src/features/money/SadaqahCard';
+import { HawlCard } from '../../../src/features/money/HawlCard';
 
 const ZAKAT_RATE = 0.025;
 
@@ -129,6 +130,7 @@ export default function ZakatScreen() {
           <Row label="Zakatable wealth" value={formatMoney(net, currency)} />
         </Card>
 
+        <HawlCard />
         <SadaqahCard />
 
         <Text style={[typography.caption1, { color: colors.tertiaryLabel }]}>

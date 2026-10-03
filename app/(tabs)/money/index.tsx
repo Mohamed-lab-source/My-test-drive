@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePullToRefresh } from '../../../src/ui/usePullToRefresh';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
@@ -17,6 +18,7 @@ import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
 import { useSmsStore } from '../../../src/sms/smsStore';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
+import { useBalanceFormatter } from '../../../src/ui/useMoney';
 import { TextField } from '../../../src/ui/TextField';
 import { Icon } from '../../../src/ui/Icon';
 import type { Transaction } from '../../../src/db/types';
@@ -44,12 +46,14 @@ function QuickLink({ icon, label, color, onPress }: { icon: string; label: strin
 export default function MoneyScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const { refreshing, onRefresh } = usePullToRefresh();
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
   const currency = useSettingsStore((s) => s.currency);
   const { accounts, transactions, fxRates } = useFinanceStore();
   const [addVisible, setAddVisible] = useState(false);
-  const { netWorthGoal, setNetWorthGoal } = useSettingsStore();
+  const { netWorthGoal, setNetWorthGoal, hideBalances, setHideBalances } = useSettingsStore();
+  const balance = useBalanceFormatter();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const smsPending = useSmsStore((s) => s.pending.length);
@@ -71,14 +75,22 @@ export default function MoneyScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={insets.top} />}
+      >
         <ScreenHeader title="Money" />
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Card>
-            <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Net worth</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel, flex: 1 }]}>Net worth</Text>
+              <Pressable onPress={() => setHideBalances(!hideBalances)} hitSlop={10}>
+                <Icon name={hideBalances ? 'eye.slash' : 'eye'} size={18} color={colors.secondaryLabel} />
+              </Pressable>
+            </View>
             <Text style={[typography.largeTitle, { color: colors.label, marginTop: 4 }]}>
-              {formatMoney(netWorth, currency)}
+              {balance(netWorth, currency)}
             </Text>
             {editingGoal ? (
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: spacing.sm }}>
@@ -130,7 +142,7 @@ export default function MoneyScreen() {
                 >
                   <IconCircle name={a.icon} color={a.color} size={28} />
                   <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 8 }]}>{a.name}</Text>
-                  <Text style={[typography.headline, { color: colors.label }]}>{formatMoney(a.balance, a.currency)}</Text>
+                  <Text style={[typography.headline, { color: colors.label }]}>{balance(a.balance, a.currency)}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -165,10 +177,16 @@ export default function MoneyScreen() {
           <QuickLink icon="building.columns.fill" label="Accounts" color={colors.blue} onPress={() => router.push('/money/accounts')} />
           <QuickLink icon="hands.sparkles.fill" label="Zakat" color={colors.mint} onPress={() => router.push('/money/zakat')} />
         </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <QuickLink icon="banknote.fill" label="Bank SMS" color={colors.red} onPress={() => router.push('/money/sms-inbox')} />
           <QuickLink icon="cart.badge.plus" label="Shopping" color={colors.green} onPress={() => router.push('/money/shopping')} />
           <QuickLink icon="function" label="Tools" color={colors.gray} onPress={() => router.push('/money/tools')} />
+          <QuickLink icon="chart.line.uptrend.xyaxis" label="Year" color={colors.indigo} onPress={() => router.push('/money/year')} />
+        </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <QuickLink icon="camera.fill" label="Receipts" color={colors.orange} onPress={() => router.push('/money/receipts')} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
           <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 

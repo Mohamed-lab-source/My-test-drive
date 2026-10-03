@@ -365,6 +365,9 @@ export interface SmsImport {
   merchant: string | null;
   card_last4: string | null;
   kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit' | 'credit';
+  // Balance the bank reported in the same message, if any.
+  balance?: number | null;
+  balance_currency?: string | null;
   status: SmsImportStatus;
   created_at: string;
 }

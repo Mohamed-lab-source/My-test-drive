@@ -15,6 +15,7 @@ import { showUndoDelete } from '../../../src/ui/undo';
 import { AddHabitSheet } from '../../../src/features/life/AddHabitSheet';
 import * as habitsRepo from '../../../src/db/repositories/habits';
 import { todayKey } from '../../../src/db/client';
+import { longestStreak } from '../../../src/utils/streaks';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { HABIT_REMINDER_TIMES, requestNotificationPermission } from '../../../src/notifications/scheduler';
 import { useSettingsStore } from '../../../src/store/settingsStore';
@@ -32,6 +33,7 @@ function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) 
   const done = isHabitDoneToday(habit.id);
   const streak = streaks[habit.id] ?? 0;
   const [monthDone, setMonthDone] = useState(0);
+  const [best, setBest] = useState(0);
   const dayOfMonth = new Date().getDate();
 
   useEffect(() => {
@@ -39,6 +41,7 @@ function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) 
     habitsRepo
       .listHabitLogsSince(habit.id, todayKey(new Date(now.getFullYear(), now.getMonth(), 1)))
       .then((logs) => setMonthDone(logs.length));
+    habitsRepo.listHabitLogsSince(habit.id, '0000-00-00').then((logs) => setBest(longestStreak(logs.map((l) => l.date))));
   }, [todayLogs, habit.id]);
 
   useEffect(() => {
@@ -84,7 +87,7 @@ function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) 
           <View style={{ marginTop: spacing.md }}>
             <Text style={[typography.subhead, { color: colors.label, marginBottom: spacing.sm }]}>
               This month: <Text style={{ fontWeight: '700' }}>{monthDone}</Text> of {dayOfMonth} days (
-              {Math.round((monthDone / dayOfMonth) * 100)}%)
+              {Math.round((monthDone / dayOfMonth) * 100)}%){best > 1 ? ` · best streak ${best} days` : ''}
             </Text>
             <Heatmap values={history} color={habit.color} weeks={WEEKS} />
             <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>

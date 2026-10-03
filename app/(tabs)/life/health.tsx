@@ -43,6 +43,18 @@ export default function HealthScreen() {
   }, [load]);
 
   const glasses = water.find((w) => w.id === today)?.count ?? 0;
+  // Days in a row at the water goal (today counts once it's reached).
+  const waterStreak = (() => {
+    const hit = new Set(water.filter((w) => w.count >= waterGoal).map((w) => w.id));
+    const d = new Date();
+    if (!hit.has(todayKey(d))) d.setDate(d.getDate() - 1);
+    let n = 0;
+    while (hit.has(todayKey(d)) && n < 400) {
+      n++;
+      d.setDate(d.getDate() - 1);
+    }
+    return n;
+  })();
   const lastNight = sleep.find((s) => s.id === today)?.hours ?? null;
   const sleepWeek = week.map((d) => ({ ...d, value: sleep.find((s) => s.id === d.key)?.hours ?? 0 }));
   const sleepLogged = sleepWeek.filter((d) => d.value > 0);
@@ -85,6 +97,7 @@ export default function HealthScreen() {
               </Text>
               <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
                 {glasses >= waterGoal ? 'Goal reached today' : `${waterGoal - glasses} more glass${waterGoal - glasses === 1 ? '' : 'es'} to go`}
+                {waterStreak > 1 ? ` · 🔥 ${waterStreak} days` : ''}
               </Text>
             </View>
             <Pressable onPress={() => changeWater(1)} hitSlop={8}>

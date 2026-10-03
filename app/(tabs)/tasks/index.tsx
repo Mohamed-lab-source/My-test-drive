@@ -16,6 +16,8 @@ import { AddTaskSheet } from '../../../src/features/tasks/AddTaskSheet';
 import { TaskDetailSheet } from '../../../src/features/tasks/TaskDetailSheet';
 import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
 import { PlanDaySheet } from '../../../src/features/tasks/PlanDaySheet';
+import { StaleBacklogSheet, staleBacklog } from '../../../src/features/tasks/StaleBacklogSheet';
+import { Share } from 'react-native';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { Icon } from '../../../src/ui/Icon';
 import { TextField } from '../../../src/ui/TextField';
@@ -67,6 +69,7 @@ export default function TasksScreen() {
   const topTaskSetting = useSettingsStore((s) => s.topTask);
   const [addVisible, setAddVisible] = useState(false);
   const [planVisible, setPlanVisible] = useState(false);
+  const [staleVisible, setStaleVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [focusTask, setFocusTask] = useState<Task | null>(null);
 
@@ -108,6 +111,19 @@ export default function TasksScreen() {
       ? base
       : base.filter((t) => (activeProject === 'none' ? !t.project_id : t.project_id === activeProject));
   }, [bySegment, activeProject, query, tasks]);
+
+  const staleCount = useMemo(() => staleBacklog(tasks).length, [tasks]);
+
+  const shareToday = () => {
+    const lines = bySegment.map((t) => `☐ ${t.title}`);
+    const meetingsToday = meetings.filter((m) => new Date(m.start_at).toDateString() === new Date().toDateString());
+    const msg = [
+      `Today — ${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}`,
+      ...meetingsToday.map((m) => `📅 ${formatTime(m.start_at)} ${m.title}`),
+      ...lines,
+    ].join('\n');
+    Share.share({ message: msg });
+  };
 
   const topTask =
     topTaskSetting && topTaskSetting.date === todayKey()
@@ -217,6 +233,18 @@ export default function TasksScreen() {
               <Icon name="magnifyingglass" size={16} color={colors.blue} />
               <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>{searching ? 'Close search' : 'Search'}</Text>
             </Pressable>
+            {segment === 2 ? (
+              <Pressable onPress={() => router.push('/tasks/matrix')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon name="flag.fill" size={16} color={colors.red} />
+                <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Priority matrix</Text>
+              </Pressable>
+            ) : null}
+            {segment === 0 && filtered.length > 0 ? (
+              <Pressable onPress={shareToday} style={{ flexDirection: 'row', alignItems: 'center', marginRight: spacing.md }}>
+                <Icon name="square.and.arrow.up" size={16} color={colors.blue} />
+                <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Share</Text>
+              </Pressable>
+            ) : null}
             {segment === 0 ? (
               <Pressable onPress={() => setPlanVisible(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Icon name="sun.max.fill" size={16} color={colors.orange} />
@@ -224,6 +252,17 @@ export default function TasksScreen() {
               </Pressable>
             ) : null}
           </View>
+          {segment === 1 && staleCount > 0 ? (
+            <Pressable onPress={() => setStaleVisible(true)}>
+              <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
+                <Icon name="archivebox.fill" size={18} color={colors.orange} />
+                <Text style={[typography.subhead, { color: colors.label, flex: 1, marginLeft: spacing.sm }]}>
+                  {staleCount} task{staleCount === 1 ? ' has' : 's have'} waited 30+ days — tidy up?
+                </Text>
+                <Icon name="chevron.right" size={14} color={colors.tertiaryLabel} />
+              </Card>
+            </Pressable>
+          ) : null}
           {searching ? <TextField placeholder="Search all tasks" value={query} onChangeText={setQuery} autoFocus /> : null}
           {segment === 0 && topTask && !query ? (
             <Pressable onPress={() => setDetailTask(topTask)}>
@@ -269,6 +308,7 @@ export default function TasksScreen() {
       <FAB onPress={() => setAddVisible(true)} />
       <AddTaskSheet visible={addVisible} onClose={() => setAddVisible(false)} />
       <PlanDaySheet visible={planVisible} onClose={() => setPlanVisible(false)} />
+      <StaleBacklogSheet visible={staleVisible} onClose={() => setStaleVisible(false)} />
       <TaskDetailSheet
         task={detailTask}
         visible={!!detailTask}

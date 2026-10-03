@@ -92,7 +92,14 @@ export default function SettingsScreen() {
     smsImportEnabled,
     lockTimeoutMinutes,
     setLockTimeoutMinutes,
+    occasionReminders,
+    setOccasionReminders,
+    monThuReminders,
+    setMonThuReminders,
+    lowBalanceAlert,
+    setLowBalanceAlert,
   } = useSettingsStore();
+  const [lowBalanceInput, setLowBalanceInput] = useState(lowBalanceAlert > 0 ? String(lowBalanceAlert / 100) : '');
 
   // Shared by the opt-in reminder toggles: ask for permission first, then
   // store the preference and re-arm everything that depends on it.
@@ -226,6 +233,19 @@ export default function SettingsScreen() {
         <ScreenHeader title="Settings" />
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Card padded={false}>
+            <ListRow
+              title="What's in Anchor"
+              subtitle="A quick tour of every feature and where to find it"
+              isLast
+              leading={<IconCircle name="sparkles" color={colors.purple} size={32} />}
+              onPress={() => router.push('/whats-new')}
+              showChevron
+            />
+          </Card>
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs, textTransform: 'uppercase' }]}>
             Account
           </Text>
@@ -302,6 +322,22 @@ export default function SettingsScreen() {
               </View>
               <Switch value={sunnahFastReminders} onValueChange={(v) => toggleWithPermission(v, setSunnahFastReminders)} />
             </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Monday & Thursday fasts</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>A reminder on Sunday and Wednesday evenings</Text>
+              </View>
+              <Switch value={monThuReminders} onValueChange={(v) => toggleWithPermission(v, setMonThuReminders)} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Islamic occasions</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
+                  Ramadan, the last ten nights, both Eids and the new year
+                </Text>
+              </View>
+              <Switch value={occasionReminders} onValueChange={(v) => toggleWithPermission(v, setOccasionReminders)} />
+            </View>
             <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>
               Hijri date adjustment · {formatHijri(new Date(), hijriOffset)}
             </Text>
@@ -323,6 +359,19 @@ export default function SettingsScreen() {
               selectedId={defaultAccountId}
               onSelect={(id) => setDefaultAccountId(id === defaultAccountId ? null : id)}
             />
+            <View style={{ marginTop: spacing.md }}>
+              <TextField
+                label={`Low-balance alert (${currency})`}
+                placeholder="Off — e.g. 1000"
+                keyboardType="decimal-pad"
+                value={lowBalanceInput}
+                onChangeText={setLowBalanceInput}
+                onBlur={() => setLowBalanceAlert(Math.round((Number(lowBalanceInput) || 0) * 100))}
+              />
+              <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: -spacing.sm }]}>
+                Get a notification when an account drops below this after a transaction.
+              </Text>
+            </View>
           </Card>
         </View>
 
@@ -352,6 +401,13 @@ export default function SettingsScreen() {
               subtitle="Meeting and bill-due notifications"
               leading={<IconCircle name="bell.fill" color={colors.red} size={32} />}
               trailing={<Switch value={notificationsEnabled} onValueChange={handleToggleNotifications} />}
+            />
+            <ListRow
+              title="Upcoming reminders"
+              subtitle="Everything Anchor has scheduled"
+              leading={<IconCircle name="clock.fill" color={colors.blue} size={32} />}
+              onPress={() => router.push('/reminders')}
+              showChevron
             />
             <ListRow
               title="Morning briefing"

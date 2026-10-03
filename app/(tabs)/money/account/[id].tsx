@@ -11,6 +11,7 @@ import { TransactionRow } from '../../../../src/features/money/TransactionRow';
 import { AddTransactionSheet } from '../../../../src/features/money/AddTransactionSheet';
 import * as repo from '../../../../src/db/repositories/finance';
 import { formatMoney } from '../../../../src/utils/money';
+import { useBalanceFormatter } from '../../../../src/ui/useMoney';
 import { localDateKey } from '../../../../src/utils/date';
 import type { Transaction } from '../../../../src/db/types';
 
@@ -22,6 +23,7 @@ export default function AccountDetailScreen() {
   const account = accounts.find((a) => a.id === id);
   const [rows, setRows] = useState<Transaction[]>([]);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const balance = useBalanceFormatter();
 
   useEffect(() => {
     if (!id) return;
@@ -64,7 +66,7 @@ export default function AccountDetailScreen() {
               <Text style={[typography.footnote, { color: colors.secondaryLabel, textTransform: 'capitalize' }]}>
                 {account.type} · {account.currency}
               </Text>
-              <Text style={[typography.title1, { color: colors.label }]}>{formatMoney(account.balance, account.currency)}</Text>
+              <Text style={[typography.title1, { color: colors.label }]}>{balance(account.balance, account.currency)}</Text>
             </View>
             <Pressable onPress={() => router.push('/money/accounts')} hitSlop={8}>
               <Text style={[typography.subhead, { color: colors.blue }]}>Edit</Text>

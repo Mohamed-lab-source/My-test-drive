@@ -212,7 +212,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
           </>
         )}
 
-        <TextField label="Note" placeholder="Optional note" value={note} onChangeText={setNote} />
+        <TextField label="Note" placeholder="Optional — add #tags like #travel" value={note} onChangeText={setNote} />
 
         {!editing && type === 'expense' ? (
           <>

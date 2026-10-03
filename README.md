@@ -55,6 +55,11 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Bank SMS extras: an instant "new card payment" notification from a native SMS receiver (works while Anchor is closed), auto-add for merchants you've confirmed before, and optional reading of money in (salary, transfers, refunds) as income
 - Subscription detector: spots monthly repeating charges and offers to track them
 - Top places this month, a daily spending heatmap, and a net worth goal with progress
+- #tags in transaction notes with a tag filter; receipts gallery; hide-balances privacy toggle
+- Budget pace markers with a daily allowance per budget; low-balance alerts
+- Debt payoff planner (smallest-first or earliest-due-first), round-up savings into goals
+- Year in review; "left after fixed costs" from recurring income vs. bills
+- Bank SMS balance check against the bank's reported available balance, with one-tap reconcile
 - Shopping list with estimated prices; tick an item off and log it as an expense in one tap
 - Suggested budgets from your 3-month average spend
 - Money tools: instalment calculator and a currency converter using your saved rates
@@ -83,6 +88,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Create a follow-up task from a meeting
 - Tasks completed per day (last 14 days) on the Focus screen
 - Project progress bars, search across all tasks, and a daily "top task" pinned on Tasks and Home
+- Priority matrix, stale-backlog clean-up, share today's plan, focus breaks (5/15 min), completion streak
+- Meeting notes: "- " lines become tasks in one tap
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -115,6 +122,9 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Ramadan 30-day grid and a make-up fasts owed counter
 - Medication reminders at chosen times
 - Habit completion for the month, bedtime reminder, weight goal
+- Prayer stats (which prayer is missed most), Quran juz map, dhikr 7-day chart, habit best streak, water streak
+- Journal "On this day" and a gratitude wall
+- Reminders for Islamic occasions, Monday/Thursday fasts and your zakat hawl date
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
@@ -126,6 +136,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Next-prayer countdown chip under the title
 - Global search also covers notes, books, shopping and countdowns
 - Biometric lock timeout (immediately / 1 / 5 / 15 minutes)
+- Today rings on Home (prayers · tasks · water), pull-to-refresh on Home and Money
+- Settings → Upcoming reminders (every scheduled notification) and What's in Anchor (feature tour)
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood

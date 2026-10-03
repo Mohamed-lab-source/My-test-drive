@@ -18,3 +18,11 @@ export async function setJournalEntry(
     await insertRow('journal_entries', { id: newId(), date, mood, note, gratitude, created_at: nowIso() });
   }
 }
+
+export async function getJournalEntries(dates: string[]): Promise<JournalEntry[]> {
+  if (dates.length === 0) return [];
+  return whereRows<JournalEntry>('journal_entries', `date IN (${dates.map(() => '?').join(', ')})`, dates);
+}
+
+export const listGratitudeEntries = (limit = 200) =>
+  whereRows<JournalEntry>('journal_entries', "gratitude IS NOT NULL AND gratitude != ''", [], `date DESC LIMIT ${limit}`);

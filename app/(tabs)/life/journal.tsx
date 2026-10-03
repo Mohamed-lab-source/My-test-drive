@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -9,7 +9,9 @@ import { Button } from '../../../src/ui/Button';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { formatDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
-import type { JournalMood } from '../../../src/db/types';
+import type { JournalEntry, JournalMood } from '../../../src/db/types';
+import * as journalRepo from '../../../src/db/repositories/journal';
+import { SegmentedControl } from '../../../src/ui/SegmentedControl';
 
 const MOODS: { id: JournalMood; emoji: string; label: string }[] = [
   { id: 'great', emoji: '😄', label: 'Great' },
@@ -48,6 +50,26 @@ export default function JournalScreen() {
   };
 
   const pastEntries = journalEntries.filter((e) => e.date !== todayKey());
+  const [view, setView] = useState(0);
+  const [memories, setMemories] = useState<{ label: string; entry: JournalEntry }[]>([]);
+  const [gratitudeWall, setGratitudeWall] = useState<JournalEntry[]>([]);
+
+  useEffect(() => {
+    const now = new Date();
+    const ago = [
+      { label: 'A week ago', date: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7) },
+      { label: 'A month ago', date: new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()) },
+      { label: 'A year ago', date: new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()) },
+    ].map((a) => ({ label: a.label, key: todayKey(a.date) }));
+    journalRepo.getJournalEntries(ago.map((a) => a.key)).then((rows) =>
+      setMemories(
+        ago
+          .map((a) => ({ label: a.label, entry: rows.find((r) => r.date === a.key) }))
+          .filter((m): m is { label: string; entry: JournalEntry } => !!m.entry)
+      )
+    );
+    journalRepo.listGratitudeEntries().then(setGratitudeWall);
+  }, [journalEntries]);
 
   const trend = useMemo(() => {
     const byDate = new Map(journalEntries.map((e) => [e.date, e.mood]));
@@ -128,41 +150,86 @@ export default function JournalScreen() {
           </Card>
         ) : null}
 
-        <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Past entries</Text>
-        {pastEntries.length === 0 ? (
-          <EmptyState icon="text.book.closed.fill" title="No past entries" message="Your journal history will show up here." />
-        ) : (
-          <Card padded={false}>
-            {pastEntries.map((entry, i) => {
-              const moodInfo = MOODS.find((m) => m.id === entry.mood);
-              return (
-                <View
-                  key={entry.id}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: spacing.md,
-                    borderBottomWidth: i === pastEntries.length - 1 ? 0 : 0.5,
-                    borderBottomColor: colors.separator,
-                  }}
-                >
-                  <Text style={{ fontSize: 22, marginRight: spacing.sm }}>{moodInfo?.emoji}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>{formatDateKey(entry.date)}</Text>
-                    {entry.note ? <Text style={[typography.body, { color: colors.label }]}>{entry.note}</Text> : null}
-                    {entry.gratitude
-                      ? entry.gratitude.split('\n').map((line, j) => (
-                          <Text key={j} style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
-                            🤲 {line}
-                          </Text>
-                        ))
-                      : null}
-                  </View>
-                </View>
-              );
-            })}
+        {memories.length > 0 ? (
+          <Card style={{ marginBottom: spacing.lg }}>
+            <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.xs }]}>On this day</Text>
+            {memories.map((m) => (
+              <View key={m.label} style={{ paddingVertical: 4 }}>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                  {m.label} · {MOODS.find((x) => x.id === m.entry.mood)?.emoji} {MOODS.find((x) => x.id === m.entry.mood)?.label}
+                </Text>
+                {m.entry.note ? <Text style={[typography.body, { color: colors.label }]}>{m.entry.note}</Text> : null}
+                {m.entry.gratitude ? (
+                  <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>🤲 {m.entry.gratitude.split('\n').join(' · ')}</Text>
+                ) : null}
+              </View>
+            ))}
           </Card>
-        )}
+        ) : null}
+
+        <View style={{ marginBottom: spacing.sm }}>
+          <SegmentedControl options={['Past entries', 'Gratitude wall']} selectedIndex={view} onChange={setView} />
+        </View>
+        {view === 1 ? (
+          gratitudeWall.length === 0 ? (
+            <EmptyState icon="heart.fill" title="Nothing yet" message="Write three things you're grateful for each day and they'll gather here." />
+          ) : (
+            <Card>
+              <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
+                {gratitudeWall.reduce((n, e) => n + (e.gratitude?.split('\n').length ?? 0), 0)} blessings counted
+              </Text>
+              {gratitudeWall.map((e) => (
+                <View key={e.id} style={{ marginBottom: spacing.sm }}>
+                  <Text style={[typography.caption1, { color: colors.tertiaryLabel }]}>{formatDateKey(e.date)}</Text>
+                  {e.gratitude!.split('\n').map((line, i) => (
+                    <Text key={i} style={[typography.body, { color: colors.label }]}>
+                      🤲 {line}
+                    </Text>
+                  ))}
+                </View>
+              ))}
+            </Card>
+          )
+        ) : null}
+        {view === 0 ? (
+          <>
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Past entries</Text>
+            {pastEntries.length === 0 ? (
+              <EmptyState icon="text.book.closed.fill" title="No past entries" message="Your journal history will show up here." />
+            ) : (
+              <Card padded={false}>
+                {pastEntries.map((entry, i) => {
+                  const moodInfo = MOODS.find((m) => m.id === entry.mood);
+                  return (
+                    <View
+                      key={entry.id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: spacing.md,
+                        borderBottomWidth: i === pastEntries.length - 1 ? 0 : 0.5,
+                        borderBottomColor: colors.separator,
+                      }}
+                    >
+                      <Text style={{ fontSize: 22, marginRight: spacing.sm }}>{moodInfo?.emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>{formatDateKey(entry.date)}</Text>
+                        {entry.note ? <Text style={[typography.body, { color: colors.label }]}>{entry.note}</Text> : null}
+                        {entry.gratitude
+                          ? entry.gratitude.split('\n').map((line, j) => (
+                              <Text key={j} style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                                🤲 {line}
+                              </Text>
+                            ))
+                          : null}
+                      </View>
+                    </View>
+                  );
+                })}
+              </Card>
+            )}
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );

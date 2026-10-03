@@ -30,23 +30,6 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
   const updateMeeting = useProductivityStore((s) => s.updateMeeting);
   const addTask = useProductivityStore((s) => s.addTask);
 
-  // Turns the meeting into a to-do for tomorrow, carrying its notes along.
-  const createFollowUp = async () => {
-    if (!editing) return;
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    await addTask({
-      project_id: null,
-      title: `Follow up: ${editing.title}`,
-      notes: notes.trim() || null,
-      status: 'todo',
-      priority: 'medium',
-      due_date: null,
-      scheduled_date: todayKey(tomorrow),
-      sort_order: Date.now(),
-    });
-    Alert.alert('Follow-up added', 'A task for tomorrow is in your Tasks list.');
-  };
 
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
@@ -67,6 +50,47 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
   }, [visible, editing?.id]);
 
   const canSave = title.trim().length > 0;
+
+  // "- item", "* item", "• item" or "[ ] item" lines in the notes.
+  const actionItems = notes
+    .split('\n')
+    .map((l) => l.match(/^\s*(?:[-*•]|\[ ?\])\s+(.+)$/)?.[1]?.trim())
+    .filter((x): x is string => !!x);
+
+  const createActionTasks = async () => {
+    let order = Date.now();
+    for (const title of actionItems) {
+      await addTask({
+        project_id: null,
+        title,
+        notes: editing ? `From meeting: ${editing.title}` : null,
+        status: 'todo',
+        priority: 'medium',
+        due_date: null,
+        scheduled_date: todayKey(),
+        sort_order: order++,
+      });
+    }
+    Alert.alert('Tasks created', `${actionItems.length} action item${actionItems.length === 1 ? '' : 's'} added to today.`);
+  };
+
+  // Turns the meeting into a to-do for tomorrow, carrying its notes along.
+  const createFollowUp = async () => {
+    if (!editing) return;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    await addTask({
+      project_id: null,
+      title: `Follow up: ${editing.title}`,
+      notes: notes.trim() || null,
+      status: 'todo',
+      priority: 'medium',
+      due_date: null,
+      scheduled_date: todayKey(tomorrow),
+      sort_order: Date.now(),
+    });
+    Alert.alert('Follow-up added', 'A task for tomorrow is in your Tasks list.');
+  };
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -116,8 +140,16 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
             onSelect={(id) => setReminder(Number(id))}
           />
         </View>
-        <TextField label="Notes" placeholder="Agenda, links, dial-in…" value={notes} onChangeText={setNotes} multiline />
+        <TextField label="Notes" placeholder="Agenda, links… start a line with “- ” for an action item" value={notes} onChangeText={setNotes} multiline />
         <Button title={editing ? 'Save' : 'Add meeting'} onPress={handleSave} disabled={!canSave} loading={saving} />
+        {actionItems.length > 0 ? (
+          <Button
+            title={`Turn ${actionItems.length} action item${actionItems.length === 1 ? '' : 's'} into tasks`}
+            variant="secondary"
+            onPress={createActionTasks}
+            style={{ marginTop: spacing.sm }}
+          />
+        ) : null}
         {editing ? (
           <Button title="Create follow-up task" variant="secondary" onPress={createFollowUp} style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
         ) : null}

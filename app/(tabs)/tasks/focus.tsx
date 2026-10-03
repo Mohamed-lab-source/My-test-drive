@@ -58,6 +58,19 @@ export default function FocusStatsScreen() {
   }, [tasks]);
   const completedTotal = completed.reduce((s, d) => s + d.value, 0);
 
+  // Days in a row with at least one task completed (today counts once done).
+  const doneStreak = useMemo(() => {
+    const days = new Set(tasks.filter((t) => t.completed_at).map((t) => localDateKey(t.completed_at!)));
+    let n = 0;
+    const d = new Date();
+    if (!days.has(todayKey(d))) d.setDate(d.getDate() - 1);
+    while (days.has(todayKey(d)) && n < 3650) {
+      n++;
+      d.setDate(d.getDate() - 1);
+    }
+    return n;
+  }, [tasks]);
+
   const topTasks = useMemo(() => {
     const m = new Map<string, number>();
     for (const s of sessions) if (s.task_id) m.set(s.task_id, (m.get(s.task_id) ?? 0) + s.minutes);
@@ -116,6 +129,7 @@ export default function FocusStatsScreen() {
           <Text style={[typography.headline, { color: colors.label }]}>Tasks completed</Text>
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
             {completedTotal} in the last 14 days · {(completedTotal / 14).toFixed(1)} a day
+            {doneStreak > 1 ? ` · 🔥 ${doneStreak}-day streak` : ''}
           </Text>
           <MiniBars data={completed} color={colors.green} />
         </Card>

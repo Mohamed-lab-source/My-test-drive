@@ -64,6 +64,18 @@ interface SettingsState {
   setTopTask: (v: { id: string; date: string } | null) => void;
   lockTimeoutMinutes: number;
   setLockTimeoutMinutes: (v: number) => void;
+  roundUpSince: string | null;
+  setRoundUpSince: (v: string | null) => void;
+  hideBalances: boolean;
+  setHideBalances: (v: boolean) => void;
+  lowBalanceAlert: number;
+  setLowBalanceAlert: (v: number) => void;
+  occasionReminders: boolean;
+  setOccasionReminders: (v: boolean) => void;
+  monThuReminders: boolean;
+  setMonThuReminders: (v: boolean) => void;
+  zakatHawl: { month: number; day: number } | null;
+  setZakatHawl: (v: { month: number; day: number } | null) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -136,6 +148,18 @@ export const useSettingsStore = create<SettingsState>()(
       setTopTask: (v) => set({ topTask: v }),
       lockTimeoutMinutes: 0,
       setLockTimeoutMinutes: (v) => set({ lockTimeoutMinutes: v }),
+      roundUpSince: null,
+      setRoundUpSince: (v) => set({ roundUpSince: v }),
+      hideBalances: false,
+      setHideBalances: (v) => set({ hideBalances: v }),
+      lowBalanceAlert: 0,
+      setLowBalanceAlert: (v) => set({ lowBalanceAlert: v }),
+      occasionReminders: false,
+      setOccasionReminders: (v) => set({ occasionReminders: v }),
+      monThuReminders: false,
+      setMonThuReminders: (v) => set({ monThuReminders: v }),
+      zakatHawl: null,
+      setZakatHawl: (v) => set({ zakatHawl: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

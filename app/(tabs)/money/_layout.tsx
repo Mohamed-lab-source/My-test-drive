@@ -25,6 +25,8 @@ export default function MoneyLayout() {
       <Stack.Screen name="sms-inbox" options={{ presentation: 'card' }} />
       <Stack.Screen name="shopping" options={{ presentation: 'card' }} />
       <Stack.Screen name="tools" options={{ presentation: 'card' }} />
+      <Stack.Screen name="year" options={{ presentation: 'card' }} />
+      <Stack.Screen name="receipts" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

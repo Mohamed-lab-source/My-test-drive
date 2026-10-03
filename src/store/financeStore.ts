@@ -156,8 +156,22 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const before = budget ? await repo.getCategorySpendSince(budget.category_id, monthStart) : 0;
 
+    const accountBefore = get().accounts.find((a) => a.id === input.account_id);
     await repo.createTransaction(input);
     await Promise.all([get().refreshTransactions(), get().refreshAccounts()]);
+
+    // Low-balance alert: only when this transaction takes the account from
+    // above the threshold to below it, so it fires once rather than nagging.
+    const threshold = useSettingsStore.getState().lowBalanceAlert;
+    const accountAfter = get().accounts.find((a) => a.id === input.account_id);
+    if (threshold > 0 && accountBefore && accountAfter && accountAfter.type !== 'credit') {
+      if (accountBefore.balance >= threshold && accountAfter.balance < threshold) {
+        notifyNow(
+          `${accountAfter.name} is running low`,
+          `Balance is now ${formatMoney(accountAfter.balance, accountAfter.currency)} — below your ${formatMoney(threshold, accountAfter.currency)} alert.`
+        );
+      }
+    }
 
     if (budget && budget.monthly_limit > 0) {
       const after = before + input.amount;

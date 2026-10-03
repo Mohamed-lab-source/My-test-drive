@@ -3,7 +3,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useFinanceStore } from '../store/financeStore';
 import * as repo from '../db/repositories/smsImports';
 import type { Account, SmsImport } from '../db/types';
-import { parseCreditSms, parseDebitSms } from './parser';
+import { parseCreditSms, parseDebitSms, parseReportedBalance } from './parser';
 import { configureSmsAlerts, isSmsReadingAvailable, readBankSms } from './native';
 
 const FIRST_SCAN_DAYS = 30;
@@ -78,6 +78,8 @@ export const useSmsStore = create<SmsState>((set, get) => ({
           merchant: parsed.merchant,
           card_last4: parsed.cardLast4,
           kind: parsed.kind,
+          balance: parseReportedBalance(m.body)?.amount ?? null,
+          balance_currency: parseReportedBalance(m.body)?.currency ?? null,
         };
         const isNew = await repo.insertSmsImport(row);
         if (!isNew) continue;

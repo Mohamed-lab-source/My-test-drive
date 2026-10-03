@@ -112,6 +112,8 @@ function AppShell() {
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
         <Stack.Screen name="search" options={{ presentation: 'modal' }} />
         <Stack.Screen name="review" />
+        <Stack.Screen name="reminders" />
+        <Stack.Screen name="whats-new" />
       </Stack>
       <UndoSnackbar />
     </>

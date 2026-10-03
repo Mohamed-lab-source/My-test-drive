@@ -25,6 +25,11 @@ export function FocusTimer({ task, visible, onClose }: { task: Task | null; visi
   const [pausedRemaining, setPausedRemaining] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [finished, setFinished] = useState(false);
+  // Pomodoro-style breaks: 5 minutes, or 15 after every fourth session.
+  const [onBreak, setOnBreak] = useState(false);
+  const [sessionsDone, setSessionsDone] = useState(0);
+  const [breakJustEnded, setBreakJustEnded] = useState(false);
+  const breakMinutes = sessionsDone > 0 && sessionsDone % 4 === 0 ? 15 : 5;
 
   const running = endsAt !== null;
   const remaining = running ? endsAt - now : pausedRemaining ?? minutes * 60000;
@@ -41,12 +46,29 @@ export function FocusTimer({ task, visible, onClose }: { task: Task | null; visi
       setPausedRemaining(null);
       setFinished(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      logFocusSession(task?.id ?? null, minutes);
+      setBreakJustEnded(onBreak);
+      if (onBreak) {
+        setOnBreak(false);
+      } else {
+        logFocusSession(task?.id ?? null, minutes);
+        setSessionsDone((n) => n + 1);
+      }
     }
   }, [running, remaining]);
 
+  const startBreak = () => {
+    const end = Date.now() + breakMinutes * 60000;
+    setOnBreak(true);
+    setFinished(false);
+    setNow(Date.now());
+    setEndsAt(end);
+    setPausedRemaining(null);
+    scheduleFocusEnd(end, 'Break over — ready for another session?');
+  };
+
   const start = () => {
     const end = Date.now() + (pausedRemaining ?? minutes * 60000);
+    setOnBreak(false);
     setFinished(false);
     setNow(Date.now());
     setEndsAt(end);
@@ -62,6 +84,7 @@ export function FocusTimer({ task, visible, onClose }: { task: Task | null; visi
   };
 
   const reset = () => {
+    setOnBreak(false);
     setEndsAt(null);
     setPausedRemaining(null);
     setFinished(false);
@@ -70,6 +93,8 @@ export function FocusTimer({ task, visible, onClose }: { task: Task | null; visi
 
   const close = () => {
     reset();
+    setSessionsDone(0);
+    setBreakJustEnded(false);
     onClose();
   };
 
@@ -79,7 +104,9 @@ export function FocusTimer({ task, visible, onClose }: { task: Task | null; visi
         <Pressable onPress={close} hitSlop={12} style={{ position: 'absolute', top: spacing.xxxl, right: spacing.xl }}>
           <Text style={[typography.body, { color: colors.blue }]}>Done</Text>
         </Pressable>
-        <Text style={[typography.subhead, { color: colors.secondaryLabel, textAlign: 'center' }]}>Focusing on</Text>
+        <Text style={[typography.subhead, { color: onBreak ? colors.green : colors.secondaryLabel, textAlign: 'center' }]}>
+          {onBreak ? `On a ${breakMinutes}-minute break from` : 'Focusing on'}
+        </Text>
         <Text style={[typography.title2, { color: colors.label, textAlign: 'center', marginTop: 4 }]} numberOfLines={2}>
           {task?.title ?? 'Focus'}
         </Text>
@@ -93,7 +120,7 @@ export function FocusTimer({ task, visible, onClose }: { task: Task | null; visi
             fontVariant: ['tabular-nums'],
           }}
         >
-          {finished ? 'Done!' : formatClock(remaining)}
+          {finished ? (breakJustEnded ? 'Break over' : 'Done!') : formatClock(remaining)}
         </Text>
         {!running && pausedRemaining === null ? (
           <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
@@ -110,8 +137,18 @@ export function FocusTimer({ task, visible, onClose }: { task: Task | null; visi
         {running ? (
           <Button title="Pause" variant="secondary" onPress={pause} />
         ) : (
-          <Button title={pausedRemaining !== null ? 'Resume' : finished ? 'Start another' : 'Start'} onPress={start} />
+          <>
+            <Button title={pausedRemaining !== null ? 'Resume' : finished ? 'Start another' : 'Start'} onPress={start} />
+            {finished && !breakJustEnded && pausedRemaining === null ? (
+              <Button title={`Take a ${breakMinutes}-minute break`} variant="secondary" onPress={startBreak} style={{ marginTop: spacing.sm }} />
+            ) : null}
+          </>
         )}
+        {sessionsDone > 0 ? (
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, textAlign: 'center', marginTop: spacing.md }]}>
+            {sessionsDone} session{sessionsDone === 1 ? '' : 's'} this sitting
+          </Text>
+        ) : null}
         {running || pausedRemaining !== null ? (
           <Button title="Reset" variant="plain" onPress={reset} style={{ marginTop: spacing.sm }} />
         ) : null}

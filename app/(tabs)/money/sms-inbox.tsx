@@ -16,6 +16,7 @@ import { hasReceivePermission, hasSmsPermission, isSmsReadingAvailable, requestS
 import { formatMoney } from '../../../src/utils/money';
 import { formatRelativeDay, formatTime, localDateKey } from '../../../src/utils/date';
 import type { SmsImport } from '../../../src/db/types';
+import { latestReportedBalance } from '../../../src/db/repositories/smsImports';
 
 export default function SmsInboxScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -40,9 +41,14 @@ export default function SmsInboxScreen() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [permission, setPermission] = useState(hasSmsPermission());
 
+  const [bankBalance, setBankBalance] = useState<{ amount: number; currency: string; date: string } | null>(null);
   useEffect(() => {
     refresh();
   }, [refresh]);
+  useEffect(() => {
+    latestReportedBalance().then(setBankBalance);
+  }, [pending]);
+  const updateAccount = useFinanceStore((s) => s.updateAccount);
 
   const account = smsTargetAccount(accounts);
   const expenseCats = categories.filter((c) => c.kind !== 'income' && !c.is_archived);
@@ -198,6 +204,35 @@ export default function SmsInboxScreen() {
             </>
           ) : null}
         </Card>
+
+        {active && bankBalance && account && bankBalance.currency === account.currency && pending.length === 0 ? (
+          <Card style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.headline, { color: colors.label }]}>Balance check</Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+              Your bank reported {formatMoney(bankBalance.amount, bankBalance.currency)} ({formatRelativeDay(bankBalance.date)}); Anchor shows{' '}
+              {formatMoney(account.balance, account.currency)} for {account.name}.
+            </Text>
+            {bankBalance.amount === account.balance ? (
+              <Text style={[typography.subhead, { color: colors.green, marginTop: spacing.xs, fontWeight: '600' }]}>✓ They match</Text>
+            ) : (
+              <Button
+                title={`Set ${account.name} to ${formatMoney(bankBalance.amount, account.currency)}`}
+                variant="secondary"
+                onPress={() =>
+                  Alert.alert(
+                    'Match the bank?',
+                    `This sets ${account.name} to the balance from your bank's latest SMS. Transactions made after that message would need adding again.`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Set balance', onPress: () => updateAccount(account.id, { balance: bankBalance.amount }) },
+                    ]
+                  )
+                }
+                style={{ marginTop: spacing.sm }}
+              />
+            )}
+          </Card>
+        ) : null}
 
         {active ? (
           <>

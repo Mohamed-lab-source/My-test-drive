@@ -11,6 +11,7 @@ import { SegmentedControl } from '../../../src/ui/SegmentedControl';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { TextField } from '../../../src/ui/TextField';
 import * as financeRepo from '../../../src/db/repositories/finance';
+import { allTags, extractTags } from '../../../src/utils/tags';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { useUndoStore } from '../../../src/store/undoStore';
@@ -28,6 +29,8 @@ export default function TransactionsScreen() {
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Transaction[] | null>(null);
+  const [tagFilter, setTagFilter] = useState<string>(ALL);
+  const tags = useMemo(() => allTags(transactions.map((t) => t.note)), [transactions]);
 
   // Re-run when the list changes too, so edits/deletes show up in results.
   useEffect(() => {
@@ -54,9 +57,10 @@ export default function TransactionsScreen() {
       (t) =>
         (typeFilter === 'all' || t.type === typeFilter) &&
         (accountFilter === ALL || t.account_id === accountFilter || t.transfer_to_account_id === accountFilter) &&
-        (categoryFilter === ALL || t.category_id === categoryFilter)
+        (categoryFilter === ALL || t.category_id === categoryFilter) &&
+        (tagFilter === ALL || extractTags(t.note).includes(tagFilter))
     );
-  }, [transactions, searchResults, typeIndex, accountFilter, categoryFilter]);
+  }, [transactions, searchResults, typeIndex, accountFilter, categoryFilter, tagFilter]);
 
   const withoutIdentity = (tx: Transaction) => {
     const { id, created_at, ...rest } = tx;
@@ -91,6 +95,15 @@ export default function TransactionsScreen() {
             onSelect={setAccountFilter}
           />
         </View>
+        {tags.length > 0 ? (
+          <View style={{ marginBottom: spacing.xs }}>
+            <ChipSelector
+              options={[{ id: ALL, label: 'All tags' }, ...tags.slice(0, 20).map((t) => ({ id: t, label: `#${t}` }))]}
+              selectedId={tagFilter}
+              onSelect={setTagFilter}
+            />
+          </View>
+        ) : null}
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector
             options={[
