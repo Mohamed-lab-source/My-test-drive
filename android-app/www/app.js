@@ -2476,6 +2476,7 @@ async function boot() {
   await safely("voice", initVoice);
   await safely("hub", initHub);
   await safely("lab", initLab);
+  await safely("knowledge", initKnowledge);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();

@@ -325,6 +325,16 @@ Fully on-device — nothing is shared between devices here. (Syncing your Jarvis
 | Passwords | "Generate a strong password", "Give me a 4-word passphrase" (made on the phone, never stored) |
 | Dates | "How many days until 20 December?", "What day is 2027-01-01?", "How old is someone born 1998-03-14?" |
 
+### 3.4 — the Knowledge pack
+
+| | Try saying |
+|---|---|
+| Dictionary | "Define resilience", "What does ephemeral mean?" (meaning, pronunciation, synonyms, example) |
+| Translate | "Translate 'good morning' to French", "How do you say thank you in Turkish?" |
+| Summarise | "Summarise this" (text you say, or have copied) |
+| Quiz | "Quiz me", then answer; "another" for the next |
+| Health maths | "What's my BMI if I'm 82 kg and 178 cm?", "How much water should I drink?" |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:
