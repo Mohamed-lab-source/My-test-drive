@@ -335,6 +335,16 @@ Fully on-device — nothing is shared between devices here. (Syncing your Jarvis
 | Quiz | "Quiz me", then answer; "another" for the next |
 | Health maths | "What's my BMI if I'm 82 kg and 178 cm?", "How much water should I drink?" |
 
+### 3.5 — the Scribe pack
+
+| | Try saying |
+|---|---|
+| Rewrite / fix | "Fix this: yo im gonna be late", "Make this formal", "Make it shorter" (English or Arabic) |
+| Draft messages | "Draft a reply to my boss saying I'll finish Thursday", "Write an email asking for a day off" |
+| Brainstorm | "Brainstorm gift ideas for my dad" |
+| Recipes | "A recipe with chicken and rice" — say yes to add the ingredients to your shopping list |
+| Read later | "Save this to read later", "What's on my reading list?" |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:
