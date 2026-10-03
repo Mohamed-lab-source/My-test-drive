@@ -7,8 +7,8 @@ android {
         applicationId "com.jarvis.secretary"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 23
-        versionName "3.5"
+        versionCode 24
+        versionName "3.7"
         // Phones only: keeps the wake-word engine's native code small
         // 64-bit phones only (every phone since ~2017): keeps the voice and wake-word engines' native code to one copy
         ndk { abiFilters 'arm64-v8a' }

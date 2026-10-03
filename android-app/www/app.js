@@ -2478,6 +2478,8 @@ async function boot() {
   await safely("lab", initLab);
   await safely("knowledge", initKnowledge);
   await safely("scribe", initScribe);
+  await safely("toolsmith", initToolsmith);
+  await safely("offline", initOffline);
   renderHistoryOnLoad();
   renderReminders();
   refreshCalendarCard();

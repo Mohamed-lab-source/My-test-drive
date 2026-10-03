@@ -345,6 +345,58 @@ Fully on-device — nothing is shared between devices here. (Syncing your Jarvis
 | Recipes | "A recipe with chicken and rice" — say yes to add the ingredients to your shopping list |
 | Read later | "Save this to read later", "What's on my reading list?" |
 
+### 3.6 — a bigger offline brain
+
+Dozens of commands now work with **no internet at all** (and when Groq is out
+of budget) — Jarvis understands them on-device and runs the matching action
+directly, instead of only when he's online. No setup needed.
+
+| Works offline now | Try saying |
+|---|---|
+| Maths & conversions | "What's 15% of 200", "Convert 5 km to miles" |
+| Decisions | "Flip a coin", "Roll a die", "Pick between koshary or pizza" |
+| Passwords | "Generate a strong password" (copied for you) |
+| Deen | "Subhanallah" (counts tasbeeh), "Morning azkar" |
+| Dates | "How many days until 2026-12-25", "What day is 2026-06-01" |
+| Phone controls | "Put my phone on vibrate", "Brightness 40", "Pause the music", "Next song" |
+| Calling & texting | "Call Mom", "Text Omi saying I'm on my way" |
+| Navigation | "Take me home", "Navigate to work" |
+| Trackers | "I weigh 81", "Feeling 7 out of 10", "I spent 200 on lunch", "I went to the gym" |
+| Notes & lists | "Remember my car is on level 2", "Find my note about wifi", "What are my reminders" |
+
+### 3.7 — the Toolsmith (30 more)
+
+A big box of everyday tools. Most are **fully offline** maths and text
+helpers; a few (rates, crypto, holidays) go online only when they must.
+
+| | Try saying |
+|---|---|
+| Tip & split | "Split a 300 bill between 4 with a 10% tip" |
+| Discount | "What's 25% off 100?" |
+| Loan / instalment | "Monthly payment on a 120,000 loan at 12% over 5 years" |
+| Age | "How old am I if I was born 1990-01-01?" |
+| Zakat | "Zakat on 100,000" (2.5%) |
+| Calories | "Daily calories, I'm 178cm, 30, male, moderate" |
+| Running pace | "Pace for 5 km in 25 minutes" |
+| Fuel cost | "Fuel cost for 100 km at 8 L/100 and 15 a litre" |
+| Base & Roman | "255 in hex", "2024 in Roman numerals" |
+| Days between | "Days between 2026-01-01 and 2026-03-01" |
+| Best value | "Which is cheaper per unit: big 50 for 2 or small 30 for 1" |
+| Word count | "Word count of this…" |
+| Change case | "Make this Title Case" (copied) |
+| Sort / dedupe lines | "Sort these lines", "Remove duplicates", "Shuffle this list" |
+| Lists | "Add milk to my shopping list", "Show my to-do list", "Clear my packing list" |
+| Counters | "Add to my pushups counter", "Show the pushups counter", "Reset it" |
+| World clock | "What time is it in London?" |
+| Timer / stopwatch | "Set a timer for 5 minutes", "Start the stopwatch", "Lap" |
+| Dua | "A dua for worry" |
+| Currency *(online)* | "Convert 100 USD to EGP" |
+| Crypto *(online)* | "Bitcoin price" |
+| Holidays *(online)* | "Public holidays in Egypt" |
+| Sunrise / sunset *(online)* | "When's sunset today?" |
+| Connection *(online)* | "What's my IP?" |
+| Facts *(online)* | "A fact about 42", "Tell me a random fact" |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:
