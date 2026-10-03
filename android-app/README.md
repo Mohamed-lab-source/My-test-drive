@@ -397,6 +397,38 @@ helpers; a few (rates, crypto, holidays) go online only when they must.
 | Connection *(online)* | "What's my IP?" |
 | Facts *(online)* | "A fact about 42", "Tell me a random fact" |
 
+### 3.8 — the Cognition pack (the brain)
+
+This is the upgrade that makes him feel like the real J.A.R.V.I.S. — not more
+buttons, but genuine *intelligence*. He now keeps a working understanding of
+your world and reasons over it.
+
+- **Awareness** — every answer is grounded in what's actually going on with
+  you right now (bills due, birthdays, streaks at risk, mood, overdue
+  reminders…), computed on-device, instantly, with no network.
+- **Anticipation** — he raises what matters *before you ask*. Say "brief me"
+  or "anything I should know?" and he scans your world and leads with the
+  urgent. He'll also slip the relevant one into his greeting when you open
+  the app.
+- **Deep reasoning** — for real problems he escalates to harder thinking.
+  "Think through whether I should take the new job", "Help me decide between
+  these two flats."
+- **Planning** — "Make me a plan to launch my side project" turns a goal into
+  ordered steps, and can set reminders for the timed ones.
+- **Reflection** — "How's my week going?" gives an honest, warm read from your
+  own logged data, and sharpens how well he knows you.
+- **Learning** — he quietly distils lasting facts about you (people, routines,
+  preferences) from your conversations and remembers them, so he knows you
+  better over time.
+
+| | Try saying |
+|---|---|
+| Brief me | "Anything I should know?", "What's on your mind?", "Brief me" |
+| Think | "Think through whether I should…", "Help me decide between X and Y" |
+| Plan | "Make a plan to redecorate the flat" (say yes to set reminders) |
+| Reflect | "How am I doing this week?", "How's my month going?" |
+| Learn | "What do you know about me?", "Learn about me" |
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

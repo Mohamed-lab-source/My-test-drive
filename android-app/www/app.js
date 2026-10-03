@@ -1157,6 +1157,7 @@ function buildSystemPrompt() {
     lines.push("What you know about the user: nothing yet.");
   }
   if (typeof presencePromptLines === "function") lines.push(...presencePromptLines());
+  if (typeof cognitionPromptLines === "function") lines.push(...cognitionPromptLines());
   return JARVIS_PERSONA.replaceAll("{ADDRESS}", state.address) + "\n\nLIVE CONTEXT\n" + lines.join("\n");
 }
 
@@ -1639,7 +1640,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // after that does Jarvis wait out a short "try again in Ns".
 const FALLBACK_MODEL = { "openai/gpt-oss-120b": "openai/gpt-oss-20b", "openai/gpt-oss-20b": "openai/gpt-oss-120b" };
 
-async function callGroq(messages, { withTools = true, tools = null, model = null, fellBack = false, retried = false } = {}) {
+async function callGroq(messages, { withTools = true, tools = null, model = null, fellBack = false, retried = false, reasoningEffort = "low", maxTokens = 1024 } = {}) {
   if (!state.apiKey) throw new Error("NO_API_KEY");
   model = model || state.model;
   const body = {
@@ -1652,8 +1653,9 @@ async function callGroq(messages, { withTools = true, tools = null, model = null
     // Hidden reasoning tokens count against the per-minute budget too; a
     // butler's replies are short, so keep the thinking brisk and the reply
     // capped (an uncapped request also reserves a huge budget up front).
-    reasoning_effort: "low",
-    max_completion_tokens: 1024,
+    // Deep-reasoning tools raise these deliberately.
+    reasoning_effort: reasoningEffort,
+    max_completion_tokens: maxTokens,
   };
   if (withTools) { body.tools = tools || allToolSchemas(); body.tool_choice = "auto"; }
   const ctrl = new AbortController();
@@ -1678,7 +1680,7 @@ async function callGroq(messages, { withTools = true, tools = null, model = null
     const alt = FALLBACK_MODEL[model];
     if (!fellBack && alt) {
       // The other model has its own separate budget: switch without waiting.
-      return callGroq(messages, { withTools, tools, model: alt, fellBack: true, retried });
+      return callGroq(messages, { withTools, tools, model: alt, fellBack: true, retried, reasoningEffort, maxTokens });
     }
     if (daily) throw new Error("DAILY_LIMIT");
     if (tooLarge) throw new Error("TOO_LARGE");
@@ -1689,7 +1691,7 @@ async function callGroq(messages, { withTools = true, tools = null, model = null
       if (status) status.textContent = `HOLDING · ${Math.ceil(waitS)}s`;
       await sleep((waitS + 0.5) * 1000);
       if (status) status.textContent = HUD_TEXT.thinking;
-      return callGroq(messages, { withTools, tools, model, fellBack: true, retried: true });
+      return callGroq(messages, { withTools, tools, model, fellBack: true, retried: true, reasoningEffort, maxTokens });
     }
     throw new Error("RATE_LIMIT");
   }
@@ -2479,6 +2481,7 @@ async function boot() {
   await safely("knowledge", initKnowledge);
   await safely("scribe", initScribe);
   await safely("toolsmith", initToolsmith);
+  await safely("cognition", initCognition);
   await safely("offline", initOffline);
   renderHistoryOnLoad();
   renderReminders();
