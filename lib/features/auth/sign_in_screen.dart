@@ -21,19 +21,9 @@ class SignInScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(flex: 2),
-              Container(
-                width: 72,
-                height: 72,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: context.k.accent,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Text('خ',
-                    style: TextStyle(
-                        color: context.k.onAccent,
-                        fontSize: 40,
-                        fontWeight: FontWeight.w800)),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Image.asset('assets/icon/khroga.png', width: 80, height: 80),
               ),
               const SizedBox(height: KSpace.lg),
               Text('Khroga', style: text.headlineMedium),

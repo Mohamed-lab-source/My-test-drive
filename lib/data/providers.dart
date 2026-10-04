@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/theme_settings.dart' show sharedPrefsProvider;
 import '../models/place.dart';
 import '../models/plan.dart';
 import '../models/social.dart';
@@ -42,11 +43,20 @@ final myProfileProvider = StreamProvider<PublicProfile?>((ref) {
 });
 
 // ---- Places ----
-/// The city the person is browsing/planning in.
+/// The city the person is browsing/planning in. Remembered on the phone.
 class CityNotifier extends Notifier<String> {
+  static const _key = 'city';
+
   @override
-  String build() => 'cairo';
-  void set(String city) => state = city;
+  String build() {
+    final saved = ref.watch(sharedPrefsProvider)?.getString(_key);
+    return Cities.all.containsKey(saved) ? saved! : 'cairo';
+  }
+
+  void set(String city) {
+    state = city;
+    ref.read(sharedPrefsProvider)?.setString(_key, city);
+  }
 }
 
 final cityProvider = NotifierProvider<CityNotifier, String>(CityNotifier.new);
@@ -173,3 +183,12 @@ final allPlansProvider = StreamProvider<List<OutingPlan>>((ref) {
 
 final allPlacesProvider =
     FutureProvider<List<Place>>((ref) => ref.watch(placesRepositoryProvider).all());
+
+/// The next group outing you're part of (soonest first), if any.
+final nextOutingProvider = Provider<Group?>((ref) {
+  final groups = ref.watch(myGroupsProvider).value ?? const <Group>[];
+  final now = DateTime.now().subtract(const Duration(hours: 6));
+  final upcoming = groups.where((g) => g.scheduledAt != null && g.scheduledAt!.isAfter(now)).toList()
+    ..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
+  return upcoming.firstOrNull;
+});

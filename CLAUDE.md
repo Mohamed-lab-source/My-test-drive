@@ -60,13 +60,21 @@ How the code enforces it (keep it this way):
   as text with map links.
 - Personal data per user: `users/{uid}/visited/{placeId}` ("Been there") and
   `users/{uid}/notes/{placeId}` (private notes, ≤500 chars). Recently viewed
-  places, search history and text size live only on the phone
-  (`lib/app/local_history.dart`, `theme_settings.dart`).
+  places, search history, text size, home city, your own star ratings and
+  ticked plan stops live only on the phone (`lib/app/local_history.dart`,
+  `local_prefs.dart`, `theme_settings.dart`). Star ratings are private and
+  never shown as a place rating.
 - Plan editing: reorder/remove/add stops, rename, outing day (`date`, used for
   weather + opening hours), full-route Google Maps link, route summary
   (straight-line km + a labeled rough time). Group extras: countdown, Google
   Calendar link, bill splitter (user-entered totals only), invite QR
   (`khroga:group:<code>`, scanned from Friends or Groups).
+- Plan options: "only places open at that time" (`onlyOpen`), "prefer my
+  favorites" (`preferPlaceIds`, a score boost only), "skip places I've been"
+  (via `excludePlaceIds`). Plans can be copied, added to Google Calendar and
+  show end times (`stopEndTime`, `planEndTime`, `planCalendarLink`).
+- App icon: drawn by `tool/make_icon.py` (Pillow) into the Android mipmaps
+  (adaptive + monochrome) and `assets/icon/khroga.png`. Re-run it to change it.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the
@@ -102,6 +110,7 @@ lib/
   planner/services.dart Open-Meteo + Gemini calls
   data/                 repositories + providers.dart
   features/             auth, plan, explore, groups, friends, profile
+  app/helpers.dart      pure helpers: greeting, chat day labels, badges, Waze/Google links
   widgets/              common.dart, launchers.dart
   firebase_options.dart placeholder; CI generates the real one
 assets/data/places.json bundled places (placeholder in git)
@@ -109,6 +118,7 @@ tool/fetch_osm_places.mjs      OpenStreetMap downloader (+ .test.mjs)
 tool/fetch_overture.py         Overture Maps downloader (pyarrow)
 tool/merge_overture.mjs        merges Overture into places.json (+ .test.mjs)
 tool/gen_firebase_options.mjs  google-services.json → lib/firebase_options.dart
+tool/make_icon.py              draws the app icon
 firestore.rules         security rules
 rules-test/             emulator tests for the rules
 android/app/khroga-test.keystore  shared TEST signing key (SHA-1 FD:0F:A7:73:...)

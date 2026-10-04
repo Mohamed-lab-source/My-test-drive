@@ -19,6 +19,19 @@ class ExploreScreen extends ConsumerStatefulWidget {
 
 enum _Sort { best, nearest, az }
 
+/// Extra filters, each based on a real map fact (unknown = not shown).
+enum _Extra {
+  nearMe('📍 Within 2 km'),
+  openLate('🌙 Open late'),
+  wheelchair('♿ Wheelchair'),
+  wifi('📶 Wi-Fi'),
+  outdoor('🌤️ Outdoor seating'),
+  photo('📷 Has photo');
+
+  const _Extra(this.label);
+  final String label;
+}
+
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final _search = TextEditingController();
   String _query = '';
@@ -28,6 +41,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   bool _openNow = false;
   _Sort _sort = _Sort.best;
   bool _locating = false;
+  bool _grid = false;
+  final Set<_Extra> _extras = {};
 
   @override
   void dispose() {
@@ -78,6 +93,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       if (_area != null && p.area != _area) return false;
       if (_kind != null && !kindsOf(p).contains(_kind)) return false;
       if (_openNow && p.isOpenAt(now) != true) return false;
+      if (_extras.isNotEmpty && !_passesExtras(p, me, now)) return false;
       if (q.isEmpty) return true;
       return p.name.toLowerCase().contains(q) ||
           (p.nameAr?.contains(raw) ?? false) ||
@@ -97,6 +113,29 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         break; // already best-documented first
     }
     return list;
+  }
+
+  bool _passesExtras(Place p, (double, double)? me, DateTime now) {
+    for (final e in _extras) {
+      final ok = switch (e) {
+        _Extra.nearMe => me != null &&
+            p.hasLocation &&
+            haversineKm(me.$1, me.$2, p.lat!, p.lng!) <= 2,
+        _Extra.openLate =>
+          p.isOpenAt(DateTime(now.year, now.month, now.day, 23, 30)) == true,
+        _Extra.wheelchair => p.details.wheelchair == 'yes' || p.details.wheelchair == 'limited',
+        _Extra.wifi => p.details.wifi == true,
+        _Extra.outdoor => p.details.outdoorSeating == true,
+        _Extra.photo => p.photoUrl != null,
+      };
+      if (!ok) return false;
+    }
+    return true;
+  }
+
+  Future<void> _toggleExtra(_Extra e, bool on) async {
+    if (on && e == _Extra.nearMe && !await _ensureLocation()) return;
+    setState(() => on ? _extras.add(e) : _extras.remove(e));
   }
 
   /// The most common values in a list, for filter choices.
@@ -119,26 +158,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   Future<void> _pickArea(List<Place> all) async {
-    final areas = _top(all.map((p) => p.area).whereType<String>(), 60)..sort();
+    final counts = <String, int>{};
+    for (final p in all) {
+      if (p.area != null && p.category != 'shop') counts[p.area!] = (counts[p.area!] ?? 0) + 1;
+    }
+    final areas = counts.keys.where((a) => counts[a]! >= 2).toList()..sort();
     final picked = await showModalBottomSheet<String>(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          children: [
-            ListTile(
-              title: const Text('Any area', style: TextStyle(fontWeight: FontWeight.w700)),
-              onTap: () => Navigator.pop(sheetContext, ''),
-            ),
-            for (final a in areas)
-              ListTile(title: Text(a), onTap: () => Navigator.pop(sheetContext, a)),
-          ],
-        ),
-      ),
+      builder: (sheetContext) => _AreaSheet(areas: areas, counts: counts),
     );
     if (picked != null) setState(() => _area = picked.isEmpty ? null : picked);
   }
@@ -159,6 +188,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       appBar: AppBar(
         title: const Text('Explore'),
         actions: [
+          IconButton(
+            tooltip: 'All malls',
+            icon: const Text('🛍️', style: TextStyle(fontSize: 20)),
+            onPressed: () => context.push('/malls'),
+          ),
+          IconButton(
+            tooltip: _grid ? 'List view' : 'Photo grid',
+            icon: Icon(_grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
+            onPressed: () => setState(() => _grid = !_grid),
+          ),
           IconButton(
             tooltip: 'Surprise me',
             icon: const Text('🎲', style: TextStyle(fontSize: 22)),
@@ -270,6 +309,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     showCheckmark: false,
                     onSelected: (_) => _pickArea(all),
                   ),
+                  for (final e in _Extra.values)
+                    FilterChip(
+                      label: Text(e.label),
+                      selected: _extras.contains(e),
+                      showCheckmark: false,
+                      onSelected: (on) => _toggleExtra(e, on),
+                    ),
                 ]),
               ),
               SliverToBoxAdapter(
@@ -360,9 +406,23 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   child: EmptyState(
                     emoji: '🔍',
                     title: 'Nothing matches',
-                    message: _openNow
-                        ? 'Only places with known opening hours show under "Open now".'
+                    message: _openNow || _extras.isNotEmpty
+                        ? 'Filters only show places whose map entry says so. Try fewer filters.'
                         : null,
+                  ),
+                )
+              else if (_grid)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
+                  sliver: SliverGrid.builder(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 220,
+                      mainAxisSpacing: KSpace.sm,
+                      crossAxisSpacing: KSpace.sm,
+                      childAspectRatio: 0.8,
+                    ),
+                    itemCount: list.length,
+                    itemBuilder: (_, i) => PlaceGridTile(place: list[i]),
                   ),
                 )
               else
@@ -405,6 +465,98 @@ class _ChipRow extends StatelessWidget {
   }
 }
 
+/// Pick an area, with how many places each has and a search box.
+class _AreaSheet extends StatefulWidget {
+  const _AreaSheet({required this.areas, required this.counts});
+
+  final List<String> areas;
+  final Map<String, int> counts;
+
+  @override
+  State<_AreaSheet> createState() => _AreaSheetState();
+}
+
+class _AreaSheetState extends State<_AreaSheet> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = widget.areas.where((a) => a.toLowerCase().contains(_q.toLowerCase())).toList();
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(KSpace.md),
+            child: TextField(
+              decoration: const InputDecoration(
+                hintText: 'Find an area',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (v) => setState(() => _q = v),
+            ),
+          ),
+          ListTile(
+            title: const Text('Any area', style: TextStyle(fontWeight: FontWeight.w700)),
+            onTap: () => Navigator.pop(context, ''),
+          ),
+          for (final a in shown)
+            ListTile(
+              title: Text(a),
+              trailing: Text('${widget.counts[a]}', style: TextStyle(color: context.k.inkMuted)),
+              onTap: () => Navigator.pop(context, a),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A photo card for the grid view.
+class PlaceGridTile extends StatelessWidget {
+  const PlaceGridTile({super.key, required this.place});
+
+  final Place place;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/place/${place.id}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: PlaceImage(
+                url: place.photoUrl,
+                emoji: Categories.emoji(place.category),
+                width: double.infinity,
+                radius: 0,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(KSpace.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(place.name, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(place.area ?? place.kindLabel ?? Categories.label(place.category),
+                      style: text.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  OpenBadge(place: place),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// "Open now" / "Closed now" badge, only when the hours are known.
 class OpenBadge extends StatelessWidget {
   const OpenBadge({super.key, required this.place});
@@ -413,8 +565,11 @@ class OpenBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final open = place.isOpenAt(DateTime.now());
+    final now = DateTime.now();
+    final open = place.isOpenAt(now);
     if (open == null) return const SizedBox.shrink();
+    // e.g. "Open · closes 23:00" or "Closed · opens 10:00 tomorrow".
+    final label = place.hours?.statusText(now) ?? (open ? 'Open now' : 'Closed now');
     final color = open ? const Color(0xFF2EAD6B) : Theme.of(context).colorScheme.error;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -425,8 +580,12 @@ class OpenBadge extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(open ? 'Open now' : 'Closed now',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+        Flexible(
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+        ),
       ],
     );
   }

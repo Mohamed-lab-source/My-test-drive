@@ -10,11 +10,18 @@ import '../../widgets/common.dart';
 import 'create_group_sheet.dart';
 import 'group_detail_screen.dart' show countdownText;
 
-class GroupsScreen extends ConsumerWidget {
+class GroupsScreen extends ConsumerStatefulWidget {
   const GroupsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GroupsScreen> createState() => _GroupsScreenState();
+}
+
+class _GroupsScreenState extends ConsumerState<GroupsScreen> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
     final groups = ref.watch(myGroupsProvider);
     return Scaffold(
       appBar: AppBar(
@@ -49,13 +56,23 @@ class GroupsScreen extends ConsumerWidget {
                 actionLabel: 'Join with a code',
                 onAction: () => _showJoinSheet(context),
               )
-            : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(
-                    KSpace.md, 0, KSpace.md, 100),
-                itemCount: list.length,
-                separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
-                itemBuilder: (_, i) => _GroupTile(group: list[i]),
-              ),
+            : Builder(builder: (context) {
+                final shown = list
+                    .where((g) => g.name.toLowerCase().contains(_q.toLowerCase()))
+                    .toList();
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 100),
+                  itemCount: shown.length + 1,
+                  separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
+                  itemBuilder: (_, i) => i == 0
+                      ? TextField(
+                          decoration: const InputDecoration(
+                              hintText: 'Search your groups', prefixIcon: Icon(Icons.search)),
+                          onChanged: (v) => setState(() => _q = v),
+                        )
+                      : _GroupTile(group: shown[i - 1]),
+                );
+              }),
       ),
     );
   }

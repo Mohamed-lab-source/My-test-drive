@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/helpers.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
@@ -102,6 +103,9 @@ class _Header extends ConsumerWidget {
     final repo = ref.read(groupsRepositoryProvider);
     final mine = group.rsvp[uid];
     final going = group.rsvp.values.where((r) => r == Rsvp.going).length;
+    final maybe = group.rsvp.values.where((r) => r == Rsvp.maybe).length;
+    final cant = group.rsvp.values.where((r) => r == Rsvp.notGoing).length;
+    final waiting = group.memberUids.where((u) => !group.rsvp.containsKey(u)).length;
     final isOwner = group.isOwner(uid);
 
     return Padding(
@@ -190,8 +194,17 @@ class _Header extends ConsumerWidget {
               const SizedBox(height: KSpace.xs),
               Row(
                 children: [
-                  Text('$going going', style: text.bodySmall),
-                  const Spacer(),
+                  Expanded(
+                    child: Text(
+                      [
+                        '✅ $going going',
+                        if (maybe > 0) '🤔 $maybe maybe',
+                        if (cant > 0) "❌ $cant can't",
+                        if (waiting > 0) '⏳ $waiting no answer',
+                      ].join('  '),
+                      style: text.bodySmall,
+                    ),
+                  ),
                   if (group.scheduledAt != null)
                     Text(countdownText(group.scheduledAt!),
                         style: text.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
@@ -528,8 +541,17 @@ class _Chat extends ConsumerWidget {
           itemBuilder: (_, i) {
             final m = list[i];
             final older = i + 1 < list.length ? list[i + 1] : null;
-            final showName = m.uid != uid && older?.uid != m.uid;
-            return _Bubble(message: m, mine: m.uid == uid, showName: showName);
+            final newDay = m.createdAt != null &&
+                (older?.createdAt == null || !sameDay(older!.createdAt!, m.createdAt!));
+            final showName = m.uid != uid && (older?.uid != m.uid || newDay);
+            final bubble = _Bubble(message: m, mine: m.uid == uid, showName: showName);
+            if (!newDay) return bubble;
+            return Column(
+              children: [
+                _DayDivider(label: chatDayLabel(m.createdAt!, DateTime.now())),
+                bubble,
+              ],
+            );
           },
         );
       },
@@ -551,7 +573,12 @@ class _Bubble extends StatelessWidget {
         : DateFormat.jm().format(message.createdAt!);
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
+      child: GestureDetector(
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: message.text));
+          showMessage(context, 'Message copied');
+        },
+        child: ConstrainedBox(
         constraints: BoxConstraints(
             maxWidth: MediaQuery.sizeOf(context).width * 0.78),
         child: Container(
@@ -584,10 +611,42 @@ class _Bubble extends StatelessWidget {
             ],
           ),
         ),
+        ),
       ),
     );
   }
 }
+
+class _DayDivider extends StatelessWidget {
+  const _DayDivider({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KSpace.sm),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: context.k.line)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KSpace.sm),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Expanded(child: Divider(color: context.k.line)),
+        ],
+      ),
+    );
+  }
+}
+
+const _quickReplies = [
+  '🚗 On my way',
+  '⏰ Running 10 min late',
+  "📍 I'm here",
+  '👍 Sounds good',
+  '🙏 Can we change the time?',
+];
 
 class _Composer extends ConsumerStatefulWidget {
   const _Composer({required this.group, required this.uid});
@@ -609,8 +668,17 @@ class _ComposerState extends ConsumerState<_Composer> {
     super.dispose();
   }
 
-  Future<void> _send() async {
-    final text = _controller.text.trim();
+  Future<void> _sendMyLocation() async {
+    try {
+      final here = await ref.read(locationServiceProvider).current();
+      await _send(myLocationText(here.$1, here.$2));
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
+  Future<void> _send([String? quick]) async {
+    final text = (quick ?? _controller.text).trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     final name = ref.read(myProfileProvider).value?.displayName ?? 'Someone';
@@ -621,7 +689,7 @@ class _ComposerState extends ConsumerState<_Composer> {
             name: name,
             text: text,
           );
-      _controller.clear();
+      if (quick == null) _controller.clear();
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -632,13 +700,34 @@ class _ComposerState extends ConsumerState<_Composer> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.sm, KSpace.sm, KSpace.sm),
+      padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.xs, KSpace.sm, KSpace.sm),
       decoration: BoxDecoration(
         color: context.k.surface,
         border: Border(top: BorderSide(color: context.k.line)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _quickReplies.length,
+              separatorBuilder: (_, _) => const SizedBox(width: KSpace.xs),
+              itemBuilder: (_, i) => ActionChip(
+                visualDensity: VisualDensity.compact,
+                label: Text(_quickReplies[i]),
+                onPressed: _sending ? null : () => _send(_quickReplies[i]),
+              ),
+            ),
+          ),
+          Row(
+        children: [
+          IconButton(
+            tooltip: 'Send my location',
+            onPressed: _sending ? null : _sendMyLocation,
+            icon: const Icon(Icons.my_location),
+          ),
           Expanded(
             child: TextField(
               controller: _controller,
@@ -659,6 +748,8 @@ class _ComposerState extends ConsumerState<_Composer> {
             onPressed: _sending ? null : _send,
             icon: const Icon(Icons.send_rounded),
           ),
+        ],
+      ),
         ],
       ),
     );

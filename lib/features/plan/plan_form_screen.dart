@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/helpers.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/plan.dart';
@@ -28,6 +29,9 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   DateTime? _date; // null = today
   int _stops = 3;
   String? _mallId;
+  bool _skipVisited = false;
+  bool _preferFavorites = true;
+  bool _onlyOpen = true;
   final _budget = TextEditingController();
   final _notes = TextEditingController();
 
@@ -63,6 +67,13 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
       mallId: _mallId,
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       date: _date == null ? null : DateFormat('yyyy-MM-dd').format(_date!),
+      excludePlaceIds: _skipVisited
+          ? (ref.read(visitedIdsProvider).value ?? const <String>[]).take(100).toList()
+          : const [],
+      preferPlaceIds: _preferFavorites
+          ? (ref.read(favoriteIdsProvider).value ?? const <String>[]).take(50).toList()
+          : const [],
+      onlyOpen: _onlyOpen,
     );
     final id = await runPlanGeneration(context, ref, request);
     if (id != null && mounted) context.push('/plan/$id');
@@ -99,10 +110,13 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 120),
         children: [
+          Text(greeting(DateTime.now().hour, ref.watch(myProfileProvider).value?.displayName),
+              style: text.titleMedium?.copyWith(color: context.k.accent)),
           Text("Where are we going?", style: text.headlineMedium),
           const SizedBox(height: KSpace.xs),
           Text('Tell us the vibe. We only suggest real places.',
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+          const _NextOutingCard(),
           const SectionTitle('Quick start'),
           Wrap(
             spacing: KSpace.sm,
@@ -141,6 +155,16 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 onSelected: (_) => setState(() {
                   final now = DateTime.now();
                   _date = DateTime(now.year, now.month, now.day + 1);
+                }),
+              ),
+              ChoiceChip(
+                label: const Text('Friday'),
+                selected: _date != null && _date!.weekday == DateTime.friday && !_isTomorrow(_date),
+                showCheckmark: false,
+                onSelected: (_) => setState(() {
+                  final now = DateTime.now();
+                  final fri = nextWeekday(now, DateTime.friday);
+                  _date = sameDay(fri, now) ? null : fri;
                 }),
               ),
               ActionChip(
@@ -241,6 +265,27 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               onChanged: (v) => setState(() => _mallId = v),
             ),
           ],
+          const SectionTitle('Choices'),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Only places open at that time'),
+            subtitle: const Text('Uses real opening hours when the map has them'),
+            value: _onlyOpen,
+            onChanged: (v) => setState(() => _onlyOpen = v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Prefer my favorite places'),
+            value: _preferFavorites,
+            onChanged: (v) => setState(() => _preferFavorites = v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text("Skip places I've been"),
+            subtitle: const Text('Discover somewhere new'),
+            value: _skipVisited,
+            onChanged: (v) => setState(() => _skipVisited = v),
+          ),
           const SectionTitle('Anything else? (optional)'),
           TextField(
             controller: _notes,
@@ -376,3 +421,26 @@ const _presets = [
   _Preset('🏛️ Culture trip', 2, ['culture'], 'morning', 3),
   _Preset('🌙 Late night', 4, ['nightlife', 'foodie'], 'night', 2),
 ];
+
+/// Your next group outing, with a countdown. Hidden when there's none.
+class _NextOutingCard extends ConsumerWidget {
+  const _NextOutingCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final g = ref.watch(nextOutingProvider);
+    if (g == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.md),
+      child: Card(
+        child: ListTile(
+          leading: const Text('🎉', style: TextStyle(fontSize: 26)),
+          title: Text('Next outing: ${g.name}', maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text(DateFormat('EEE d MMM · h:mm a').format(g.scheduledAt!)),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push('/group/${g.id}'),
+        ),
+      ),
+    );
+  }
+}

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
@@ -33,6 +35,15 @@ class PlanResultScreen extends ConsumerWidget {
               icon: const Icon(Icons.share_outlined),
               onPressed: () => SharePlus.instance.share(ShareParams(text: planShareText(loaded))),
             ),
+          if (loaded != null)
+            PopupMenuButton<String>(
+              onSelected: (v) => _menu(context, ref, loaded, v),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'copy', child: Text('Copy plan as text')),
+                PopupMenuItem(value: 'calendar', child: Text('Add to Google Calendar')),
+                PopupMenuItem(value: 'duplicate', child: Text('Make a copy')),
+              ],
+            ),
         ],
       ),
       body: AsyncView<OutingPlan?>(
@@ -43,6 +54,28 @@ class PlanResultScreen extends ConsumerWidget {
             : _PlanBody(plan: p),
       ),
     );
+  }
+}
+
+Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String action) async {
+  switch (action) {
+    case 'copy':
+      await Clipboard.setData(ClipboardData(text: planShareText(plan)));
+      if (context.mounted) showMessage(context, 'Plan copied. Paste it anywhere.');
+    case 'calendar':
+      await openUri(planCalendarLink(plan));
+    case 'duplicate':
+      final uid = ref.read(uidProvider);
+      if (uid == null) return;
+      try {
+        final id = await ref.read(plansRepositoryProvider).duplicate(uid, plan);
+        if (context.mounted) {
+          showMessage(context, 'Copy made');
+          context.push('/plan/$id');
+        }
+      } catch (e) {
+        if (context.mounted) showError(context, e);
+      }
   }
 }
 
@@ -67,6 +100,8 @@ class _PlanBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final uid = ref.watch(uidProvider)!;
+    final done = ref.watch(planChecklistProvider);
+    final endsAt = planEndTime(plan.stops);
     return ListView(
       padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
       children: [
@@ -99,6 +134,8 @@ class _PlanBody extends ConsumerWidget {
             Pill(TimesOfDay.all[plan.request.timeOfDay] ?? plan.request.timeOfDay),
             if (plan.request.date != null) Pill(DateFormat('EEE d MMM').format(plan.request.day)),
             if (plan.isMallLocked) const Pill('🛍️ One mall'),
+            if (endsAt != null && plan.stops.first.startTime != null)
+              Pill('🕘 ${plan.stops.first.startTime}–$endsAt'),
           ],
         ),
         if (plan.weatherNote != null) ...[
@@ -120,6 +157,10 @@ class _PlanBody extends ConsumerWidget {
             index: i,
             isFirst: i == 0,
             isLast: i == plan.stops.length - 1,
+            done: done.contains(PlanChecklist.keyFor(plan.id, plan.stops[i].placeId)),
+            onToggleDone: () =>
+                ref.read(planChecklistProvider.notifier).toggle(plan.id, plan.stops[i].placeId),
+            legUrl: i == 0 ? null : legMapsUrl(plan.stops[i - 1], plan.stops[i]),
             onSwap: () => _showSwapSheet(context, ref, plan, i),
             onUp: i == 0 ? null : () => _editStops(context, ref, plan, moveStop(plan.stops, i, i - 1)),
             onDown: i == plan.stops.length - 1
@@ -228,12 +269,20 @@ class _StopTile extends StatelessWidget {
     required this.isFirst,
     required this.isLast,
     required this.onSwap,
+    required this.done,
+    required this.onToggleDone,
+    this.legUrl,
     this.onUp,
     this.onDown,
     this.onRemove,
   });
 
   final VoidCallback onSwap;
+  final bool done;
+  final VoidCallback onToggleDone;
+
+  /// Directions from the previous stop, when both have coordinates.
+  final Uri? legUrl;
   final VoidCallback? onUp;
   final VoidCallback? onDown;
   final VoidCallback? onRemove;
@@ -246,8 +295,9 @@ class _StopTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final end = stopEndTime(stop);
     final meta = [
-      if (stop.startTime != null) stop.startTime!,
+      if (stop.startTime != null) end == null ? stop.startTime! : '${stop.startTime}–$end',
       if (stop.durationMinutes != null) _duration(stop.durationMinutes!),
       if (stop.area != null) stop.area!,
       if (stop.cuisine != null) stop.cuisine!,
@@ -268,9 +318,11 @@ class _StopTile extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                       color: context.k.accent, shape: BoxShape.circle),
-                  child: Text('${index + 1}',
-                      style: TextStyle(
-                          color: context.k.onAccent, fontWeight: FontWeight.w700)),
+                  child: done
+                      ? Icon(Icons.check, size: 18, color: context.k.onAccent)
+                      : Text('${index + 1}',
+                          style: TextStyle(
+                              color: context.k.onAccent, fontWeight: FontWeight.w700)),
                 ),
                 if (!isLast)
                   Expanded(
@@ -289,9 +341,24 @@ class _StopTile extends StatelessWidget {
                   if (stop.kmFromPrevious != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: KSpace.xs),
-                      child: Text(
-                        '↓ ${stop.kmFromPrevious!.toStringAsFixed(1)} km from the last stop (straight line)',
-                        style: text.bodySmall,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '↓ ${stop.kmFromPrevious!.toStringAsFixed(1)} km from the last stop (straight line)',
+                              style: text.bodySmall,
+                            ),
+                          ),
+                          if (legUrl != null)
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: KSpace.sm)),
+                              onPressed: () => openUri(legUrl!),
+                              icon: const Icon(Icons.directions, size: 16),
+                              label: const Text('Directions'),
+                            ),
+                        ],
                       ),
                     ),
                   Card(
@@ -316,7 +383,9 @@ class _StopTile extends StatelessWidget {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(stop.name, style: text.titleMedium),
+                                      Text(stop.name,
+                                          style: text.titleMedium?.copyWith(
+                                              decoration: done ? TextDecoration.lineThrough : null)),
                                       const SizedBox(height: 2),
                                       Text(
                                         meta.isEmpty
@@ -326,6 +395,12 @@ class _StopTile extends StatelessWidget {
                                       ),
                                     ],
                                   ),
+                                ),
+                                IconButton(
+                                  tooltip: done ? 'Not done yet' : 'Mark as done',
+                                  onPressed: onToggleDone,
+                                  icon: Icon(done ? Icons.check_circle : Icons.check_circle_outline,
+                                      color: done ? context.k.accent : context.k.inkMuted),
                                 ),
                               ],
                             ),

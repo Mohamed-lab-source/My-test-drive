@@ -4,12 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/helpers.dart';
 import '../../app/local_history.dart';
+import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
+import '../../models/plan.dart';
 import '../../widgets/common.dart';
-import '../../planner/planner.dart' show similarNearby, nearbyPlaces, haversineKm;
+import '../../planner/planner.dart' show similarNearby, nearbyPlaces, haversineKm, addStop;
 import '../../widgets/launchers.dart';
 import 'explore_screen.dart';
 
@@ -177,6 +180,33 @@ class _Details extends ConsumerWidget {
                 icon: const Icon(Icons.language),
                 label: const Text('Website'),
               ),
+            if (wazeUrl(place) != null)
+              OutlinedButton.icon(
+                onPressed: () => openUri(wazeUrl(place)!),
+                icon: const Icon(Icons.navigation_outlined),
+                label: const Text('Waze'),
+              ),
+            OutlinedButton.icon(
+              onPressed: () => openUri(googleSearchUrl(place)),
+              icon: const Icon(Icons.travel_explore),
+              label: const Text('Reviews & menus on Google'),
+            ),
+            if (wikidataUrl(place) != null)
+              OutlinedButton.icon(
+                onPressed: () => openUri(wikidataUrl(place)!),
+                icon: const Icon(Icons.menu_book_outlined),
+                label: const Text('Wikipedia / Wikidata'),
+              ),
+            OutlinedButton.icon(
+              onPressed: () => _addToPlan(context, ref, place),
+              icon: const Icon(Icons.playlist_add),
+              label: const Text('Add to a plan'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _sendToGroup(context, ref, place),
+              icon: const Icon(Icons.forum_outlined),
+              label: const Text('Send to a group'),
+            ),
           ],
         ),
         if (facts.labels.isNotEmpty) ...[
@@ -189,12 +219,16 @@ class _Details extends ConsumerWidget {
         ],
         if (place.openingHours != null) ...[
           const SectionTitle('Opening hours'),
-          Text(_friendlyHours(place.openingHours!), style: text.bodyMedium),
+          if (place.hours?.weekTable() case final table?)
+            _HoursTable(table: table)
+          else
+            Text(_friendlyHours(place.openingHours!), style: text.bodyMedium),
           const SizedBox(height: KSpace.xs),
           Text('Hours can change. Call ahead if it matters.', style: text.bodySmall),
         ],
         const SizedBox(height: KSpace.md),
         _VisitedAndNote(place: place),
+        _MyRating(place: place),
         if (place.category == 'mall') _MallDirectory(mall: place),
         if (place.category != 'mall') _PlaceList(
           title: 'Similar places nearby',
@@ -525,5 +559,165 @@ class _PlaceList extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+/// The week's opening hours as a table, today in bold.
+class _HoursTable extends StatelessWidget {
+  const _HoursTable({required this.table});
+
+  final List<(String, String)> table;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now().weekday - 1;
+    return Column(
+      children: [
+        for (final (i, (day, hours)) in table.indexed)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 64,
+                  child: Text(i == today ? '$day •' : day,
+                      style: TextStyle(
+                          fontWeight: i == today ? FontWeight.w800 : FontWeight.w500,
+                          color: i == today ? context.k.accent : context.k.ink)),
+                ),
+                Expanded(
+                  child: Text(hours,
+                      style: TextStyle(
+                          fontWeight: i == today ? FontWeight.w700 : FontWeight.w400,
+                          color: hours == 'Closed' ? context.k.inkMuted : context.k.ink)),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Your own star rating, saved on this phone only and shown only to you.
+class _MyRating extends ConsumerWidget {
+  const _MyRating({required this.place});
+
+  final Place place;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stars = ref.watch(myRatingsProvider)[place.id] ?? 0;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.sm),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Your rating', style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text('Only you can see it, on this phone',
+                      style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+            for (var i = 1; i <= 5; i++)
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: '$i star${i == 1 ? '' : 's'}',
+                onPressed: () =>
+                    ref.read(myRatingsProvider.notifier).set(place.id, stars == i ? null : i),
+                icon: Icon(i <= stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                    color: i <= stars ? context.k.accent : context.k.inkMuted),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Adds this place as the last stop of one of your recent plans.
+Future<void> _addToPlan(BuildContext context, WidgetRef ref, Place place) async {
+  final uid = ref.read(uidProvider);
+  if (uid == null) return;
+  final plans = (await ref.read(allPlansProvider.future))
+      .where((p) => p.stops.length < 5 && !p.stops.any((s) => s.placeId == place.id))
+      .take(15)
+      .toList();
+  if (!context.mounted) return;
+  if (plans.isEmpty) {
+    showMessage(context, 'No plan with room for another stop. Make a plan first.');
+    return;
+  }
+  final picked = await showModalBottomSheet<OutingPlan>(
+    context: context,
+    useSafeArea: true,
+    builder: (sheetContext) => ListView(
+      shrinkWrap: true,
+      padding: const EdgeInsets.all(KSpace.md),
+      children: [
+        Text('Add to which plan?', style: Theme.of(sheetContext).textTheme.titleLarge),
+        const SizedBox(height: KSpace.sm),
+        for (final p in plans)
+          ListTile(
+            leading: const Icon(Icons.map_outlined),
+            title: Text(p.title),
+            subtitle: Text('${p.stops.length} stops'),
+            onTap: () => Navigator.pop(sheetContext, p),
+          ),
+      ],
+    ),
+  );
+  if (picked == null) return;
+  try {
+    await ref.read(plansRepositoryProvider).updateStops(uid, picked.id, addStop(picked.stops, place));
+    if (context.mounted) showMessage(context, 'Added to "${picked.title}"');
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}
+
+/// Posts this place (name, area, map link) into one of your group chats.
+Future<void> _sendToGroup(BuildContext context, WidgetRef ref, Place place) async {
+  final uid = ref.read(uidProvider);
+  if (uid == null) return;
+  final groups = await ref.read(myGroupsProvider.future);
+  if (!context.mounted) return;
+  if (groups.isEmpty) {
+    showMessage(context, "You're not in any group yet.");
+    return;
+  }
+  final picked = await showModalBottomSheet<String>(
+    context: context,
+    useSafeArea: true,
+    builder: (sheetContext) => ListView(
+      shrinkWrap: true,
+      padding: const EdgeInsets.all(KSpace.md),
+      children: [
+        Text('Send to which group?', style: Theme.of(sheetContext).textTheme.titleLarge),
+        const SizedBox(height: KSpace.sm),
+        for (final g in groups)
+          ListTile(
+            leading: const Icon(Icons.forum_outlined),
+            title: Text(g.name),
+            onTap: () => Navigator.pop(sheetContext, g.id),
+          ),
+      ],
+    ),
+  );
+  if (picked == null) return;
+  try {
+    await ref.read(groupsRepositoryProvider).sendMessage(
+          groupId: picked,
+          uid: uid,
+          name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
+          text: placeChatText(place),
+        );
+    if (context.mounted) showMessage(context, 'Sent to the group');
+  } catch (e) {
+    if (context.mounted) showError(context, e);
   }
 }

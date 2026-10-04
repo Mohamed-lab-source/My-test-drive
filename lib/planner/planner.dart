@@ -85,6 +85,8 @@ double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random rand
     score -= input.timeOfDay == 'night' ? 1000 : 15;
   }
   if (isBadWeather(weather) && !isIndoor(p)) score -= 25;
+  // The person's favorites get a boost (still only if they fit the vibe).
+  if (input.preferPlaceIds.contains(p.id)) score += 20;
   // Real opening hours: avoid places we know are closed when the outing starts.
   if (startsAt != null) {
     final open = p.isOpenAt(startsAt);
@@ -120,7 +122,9 @@ List<Place> pickCandidates(
   List<Place> rank(bool useExclude) {
     final scored = <(Place, double)>[
       for (final p in places)
-        if (passesFilters(p, input) && (!useExclude || !exclude.contains(p.id)))
+        if (passesFilters(p, input) &&
+            (!useExclude || !exclude.contains(p.id)) &&
+            !(input.onlyOpen && startsAt != null && p.isOpenAt(startsAt) == false))
           (p, scorePlace(p, input, weather, rnd, startsAt: startsAt)),
     ]..removeWhere((x) => x.$2 < -500);
     scored.sort((a, b) => b.$2.compareTo(a.$2));
@@ -552,4 +556,69 @@ List<PlanStop> addStop(List<PlanStop> stops, Place place) {
       durationMinutes: _defaultMinutes[place.category] ?? 60,
     ),
   ]);
+}
+
+// ---------------------------------------------------------------------------
+// Timing, calendar and directions for a plan
+// ---------------------------------------------------------------------------
+
+int? _minutesOf(String? hhmm) {
+  final parts = hhmm?.split(':');
+  if (parts == null || parts.length != 2) return null;
+  final h = int.tryParse(parts[0]);
+  final m = int.tryParse(parts[1]);
+  return h == null || m == null ? null : h * 60 + m;
+}
+
+/// When a stop ends ("19:30"), from its start time and planned length.
+String? stopEndTime(PlanStop s) {
+  final start = _minutesOf(s.startTime);
+  if (start == null || s.durationMinutes == null) return null;
+  return _hhmm(start + s.durationMinutes!);
+}
+
+/// When the whole outing ends: the last stop with a start and a length.
+String? planEndTime(List<PlanStop> stops) {
+  for (final s in stops.reversed) {
+    final end = stopEndTime(s);
+    if (end != null) return end;
+  }
+  return null;
+}
+
+/// Google Maps directions from one stop to the next (real coordinates only).
+Uri? legMapsUrl(PlanStop from, PlanStop to) {
+  if (!from.hasLocation || !to.hasLocation) return null;
+  return Uri.https('www.google.com', '/maps/dir/', {
+    'api': '1',
+    'origin': '${from.lat},${from.lng}',
+    'destination': '${to.lat},${to.lng}',
+  });
+}
+
+/// A Google Calendar "add event" link for a plan on its day.
+Uri planCalendarLink(OutingPlan plan) {
+  final day = plan.request.day;
+  final startMin = _minutesOf(plan.stops.isEmpty ? null : plan.stops.first.startTime) ??
+      _minutesOf(startHour[plan.request.timeOfDay])!;
+  final endMin = _minutesOf(planEndTime(plan.stops)) ?? startMin + 180;
+  final start = DateTime(day.year, day.month, day.day).add(Duration(minutes: startMin));
+  final end = DateTime(day.year, day.month, day.day)
+      .add(Duration(minutes: endMin <= startMin ? endMin + 1440 : endMin));
+  String fmt(DateTime d) {
+    final u = d.toUtc();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${u.year}${two(u.month)}${two(u.day)}T${two(u.hour)}${two(u.minute)}00Z';
+  }
+
+  return Uri.https('calendar.google.com', '/calendar/render', {
+    'action': 'TEMPLATE',
+    'text': plan.title,
+    'dates': '${fmt(start)}/${fmt(end)}',
+    'details': [
+      for (final (i, s) in plan.stops.indexed) '${i + 1}. ${s.startTime ?? ''} ${s.name}'.trim(),
+      'Planned with Khroga',
+    ].join('\n'),
+    if (plan.stops.isNotEmpty && plan.stops.first.area != null) 'location': plan.stops.first.area!,
+  });
 }

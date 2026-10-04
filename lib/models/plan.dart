@@ -13,7 +13,15 @@ class PlanRequest {
     this.notes,
     this.excludePlaceIds = const [],
     this.date,
+    this.preferPlaceIds = const [],
+    this.onlyOpen = false,
   });
+
+  /// Places the person likes (their favorites): ranked higher, never forced.
+  final List<String> preferPlaceIds;
+
+  /// Leave out places whose real hours say they're closed when the outing starts.
+  final bool onlyOpen;
 
   /// The day of the outing as "yyyy-MM-dd" (null = today).
   final String? date;
@@ -48,6 +56,8 @@ class PlanRequest {
         'notes': notes,
         'excludePlaceIds': excludePlaceIds,
         'date': date,
+        'preferPlaceIds': preferPlaceIds,
+        'onlyOpen': onlyOpen,
       };
 
   factory PlanRequest.fromMap(Map<String, dynamic> m) => PlanRequest(
@@ -63,6 +73,10 @@ class PlanRequest {
             .whereType<String>()
             .toList(),
         date: m['date'] as String?,
+        preferPlaceIds: ((m['preferPlaceIds'] as List?) ?? const [])
+            .whereType<String>()
+            .toList(),
+        onlyOpen: (m['onlyOpen'] as bool?) ?? false,
       );
 
   PlanRequest copyWith({List<String>? excludePlaceIds}) => PlanRequest(
@@ -76,6 +90,8 @@ class PlanRequest {
         notes: notes,
         excludePlaceIds: excludePlaceIds ?? this.excludePlaceIds,
         date: date,
+        preferPlaceIds: preferPlaceIds,
+        onlyOpen: onlyOpen,
       );
 }
 

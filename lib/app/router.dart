@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../data/providers.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/explore/explore_screen.dart';
+import '../features/explore/malls_screen.dart';
 import '../features/explore/place_details_screen.dart';
 import '../features/friends/friends_screen.dart';
 import '../features/friends/qr_scan_screen.dart';
@@ -16,6 +17,7 @@ import '../features/groups/groups_screen.dart';
 import '../features/plan/plan_form_screen.dart';
 import '../features/plan/plan_result_screen.dart';
 import '../features/plan/saved_plans_screen.dart';
+import '../features/profile/about_screen.dart';
 import '../features/profile/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -72,6 +74,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/scan', builder: (_, _) => const QrScanScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(path: '/malls', builder: (_, _) => const MallsScreen()),
+      GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
     ],
   );
 });

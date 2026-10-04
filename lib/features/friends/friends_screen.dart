@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -51,6 +52,14 @@ class FriendsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Friends'),
         actions: [
+          if (me?.username != null)
+            IconButton(
+              tooltip: 'Share my username',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => SharePlus.instance.share(ShareParams(
+                  text: 'Add me on Khroga: @${me!.username}\n'
+                      'Open Friends, search "${me.username}" and tap Add.')),
+            ),
           if (me?.username != null)
             IconButton(
               tooltip: 'My QR code',

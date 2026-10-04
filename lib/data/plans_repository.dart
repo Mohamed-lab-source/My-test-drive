@@ -113,6 +113,19 @@ class PlansRepository {
   Future<void> setSaved(String uid, String planId, bool saved) =>
       _plans(uid).doc(planId).update({'saved': saved});
 
+  /// Saves a copy of a plan (e.g. to try changes but keep the original).
+  Future<String> duplicate(String uid, OutingPlan plan) async {
+    final t = 'Copy of ${plan.title}';
+    final doc = _plans(uid).doc();
+    await doc.set({
+      ...plan.toMap(),
+      'title': t.length > 80 ? t.substring(0, 80) : t,
+      'saved': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    return doc.id;
+  }
+
   Future<void> delete(String uid, String planId) =>
       _plans(uid).doc(planId).delete();
 }

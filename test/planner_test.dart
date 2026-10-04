@@ -59,6 +59,39 @@ List<Place> pick(PlanRequest r, [Weather? w]) =>
 
 void main() {
   _hoursAndSwapTests();
+  test('favorites get a boost but must still fit the vibe', () {
+    const base = PlanRequest(city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'afternoon');
+    const fav = PlanRequest(
+        city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'afternoon', preferPlaceIds: ['r1', 'e1']);
+    final p = places.firstWhere((x) => x.id == 'r1');
+    expect(scorePlace(p, fav, null, Random(1)), greaterThan(scorePlace(p, base, null, Random(1))));
+    // An escape room doesn't fit "chill", favorite or not.
+    expect(pickCandidates(places, fav, null, random: Random(1)).map((x) => x.id), isNot(contains('e1')));
+  });
+
+  test('"only open" drops places known to be closed, keeps unknown hours', () {
+    final list = [
+      _p('open', 'cafe', hours: 'Mo-Su 08:00-23:00'),
+      _p('closed', 'cafe', hours: 'Mo-Su 20:00-23:00'),
+      _p('unknown', 'cafe'),
+    ];
+    const r = PlanRequest(
+        city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'afternoon', onlyOpen: true);
+    final ids = pickCandidates(list, r, null, random: Random(1), now: DateTime(2026, 10, 5))
+        .map((x) => x.id);
+    expect(ids, containsAll(['open', 'unknown']));
+    expect(ids, isNot(contains('closed')));
+  });
+
+  test('new request fields survive saving and loading', () {
+    const r = PlanRequest(
+        city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening',
+        preferPlaceIds: ['a'], onlyOpen: true);
+    final back = PlanRequest.fromMap(r.toMap());
+    expect(back.preferPlaceIds, ['a']);
+    expect(back.onlyOpen, isTrue);
+    expect(back.copyWith(excludePlaceIds: ['x']).onlyOpen, isTrue);
+  });
   test('candidates stay in the chosen city', () {
     final c = pick(req());
     expect(c, isNotEmpty);
