@@ -75,11 +75,11 @@ class _GroupTile extends StatelessWidget {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.xs),
         leading: CircleAvatar(
-          backgroundColor: KColors.accentSoft,
+          backgroundColor: context.k.accentSoft,
           child: Text(
             group.name.isEmpty ? '?' : group.name.characters.first.toUpperCase(),
-            style: const TextStyle(
-                color: KColors.accent, fontWeight: FontWeight.w700),
+            style: TextStyle(
+                color: context.k.accent, fontWeight: FontWeight.w700),
           ),
         ),
         title: Text(group.name,

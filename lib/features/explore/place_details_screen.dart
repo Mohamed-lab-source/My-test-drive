@@ -45,7 +45,7 @@ class _Details extends ConsumerWidget {
           height: 120,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: KColors.accentSoft,
+            color: context.k.accentSoft,
             borderRadius: BorderRadius.circular(KRadius.card),
           ),
           child: Text(Categories.emoji(place.category),
@@ -56,7 +56,7 @@ class _Details extends ConsumerWidget {
         if (place.nameAr != null && place.nameAr != place.name)
           Text(place.nameAr!,
               textDirection: TextDirection.rtl,
-              style: text.titleMedium?.copyWith(color: KColors.inkMuted)),
+              style: text.titleMedium?.copyWith(color: context.k.inkMuted)),
         const SizedBox(height: KSpace.sm),
         Wrap(
           spacing: KSpace.sm,
@@ -73,7 +73,7 @@ class _Details extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.place_outlined, size: 20, color: KColors.inkMuted),
+              Icon(Icons.place_outlined, size: 20, color: context.k.inkMuted),
               const SizedBox(width: KSpace.sm),
               Expanded(child: Text(place.address!)),
             ],

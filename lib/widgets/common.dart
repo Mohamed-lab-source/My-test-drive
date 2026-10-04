@@ -106,7 +106,7 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: KSpace.sm),
               Text(
                 message!,
-                style: text.bodyMedium?.copyWith(color: KColors.inkMuted),
+                style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -165,7 +165,7 @@ class PlaceImage extends StatelessWidget {
     final placeholder = Container(
       width: width,
       height: height,
-      color: KColors.accentSoft,
+      color: context.k.accentSoft,
       alignment: Alignment.center,
       child: Text(emoji, style: const TextStyle(fontSize: 26)),
     );
@@ -197,12 +197,12 @@ class Avatar extends StatelessWidget {
     final url = profile?.photoUrl;
     return CircleAvatar(
       radius: size / 2,
-      backgroundColor: KColors.accentSoft,
+      backgroundColor: context.k.accentSoft,
       foregroundImage: url == null ? null : NetworkImage(url),
       child: Text(
         profile?.initials ?? '?',
         style: TextStyle(
-          color: KColors.accent,
+          color: context.k.accent,
           fontWeight: FontWeight.w700,
           fontSize: size * 0.38,
         ),
@@ -225,14 +225,14 @@ class Pill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: ShapeDecoration(
         shape: const StadiumBorder(),
-        color: color ?? KColors.background,
+        color: color ?? context.k.background,
       ),
       child: Text(
         text,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: textColor ?? KColors.inkMuted,
+          color: textColor ?? context.k.inkMuted,
         ),
       ),
     );

@@ -5,6 +5,7 @@ import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../widgets/common.dart';
 import '../auth/username_sheet.dart';
+import 'theme_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -28,12 +29,20 @@ class ProfileScreen extends ConsumerWidget {
           if (me?.username != null)
             Center(
               child: Text('@${me!.username}',
-                  style: text.bodyMedium?.copyWith(color: KColors.inkMuted)),
+                  style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
             ),
           const SizedBox(height: KSpace.lg),
           Card(
             child: Column(
               children: [
+                ListTile(
+                  leading: const Icon(Icons.palette_outlined),
+                  title: const Text('Look & colors'),
+                  subtitle: const Text('Dark mode and color themes'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => showThemeSheet(context),
+                ),
+                const Divider(),
                 ListTile(
                   leading: const Icon(Icons.badge_outlined),
                   title: const Text('Display name'),
@@ -61,7 +70,7 @@ class ProfileScreen extends ConsumerWidget {
             Text(
               "You're using Khroga as a guest. Sign in to keep your plans on "
               'any phone and to add friends.',
-              style: text.bodyMedium?.copyWith(color: KColors.inkMuted),
+              style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
             ),
             const SizedBox(height: KSpace.sm),
             BusyButton(

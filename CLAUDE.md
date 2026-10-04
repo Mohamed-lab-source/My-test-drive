@@ -66,7 +66,10 @@ Without the secret it still builds a "not connected" test APK.
 
 ```
 lib/
-  app/theme.dart        all colors/spacing (KColors, KSpace): redesigns start here
+  app/theme.dart        themes: 6 accent themes x light/dark. Screens read colors
+                        with `context.k.<color>` (never fixed colors); test/theme_test.dart
+                        checks text contrast for every theme
+  app/theme_settings.dart  saved look (dark by default), shared_preferences
   app/router.dart       go_router, 4 tabs: Plan, Explore, Groups, Friends
   models/               place.dart, plan.dart, social.dart
   planner/planner.dart  pure planning logic (tested in test/planner_test.dart)
@@ -93,6 +96,7 @@ cd rules-test && npm install && npm test   # needs Java + firebase-tools
 
 ## Gotchas
 
+- Don't hard-code colors (no `Colors.white` on accents): use `context.k.onAccent` etc.
 - Pill shapes use `StadiumBorder` (never `ContinuousRectangleBorder` at big radii).
 - Never commit real Firebase config or keys; CI generates them at build time.
 - Firestore rules on queries: a query must filter on what the rule checks
@@ -104,5 +108,5 @@ cd rules-test && npm install && npm test   # needs Java + firebase-tools
 ## Not built yet
 
 Localization (Arabic first), user-submitted menus/prices, crowd check-ins,
-"where is everyone" map, location share, custom accent color, iOS build,
+"where is everyone" map, location share, iOS build,
 photos (could use Wikimedia Commons, free).

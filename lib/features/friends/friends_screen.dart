@@ -172,10 +172,10 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
           onChanged: _onChanged,
         ),
         if (_query.trim().length >= 2 && !_loading && visible.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(KSpace.md),
+          Padding(
+            padding: const EdgeInsets.all(KSpace.md),
             child: Text('No one with that username.',
-                style: TextStyle(color: KColors.inkMuted)),
+                style: TextStyle(color: context.k.inkMuted)),
           ),
         for (final p in visible)
           ListTile(
@@ -188,7 +188,7 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
                     known[p.uid]!.status == FriendshipStatus.accepted
                         ? 'Friends'
                         : 'Requested',
-                    style: const TextStyle(color: KColors.inkMuted))
+                    style: TextStyle(color: context.k.inkMuted))
                 : FilledButton.tonal(
                     onPressed: () async {
                       try {
@@ -276,11 +276,11 @@ class _FriendLists extends ConsumerWidget {
         ],
         SectionTitle('Friends (${friends.length})'),
         if (friends.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: KSpace.md),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: KSpace.md),
             child: Text(
               'Search for friends above, or scan their QR code.',
-              style: TextStyle(color: KColors.inkMuted),
+              style: TextStyle(color: context.k.inkMuted),
             ),
           ),
         for (final f in friends)

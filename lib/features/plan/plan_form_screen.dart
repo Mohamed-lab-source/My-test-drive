@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
+import '../profile/theme_sheet.dart';
 
 /// The home tab: describe your outing, get a real plan.
 class PlanFormScreen extends ConsumerStatefulWidget {
@@ -76,6 +77,11 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         title: const Text('Khroga'),
         actions: [
           IconButton(
+            tooltip: 'Look & colors',
+            icon: const Icon(Icons.palette_outlined),
+            onPressed: () => showThemeSheet(context),
+          ),
+          IconButton(
             tooltip: 'Saved plans',
             icon: const Icon(Icons.bookmark_outline),
             onPressed: () => context.push('/saved'),
@@ -93,7 +99,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           Text("Where are we going?", style: text.headlineMedium),
           const SizedBox(height: KSpace.xs),
           Text('Tell us the vibe. We only suggest real places.',
-              style: text.bodyMedium?.copyWith(color: KColors.inkMuted)),
+              style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const SectionTitle('City'),
           SegmentedButton<String>(
             showSelectedIcon: false,
@@ -229,7 +235,7 @@ class _GeneratingDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Dialog(
+    return Dialog(
       child: Padding(
         padding: EdgeInsets.all(KSpace.lg),
         child: Column(
@@ -242,7 +248,7 @@ class _GeneratingDialog extends StatelessWidget {
             SizedBox(height: KSpace.xs),
             Text('Picking real places and checking the weather',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: KColors.inkMuted)),
+                style: TextStyle(color: context.k.inkMuted)),
           ],
         ),
       ),

@@ -181,7 +181,7 @@ class PlaceTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: KColors.inkMuted),
+              Icon(Icons.chevron_right, color: context.k.inkMuted),
             ],
           ),
         ),

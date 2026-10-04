@@ -215,8 +215,8 @@ void _showPlan(BuildContext context, Group group) {
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
-                  backgroundColor: KColors.accent,
-                  foregroundColor: Colors.white,
+                  backgroundColor: context.k.accent,
+                  foregroundColor: context.k.onAccent,
                   child: Text('${i + 1}'),
                 ),
                 title: Text(stop.name),
@@ -278,11 +278,11 @@ class _MembersSheet extends ConsumerWidget {
             child: ListTile(
               title: const Text('Invite code'),
               subtitle: Text(group.joinCode,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 22,
                       letterSpacing: 4,
                       fontWeight: FontWeight.w800,
-                      color: KColors.ink)),
+                      color: context.k.ink)),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -318,7 +318,7 @@ class _MembersSheet extends ConsumerWidget {
                 ? 'Nobody has said "Going" yet.'
                 : '$paying ${paying == 1 ? 'person splits' : 'people split'} the bill.'
                     '${isOwner ? ' Tap "Free" for anyone who doesn\'t pay.' : ''}',
-            style: text.bodyMedium?.copyWith(color: KColors.inkMuted),
+            style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
           ),
           const SizedBox(height: KSpace.sm),
           for (final memberUid in group.memberUids)
@@ -351,7 +351,8 @@ class _MembersSheet extends ConsumerWidget {
             ),
           const SizedBox(height: KSpace.lg),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+            style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error),
             onPressed: () => _leaveOrDelete(context, ref, group, isOwner),
             child: Text(isOwner ? 'Delete group' : 'Leave group'),
           ),
@@ -499,8 +500,8 @@ class _Bubble extends StatelessWidget {
           margin: EdgeInsets.only(top: showName ? KSpace.sm : 2),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(
-            color: mine ? KColors.accent : KColors.surface,
-            border: mine ? null : Border.all(color: KColors.line),
+            color: mine ? context.k.accent : context.k.surface,
+            border: mine ? null : Border.all(color: context.k.line),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -508,18 +509,20 @@ class _Bubble extends StatelessWidget {
             children: [
               if (showName)
                 Text(message.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: KColors.accent)),
+                        color: context.k.accent)),
               Text(message.text,
                   style: TextStyle(
-                      color: mine ? Colors.white : KColors.ink, fontSize: 15)),
+                      color: mine ? context.k.onAccent : context.k.ink, fontSize: 15)),
               if (time.isNotEmpty)
                 Text(time,
                     style: TextStyle(
                         fontSize: 10,
-                        color: mine ? Colors.white70 : KColors.inkMuted)),
+                        color: mine
+                            ? context.k.onAccent.withValues(alpha: 0.75)
+                            : context.k.inkMuted)),
             ],
           ),
         ),
@@ -572,9 +575,9 @@ class _ComposerState extends ConsumerState<_Composer> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.sm, KSpace.sm, KSpace.sm),
-      decoration: const BoxDecoration(
-        color: KColors.surface,
-        border: Border(top: BorderSide(color: KColors.line)),
+      decoration: BoxDecoration(
+        color: context.k.surface,
+        border: Border(top: BorderSide(color: context.k.line)),
       ),
       child: Row(
         children: [

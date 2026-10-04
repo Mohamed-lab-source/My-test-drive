@@ -60,7 +60,7 @@ class _PlanBody extends ConsumerWidget {
         const SizedBox(height: KSpace.sm),
         if (plan.summary.isNotEmpty)
           Text(plan.summary,
-              style: text.bodyLarge?.copyWith(color: KColors.inkMuted)),
+              style: text.bodyLarge?.copyWith(color: context.k.inkMuted)),
         const SizedBox(height: KSpace.sm),
         Wrap(
           spacing: KSpace.sm,
@@ -160,13 +160,13 @@ class _InfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(KSpace.md),
       decoration: BoxDecoration(
-        color: KColors.accentSoft,
+        color: context.k.accentSoft,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: KColors.accent),
+          Icon(icon, size: 20, color: context.k.accent),
           const SizedBox(width: KSpace.sm),
           Expanded(child: Text(text)),
         ],
@@ -211,15 +211,15 @@ class _StopTile extends StatelessWidget {
                   width: 28,
                   height: 28,
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                      color: KColors.accent, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: context.k.accent, shape: BoxShape.circle),
                   child: Text('${index + 1}',
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          color: context.k.onAccent, fontWeight: FontWeight.w700)),
                 ),
                 if (!isLast)
                   Expanded(
-                    child: Container(width: 2, color: KColors.line),
+                    child: Container(width: 2, color: context.k.line),
                   ),
               ],
             ),
@@ -365,7 +365,7 @@ class _BudgetCard extends StatelessWidget {
             Text(
               "We don't show prices we haven't confirmed. Check menus or ask "
               'when you arrive.',
-              style: text.bodyMedium?.copyWith(color: KColors.inkMuted),
+              style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
             ),
           ],
         ),

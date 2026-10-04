@@ -59,8 +59,8 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
         children: [
           Text('Pick a username', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: KSpace.sm),
-          const Text('Friends find you by this name.',
-              style: TextStyle(color: KColors.inkMuted)),
+          Text('Friends find you by this name.',
+              style: TextStyle(color: context.k.inkMuted)),
           const SizedBox(height: KSpace.md),
           TextField(
             controller: _controller,

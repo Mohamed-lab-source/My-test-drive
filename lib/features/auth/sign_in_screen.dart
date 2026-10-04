@@ -13,7 +13,7 @@ class SignInScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final auth = ref.watch(authRepositoryProvider);
     return Scaffold(
-      backgroundColor: KColors.surface,
+      backgroundColor: context.k.surface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(KSpace.lg),
@@ -26,12 +26,12 @@ class SignInScreen extends ConsumerWidget {
                 height: 72,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: KColors.accent,
+                  color: context.k.accent,
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: const Text('خ',
+                child: Text('خ',
                     style: TextStyle(
-                        color: Colors.white,
+                        color: context.k.onAccent,
                         fontSize: 40,
                         fontWeight: FontWeight.w800)),
               ),
@@ -41,7 +41,7 @@ class SignInScreen extends ConsumerWidget {
               Text(
                 'Plan real outings in Cairo, Giza and Alexandria — '
                 'with real places, and your friends.',
-                style: text.bodyLarge?.copyWith(color: KColors.inkMuted),
+                style: text.bodyLarge?.copyWith(color: context.k.inkMuted),
               ),
               const Spacer(flex: 3),
               BusyButton(

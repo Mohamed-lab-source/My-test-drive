@@ -1,9 +1,11 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/router.dart';
 import 'app/theme.dart';
+import 'app/theme_settings.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -15,7 +17,16 @@ Future<void> main() async {
     runApp(_NotConnectedApp(error: '$e'));
     return;
   }
-  runApp(const ProviderScope(child: KhrogaApp()));
+  SharedPreferences? prefs;
+  try {
+    prefs = await SharedPreferences.getInstance();
+  } catch (_) {
+    // Settings just won't be remembered; the app still works.
+  }
+  runApp(ProviderScope(
+    overrides: [sharedPrefsProvider.overrideWithValue(prefs)],
+    child: const KhrogaApp(),
+  ));
 }
 
 class KhrogaApp extends ConsumerWidget {
@@ -23,10 +34,13 @@ class KhrogaApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final look = ref.watch(themeSettingsProvider);
     return MaterialApp.router(
       title: 'Khroga',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
+      theme: buildTheme(accent: look.accent, brightness: Brightness.light),
+      darkTheme: buildTheme(accent: look.accent, brightness: Brightness.dark),
+      themeMode: look.mode,
       routerConfig: ref.watch(routerProvider),
     );
   }
