@@ -44,7 +44,7 @@ async function main() {
   }
   if (dry) { console.log("\nDry run: nothing uploaded."); return; }
 
-  initializeApp({ projectId: "khroga-74d82" });
+  initializeApp(); // project comes from your Google credentials
   const db = getFirestore();
   for (let i = 0; i < good.length; i += 400) {
     const batch = db.batch();

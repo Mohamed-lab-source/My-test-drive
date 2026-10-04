@@ -1,15 +1,20 @@
 # Khroga — notes for Claude
 
-AI outing planner for Egypt (Cairo / Giza / Alexandria). Rebuilt from scratch in
-Oct 2026; the old app's history is in `docs/old-app-handoff.md` (read it only
-for background — its file map and fixes refer to the OLD code).
+AI outing planner for Egypt (Cairo / Giza / Alexandria). Built from scratch in
+Oct 2026. The owner asked for a clean start with nothing from an earlier app,
+so don't bring in old data, files or project ids.
 
 ## The owner
 
 Mohamed is **non-technical**. Explain changes in plain language, say which
 files changed and give exact PowerShell commands to run. He works on Windows
-with an Android phone. Setup steps live in `SETUP.md` — keep it accurate when
-anything about setup changes.
+with an Android phone and doesn't use PowerShell. Setup is browser-only
+(`SETUP.md`): he creates a Firebase project and puts a service-account key in
+the GitHub secret `FIREBASE_SERVICE_ACCOUNT`; the GitHub workflow
+`.github/workflows/khroga.yml` does everything else (enables APIs, creates the
+database, API key and function secrets, deploys rules + functions, fills places
+from Google on the first run, registers the Android app, builds the APK).
+Keep SETUP.md accurate when anything about setup changes.
 
 ## THE rule
 
@@ -45,10 +50,14 @@ functions/
   src/external.ts       Gemini, Open-Meteo, Places photo calls
   src/index.ts          callable functions
   scripts/              seed.ts, discoverPlaces.ts, normalize.ts
-  data/places.json      real place data (Mohamed copies it from the old project)
+  data/places.json      merged real places (filled by the workflow from Google)
+  data/discover_queries.txt  Google searches used to find places
   test/                 node:test tests
 firestore.rules         security rules
 rules-test/             emulator tests for the rules
+tool/gen_firebase_options.mjs  builds lib/firebase_options.dart from google-services.json (CI)
+.github/workflows/khroga.yml   server setup + APK build (artifact: khroga-apk)
+android/app/khroga-test.keystore  shared TEST signing key (SHA-1 FD:0F:A7:73:...)
 ```
 
 ## Data model (Firestore)
@@ -80,8 +89,9 @@ cd rules-test && npm install && npm test   # needs Java + firebase-tools
 ## Gotchas
 
 - Pill shapes use `StadiumBorder` (never `ContinuousRectangleBorder` at big radii).
-- `lib/firebase_options.dart` in git is a placeholder; `flutterfire configure`
-  on Mohamed's PC replaces it.
+- `lib/firebase_options.dart` in git is a placeholder (also defines
+  `googleWebClientId`); the workflow generates the real one at build time.
+  Never commit real Firebase config or keys.
 - `firebase deploy` may say "Skipped (No changes detected)" — not an error.
 - Places API keys used by the server must NOT have Android-app restrictions (403).
 - Firestore rules on queries: a query must filter on what the rule checks
@@ -89,7 +99,7 @@ cd rules-test && npm install && npm test   # needs Java + firebase-tools
 - This cloud environment can't reach `dl.google.com`, so Android builds can't
   run here — verify with `flutter analyze` / tests and let Mohamed build.
 
-## Not built yet (ideas from the old app)
+## Not built yet
 
 Localization (Arabic first), user-submitted menus/prices, crowd check-ins,
 "where is everyone" map, Heading-There location share, InstaPay, custom

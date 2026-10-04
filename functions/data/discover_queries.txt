@@ -14,3 +14,13 @@ giza | cinemas in Sheikh Zayed
 alexandria | cafes in Alexandria
 alexandria | restaurants in Alexandria
 alexandria | cinemas in Alexandria
+cairo | shopping malls in Cairo
+giza | shopping malls in Giza
+alexandria | shopping malls in Alexandria
+giza | restaurants in Mall of Egypt
+giza | cafes in Mall of Egypt
+giza | entertainment in Mall of Egypt
+cairo | restaurants in City Stars Heliopolis
+cairo | restaurants in Cairo Festival City Mall
+cairo | cafes in Cairo Festival City Mall
+alexandria | restaurants in City Centre Alexandria

@@ -64,3 +64,4 @@ ui-debug.log
 
 # Scratch output from the places discovery script (review before merging)
 functions/data/discovered.json
+!functions/.env

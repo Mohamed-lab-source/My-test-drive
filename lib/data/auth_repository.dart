@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../firebase_options.dart';
+
 class AuthRepository {
   AuthRepository(this._auth, this._db);
 
@@ -15,7 +17,7 @@ class AuthRepository {
 
   Future<void> _initGoogle() async {
     if (_googleReady) return;
-    await GoogleSignIn.instance.initialize();
+    await GoogleSignIn.instance.initialize(serverClientId: googleWebClientId);
     _googleReady = true;
   }
 

@@ -26,8 +26,11 @@ const FIELDS = [
   "places.rating", "places.userRatingCount", "places.priceLevel", "places.primaryType",
   "places.types", "places.photos", "places.websiteUri", "places.nationalPhoneNumber",
   "places.regularOpeningHours.weekdayDescriptions", "places.businessStatus",
-  "places.addressComponents",
+  "places.addressComponents", "places.containingPlaces",
 ].join(",");
+
+/** Skip listings with very few reviews: they are often closed or not real venues. */
+const MIN_REVIEWS = 15;
 
 interface GPlace {
   id: string;
@@ -45,6 +48,7 @@ interface GPlace {
   regularOpeningHours?: { weekdayDescriptions?: string[] };
   businessStatus?: string;
   addressComponents?: { longText?: string; types?: string[] }[];
+  containingPlaces?: { id?: string }[];
 }
 
 const PRICE: Record<string, number> = {
@@ -115,7 +119,24 @@ function toPlace(g: GPlace, city: string, hint?: { area?: string; category?: str
     website: g.websiteUri,
     phone: g.nationalPhoneNumber,
     source: "google_places",
+    // Google's own "this place is inside X" data, used to link venues to malls.
+    containingGoogleIds: (g.containingPlaces ?? []).map((c) => c.id).filter(Boolean) as string[],
   };
+}
+
+type Found = NonNullable<ReturnType<typeof toPlace>> & { parentMallId?: string };
+
+/** Links each venue to the mall it is inside, using Google's containingPlaces. */
+function linkMalls(places: Found[]): number {
+  const mallByGoogleId = new Map(
+    places.filter((p) => p.category === "mall").map((m) => [m.googlePlaceId, m.id]),
+  );
+  let linked = 0;
+  for (const p of places) {
+    const mallId = p.containingGoogleIds.map((id) => mallByGoogleId.get(id)).find(Boolean);
+    if (mallId && mallId !== p.id) { p.parentMallId = mallId; linked++; }
+  }
+  return linked;
 }
 
 function parseCsv(path: string): { name: string; area?: string; city: string; category?: string }[] {
@@ -164,14 +185,18 @@ async function discover() {
       let added = 0;
       for (const g of results) {
         if (g.businessStatus && g.businessStatus !== "OPERATIONAL") { skippedClosed++; continue; }
+        if ((g.userRatingCount ?? 0) < MIN_REVIEWS) continue;
         const p = toPlace(g, city.toLowerCase());
         if (p && !found.has(p.googlePlaceId)) { found.set(p.googlePlaceId, p); added++; }
       }
       console.log(`  ${query}: ${added} places`);
     }
   }
-  writeFileSync(discoveredFile, JSON.stringify([...found.values()], null, 2));
-  console.log(`\n✔ Saved ${found.size} real places to data/discovered.json (skipped ${skippedClosed} closed).`);
+  const all = [...found.values()] as Found[];
+  const linked = linkMalls(all);
+  const output = all.map(({ containingGoogleIds: _ignored, ...rest }) => rest);
+  writeFileSync(discoveredFile, JSON.stringify(output, null, 2));
+  console.log(`\n✔ Saved ${found.size} real places to data/discovered.json (skipped ${skippedClosed} closed, ${linked} linked to a mall).`);
   console.log("  Review it, then run:  npm run discover -- --merge");
 }
 

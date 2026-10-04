@@ -1,0 +1,239 @@
+# Sets up Khroga's server and builds the Android app, on GitHub's computers.
+#
+# Before the first run, add the secret FIREBASE_SERVICE_ACCOUNT (see SETUP.md).
+# Without it, this still builds a test app that shows "not connected".
+#
+# Download the app: GitHub > Actions > latest "Khroga" run > Artifacts > khroga-apk
+name: Khroga
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      refresh_places:
+        description: "Search Google again for more real places"
+        type: boolean
+        default: false
+
+concurrency:
+  group: khroga-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ANDROID_PACKAGE: com.khroga.khroga
+  # Fingerprints of the test signing key in android/app/khroga-test.keystore
+  SHA1: FD:0F:A7:73:8B:35:DF:67:6A:DC:61:62:65:FD:F8:6F:06:27:6C:C3
+  SHA256: 1D:FB:9E:2E:F9:D7:A0:E2:B4:01:5A:D9:73:A9:17:1A:A7:F5:42:5D:62:B8:5E:85:40:A9:79:65:3B:05:A2:51
+  FIRESTORE_LOCATION: europe-west1
+
+jobs:
+  server:
+    name: Set up server
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      connected: ${{ steps.check.outputs.connected }}
+    steps:
+      - name: Is Firebase connected?
+        id: check
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$SA" ]; then
+            echo "connected=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "connected=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::FIREBASE_SERVICE_ACCOUNT secret is missing, so the app will show 'not connected'. See SETUP.md."
+          fi
+
+      - if: steps.check.outputs.connected == 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.check.outputs.connected == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - if: steps.check.outputs.connected == 'true'
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - if: steps.check.outputs.connected == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install Firebase tools
+        if: steps.check.outputs.connected == 'true'
+        run: npm install -g firebase-tools
+
+      - name: Turn on Google services
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          gcloud services enable --project "$P" \
+            cloudresourcemanager.googleapis.com serviceusage.googleapis.com iam.googleapis.com \
+            firebase.googleapis.com firestore.googleapis.com identitytoolkit.googleapis.com fcm.googleapis.com \
+            cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
+            run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com secretmanager.googleapis.com \
+            apikeys.googleapis.com places.googleapis.com generativelanguage.googleapis.com
+
+      - name: Create the database (first run only)
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          if firebase firestore:databases:list --project "$P" | grep -q "(default)"; then
+            echo "Database already exists."
+          else
+            firebase firestore:databases:create "(default)" --location "$FIRESTORE_LOCATION" --project "$P"
+          fi
+
+      - name: Create the server API key (first run only)
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          find_key() {
+            gcloud services api-keys list --project "$P" \
+              --filter="displayName=khroga-server" --format="value(name)" | head -n1
+          }
+          NAME=$(find_key)
+          if [ -z "$NAME" ]; then
+            gcloud services api-keys create --project "$P" --display-name=khroga-server \
+              --api-target=service=places.googleapis.com \
+              --api-target=service=generativelanguage.googleapis.com
+            for i in 1 2 3 4 5 6; do NAME=$(find_key); [ -n "$NAME" ] && break; sleep 10; done
+          fi
+          [ -n "$NAME" ] || { echo "::error::Could not create the API key."; exit 1; }
+          KEY=$(gcloud services api-keys get-key-string "$NAME" --format="value(keyString)")
+          echo "::add-mask::$KEY"
+          echo "SERVER_KEY=$KEY" >> "$GITHUB_ENV"
+
+      - name: Store keys for the server (first run only)
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          for NAME in GEMINI_API_KEY PLACES_API_KEY; do
+            if gcloud secrets describe "$NAME" --project "$P" >/dev/null 2>&1; then
+              echo "$NAME already stored."
+            else
+              printf %s "$SERVER_KEY" | firebase functions:secrets:set "$NAME" --data-file - --project "$P" --force
+            fi
+          done
+
+      - name: Test server code
+        if: steps.check.outputs.connected == 'true'
+        working-directory: functions
+        run: |
+          npm ci
+          npm test
+
+      - name: Put the server and security rules online
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          # A brand-new project sometimes needs a minute for permissions to settle.
+          for attempt in 1 2 3; do
+            if firebase deploy --only firestore,functions --project "$P" --force --non-interactive; then
+              exit 0
+            fi
+            echo "Deploy attempt $attempt failed; retrying in 60s..."
+            sleep 60
+          done
+          exit 1
+
+      - name: Add real places from Google (first run, or when asked)
+        if: steps.check.outputs.connected == 'true'
+        working-directory: functions
+        env:
+          PLACES_API_KEY: ${{ env.SERVER_KEY }}
+          REFRESH: ${{ inputs.refresh_places }}
+        run: |
+          COUNT=$(npm run -s count-places)
+          echo "Places in the database: $COUNT"
+          if [ "$COUNT" = "0" ] || [ "$REFRESH" = "true" ]; then
+            npm run discover
+            npm run discover -- --merge
+            npm run seed
+          fi
+
+      - name: Register the Android app
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          APP_ID=$(firebase apps:list ANDROID --project "$P" --json \
+            | jq -r --arg pkg "$ANDROID_PACKAGE" '.result[]? | select(.packageName==$pkg) | .appId' | head -n1)
+          if [ -z "$APP_ID" ]; then
+            APP_ID=$(firebase apps:create ANDROID Khroga --package-name "$ANDROID_PACKAGE" \
+              --project "$P" --json | jq -r '.result.appId')
+          fi
+          if [ -z "$APP_ID" ] || [ "$APP_ID" = "null" ]; then
+            echo "::error::Could not register the Android app."
+            exit 1
+          fi
+          firebase apps:android:sha:create "$APP_ID" "$SHA1" --project "$P" || echo "SHA-1 already added."
+          firebase apps:android:sha:create "$APP_ID" "$SHA256" --project "$P" || echo "SHA-256 already added."
+          firebase apps:sdkconfig ANDROID "$APP_ID" --project "$P" --out google-services.json
+
+      - if: steps.check.outputs.connected == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-config
+          path: google-services.json
+          retention-days: 1
+
+  android:
+    name: Build Android app
+    needs: server
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.6"
+          cache: true
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Check code
+        run: flutter analyze
+
+      - name: Run app tests
+        run: flutter test
+
+      - if: needs.server.outputs.connected == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: firebase-config
+          path: /tmp/firebase-config
+
+      - name: Connect the app to Firebase
+        if: needs.server.outputs.connected == 'true'
+        run: node tool/gen_firebase_options.mjs /tmp/firebase-config/google-services.json "$ANDROID_PACKAGE"
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: khroga-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

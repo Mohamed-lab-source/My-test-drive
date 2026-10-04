@@ -10,6 +10,7 @@
     "test": "tsc && node --test lib/test/*.test.js",
     "seed": "tsc && node lib/scripts/seed.js",
     "discover": "tsc && node lib/scripts/discoverPlaces.js",
+    "count-places": "tsc && node lib/scripts/countPlaces.js",
     "deploy": "firebase deploy --only functions"
   },
   "dependencies": {
