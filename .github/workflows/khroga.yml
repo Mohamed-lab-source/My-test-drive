@@ -196,6 +196,8 @@ jobs:
     name: Build Android app
     needs: firebase
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # to publish the APK to the download link
     timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
@@ -224,20 +226,30 @@ jobs:
 
       - name: Reuse this week's places (or the last good ones)
         id: places-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: assets/data/places.json
           key: osm-places-v2-${{ steps.week.outputs.week }}
           restore-keys: |
+            osm-places-v2-${{ steps.week.outputs.week }}-
             osm-places-v2-
             osm-places-v1-
 
       - name: Download real places from OpenStreetMap
         id: download
-        if: steps.places-cache.outputs.cache-hit != 'true' || inputs.refresh_places
+        if: "!startsWith(steps.places-cache.outputs.cache-matched-key, format('osm-places-v2-{0}-', steps.week.outputs.week)) || inputs.refresh_places"
         timeout-minutes: 40
         continue-on-error: true
         run: node tool/fetch_osm_places.mjs
+
+      # Only remember this week's places if the download really worked, so a
+      # failed download is retried on the next build.
+      - name: Remember this week's places
+        if: steps.download.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: assets/data/places.json
+          key: osm-places-v2-${{ steps.week.outputs.week }}-${{ github.run_id }}
 
       - name: Make sure the app has places
         run: |
@@ -288,3 +300,21 @@ jobs:
           name: khroga-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      - name: Publish to the fixed download link
+        if: github.event_name != 'pull_request'
+        run: cp build/app/outputs/flutter-apk/app-release.apk khroga.apk
+
+      - name: Upload to the "latest-apk" release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-apk
+          name: Khroga — latest app
+          body: |
+            Newest Khroga build (${{ github.sha }}).
+            On your phone, tap **khroga.apk** below to download and install.
+          prerelease: true
+          make_latest: false
+          files: khroga.apk
+          overwrite_files: true
