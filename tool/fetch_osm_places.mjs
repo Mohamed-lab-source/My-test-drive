@@ -253,7 +253,7 @@ export function convert(city, elements, shapes = []) {
 }
 
 function placesQuery(iso) {
-  return `[out:json][timeout:300];
+  return `[out:json][timeout:TIMEOUT];
 area["ISO3166-2"="${iso}"]->.a;
 (
   nwr(area.a)["amenity"~"^(restaurant|fast_food|cafe|ice_cream|cinema|arts_centre|theatre)$"]["name"];
@@ -268,14 +268,14 @@ out tags center;`;
 }
 
 function mallsQuery(iso) {
-  return `[out:json][timeout:180];
+  return `[out:json][timeout:TIMEOUT];
 area["ISO3166-2"="${iso}"]->.a;
 (way(area.a)["shop"="mall"]["name"]; relation(area.a)["shop"="mall"]["name"];);
 out geom;`;
 }
 
 function mallShopsQuery(iso) {
-  return `[out:json][timeout:240];
+  return `[out:json][timeout:TIMEOUT];
 area["ISO3166-2"="${iso}"]->.a;
 (way(area.a)["shop"="mall"]["name"]; relation(area.a)["shop"="mall"]["name"];)->.m;
 .m map_to_area->.ma;
@@ -283,24 +283,30 @@ nwr(area.ma)["shop"]["name"]["shop"!="mall"];
 out tags center;`;
 }
 
-async function overpass(query) {
+/**
+ * Runs an Overpass query, trying each public server in turn.
+ * [seconds] caps how long any one try may take, so a slow server can't
+ * stall the whole build.
+ */
+async function overpass(query, { seconds = 200, endpoints = ENDPOINTS } = {}) {
   let lastError;
-  for (const url of ENDPOINTS) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
-          body: "data=" + encodeURIComponent(query),
-          signal: AbortSignal.timeout(360000),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return (await res.json()).elements ?? [];
-      } catch (e) {
-        lastError = e;
-        console.warn(`  ${url} failed (${e.message}), retrying...`);
-        await new Promise((r) => setTimeout(r, 10000 * attempt));
-      }
+  for (const url of endpoints) {
+    const started = Date.now();
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
+        body: "data=" + encodeURIComponent(query.replace("[timeout:TIMEOUT]", `[timeout:${seconds}]`)),
+        signal: AbortSignal.timeout((seconds + 20) * 1000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const elements = (await res.json()).elements ?? [];
+      console.log(`  ${new URL(url).host}: ${elements.length} items in ${Math.round((Date.now() - started) / 1000)}s`);
+      return elements;
+    } catch (e) {
+      lastError = e;
+      console.warn(`  ${new URL(url).host} failed after ${Math.round((Date.now() - started) / 1000)}s (${e.message})`);
+      await new Promise((r) => setTimeout(r, 5000));
     }
   }
   throw lastError;
@@ -338,11 +344,17 @@ async function main() {
   const all = [];
   for (const [city, iso] of Object.entries(CITIES)) {
     console.log(`Downloading ${city}...`);
-    const elements = await overpass(placesQuery(iso));
-    const malls = await overpass(mallsQuery(iso));
+    const elements = await overpass(placesQuery(iso), { seconds: 200 });
+    let malls = [];
+    try {
+      malls = await overpass(mallsQuery(iso), { seconds: 120 });
+    } catch (e) {
+      console.warn(`  Mall outlines skipped (${e.message}).`);
+    }
+    // Shops inside malls are a nice extra: strict time limit, one server.
     let shops = [];
     try {
-      shops = await overpass(mallShopsQuery(iso));
+      shops = await overpass(mallShopsQuery(iso), { seconds: 90, endpoints: ENDPOINTS.slice(0, 1) });
     } catch (e) {
       console.warn(`  Shops inside malls skipped (${e.message}).`);
     }
@@ -365,6 +377,6 @@ async function main() {
   console.log(`Wrote ${all.length} real places to assets/data/places.json`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => { console.error("Failed:", e.message ?? e); process.exit(1); });
 }

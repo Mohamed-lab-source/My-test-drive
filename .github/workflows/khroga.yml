@@ -222,17 +222,34 @@ jobs:
         id: week
         run: echo "week=$(date +%G-%V)" >> "$GITHUB_OUTPUT"
 
-      - name: Reuse this week's places
+      - name: Reuse this week's places (or the last good ones)
         id: places-cache
-        if: ${{ !inputs.refresh_places }}
         uses: actions/cache@v4
         with:
           path: assets/data/places.json
           key: osm-places-v2-${{ steps.week.outputs.week }}
+          restore-keys: |
+            osm-places-v2-
+            osm-places-v1-
 
       - name: Download real places from OpenStreetMap
-        if: steps.places-cache.outputs.cache-hit != 'true'
+        id: download
+        if: steps.places-cache.outputs.cache-hit != 'true' || inputs.refresh_places
+        timeout-minutes: 25
+        continue-on-error: true
         run: node tool/fetch_osm_places.mjs
+
+      - name: Make sure the app has places
+        run: |
+          COUNT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('assets/data/places.json','utf8')).places.length)")
+          echo "Places bundled in the app: $COUNT"
+          if [ "${{ steps.download.outcome }}" = "failure" ]; then
+            echo "::warning::Downloading fresh places failed, so this build uses the last good set."
+          fi
+          if [ "$COUNT" -lt 50 ]; then
+            echo "::error::No places available (download failed and nothing saved before). Re-run in a few minutes."
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
