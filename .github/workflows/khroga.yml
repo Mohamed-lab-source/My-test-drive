@@ -88,7 +88,8 @@ jobs:
           gcloud services enable --project "$P" \
             cloudresourcemanager.googleapis.com serviceusage.googleapis.com \
             firebase.googleapis.com firestore.googleapis.com identitytoolkit.googleapis.com \
-            apikeys.googleapis.com generativelanguage.googleapis.com
+            apikeys.googleapis.com generativelanguage.googleapis.com \
+            securetoken.googleapis.com firebaseinstallations.googleapis.com
 
       - name: Create the database (first run only)
         if: steps.check.outputs.connected == 'true'
@@ -156,6 +157,33 @@ jobs:
           firebase apps:android:sha:create "$APP_ID" "$SHA256" --project "$P" || echo "SHA-256 already added."
           mkdir -p out
           firebase apps:sdkconfig ANDROID "$APP_ID" --project "$P" --out out/google-services.json
+
+      - name: Let the app's Firebase key use sign-in and the database
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          # Google auto-creates the app's key with a fixed list of allowed
+          # services; make sure the ones Khroga needs are on it.
+          KEY_STRING=$(jq -r '.client[0].api_key[0].current_key' out/google-services.json)
+          NAME=$(gcloud services api-keys lookup "$KEY_STRING" --format="value(name)")
+          if [ -z "$NAME" ]; then
+            echo "::warning::Couldn't find the app's Firebase key to check its settings."
+            exit 0
+          fi
+          NEEDED="identitytoolkit.googleapis.com securetoken.googleapis.com firestore.googleapis.com firebaseinstallations.googleapis.com"
+          CURRENT=$(gcloud services api-keys describe "$NAME" --format=json | jq -r '.restrictions.apiTargets[]?.service')
+          if [ -z "$CURRENT" ]; then
+            echo "Key has no service limits; nothing to change."
+            exit 0
+          fi
+          ARGS=""
+          for svc in $(printf '%s\n%s\n' "$CURRENT" "$(echo $NEEDED | tr ' ' '\n')" | sort -u); do
+            ARGS="$ARGS --api-target=service=$svc"
+          done
+          gcloud services api-keys update "$NAME" $ARGS
+          echo "Allowed services now:"
+          gcloud services api-keys describe "$NAME" --format=json | jq -r '.restrictions.apiTargets[]?.service'
 
       - if: steps.check.outputs.connected == 'true'
         uses: actions/upload-artifact@v4
