@@ -142,6 +142,13 @@ function distanceKm([a1, o1], [a2, o2]) {
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
+/** Keeps at most [max] points of a ring (rounded), enough for "is it inside?". */
+export function simplifyRing(ring, max = 60) {
+  const step = Math.max(1, Math.ceil(ring.length / max));
+  return ring.filter((_, i) => i % step === 0)
+    .map(([lat, lng]) => [Math.round(lat * 1e5) / 1e5, Math.round(lng * 1e5) / 1e5]);
+}
+
 /** Mall outlines from Overpass "out geom" (ways and multipolygon relations). */
 export function mallShapes(elements) {
   const shapes = [];
@@ -224,6 +231,10 @@ export function convert(city, elements, shapes = []) {
       details: detailsOf(t),
       quality: qualityOf(t),
     };
+    if (category === "mall") {
+      const own = shapes.find((m) => m.id === id);
+      if (own) place.outline = simplifyRing(own.rings[0]);
+    }
     if (!Object.keys(place.details).length) delete place.details;
     for (const k of Object.keys(place)) if (place[k] === undefined) delete place[k];
     (byCategory[category] ??= []).push(place);

@@ -81,6 +81,12 @@ test("sights and photos", () => {
   assert.match(commonsUrls("A b.jpg").photoPage, /File:A_b\.jpg$/);
 });
 
+test("malls keep a simplified outline", () => {
+  assert.equal(byName("Test Mall").outline.length, 4);
+  assert.equal(byName("Big Mall").outline.length, 4);
+  assert.equal(byName("Test Cafe").outline, undefined);
+});
+
 test("undocumented parks are skipped", () => {
   assert.equal(byName("Tiny Park"), undefined);
 });

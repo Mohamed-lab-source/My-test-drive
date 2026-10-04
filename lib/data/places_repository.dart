@@ -1,27 +1,29 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../models/place.dart';
 
-/// Real places from OpenStreetMap, bundled inside the app at build time
-/// (assets/data/places.json). No server, no cost, and works offline.
+/// Real places from OpenStreetMap and Overture Maps, bundled inside the app
+/// at build time (assets/data/places.json). No server, no cost, works offline.
 class PlacesRepository {
   PlacesRepository({AssetBundle? bundle}) : _bundle = bundle ?? rootBundle;
 
   final AssetBundle _bundle;
   List<Place>? _all;
 
-  Future<List<Place>> all() async {
-    if (_all != null) return _all!;
-    final raw = jsonDecode(await _bundle.loadString('assets/data/places.json'));
-    final list = raw is Map ? (raw['places'] as List? ?? const []) : raw as List;
-    _all = list
-        .whereType<Map>()
-        .map((m) => Place.fromMap(Map<String, dynamic>.from(m)))
-        .where((p) => p.id.isNotEmpty)
-        .toList();
-    return _all!;
+  Future<List<Place>>? _loading;
+
+  Future<List<Place>> all() {
+    if (_all != null) return Future.value(_all!);
+    return _loading ??= () async {
+      final text = await _bundle.loadString('assets/data/places.json');
+      // Tens of thousands of places: read them off the main thread so the
+      // screen never freezes.
+      _all = await compute(_parsePlaces, text);
+      return _all!;
+    }();
   }
 
   Future<List<Place>> placesInCity(String city) async {
@@ -49,4 +51,14 @@ class PlacesRepository {
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
   }
+}
+
+List<Place> _parsePlaces(String text) {
+  final raw = jsonDecode(text);
+  final list = raw is Map ? (raw['places'] as List? ?? const []) : raw as List;
+  return list
+      .whereType<Map>()
+      .map((m) => Place.fromMap(Map<String, dynamic>.from(m)))
+      .where((p) => p.id.isNotEmpty)
+      .toList();
 }

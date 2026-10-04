@@ -37,10 +37,19 @@ How the code enforces it (keep it this way):
 
 ## How it runs
 
-- **Places** are downloaded from OpenStreetMap (Overpass) during the GitHub
-  build and bundled as `assets/data/places.json` (cached weekly). The committed
-  file is an empty placeholder. Credit "© OpenStreetMap contributors" is shown
-  in the app (`OsmCredit`).
+- **Places** come from two free, real sources, combined during the GitHub
+  build into `assets/data/places.json` (the committed file is an empty
+  placeholder):
+  1. OpenStreetMap via Overpass (`tool/fetch_osm_places.mjs`): rich facts
+     (hours, wheelchair, floors, photos, mall outlines). Slow and often
+     overloaded, so the result is cached and only re-downloaded when no
+     cache exists or on a manual `refresh_places` run.
+  2. Overture Maps (`tool/fetch_overture.py`, pyarrow, ~10 s): ~40k places
+     in Greater Cairo + Alexandria, including shops inside malls. Merged by
+     `tool/merge_overture.mjs`: maps categories, skips duplicates of OSM
+     places, links venues to malls (outline, within 120 m, or address names
+     the mall), dedupes malls listed twice, keeps shops only inside malls.
+  Credits for both are shown in the app (`OsmCredit`).
 - Places carry extra map facts in `details` (wheelchair, wifi, floor, cards…)
   and real photos from Wikimedia Commons (via OSM `wikimedia_commons`/`image`
   or Wikidata P18). Shops are kept only when inside a mall (mall directory,
@@ -88,6 +97,8 @@ lib/
   firebase_options.dart placeholder; CI generates the real one
 assets/data/places.json bundled places (placeholder in git)
 tool/fetch_osm_places.mjs      OpenStreetMap downloader (+ .test.mjs)
+tool/fetch_overture.py         Overture Maps downloader (pyarrow)
+tool/merge_overture.mjs        merges Overture into places.json (+ .test.mjs)
 tool/gen_firebase_options.mjs  google-services.json → lib/firebase_options.dart
 firestore.rules         security rules
 rules-test/             emulator tests for the rules
@@ -98,7 +109,7 @@ android/app/khroga-test.keystore  shared TEST signing key (SHA-1 FD:0F:A7:73:...
 
 ```bash
 flutter analyze && flutter test
-node --test tool/fetch_osm_places.test.mjs
+node --test tool/fetch_osm_places.test.mjs tool/merge_overture.test.mjs
 cd rules-test && npm install && npm test   # needs Java + firebase-tools
 ```
 

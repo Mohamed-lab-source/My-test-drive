@@ -217,8 +217,8 @@ jobs:
           flutter-version: "3.47.6"
           cache: true
 
-      - name: Test the place downloader
-        run: node --test tool/fetch_osm_places.test.mjs
+      - name: Test the place tools
+        run: node --test tool/fetch_osm_places.test.mjs tool/merge_overture.test.mjs
 
       - name: Week number (places are refreshed weekly)
         id: week
@@ -237,7 +237,9 @@ jobs:
 
       - name: Download real places from OpenStreetMap
         id: download
-        if: "!startsWith(steps.places-cache.outputs.cache-matched-key, format('osm-places-v2-{0}-', steps.week.outputs.week)) || inputs.refresh_places"
+        # The OpenStreetMap download is slow (public servers are often busy), so
+        # it only runs when nothing is saved yet, or when asked for.
+        if: steps.places-cache.outputs.cache-matched-key == '' || inputs.refresh_places
         timeout-minutes: 40
         continue-on-error: true
         run: node tool/fetch_osm_places.mjs
@@ -250,6 +252,22 @@ jobs:
         with:
           path: assets/data/places.json
           key: osm-places-v2-${{ steps.week.outputs.week }}-${{ github.run_id }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download more real places from Overture Maps
+        id: overture
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          pip install --quiet pyarrow
+          python tool/fetch_overture.py build/overture.jsonl
+
+      - name: Merge Overture places and link them to malls
+        if: steps.overture.outcome == 'success'
+        run: node tool/merge_overture.mjs build/overture.jsonl
 
       - name: Make sure the app has places
         run: |
