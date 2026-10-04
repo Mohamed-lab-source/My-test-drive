@@ -65,8 +65,7 @@ class PlanRequest {
       );
 }
 
-/// A generated outing plan. Written by the server only, so every stop is
-/// guaranteed to point at a real place in the database.
+/// A generated outing plan. Every stop points at a real place from our data.
 class OutingPlan {
   const OutingPlan({
     required this.id,
@@ -89,19 +88,24 @@ class OutingPlan {
   final List<String> tips;
   final String? weatherNote;
 
-  /// 'ai' when Gemini built it, 'fallback' when the server built it alone.
+  /// 'ai' when Gemini wrote it, 'fallback' when the app built it alone.
   final String source;
   final bool saved;
   final DateTime? createdAt;
 
   bool get isMallLocked => request.mallId != null && request.mallId!.isNotEmpty;
 
-  /// Sum of known per-person costs. Unknown costs are not guessed.
-  num get knownCostPerPerson =>
-      stops.fold<num>(0, (acc, s) => acc + (s.avgCostPerPerson ?? 0));
-
-  int get stopsWithUnknownCost =>
-      stops.where((s) => s.avgCostPerPerson == null).length;
+  /// Fields to store in Firestore (createdAt is added by the repository).
+  Map<String, dynamic> toMap() => {
+        'title': title,
+        'summary': summary,
+        'stops': stops.map((s) => s.toMap()).toList(),
+        'request': request.toMap(),
+        'tips': tips,
+        'weatherNote': weatherNote,
+        'source': source,
+        'saved': saved,
+      };
 
   factory OutingPlan.fromMap(String id, Map<String, dynamic> m) => OutingPlan(
         id: id,
@@ -121,8 +125,8 @@ class OutingPlan {
       );
 }
 
-/// One stop in a plan. Place facts are copied from the database at the time
-/// the plan was made; [why] and timing come from the planner.
+/// One stop in a plan. Place facts are copied from our data when the plan is
+/// made; [why] and timing come from the planner.
 class PlanStop {
   const PlanStop({
     required this.placeId,
@@ -131,11 +135,7 @@ class PlanStop {
     this.area,
     this.lat,
     this.lng,
-    this.googlePlaceId,
-    this.rating,
-    this.priceLevel,
-    this.avgCostPerPerson,
-    this.photoUrl,
+    this.cuisine,
     this.startTime,
     this.durationMinutes,
     this.why,
@@ -148,11 +148,7 @@ class PlanStop {
   final String? area;
   final double? lat;
   final double? lng;
-  final String? googlePlaceId;
-  final double? rating;
-  final int? priceLevel;
-  final num? avgCostPerPerson;
-  final String? photoUrl;
+  final String? cuisine;
   final String? startTime;
   final int? durationMinutes;
   final String? why;
@@ -163,6 +159,20 @@ class PlanStop {
 
   bool get hasLocation => lat != null && lng != null;
 
+  Map<String, dynamic> toMap() => {
+        'placeId': placeId,
+        'name': name,
+        'category': category,
+        'area': area,
+        'lat': lat,
+        'lng': lng,
+        'cuisine': cuisine,
+        'startTime': startTime,
+        'durationMinutes': durationMinutes,
+        'why': why,
+        'kmFromPrevious': kmFromPrevious,
+      };
+
   factory PlanStop.fromMap(Map<String, dynamic> m) => PlanStop(
         placeId: (m['placeId'] as String?) ?? '',
         name: (m['name'] as String?) ?? '',
@@ -170,11 +180,7 @@ class PlanStop {
         area: m['area'] as String?,
         lat: (m['lat'] as num?)?.toDouble(),
         lng: (m['lng'] as num?)?.toDouble(),
-        googlePlaceId: m['googlePlaceId'] as String?,
-        rating: (m['rating'] as num?)?.toDouble(),
-        priceLevel: (m['priceLevel'] as num?)?.toInt(),
-        avgCostPerPerson: m['avgCostPerPerson'] as num?,
-        photoUrl: m['photoUrl'] as String?,
+        cuisine: m['cuisine'] as String?,
         startTime: m['startTime'] as String?,
         durationMinutes: (m['durationMinutes'] as num?)?.toInt(),
         why: m['why'] as String?,

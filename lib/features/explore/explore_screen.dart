@@ -120,10 +120,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(
                         KSpace.md, 0, KSpace.md, KSpace.xl),
-                    itemCount: list.length,
+                    itemCount: list.length + 1,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: KSpace.sm),
-                    itemBuilder: (_, i) => PlaceTile(place: list[i]),
+                    itemBuilder: (_, i) => i == list.length
+                        ? const OsmCredit()
+                        : PlaceTile(place: list[i]),
                   ),
                 );
               },
@@ -146,9 +148,8 @@ class PlaceTile extends StatelessWidget {
     final sub = [
       Categories.label(place.category),
       if (place.area != null) place.area!,
-      if (place.priceLabel.isNotEmpty) place.priceLabel,
+      if (place.cuisineLabel != null) place.cuisineLabel!,
     ].join(' · ');
-    final photo = place.photos.where((p) => p.url != null).firstOrNull;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -158,7 +159,7 @@ class PlaceTile extends StatelessWidget {
           child: Row(
             children: [
               PlaceImage(
-                url: photo?.url,
+                url: null,
                 emoji: Categories.emoji(place.category),
                 width: 64,
                 height: 64,
@@ -180,11 +181,27 @@ class PlaceTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (place.rating != null)
-                Pill('★ ${place.rating!.toStringAsFixed(1)}'),
+              const Icon(Icons.chevron_right, color: KColors.inkMuted),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// OpenStreetMap's data licence asks us to credit its contributors.
+class OsmCredit extends StatelessWidget {
+  const OsmCredit({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: KSpace.md),
+      child: Text(
+        'Place data © OpenStreetMap contributors (openstreetmap.org/copyright)',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }

@@ -42,7 +42,9 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
       return;
     }
     setState(() => _error = null);
-    await ref.read(socialRepositoryProvider).claimUsername(value);
+    final uid = ref.read(uidProvider);
+    if (uid == null) return;
+    await ref.read(socialRepositoryProvider).claimUsername(uid, value);
     if (mounted) Navigator.of(context).pop();
   }
 

@@ -126,7 +126,9 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
       throw Exception('Enter the code your friend shared.');
     }
     final router = GoRouter.of(context);
-    final id = await ref.read(groupsRepositoryProvider).join(_code.text);
+    final uid = ref.read(uidProvider);
+    if (uid == null) throw Exception('Please sign in again.');
+    final id = await ref.read(groupsRepositoryProvider).join(uid, _code.text);
     if (!mounted) return;
     Navigator.of(context).pop();
     router.push('/group/$id');

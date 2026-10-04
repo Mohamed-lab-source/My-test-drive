@@ -213,7 +213,9 @@ Future<String?> runPlanGeneration(
     builder: (_) => const PopScope(canPop: false, child: _GeneratingDialog()),
   );
   try {
-    return await ref.read(plansRepositoryProvider).generate(request);
+    final uid = ref.read(uidProvider);
+    if (uid == null) throw Exception('Please sign in again.');
+    return await ref.read(plansRepositoryProvider).generate(uid, request);
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(friendlyError(e))));
     return null;

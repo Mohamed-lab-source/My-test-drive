@@ -1,4 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,18 +8,6 @@ import '../models/social.dart';
 
 /// Turns any error into one short sentence a person can act on.
 String friendlyError(Object error) {
-  if (error is FirebaseFunctionsException) {
-    if (error.message != null && error.message!.isNotEmpty &&
-        error.code != 'internal') {
-      return error.message!;
-    }
-    return switch (error.code) {
-      'unavailable' || 'deadline-exceeded' =>
-        'The server took too long. Check your internet and try again.',
-      'unauthenticated' => 'Please sign in again.',
-      _ => 'Something went wrong on our side. Please try again.',
-    };
-  }
   if (error is GoogleSignInException) {
     return error.code == GoogleSignInExceptionCode.canceled
         ? 'Sign-in was cancelled.'

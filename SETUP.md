@@ -1,8 +1,10 @@
-# Khroga — Setup (browser only, about 15 minutes)
+# Khroga — Setup (free, browser only, about 10 minutes)
+
+**Khroga costs nothing.** It uses Google's free **Spark** plan, which needs no
+card at all, so Google has no way to charge you. If you ever see a button
+saying **Upgrade** or **Blaze**, ignore it.
 
 You only do this **once**. No PowerShell and no installing anything.
-GitHub's computers do the rest: they create the server, the database and the
-keys, add real places from Google, and build the app for your phone.
 
 ---
 
@@ -11,21 +13,14 @@ keys, add real places from Google, and build the app for your phone.
 GitHub → `My-test-drive` → **Settings** → scroll to the bottom (**Danger Zone**) →
 **Change visibility → Make private**.
 
-## 2. Create your Firebase project
+## 2. Create your Firebase project (free)
 
 1. Go to https://console.firebase.google.com and sign in with your Google account.
 2. **Create a project** → name it `Khroga` → you can turn **off** Google
    Analytics → **Create project**.
+3. It starts on the free **Spark** plan. Leave it that way. **Don't add a card.**
 
-## 3. Turn on billing (required by Google for the server)
-
-1. In your new project, click **Upgrade** (bottom left) → choose **Blaze**
-   (pay as you go) → add your card.
-2. When it offers a **budget alert**, set one (for example $5) so you're emailed
-   if costs ever go up. A small test app normally costs **$0–1 a month**:
-   Google's free allowance covers most of it.
-
-## 4. Turn on sign-in
+## 3. Turn on sign-in
 
 In the Firebase console: **Build → Authentication → Get started**, then:
 
@@ -33,7 +28,7 @@ In the Firebase console: **Build → Authentication → Get started**, then:
 2. **Add new provider → Google** → switch **Enable** on → choose your email
    as the support email → **Save**.
 
-## 5. Make a key for GitHub
+## 4. Make a key for GitHub
 
 This key lets GitHub set up your project for you.
 
@@ -44,7 +39,7 @@ This key lets GitHub set up your project for you.
 4. Click the new `github-builder` account → **Keys** tab → **Add key → Create
    new key → JSON → Create**. A `.json` file downloads.
 
-## 6. Give the key to GitHub
+## 5. Give the key to GitHub
 
 1. GitHub → `My-test-drive` → **Settings → Secrets and variables → Actions**.
 2. **New repository secret**.
@@ -53,14 +48,13 @@ This key lets GitHub set up your project for you.
      everything (Ctrl+A), copy, paste here.
 3. **Add secret**. Then **delete the downloaded file** from your computer.
 
-## 7. Start the build
+## 6. Start the build
 
 Tell Claude **"done"** and it starts the build for you. Or do it yourself:
 GitHub → **Actions** → the latest **Khroga** run → **Re-run all jobs**.
+It takes about **10–15 minutes**.
 
-The first run takes about **15–20 minutes**.
-
-## 8. Install the app
+## 7. Install the app
 
 1. GitHub → **Actions** → open the finished **Khroga** run (green ✔).
 2. Scroll to **Artifacts** → click **khroga-apk** → it downloads a zip.
@@ -69,12 +63,22 @@ The first run takes about **15–20 minutes**.
 
 ---
 
+## What's free, and what that means
+
+| Part | Free service | Note |
+|---|---|---|
+| Accounts, groups, chat | Firebase Spark plan | Free allowance is far more than a test app uses. If it's ever used up, the app pauses until the next day. It never charges. |
+| Places | OpenStreetMap | Real names, locations, hours, phones and websites. No photos or star ratings. |
+| AI plans | Gemini free tier | If the AI is busy or unavailable, the app still builds a plan from real places. |
+| Weather | Open-Meteo | Free, no key. |
+
+Because there's no paid server, **the phone doesn't buzz for new chat
+messages**. Messages show up live while the app is open.
+
 ## Later
 
 - **Every change Claude makes** builds a new app automatically. Get it from
   **Actions → latest run → Artifacts**.
-- **More places:** GitHub → Actions → **Khroga** → **Run workflow** → tick
-  *Search Google again for more real places*. (This button only appears once
-  the workflow is on the main branch. Until then, just ask Claude.)
+- **Places refresh** from OpenStreetMap once a week automatically.
 - **Something went wrong?** Open the run in **Actions**. The step with the red ✖
   says what failed. Copy that text to Claude.

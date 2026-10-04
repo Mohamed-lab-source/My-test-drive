@@ -7,6 +7,7 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../widgets/common.dart';
 import '../../widgets/launchers.dart';
+import 'explore_screen.dart';
 
 class PlaceDetailsScreen extends ConsumerWidget {
   const PlaceDetailsScreen({super.key, required this.placeId});
@@ -38,168 +39,115 @@ class _Details extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     return ListView(
-      padding: const EdgeInsets.only(bottom: KSpace.xl),
+      padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
       children: [
-        _PhotoStrip(place: place),
-        Padding(
-          padding: const EdgeInsets.all(KSpace.md),
-          child: Column(
+        Container(
+          height: 120,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: KColors.accentSoft,
+            borderRadius: BorderRadius.circular(KRadius.card),
+          ),
+          child: Text(Categories.emoji(place.category),
+              style: const TextStyle(fontSize: 56)),
+        ),
+        const SizedBox(height: KSpace.md),
+        Text(place.name, style: text.headlineMedium),
+        if (place.nameAr != null && place.nameAr != place.name)
+          Text(place.nameAr!,
+              textDirection: TextDirection.rtl,
+              style: text.titleMedium?.copyWith(color: KColors.inkMuted)),
+        const SizedBox(height: KSpace.sm),
+        Wrap(
+          spacing: KSpace.sm,
+          runSpacing: KSpace.sm,
+          children: [
+            Pill('${Categories.emoji(place.category)} '
+                '${Categories.label(place.category)}'),
+            if (place.area != null) Pill(place.area!),
+            if (place.cuisineLabel != null) Pill(place.cuisineLabel!),
+          ],
+        ),
+        if (place.address != null) ...[
+          const SizedBox(height: KSpace.md),
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(place.name, style: text.headlineMedium),
-              const SizedBox(height: KSpace.sm),
-              Wrap(
-                spacing: KSpace.sm,
-                runSpacing: KSpace.sm,
-                children: [
-                  Pill('${Categories.emoji(place.category)} '
-                      '${Categories.label(place.category)}'),
-                  if (place.rating != null)
-                    Pill('★ ${place.rating!.toStringAsFixed(1)}'
-                        '${place.ratingCount != null ? ' (${place.ratingCount})' : ''}'),
-                  if (place.priceLabel.isNotEmpty) Pill(place.priceLabel),
-                  if (place.area != null) Pill(place.area!),
-                ],
-              ),
-              if (place.address != null) ...[
-                const SizedBox(height: KSpace.md),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.place_outlined,
-                        size: 20, color: KColors.inkMuted),
-                    const SizedBox(width: KSpace.sm),
-                    Expanded(child: Text(place.address!)),
-                  ],
-                ),
-              ],
-              const SizedBox(height: KSpace.md),
-              Wrap(
-                spacing: KSpace.sm,
-                runSpacing: KSpace.sm,
-                children: [
-                  if (place.hasLocation || place.googlePlaceId != null)
-                    OutlinedButton.icon(
-                      onPressed: () => openInMaps(
-                        name: place.name,
-                        lat: place.lat,
-                        lng: place.lng,
-                        googlePlaceId: place.googlePlaceId,
-                      ),
-                      icon: const Icon(Icons.directions_outlined),
-                      label: const Text('Directions'),
-                    ),
-                  if (place.phone != null)
-                    OutlinedButton.icon(
-                      onPressed: () => callPhone(place.phone!),
-                      icon: const Icon(Icons.call_outlined),
-                      label: const Text('Call'),
-                    ),
-                  if (place.website != null)
-                    OutlinedButton.icon(
-                      onPressed: () => openWebsite(place.website!),
-                      icon: const Icon(Icons.language),
-                      label: const Text('Website'),
-                    ),
-                ],
-              ),
-              if (place.avgCostPerPerson != null) ...[
-                const SectionTitle('Cost'),
-                Text('~${place.avgCostPerPerson} EGP per person '
-                    '(shared by Khroga users)'),
-              ],
-              if (place.openingHours.isNotEmpty) ...[
-                const SectionTitle('Opening hours'),
-                for (final line in place.openingHours)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(line, style: text.bodyMedium),
-                  ),
-              ],
-              if (place.category == 'mall') ...[
-                const SizedBox(height: KSpace.lg),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      ref.read(cityProvider.notifier).set(place.city);
-                      context.push('/new-plan?mall=${place.id}');
-                    },
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Plan my day here'),
-                  ),
-                ),
-              ],
+              const Icon(Icons.place_outlined, size: 20, color: KColors.inkMuted),
+              const SizedBox(width: KSpace.sm),
+              Expanded(child: Text(place.address!)),
             ],
           ),
+        ],
+        const SizedBox(height: KSpace.md),
+        Wrap(
+          spacing: KSpace.sm,
+          runSpacing: KSpace.sm,
+          children: [
+            if (place.hasLocation)
+              OutlinedButton.icon(
+                onPressed: () =>
+                    openInMaps(name: place.name, lat: place.lat, lng: place.lng),
+                icon: const Icon(Icons.directions_outlined),
+                label: const Text('Directions'),
+              ),
+            if (place.phone != null)
+              OutlinedButton.icon(
+                onPressed: () => callPhone(place.phone!),
+                icon: const Icon(Icons.call_outlined),
+                label: const Text('Call'),
+              ),
+            if (place.website != null)
+              OutlinedButton.icon(
+                onPressed: () => openWebsite(place.website!),
+                icon: const Icon(Icons.language),
+                label: const Text('Website'),
+              ),
+          ],
         ),
+        if (place.openingHours != null) ...[
+          const SectionTitle('Opening hours'),
+          Text(_friendlyHours(place.openingHours!), style: text.bodyMedium),
+          const SizedBox(height: KSpace.xs),
+          Text('Hours can change. Call ahead if it matters.', style: text.bodySmall),
+        ],
+        if (place.category == 'mall') ...[
+          const SizedBox(height: KSpace.lg),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () {
+                ref.read(cityProvider.notifier).set(place.city);
+                context.push('/new-plan?mall=${place.id}');
+              },
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Plan my day here'),
+            ),
+          ),
+        ],
+        const SizedBox(height: KSpace.lg),
+        if (place.osmUrl != null)
+          TextButton(
+            onPressed: () => openWebsite(place.osmUrl!),
+            child: const Text('Something wrong? Fix it on OpenStreetMap'),
+          ),
+        const OsmCredit(),
       ],
     );
   }
-}
 
-/// A horizontal, draggable strip of real photos with their attributions.
-class _PhotoStrip extends ConsumerWidget {
-  const _PhotoStrip({required this.place});
-
-  final Place place;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (place.photos.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: KSpace.md),
-        child: PlaceImage(
-          url: null,
-          emoji: Categories.emoji(place.category),
-          height: 140,
-          width: double.infinity,
-          radius: KRadius.card,
-        ),
-      );
-    }
-    final photos = ref.watch(placePhotosProvider(place.id));
-    return photos.when(
-      loading: () => const SizedBox(
-          height: 220, child: Center(child: CircularProgressIndicator())),
-      // Photos are nice-to-have: if they fail, just leave them out.
-      error: (_, _) => const SizedBox.shrink(),
-      data: (list) {
-        if (list.isEmpty) return const SizedBox.shrink();
-        final credits = list
-            .map((p) => p.attribution)
-            .whereType<String>()
-            .toSet()
-            .join(', ');
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 220,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: KSpace.md),
-                itemCount: list.length,
-                separatorBuilder: (_, _) => const SizedBox(width: KSpace.sm),
-                itemBuilder: (_, i) => PlaceImage(
-                  url: list[i].url,
-                  emoji: Categories.emoji(place.category),
-                  width: 260,
-                  height: 220,
-                  radius: KRadius.card,
-                ),
-              ),
-            ),
-            if (credits.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    KSpace.md, KSpace.xs, KSpace.md, 0),
-                child: Text('Photos: $credits',
-                    style: Theme.of(context).textTheme.bodySmall),
-              ),
-          ],
-        );
-      },
-    );
+  /// Makes OpenStreetMap's short day names readable ("Mo-Fr" → "Mon–Fri").
+  static String _friendlyHours(String raw) {
+    const days = {
+      'Mo': 'Mon', 'Tu': 'Tue', 'We': 'Wed', 'Th': 'Thu',
+      'Fr': 'Fri', 'Sa': 'Sat', 'Su': 'Sun', 'PH': 'Holidays',
+    };
+    var out = raw;
+    days.forEach((k, v) => out = out.replaceAll(RegExp('\\b$k\\b'), v));
+    return out
+        .replaceAll('24/7', 'Open 24 hours')
+        .replaceAll('; ', '\n')
+        .replaceAll(';', '\n')
+        .replaceAll(' off', ' closed');
   }
 }

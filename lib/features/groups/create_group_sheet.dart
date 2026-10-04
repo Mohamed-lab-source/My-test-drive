@@ -51,9 +51,15 @@ class _CreateGroupSheetState extends ConsumerState<_CreateGroupSheet> {
     final name = _name.text.trim();
     if (name.isEmpty) throw Exception('Give your group a name.');
     final router = GoRouter.of(context);
+    final uid = ref.read(uidProvider);
+    if (uid == null) throw Exception('Please sign in again.');
+    final plan = widget.planId == null
+        ? null
+        : await ref.read(plansRepositoryProvider).get(uid, widget.planId!);
     final id = await ref.read(groupsRepositoryProvider).create(
+          uid: uid,
           name: name,
-          planId: widget.planId,
+          plan: plan,
           scheduledAt: _when,
         );
     if (!mounted) return;

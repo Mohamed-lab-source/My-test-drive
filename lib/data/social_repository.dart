@@ -1,14 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 
 import '../models/social.dart';
 
 /// Profiles, usernames and friends.
 class SocialRepository {
-  SocialRepository(this._db, this._functions);
+  SocialRepository(this._db);
 
   final FirebaseFirestore _db;
-  final FirebaseFunctions _functions;
+  static final usernamePattern = RegExp(r'^[a-z0-9_.]{3,20}$');
 
   CollectionReference<Map<String, dynamic>> get _profiles =>
       _db.collection('publicProfiles');
@@ -41,10 +40,29 @@ class SocialRepository {
   Future<void> updateDisplayName(String uid, String name) =>
       _profiles.doc(uid).update({'displayName': name.trim()});
 
-  /// Usernames are claimed on the server so two people can never get the same.
-  Future<void> claimUsername(String username) => _functions
-      .httpsCallable('claimUsername')
-      .call<Map<String, dynamic>>({'username': username.trim().toLowerCase()});
+  /// Claims a unique @username. The rules make sure two people can never
+  /// own the same one, and only signed-in (non-guest) users can claim.
+  Future<void> claimUsername(String uid, String raw) async {
+    final username = raw.trim().toLowerCase();
+    if (!usernamePattern.hasMatch(username)) {
+      throw Exception('Use 3–20 letters, numbers, dots or underscores.');
+    }
+    final nameRef = _db.collection('usernames').doc(username);
+    final profileRef = _profiles.doc(uid);
+    await _db.runTransaction((tx) async {
+      final nameDoc = await tx.get(nameRef);
+      final profile = await tx.get(profileRef);
+      final owner = nameDoc.data()?['uid'];
+      if (nameDoc.exists && owner != uid) {
+        throw Exception('That username is taken. Try another.');
+      }
+      final old = profile.data()?['username'] as String?;
+      if (old == username) return;
+      if (old != null) tx.delete(_db.collection('usernames').doc(old));
+      if (!nameDoc.exists) tx.set(nameRef, {'uid': uid});
+      tx.update(profileRef, {'username': username});
+    });
+  }
 
   /// Live prefix search by username.
   Future<List<PublicProfile>> searchUsername(String query) async {
@@ -52,7 +70,7 @@ class SocialRepository {
     if (q.length < 2) return const [];
     final snap = await _profiles
         .where('username', isGreaterThanOrEqualTo: q)
-        .where('username', isLessThan: '$q')
+        .where('username', isLessThan: '$q\uf8ff')
         .limit(20)
         .get();
     return snap.docs.map((d) => PublicProfile.fromMap(d.id, d.data())).toList();
@@ -81,10 +99,4 @@ class SocialRepository {
 
   Future<void> remove(String friendshipId) =>
       _friendships.doc(friendshipId).delete();
-
-  /// Saves this device's push token so group messages can notify it.
-  Future<void> saveFcmToken(String uid, String token) =>
-      _db.collection('users').doc(uid).set({
-        'fcmTokens': FieldValue.arrayUnion([token]),
-      }, SetOptions(merge: true));
 }

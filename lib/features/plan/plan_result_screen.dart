@@ -81,8 +81,8 @@ class _PlanBody extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           const _InfoBanner(
             icon: Icons.info_outline,
-            text: 'Our AI planner was busy, so we picked the best-rated '
-                'matching places for you. Tap "Another one" to try again.',
+            text: 'Our AI planner was busy or offline, so we picked '
+                'well-known matching places for you. Tap "Another one" to try again.',
           ),
         ],
         const SizedBox(height: KSpace.lg),
@@ -195,6 +195,7 @@ class _StopTile extends StatelessWidget {
       if (stop.startTime != null) stop.startTime!,
       if (stop.durationMinutes != null) _duration(stop.durationMinutes!),
       if (stop.area != null) stop.area!,
+      if (stop.cuisine != null) stop.cuisine!,
     ].join(' · ');
 
     return IntrinsicHeight(
@@ -250,7 +251,7 @@ class _StopTile extends StatelessWidget {
                             Row(
                               children: [
                                 PlaceImage(
-                                  url: stop.photoUrl,
+                                  url: null,
                                   emoji: Categories.emoji(stop.category),
                                   width: 56,
                                   height: 56,
@@ -271,8 +272,6 @@ class _StopTile extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                if (stop.rating != null)
-                                  Pill('★ ${stop.rating!.toStringAsFixed(1)}'),
                               ],
                             ),
                             if (stop.why != null && stop.why!.isNotEmpty) ...[
@@ -335,11 +334,8 @@ class _RideRow extends StatelessWidget {
         ActionChip(
           avatar: const Icon(Icons.map_outlined, size: 18),
           label: const Text('Map'),
-          onPressed: () => openInMaps(
-              name: stop.name,
-              lat: stop.lat,
-              lng: stop.lng,
-              googlePlaceId: stop.googlePlaceId),
+          onPressed: () =>
+              openInMaps(name: stop.name, lat: stop.lat, lng: stop.lng),
         ),
       ],
     );
@@ -354,22 +350,6 @@ class _BudgetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final unknown = plan.stopsWithUnknownCost;
-    final known = plan.knownCostPerPerson;
-    final all = plan.stops.length;
-    final String headline;
-    final String detail;
-    if (unknown == all) {
-      headline = 'Cost not known yet';
-      detail = "We don't show prices we haven't confirmed. Check each place's "
-          'menu or ask when you arrive.';
-    } else {
-      headline = '~${known.round()} EGP per person';
-      detail = unknown == 0
-          ? 'Based on prices people shared for these places.'
-          : 'Covers ${all - unknown} of $all stops. The other $unknown '
-              "don't have confirmed prices yet.";
-    }
     final budget = plan.request.budgetPerPerson;
     return Card(
       child: Padding(
@@ -379,13 +359,14 @@ class _BudgetCard extends StatelessWidget {
           children: [
             Text('Budget', style: text.bodySmall),
             const SizedBox(height: KSpace.xs),
-            Text(headline, style: text.titleLarge),
+            Text(budget == null ? 'No budget set' : '$budget EGP per person',
+                style: text.titleLarge),
             const SizedBox(height: KSpace.xs),
-            Text(detail, style: text.bodyMedium?.copyWith(color: KColors.inkMuted)),
-            if (budget != null) ...[
-              const SizedBox(height: KSpace.sm),
-              Text('Your budget: $budget EGP per person', style: text.bodySmall),
-            ],
+            Text(
+              "We don't show prices we haven't confirmed. Check menus or ask "
+              'when you arrive.',
+              style: text.bodyMedium?.copyWith(color: KColors.inkMuted),
+            ),
           ],
         ),
       ),

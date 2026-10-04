@@ -386,9 +386,9 @@ class _MembersSheet extends ConsumerWidget {
     try {
       Navigator.of(context).pop(); // close the sheet
       if (isOwner) {
-        await repo.delete(group.id);
+        await repo.delete(group);
       } else {
-        await repo.leave(group.id);
+        await repo.leave(group.id, uid);
       }
       router.go('/groups');
     } catch (e) {

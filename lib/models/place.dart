@@ -1,105 +1,87 @@
-/// A real place from Khroga's database.
+/// A real place, from OpenStreetMap (bundled in the app at build time).
 ///
-/// Every field comes from real sources only: Khroga's research, Google Places,
-/// or user submissions. Fields we don't know are `null` — never guessed.
+/// Every field comes from real data. Fields we don't know are `null` —
+/// never guessed.
 class Place {
   const Place({
     required this.id,
     required this.name,
     required this.category,
     required this.city,
+    this.nameAr,
     this.area,
     this.address,
     this.lat,
     this.lng,
-    this.googlePlaceId,
-    this.rating,
-    this.ratingCount,
-    this.priceLevel,
-    this.avgCostPerPerson,
-    this.photos = const [],
-    this.openingHours = const [],
+    this.cuisine,
+    this.openingHours,
     this.parentMallId,
     this.website,
     this.phone,
     this.indoor,
+    this.osmUrl,
+    this.quality = 0,
   });
 
   final String id;
   final String name;
   final String category;
   final String city;
+  final String? nameAr;
+
+  /// Nearest neighbourhood on the map, e.g. "Zamalek".
   final String? area;
   final String? address;
   final double? lat;
   final double? lng;
-  final String? googlePlaceId;
-  final double? rating;
-  final int? ratingCount;
 
-  /// Google's price level, 0 (free) to 4 (very expensive). Real, from Google.
-  final int? priceLevel;
+  /// e.g. "pizza;italian" as written on OpenStreetMap.
+  final String? cuisine;
 
-  /// Average cost per person in EGP. Only ever set from user submissions.
-  final num? avgCostPerPerson;
-  final List<PlacePhoto> photos;
-
-  /// Opening hours as Google words them, e.g. "Monday: 10:00 AM – 11:00 PM".
-  final List<String> openingHours;
+  /// Opening hours as written on OpenStreetMap, e.g. "Mo-Su 10:00-23:00".
+  final String? openingHours;
   final String? parentMallId;
   final String? website;
   final String? phone;
   final bool? indoor;
 
+  /// Link to this place on openstreetmap.org (for attribution and fixes).
+  final String? osmUrl;
+
+  /// How complete the map entry is (website, hours, phone...). Used only to
+  /// rank places; never shown as a rating.
+  final int quality;
+
   bool get hasLocation => lat != null && lng != null;
 
-  String get priceLabel =>
-      priceLevel == null ? '' : (priceLevel == 0 ? 'Free' : r'$' * priceLevel!);
+  String? get cuisineLabel => cuisine
+      ?.split(';')
+      .map((c) => c.trim().replaceAll('_', ' '))
+      .where((c) => c.isNotEmpty)
+      .take(3)
+      .join(', ');
 
-  factory Place.fromMap(String id, Map<String, dynamic> m) {
+  factory Place.fromMap(Map<String, dynamic> m) {
     return Place(
-      id: id,
+      id: (m['id'] as String?) ?? '',
       name: (m['name'] as String?) ?? 'Unnamed place',
       category: (m['category'] as String?) ?? 'other',
       city: (m['city'] as String?) ?? '',
+      nameAr: m['nameAr'] as String?,
       area: m['area'] as String?,
       address: m['address'] as String?,
       lat: (m['lat'] as num?)?.toDouble(),
       lng: (m['lng'] as num?)?.toDouble(),
-      googlePlaceId: m['googlePlaceId'] as String?,
-      rating: (m['rating'] as num?)?.toDouble(),
-      ratingCount: (m['ratingCount'] as num?)?.toInt(),
-      priceLevel: (m['priceLevel'] as num?)?.toInt(),
-      avgCostPerPerson: m['avgCostPerPerson'] as num?,
-      photos: ((m['photos'] as List?) ?? const [])
-          .whereType<Map>()
-          .map((p) => PlacePhoto.fromMap(Map<String, dynamic>.from(p)))
-          .where((p) => p.url != null || p.name != null)
-          .toList(),
-      openingHours:
-          ((m['openingHours'] as List?) ?? const []).whereType<String>().toList(),
+      cuisine: m['cuisine'] as String?,
+      openingHours: m['openingHours'] as String?,
       parentMallId: m['parentMallId'] as String?,
       website: m['website'] as String?,
       phone: m['phone'] as String?,
       indoor: m['indoor'] as bool?,
+      osmUrl: m['osmUrl'] as String?,
+      quality: (m['quality'] as num?)?.toInt() ?? 0,
     );
   }
-}
-
-/// A photo of a place. Either a stored [url], or a Google Places photo
-/// resource [name] that the server turns into a viewable link.
-class PlacePhoto {
-  const PlacePhoto({this.url, this.name, this.attribution});
-
-  final String? url;
-  final String? name;
-  final String? attribution;
-
-  factory PlacePhoto.fromMap(Map<String, dynamic> m) => PlacePhoto(
-        url: m['url'] as String?,
-        name: m['name'] as String?,
-        attribution: m['attribution'] as String?,
-      );
 }
 
 /// Human-friendly labels and icons for place categories.

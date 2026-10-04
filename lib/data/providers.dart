@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,19 +13,17 @@ import 'social_repository.dart';
 
 // ---- Firebase singletons ----
 final firestoreProvider = Provider((_) => FirebaseFirestore.instance);
-final functionsProvider = Provider((_) => FirebaseFunctions.instance);
 
 // ---- Repositories ----
 final authRepositoryProvider = Provider(
     (ref) => AuthRepository(FirebaseAuth.instance, ref.watch(firestoreProvider)));
-final placesRepositoryProvider = Provider((ref) =>
-    PlacesRepository(ref.watch(firestoreProvider), ref.watch(functionsProvider)));
+final placesRepositoryProvider = Provider((_) => PlacesRepository());
 final plansRepositoryProvider = Provider((ref) =>
-    PlansRepository(ref.watch(firestoreProvider), ref.watch(functionsProvider)));
-final groupsRepositoryProvider = Provider((ref) =>
-    GroupsRepository(ref.watch(firestoreProvider), ref.watch(functionsProvider)));
-final socialRepositoryProvider = Provider((ref) =>
-    SocialRepository(ref.watch(firestoreProvider), ref.watch(functionsProvider)));
+    PlansRepository(ref.watch(firestoreProvider), ref.watch(placesRepositoryProvider)));
+final groupsRepositoryProvider =
+    Provider((ref) => GroupsRepository(ref.watch(firestoreProvider)));
+final socialRepositoryProvider =
+    Provider((ref) => SocialRepository(ref.watch(firestoreProvider)));
 
 // ---- Auth ----
 final authStateProvider = StreamProvider<User?>(
@@ -59,13 +56,6 @@ final placeProvider = FutureProvider.family<Place?, String>(
 
 final mallsProvider = FutureProvider.family<List<Place>, String>(
     (ref, city) => ref.watch(placesRepositoryProvider).malls(city));
-
-final placePhotosProvider = FutureProvider.family<List<PlacePhoto>, String>(
-    (ref, placeId) async {
-  final place = await ref.watch(placeProvider(placeId).future);
-  if (place == null) return const [];
-  return ref.watch(placesRepositoryProvider).photosFor(place);
-});
 
 // ---- Plans ----
 final planProvider = StreamProvider.family<OutingPlan?, String>((ref, planId) {

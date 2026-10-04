@@ -1,129 +1,184 @@
 rules_version = '2';
 
-// Khroga security rules.
-// Principle: the app may only make small, safe changes directly. Anything that
-// must be trustworthy (plans, usernames, join codes, joining/leaving/deleting
-// groups) is done by Cloud Functions, which bypass these rules.
+// Khroga security rules (free Spark plan: there is no server, so these rules
+// are what keep everything safe and fair). Places are bundled in the app and
+// never stored here.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
-    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
-    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function me() { return request.auth.uid; }
+    function isMe(uid) { return signedIn() && me() == uid; }
+    function isGuest() { return request.auth.token.firebase.sign_in_provider == 'anonymous'; }
+    function newData() { return request.resource.data; }
+    function changed() { return newData().diff(resource.data).affectedKeys(); }
     function validName(n) { return n is string && n.size() > 0 && n.size() <= 40; }
+    function pairId(a, b) { return a < b ? a + '_' + b : b + '_' + a; }
 
-    // Real places: read-only for everyone signed in. Only admin scripts write.
-    match /places/{placeId} {
-      allow read: if signedIn();
-      allow write: if false;
-    }
-
-    // Private user data (push tokens).
+    // ---- Private user data ----
     match /users/{uid} {
       allow read: if isMe(uid);
-      allow create: if isMe(uid)
-        && request.resource.data.keys().hasOnly(['createdAt', 'fcmTokens']);
-      allow update: if isMe(uid)
-        && changed().hasOnly(['createdAt', 'fcmTokens'])
-        && request.resource.data.fcmTokens is list
-        && request.resource.data.fcmTokens.size() <= 20;
+      allow create, update: if isMe(uid) && newData().keys().hasOnly(['createdAt']);
       allow delete: if false;
 
-      // Plans are written by the server. The owner can only (un)save or delete.
+      // Plans: only the owner can see or change them.
       match /plans/{planId} {
         allow read, delete: if isMe(uid);
-        allow update: if isMe(uid)
-          && changed().hasOnly(['saved'])
-          && request.resource.data.saved is bool;
-        allow create: if false;
+        allow create: if isMe(uid)
+          && newData().keys().hasOnly(['title', 'summary', 'stops', 'request', 'tips',
+                                       'weatherNote', 'source', 'saved', 'createdAt'])
+          && newData().stops is list && newData().stops.size() <= 5
+          && newData().title is string && newData().title.size() <= 80
+          && newData().saved == false
+          && newData().createdAt == request.time;
+        allow update: if isMe(uid) && changed().hasOnly(['saved']) && newData().saved is bool;
       }
     }
 
-    // What other users can see about you. Username is set by the server only.
+    // ---- What other users can see about you ----
     match /publicProfiles/{uid} {
       allow read: if signedIn();
       allow create: if isMe(uid)
-        && request.resource.data.keys().hasOnly(['displayName', 'photoUrl', 'createdAt'])
-        && validName(request.resource.data.displayName);
+        && newData().keys().hasOnly(['displayName', 'photoUrl', 'createdAt'])
+        && validName(newData().displayName);
       allow update: if isMe(uid)
-        && changed().hasOnly(['displayName', 'photoUrl'])
-        && validName(request.resource.data.displayName);
+        && changed().hasOnly(['displayName', 'photoUrl', 'username'])
+        && validName(newData().displayName)
+        // A new username must be one this person owns in /usernames.
+        && (!('username' in changed())
+            || getAfter(/databases/$(database)/documents/usernames/$(newData().username)).data.uid == me());
       allow delete: if false;
     }
 
+    // One document per username, so no two people can own the same one.
     match /usernames/{name} {
-      allow read: if signedIn();
-      allow write: if false;
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && !isGuest()
+        && name.matches('^[a-z0-9_.]{3,20}$')
+        && newData().keys().hasOnly(['uid'])
+        && newData().uid == me();
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.uid == me();
     }
 
-    match /joinCodes/{code} {
-      allow read, write: if false;
-    }
-
-    // One document per pair of users, id = "smallerUid_largerUid".
+    // ---- Friends: one document per pair, id = "smallerUid_largerUid" ----
     match /friendships/{id} {
-      allow read: if signedIn()
-        && (resource == null || request.auth.uid in resource.data.uids);
+      allow read: if signedIn() && (resource == null || me() in resource.data.uids);
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['uids', 'requestedBy', 'status', 'createdAt'])
-        && request.resource.data.requestedBy == request.auth.uid
-        && request.resource.data.status == 'pending'
-        && request.resource.data.uids is list
-        && request.resource.data.uids.size() == 2
-        && request.auth.uid in request.resource.data.uids
-        && request.resource.data.uids[0] < request.resource.data.uids[1]
-        && id == request.resource.data.uids[0] + '_' + request.resource.data.uids[1];
+        && newData().keys().hasOnly(['uids', 'requestedBy', 'status', 'createdAt'])
+        && newData().requestedBy == me()
+        && newData().status == 'pending'
+        && newData().uids is list && newData().uids.size() == 2
+        && me() in newData().uids
+        && newData().uids[0] < newData().uids[1]
+        && id == newData().uids[0] + '_' + newData().uids[1];
       // Only the person who RECEIVED the request can accept it.
       allow update: if signedIn()
-        && request.auth.uid in resource.data.uids
-        && request.auth.uid != resource.data.requestedBy
+        && me() in resource.data.uids
+        && me() != resource.data.requestedBy
         && changed().hasOnly(['status'])
-        && request.resource.data.status == 'accepted';
+        && newData().status == 'accepted';
       // Either person can cancel, decline or unfriend.
-      allow delete: if signedIn() && request.auth.uid in resource.data.uids;
+      allow delete: if signedIn() && me() in resource.data.uids;
     }
 
+    // ---- Invite codes: look up one code at a time; listing is blocked ----
+    match /joinCodes/{code} {
+      allow get: if signedIn();
+      allow list, update: if false;
+      allow create: if signedIn()
+        && code.matches('^[A-Z0-9]{6}$')
+        && newData().keys().hasOnly(['groupId'])
+        && getAfter(/databases/$(database)/documents/groups/$(newData().groupId)).data.ownerUid == me()
+        && getAfter(/databases/$(database)/documents/groups/$(newData().groupId)).data.joinCode == code;
+      allow delete: if signedIn()
+        && get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.ownerUid == me();
+    }
+
+    // ---- Groups ----
     match /groups/{groupId} {
-      function isMember() {
-        return signedIn() && request.auth.uid in resource.data.memberUids;
+      function isMember() { return signedIn() && me() in resource.data.memberUids; }
+      function oldMembers() { return resource.data.memberUids.toSet(); }
+      function newMembers() { return newData().memberUids.toSet(); }
+      function onlyAdds(uid) {
+        return newMembers() == oldMembers().union([uid].toSet())
+          && !(uid in resource.data.memberUids)
+          && newData().memberUids.size() == resource.data.memberUids.size() + 1
+          && newData().memberUids.size() <= 50;
       }
 
       allow read: if signedIn() && (resource == null || isMember());
-      allow create, delete: if false;
-      allow update: if isMember() && (
-        // Anyone in the group: change only their own RSVP.
-        (changed().hasOnly(['rsvp'])
-          && request.resource.data.rsvp.diff(resource.data.rsvp).affectedKeys()
-               .hasOnly([request.auth.uid])
-          && request.resource.data.rsvp[request.auth.uid] in ['going', 'maybe', 'no'])
+
+      allow create: if signedIn()
+        && newData().keys().hasOnly(['name', 'ownerUid', 'memberUids', 'joinCode', 'scheduledAt',
+                                     'rsvp', 'freeUids', 'planId', 'planTitle', 'planStops',
+                                     'createdAt', 'lastMessageAt'])
+        && newData().ownerUid == me()
+        && newData().memberUids == [me()]
+        && newData().freeUids == []
+        && newData().rsvp.keys().hasOnly([me()]) && newData().rsvp[me()] == 'going'
+        && validName(newData().name)
+        && newData().planStops is list && newData().planStops.size() <= 5
+        && getAfter(/databases/$(database)/documents/joinCodes/$(newData().joinCode)).data.groupId == groupId;
+
+      allow update: if signedIn() && (
+        // Joining with an invite code: add yourself, nothing else.
+        (changed().hasOnly(['memberUids']) && onlyAdds(me()))
         ||
-        // Organizer: date, name and who doesn't pay.
-        (request.auth.uid == resource.data.ownerUid
+        // A member adds one of their accepted friends.
+        (isMember()
+          && changed().hasOnly(['memberUids', 'lastAddedUid'])
+          && onlyAdds(newData().lastAddedUid)
+          && get(/databases/$(database)/documents/friendships/$(pairId(me(), newData().lastAddedUid))).data.status == 'accepted')
+        ||
+        // A member changes only their own RSVP.
+        (isMember()
+          && changed().hasOnly(['rsvp'])
+          && newData().rsvp.diff(resource.data.rsvp).affectedKeys().hasOnly([me()])
+          && newData().rsvp[me()] in ['going', 'maybe', 'no'])
+        ||
+        // A member (not the organizer) leaves.
+        (isMember()
+          && me() != resource.data.ownerUid
+          && changed().hasOnly(['memberUids', 'rsvp', 'freeUids'])
+          && newMembers() == oldMembers().difference([me()].toSet())
+          && !(me() in newData().rsvp)
+          && newData().rsvp.diff(resource.data.rsvp).affectedKeys().hasOnly([me()])
+          && newData().freeUids.toSet() == resource.data.freeUids.toSet().difference([me()].toSet()))
+        ||
+        // A member sends a message: update the preview shown in the list.
+        (isMember()
+          && changed().hasOnly(['lastMessage', 'lastMessageAt'])
+          && newData().lastMessage is string && newData().lastMessage.size() <= 120
+          && newData().lastMessageAt == request.time)
+        ||
+        // The organizer: name, date and who doesn't pay.
+        (me() == resource.data.ownerUid
           && changed().hasOnly(['scheduledAt', 'freeUids', 'name'])
-          && request.resource.data.freeUids is list
-          && validName(request.resource.data.name)
-          && (request.resource.data.scheduledAt == null
-              || request.resource.data.scheduledAt is timestamp))
+          && newData().freeUids is list
+          && validName(newData().name)
+          && (newData().scheduledAt == null || newData().scheduledAt is timestamp))
       );
 
+      allow delete: if signedIn() && me() == resource.data.ownerUid;
+
       match /messages/{messageId} {
-        function member() {
-          return signedIn() && request.auth.uid in
-            get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
-        }
+        function group() { return get(/databases/$(database)/documents/groups/$(groupId)).data; }
+        function member() { return signedIn() && me() in group().memberUids; }
+
         allow read: if member();
         allow create: if member()
-          && request.resource.data.keys().hasOnly(['uid', 'name', 'text', 'createdAt'])
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 1000
-          && request.resource.data.name is string
-          && request.resource.data.name.size() <= 60
-          && request.resource.data.createdAt == request.time;
-        // Messages can't be edited by anyone; the server deletes them with the group.
-        allow update, delete: if false;
+          && newData().keys().hasOnly(['uid', 'name', 'text', 'createdAt'])
+          && newData().uid == me()
+          && newData().text is string
+          && newData().text.size() > 0 && newData().text.size() <= 1000
+          && newData().name is string && newData().name.size() <= 60
+          && newData().createdAt == request.time;
+        allow update: if false;
+        // Only the organizer, when deleting the whole group.
+        allow delete: if signedIn() && group().ownerUid == me();
       }
     }
   }

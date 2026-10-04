@@ -1,6 +1,7 @@
-# Sets up Khroga's server and builds the Android app, on GitHub's computers.
+# Sets up Khroga (free Spark plan, no billing) and builds the Android app,
+# on GitHub's computers.
 #
-# Before the first run, add the secret FIREBASE_SERVICE_ACCOUNT (see SETUP.md).
+# Before the first full run, add the secret FIREBASE_SERVICE_ACCOUNT (see SETUP.md).
 # Without it, this still builds a test app that shows "not connected".
 #
 # Download the app: GitHub > Actions > latest "Khroga" run > Artifacts > khroga-apk
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh_places:
-        description: "Search Google again for more real places"
+        description: "Download fresh places from OpenStreetMap"
         type: boolean
         default: false
 
@@ -27,10 +28,10 @@ env:
   FIRESTORE_LOCATION: europe-west1
 
 jobs:
-  server:
-    name: Set up server
+  firebase:
+    name: Set up Firebase (free)
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 20
     outputs:
       connected: ${{ steps.check.outputs.connected }}
     steps:
@@ -67,17 +68,27 @@ jobs:
         if: steps.check.outputs.connected == 'true'
         run: npm install -g firebase-tools
 
-      - name: Turn on Google services
+      - name: Make sure there is no billing (so it can never cost money)
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          gcloud services enable cloudbilling.googleapis.com --project "$P" >/dev/null 2>&1 || true
+          ENABLED=$(gcloud billing projects describe "$P" --format="value(billingEnabled)" 2>/dev/null || echo "unknown")
+          echo "Billing enabled: $ENABLED"
+          if [ "$ENABLED" = "True" ]; then
+            echo "::warning::Billing is turned ON for this Firebase project. Khroga doesn't need it. Switch the project back to the free Spark plan to be sure it never costs money."
+          fi
+
+      - name: Turn on the free Google services
         if: steps.check.outputs.connected == 'true'
         env:
           P: ${{ steps.auth.outputs.project_id }}
         run: |
           gcloud services enable --project "$P" \
-            cloudresourcemanager.googleapis.com serviceusage.googleapis.com iam.googleapis.com \
-            firebase.googleapis.com firestore.googleapis.com identitytoolkit.googleapis.com fcm.googleapis.com \
-            cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
-            run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com secretmanager.googleapis.com \
-            apikeys.googleapis.com places.googleapis.com generativelanguage.googleapis.com
+            cloudresourcemanager.googleapis.com serviceusage.googleapis.com \
+            firebase.googleapis.com firestore.googleapis.com identitytoolkit.googleapis.com \
+            apikeys.googleapis.com generativelanguage.googleapis.com
 
       - name: Create the database (first run only)
         if: steps.check.outputs.connected == 'true'
@@ -90,75 +101,40 @@ jobs:
             firebase firestore:databases:create "(default)" --location "$FIRESTORE_LOCATION" --project "$P"
           fi
 
-      - name: Create the server API key (first run only)
+      - name: Put the security rules online
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          for attempt in 1 2 3; do
+            firebase deploy --only firestore --project "$P" --non-interactive && exit 0
+            echo "Attempt $attempt failed; retrying in 30s..."
+            sleep 30
+          done
+          exit 1
+
+      - name: Create the AI key, locked to this app (first run only)
         if: steps.check.outputs.connected == 'true'
         env:
           P: ${{ steps.auth.outputs.project_id }}
         run: |
           find_key() {
             gcloud services api-keys list --project "$P" \
-              --filter="displayName=khroga-server" --format="value(name)" | head -n1
+              --filter="displayName=khroga-app-ai" --format="value(name)" | head -n1
           }
           NAME=$(find_key)
           if [ -z "$NAME" ]; then
-            gcloud services api-keys create --project "$P" --display-name=khroga-server \
-              --api-target=service=places.googleapis.com \
-              --api-target=service=generativelanguage.googleapis.com
+            gcloud services api-keys create --project "$P" --display-name=khroga-app-ai \
+              --api-target=service=generativelanguage.googleapis.com \
+              --allowed-application=sha1_fingerprint="$SHA1",package_name="$ANDROID_PACKAGE"
             for i in 1 2 3 4 5 6; do NAME=$(find_key); [ -n "$NAME" ] && break; sleep 10; done
           fi
-          [ -n "$NAME" ] || { echo "::error::Could not create the API key."; exit 1; }
-          KEY=$(gcloud services api-keys get-key-string "$NAME" --format="value(keyString)")
-          echo "::add-mask::$KEY"
-          echo "SERVER_KEY=$KEY" >> "$GITHUB_ENV"
-
-      - name: Store keys for the server (first run only)
-        if: steps.check.outputs.connected == 'true'
-        env:
-          P: ${{ steps.auth.outputs.project_id }}
-        run: |
-          for NAME in GEMINI_API_KEY PLACES_API_KEY; do
-            if gcloud secrets describe "$NAME" --project "$P" >/dev/null 2>&1; then
-              echo "$NAME already stored."
-            else
-              printf %s "$SERVER_KEY" | firebase functions:secrets:set "$NAME" --data-file - --project "$P" --force
-            fi
-          done
-
-      - name: Test server code
-        if: steps.check.outputs.connected == 'true'
-        working-directory: functions
-        run: |
-          npm ci
-          npm test
-
-      - name: Put the server and security rules online
-        if: steps.check.outputs.connected == 'true'
-        env:
-          P: ${{ steps.auth.outputs.project_id }}
-        run: |
-          # A brand-new project sometimes needs a minute for permissions to settle.
-          for attempt in 1 2 3; do
-            if firebase deploy --only firestore,functions --project "$P" --force --non-interactive; then
-              exit 0
-            fi
-            echo "Deploy attempt $attempt failed; retrying in 60s..."
-            sleep 60
-          done
-          exit 1
-
-      - name: Add real places from Google (first run, or when asked)
-        if: steps.check.outputs.connected == 'true'
-        working-directory: functions
-        env:
-          PLACES_API_KEY: ${{ env.SERVER_KEY }}
-          REFRESH: ${{ inputs.refresh_places }}
-        run: |
-          COUNT=$(npm run -s count-places)
-          echo "Places in the database: $COUNT"
-          if [ "$COUNT" = "0" ] || [ "$REFRESH" = "true" ]; then
-            npm run discover
-            npm run discover -- --merge
-            npm run seed
+          mkdir -p out
+          if [ -n "$NAME" ]; then
+            gcloud services api-keys get-key-string "$NAME" --format="value(keyString)" > out/gemini.key
+          else
+            echo "::warning::Could not create the AI key. The app will still plan, just without AI."
+            : > out/gemini.key
           fi
 
       - name: Register the Android app
@@ -178,18 +154,19 @@ jobs:
           fi
           firebase apps:android:sha:create "$APP_ID" "$SHA1" --project "$P" || echo "SHA-1 already added."
           firebase apps:android:sha:create "$APP_ID" "$SHA256" --project "$P" || echo "SHA-256 already added."
-          firebase apps:sdkconfig ANDROID "$APP_ID" --project "$P" --out google-services.json
+          mkdir -p out
+          firebase apps:sdkconfig ANDROID "$APP_ID" --project "$P" --out out/google-services.json
 
       - if: steps.check.outputs.connected == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: firebase-config
-          path: google-services.json
+          name: app-config
+          path: out/
           retention-days: 1
 
   android:
     name: Build Android app
-    needs: server
+    needs: firebase
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -210,6 +187,31 @@ jobs:
           flutter-version: "3.47.6"
           cache: true
 
+      - name: Test the place downloader
+        run: node --test tool/fetch_osm_places.test.mjs
+
+      - name: Week number (places are refreshed weekly)
+        id: week
+        run: echo "week=$(date +%G-%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Reuse this week's places
+        id: places-cache
+        if: ${{ !inputs.refresh_places }}
+        uses: actions/cache@v4
+        with:
+          path: assets/data/places.json
+          key: osm-places-v1-${{ steps.week.outputs.week }}
+
+      - name: Download real places from OpenStreetMap
+        if: steps.places-cache.outputs.cache-hit != 'true'
+        run: node tool/fetch_osm_places.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: places-data
+          path: assets/data/places.json
+          retention-days: 30
+
       - name: Get packages
         run: flutter pub get
 
@@ -219,18 +221,22 @@ jobs:
       - name: Run app tests
         run: flutter test
 
-      - if: needs.server.outputs.connected == 'true'
+      - if: needs.firebase.outputs.connected == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: firebase-config
-          path: /tmp/firebase-config
+          name: app-config
+          path: /tmp/app-config
 
       - name: Connect the app to Firebase
-        if: needs.server.outputs.connected == 'true'
-        run: node tool/gen_firebase_options.mjs /tmp/firebase-config/google-services.json "$ANDROID_PACKAGE"
+        if: needs.firebase.outputs.connected == 'true'
+        run: node tool/gen_firebase_options.mjs /tmp/app-config/google-services.json "$ANDROID_PACKAGE"
 
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          KEY=""
+          if [ -f /tmp/app-config/gemini.key ]; then KEY=$(cat /tmp/app-config/gemini.key); fi
+          echo "::add-mask::$KEY"
+          flutter build apk --release --dart-define=GEMINI_API_KEY="$KEY"
 
       - uses: actions/upload-artifact@v4
         with:

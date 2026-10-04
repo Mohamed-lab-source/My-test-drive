@@ -6,43 +6,37 @@ import 'package:khroga/models/social.dart';
 void main() {
   group('Place', () {
     test('missing facts stay null instead of being guessed', () {
-      final p = Place.fromMap('x', {'name': 'Somewhere', 'category': 'cafe', 'city': 'cairo'});
+      final p = Place.fromMap({'id': 'x', 'name': 'Somewhere', 'category': 'cafe', 'city': 'cairo'});
       expect(p.lat, isNull);
       expect(p.hasLocation, isFalse);
-      expect(p.avgCostPerPerson, isNull);
-      expect(p.priceLabel, '');
+      expect(p.openingHours, isNull);
+      expect(p.cuisineLabel, isNull);
     });
 
-    test('price level label', () {
-      expect(Place.fromMap('x', {'priceLevel': 0}).priceLabel, 'Free');
-      expect(Place.fromMap('x', {'priceLevel': 3}).priceLabel, r'$$$');
-    });
-
-    test('ignores broken photo entries', () {
-      final p = Place.fromMap('x', {
-        'photos': [
-          {'url': 'https://a/b.jpg', 'attribution': 'Someone'},
-          {'attribution': 'no link'},
-          'not a map',
-        ],
-      });
-      expect(p.photos, hasLength(1));
+    test('cuisine label is readable', () {
+      final p = Place.fromMap({'id': 'x', 'cuisine': 'pizza;italian;fast_food;burger'});
+      expect(p.cuisineLabel, 'pizza, italian, fast food');
     });
   });
 
   group('OutingPlan', () {
-    test('budget only adds up known costs', () {
-      final plan = OutingPlan.fromMap('p', {
-        'title': 'T',
-        'stops': [
-          {'placeId': 'a', 'name': 'A', 'avgCostPerPerson': 200},
-          {'placeId': 'b', 'name': 'B'},
-        ],
-        'request': {'city': 'cairo', 'mallId': 'mall1'},
-      });
-      expect(plan.knownCostPerPerson, 200);
-      expect(plan.stopsWithUnknownCost, 1);
-      expect(plan.isMallLocked, isTrue);
+    test('saving and loading keeps every field', () {
+      const plan = OutingPlan(
+        id: 'p',
+        title: 'T',
+        summary: 'S',
+        stops: [PlanStop(placeId: 'a', name: 'A', category: 'cafe', lat: 30, lng: 31, startTime: '18:00')],
+        request: PlanRequest(
+            city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening', mallId: 'm1'),
+        tips: ['Book ahead'],
+        source: 'fallback',
+      );
+      final back = OutingPlan.fromMap('p', plan.toMap());
+      expect(back.stops.single.lat, 30);
+      expect(back.stops.single.startTime, '18:00');
+      expect(back.isMallLocked, isTrue);
+      expect(back.source, 'fallback');
+      expect(back.tips, ['Book ahead']);
     });
 
     test('regenerating keeps mall mode', () {
@@ -70,7 +64,7 @@ void main() {
     });
 
     test('initials', () {
-      expect(const PublicProfile(uid: 'u', displayName: 'mohamed ali').initials, 'MA');
+      expect(const PublicProfile(uid: 'u', displayName: 'sara ali').initials, 'SA');
       expect(const PublicProfile(uid: 'u', displayName: '  ').initials, '?');
     });
   });

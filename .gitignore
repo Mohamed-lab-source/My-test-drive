@@ -53,15 +53,9 @@ app.*.map.json
 *key*.json
 .env
 .env.*
-functions/.secret.local
-functions/.runtimeconfig.json
 
 # Firebase
 .firebase/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
-
-# Scratch output from the places discovery script (review before merging)
-functions/data/discovered.json
-!functions/.env
