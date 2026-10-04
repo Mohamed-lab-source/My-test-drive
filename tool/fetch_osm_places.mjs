@@ -1,10 +1,11 @@
 // Downloads REAL places from OpenStreetMap (free, no key) and writes
 // assets/data/places.json, which is bundled inside the app.
 //
-//   node tool/fetch_osm_places.mjs            -> download and write the file
+//   node tool/fetch_osm_places.mjs
 //
-// Data © OpenStreetMap contributors, ODbL. The app shows this credit.
-// Nothing is invented: every field is copied from the map, or left out.
+// Data © OpenStreetMap contributors (ODbL); photos from Wikimedia Commons.
+// The app shows these credits. Nothing is invented: every field is copied
+// from the map (or Wikidata's photo link), or left out.
 
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -21,15 +22,22 @@ const ENDPOINTS = [
   "https://overpass.private.coffee/api/interpreter",
 ];
 
+const USER_AGENT = "Khroga-app-build/1.0 (outing planner; github actions)";
+
 /** Most places of each kind to keep per city (the best-documented ones). */
 const CAPS = {
-  restaurant: 150, cafe: 100, cinema: 40, mall: 40, escape_room: 40,
-  entertainment: 60, park: 40, museum: 60, activity: 40,
+  restaurant: 400, cafe: 300, cinema: 60, mall: 150, escape_room: 60,
+  entertainment: 150, park: 80, museum: 120, activity: 80, sight: 120, shop: 2500,
 };
 
+/** Most shops to keep inside any one mall. */
+const SHOPS_PER_MALL = 80;
+
+const SIGHT_HISTORIC = ["castle", "monument", "archaeological_site", "ruins", "city_gate", "fort", "palace"];
+
 export function categoryOf(t) {
-  if (t.amenity === "restaurant") return "restaurant";
-  if (t.amenity === "cafe") return "cafe";
+  if (t.amenity === "restaurant" || t.amenity === "fast_food") return "restaurant";
+  if (t.amenity === "cafe" || t.amenity === "ice_cream") return "cafe";
   if (t.amenity === "cinema") return "cinema";
   if (t.shop === "mall") return "mall";
   if (t.leisure === "escape_game") return "escape_room";
@@ -37,13 +45,17 @@ export function categoryOf(t) {
     return "entertainment";
   }
   if (["theme_park", "zoo", "aquarium"].includes(t.tourism)) return "entertainment";
-  if (t.leisure === "park") return "park";
+  if (t.leisure === "park" || t.leisure === "garden") return "park";
   if (["museum", "gallery"].includes(t.tourism) || ["arts_centre", "theatre"].includes(t.amenity)) {
     return "museum";
   }
   if (["sports_centre", "ice_rink", "horse_riding"].includes(t.leisure) || t.sport === "karting") {
     return "activity";
   }
+  if (["attraction", "viewpoint"].includes(t.tourism) || SIGHT_HISTORIC.includes(t.historic)) {
+    return "sight";
+  }
+  if (t.shop) return "shop";
   return null;
 }
 
@@ -57,7 +69,52 @@ export function qualityOf(t) {
   if (t.cuisine) q += 1;
   if (t["name:en"]) q += 1;
   if (t["addr:street"]) q += 1;
+  if (t.brand) q += 1;
   return q;
+}
+
+const yesNo = (v) => (v === "yes" ? true : v === "no" ? false : undefined);
+
+/** Extra facts copied from map tags. Only tags that are present are kept. */
+export function detailsOf(t) {
+  const cards = ["payment:credit_cards", "payment:debit_cards", "payment:visa", "payment:mastercard", "payment:cards"]
+    .map((k) => t[k]);
+  const d = {
+    wheelchair: ["yes", "limited", "no"].includes(t.wheelchair) ? t.wheelchair : undefined,
+    outdoorSeating: yesNo(t.outdoor_seating),
+    wifi: ["wlan", "yes"].includes(t.internet_access) ? true : t.internet_access === "no" ? false : undefined,
+    smoking: ["yes", "no", "outside", "separated", "isolated"].includes(t.smoking) ? t.smoking : undefined,
+    shisha: t.shisha === "yes" || t["smoking:hookah"] === "yes" || /(^|;)\s*shisha/.test(t.cuisine ?? "")
+      ? true : t.shisha === "no" ? false : undefined,
+    takeaway: ["yes", "no", "only"].includes(t.takeaway) ? t.takeaway : undefined,
+    delivery: yesNo(t.delivery),
+    airConditioning: yesNo(t.air_conditioning),
+    vegetarian: ["yes", "only", "limited"].includes(t["diet:vegetarian"]) ? t["diet:vegetarian"] : undefined,
+    reservation: ["yes", "required", "recommended", "no"].includes(t.reservation) ? t.reservation : undefined,
+    cards: cards.includes("yes") ? true : cards.filter(Boolean).length && cards.filter(Boolean).every((v) => v === "no") ? false : undefined,
+    level: t.level || t["level:ref"] || undefined,
+    brand: t.brand || undefined,
+    description: (t["description:en"] || t.description || "").slice(0, 300) || undefined,
+  };
+  for (const k of Object.keys(d)) if (d[k] === undefined) delete d[k];
+  return d;
+}
+
+/** A Wikimedia Commons file named directly on the map, if any. */
+export function commonsFileOf(t) {
+  const c = t.wikimedia_commons;
+  if (c && /^File:/i.test(c)) return c.replace(/^File:/i, "");
+  const img = t.image ?? "";
+  const m = img.match(/commons\.wikimedia\.org\/wiki\/File:([^?#]+)/i);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+export function commonsUrls(file) {
+  const name = file.replace(/ /g, "_");
+  return {
+    photoUrl: `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(name)}?width=800`,
+    photoPage: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(name)}`,
+  };
 }
 
 const ARABIC = /[؀-ۿ]/;
@@ -85,19 +142,34 @@ function distanceKm([a1, o1], [a2, o2]) {
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
+/** Mall outlines from Overpass "out geom" (ways and multipolygon relations). */
+export function mallShapes(elements) {
+  const shapes = [];
+  for (const el of elements) {
+    const rings = [];
+    if (el.type === "way" && Array.isArray(el.geometry) && el.geometry.length >= 3) {
+      rings.push(el.geometry.map((g) => [g.lat, g.lon]));
+    } else if (el.type === "relation") {
+      for (const m of el.members ?? []) {
+        if (m.role !== "inner" && Array.isArray(m.geometry) && m.geometry.length >= 3) {
+          rings.push(m.geometry.map((g) => [g.lat, g.lon]));
+        }
+      }
+    }
+    if (rings.length) shapes.push({ id: `osm-${el.type}-${el.id}`, rings });
+  }
+  return shapes;
+}
+
 /**
  * Turns raw Overpass elements for one city into Khroga places.
  * @param elements  places + neighbourhood nodes (out tags center)
- * @param mallWays  mall outlines (out geom), used to link venues to malls
+ * @param shapes    mall outlines from mallShapes(), used to link venues to malls
  */
-export function convert(city, elements, mallWays = []) {
+export function convert(city, elements, shapes = []) {
   const suburbs = elements
     .filter((e) => e.tags?.place && ["suburb", "neighbourhood", "quarter"].includes(e.tags.place) && pointOf(e))
     .map((e) => ({ name: e.tags["name:en"] || e.tags.name, at: pointOf(e) }));
-
-  const malls = mallWays
-    .filter((w) => Array.isArray(w.geometry) && w.geometry.length >= 3)
-    .map((w) => ({ id: `osm-way-${w.id}`, poly: w.geometry.map((g) => [g.lat, g.lon]) }));
 
   const seen = new Set();
   const byCategory = {};
@@ -107,10 +179,16 @@ export function convert(city, elements, mallWays = []) {
     const category = categoryOf(t);
     const at = pointOf(el);
     if (!category || !at) continue;
-    if (t.disused || t["disused:amenity"] || t.abandoned) continue;
+    if (t.disused || t["disused:amenity"] || t["disused:shop"] || t.abandoned) continue;
     const id = `osm-${el.type}-${el.id}`;
     if (seen.has(id)) continue;
     seen.add(id);
+
+    const mall = category === "mall"
+      ? null
+      : shapes.find((m) => m.id !== id && m.rings.some((ring) => insidePolygon(at, ring)));
+    // Shops are only useful inside malls ("Plan my day here", mall directory).
+    if (category === "shop" && !mall) continue;
 
     let area;
     let best = 4; // km: only name a neighbourhood if it's close
@@ -118,16 +196,17 @@ export function convert(city, elements, mallWays = []) {
       const d = distanceKm(at, s.at);
       if (d < best) { best = d; area = s.name; }
     }
-    const mall = category === "mall" ? null : malls.find((m) => m.id !== id && insidePolygon(at, m.poly));
     const name = t["name:en"] || t.name;
     const nameAr = t["name:ar"] || (ARABIC.test(t.name) ? t.name : undefined);
     const street = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ");
+    const file = commonsFileOf(t);
 
     const place = {
       id,
       name,
       nameAr: nameAr && nameAr !== name ? nameAr : undefined,
       category,
+      kind: t.shop && category === "shop" ? t.shop : t.amenity === "fast_food" ? "fast_food" : undefined,
       city,
       area,
       address: street || undefined,
@@ -140,8 +219,12 @@ export function convert(city, elements, mallWays = []) {
       phone: t.phone || t["contact:phone"],
       indoor: category === "park" ? false : undefined,
       osmUrl: `https://www.openstreetmap.org/${el.type}/${el.id}`,
+      wikidata: /^Q\d+$/.test(t.wikidata ?? "") ? t.wikidata : undefined,
+      ...(file ? commonsUrls(file) : {}),
+      details: detailsOf(t),
       quality: qualityOf(t),
     };
+    if (!Object.keys(place.details).length) delete place.details;
     for (const k of Object.keys(place)) if (place[k] === undefined) delete place[k];
     (byCategory[category] ??= []).push(place);
   }
@@ -149,24 +232,35 @@ export function convert(city, elements, mallWays = []) {
   const out = [];
   for (const [category, list] of Object.entries(byCategory)) {
     list.sort((a, b) => b.quality - a.quality || a.name.localeCompare(b.name));
-    // Parks and sports centres are common; keep only documented ones.
-    const filtered = ["park", "activity"].includes(category) ? list.filter((p) => p.quality >= 2) : list;
+    let filtered = list;
+    // Parks, sports centres and sights are common; keep only documented ones.
+    if (["park", "activity", "sight"].includes(category)) filtered = list.filter((p) => p.quality >= 2 || p.wikidata);
+    if (category === "shop") {
+      const perMall = {};
+      filtered = list.filter((p) => (perMall[p.parentMallId] = (perMall[p.parentMallId] ?? 0) + 1) <= SHOPS_PER_MALL);
+    }
     out.push(...filtered.slice(0, CAPS[category] ?? 40));
   }
   // Keep mall links only to malls we actually kept.
   const keptMalls = new Set(out.filter((p) => p.category === "mall").map((p) => p.id));
-  for (const p of out) if (p.parentMallId && !keptMalls.has(p.parentMallId)) delete p.parentMallId;
-  return out;
+  return out.filter((p) => {
+    if (p.parentMallId && !keptMalls.has(p.parentMallId)) {
+      if (p.category === "shop") return false;
+      delete p.parentMallId;
+    }
+    return true;
+  });
 }
 
 function placesQuery(iso) {
-  return `[out:json][timeout:240];
+  return `[out:json][timeout:300];
 area["ISO3166-2"="${iso}"]->.a;
 (
-  nwr(area.a)["amenity"~"^(restaurant|cafe|cinema|arts_centre|theatre)$"]["name"];
+  nwr(area.a)["amenity"~"^(restaurant|fast_food|cafe|ice_cream|cinema|arts_centre|theatre)$"]["name"];
   nwr(area.a)["shop"="mall"]["name"];
-  nwr(area.a)["leisure"~"^(escape_game|bowling_alley|amusement_arcade|trampoline_park|water_park|park|sports_centre|ice_rink|horse_riding)$"]["name"];
-  nwr(area.a)["tourism"~"^(museum|gallery|theme_park|zoo|aquarium)$"]["name"];
+  nwr(area.a)["leisure"~"^(escape_game|bowling_alley|amusement_arcade|trampoline_park|water_park|park|garden|sports_centre|ice_rink|horse_riding)$"]["name"];
+  nwr(area.a)["tourism"~"^(museum|gallery|theme_park|zoo|aquarium|attraction|viewpoint)$"]["name"];
+  nwr(area.a)["historic"~"^(${SIGHT_HISTORIC.join("|")})$"]["name"];
   nwr(area.a)["sport"="karting"]["name"];
   node(area.a)["place"~"^(suburb|neighbourhood|quarter)$"]["name"];
 );
@@ -174,10 +268,19 @@ out tags center;`;
 }
 
 function mallsQuery(iso) {
-  return `[out:json][timeout:120];
+  return `[out:json][timeout:180];
 area["ISO3166-2"="${iso}"]->.a;
-way(area.a)["shop"="mall"]["name"];
+(way(area.a)["shop"="mall"]["name"]; relation(area.a)["shop"="mall"]["name"];);
 out geom;`;
+}
+
+function mallShopsQuery(iso) {
+  return `[out:json][timeout:240];
+area["ISO3166-2"="${iso}"]->.a;
+(way(area.a)["shop"="mall"]["name"]; relation(area.a)["shop"="mall"]["name"];)->.m;
+.m map_to_area->.ma;
+nwr(area.ma)["shop"]["name"]["shop"!="mall"];
+out tags center;`;
 }
 
 async function overpass(query) {
@@ -187,9 +290,9 @@ async function overpass(query) {
       try {
         const res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Khroga-app-build" },
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
           body: "data=" + encodeURIComponent(query),
-          signal: AbortSignal.timeout(300000),
+          signal: AbortSignal.timeout(360000),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return (await res.json()).elements ?? [];
@@ -203,13 +306,47 @@ async function overpass(query) {
   throw lastError;
 }
 
+/** Adds real photos from Wikidata (property P18) for places that link to it. */
+async function addWikidataPhotos(places) {
+  const want = places.filter((p) => p.wikidata && !p.photoUrl);
+  const ids = [...new Set(want.map((p) => p.wikidata))];
+  const files = {};
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    const url = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=claims&format=json&ids=" +
+      batch.join("|");
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(60000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = await res.json();
+      for (const [id, entity] of Object.entries(body.entities ?? {})) {
+        const file = entity.claims?.P18?.[0]?.mainsnak?.datavalue?.value;
+        if (typeof file === "string") files[id] = file;
+      }
+    } catch (e) {
+      console.warn(`  Wikidata batch failed (${e.message}); those places just won't have photos.`);
+    }
+  }
+  let added = 0;
+  for (const p of want) {
+    if (files[p.wikidata]) { Object.assign(p, commonsUrls(files[p.wikidata])); added++; }
+  }
+  return added;
+}
+
 async function main() {
   const all = [];
   for (const [city, iso] of Object.entries(CITIES)) {
     console.log(`Downloading ${city}...`);
     const elements = await overpass(placesQuery(iso));
-    const mallWays = await overpass(mallsQuery(iso));
-    const places = convert(city, elements, mallWays);
+    const malls = await overpass(mallsQuery(iso));
+    let shops = [];
+    try {
+      shops = await overpass(mallShopsQuery(iso));
+    } catch (e) {
+      console.warn(`  Shops inside malls skipped (${e.message}).`);
+    }
+    const places = convert(city, [...elements, ...shops], mallShapes(malls));
     const counts = {};
     for (const p of places) counts[p.category] = (counts[p.category] ?? 0) + 1;
     console.log(`  ${places.length} places`, counts,
@@ -217,8 +354,11 @@ async function main() {
     all.push(...places);
   }
   if (all.length < 50) throw new Error(`Only ${all.length} places found; refusing to write a near-empty file.`);
+  const photos = await addWikidataPhotos(all);
+  console.log(`Added ${photos} photos from Wikidata (${all.filter((p) => p.photoUrl).length} places have photos).`);
   writeFileSync("assets/data/places.json", JSON.stringify({
-    source: "© OpenStreetMap contributors, ODbL 1.0 (https://www.openstreetmap.org/copyright)",
+    source: "© OpenStreetMap contributors, ODbL 1.0 (https://www.openstreetmap.org/copyright). " +
+      "Photos: Wikimedia Commons.",
     generatedAt: new Date().toISOString(),
     places: all,
   }));

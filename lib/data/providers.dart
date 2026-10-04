@@ -6,6 +6,8 @@ import '../models/place.dart';
 import '../models/plan.dart';
 import '../models/social.dart';
 import 'auth_repository.dart';
+import 'favorites_repository.dart';
+import 'location_service.dart';
 import 'groups_repository.dart';
 import 'places_repository.dart';
 import 'plans_repository.dart';
@@ -101,3 +103,29 @@ final friendshipsProvider = StreamProvider<List<Friendship>>((ref) {
   if (uid == null) return Stream.value(const []);
   return ref.watch(socialRepositoryProvider).watchFriendships(uid);
 });
+
+// ---- Favorites ----
+final favoritesRepositoryProvider =
+    Provider((ref) => FavoritesRepository(ref.watch(firestoreProvider)));
+
+final favoriteIdsProvider = StreamProvider<List<String>>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(favoritesRepositoryProvider).watch(uid);
+});
+
+final favoritePlacesProvider = FutureProvider<List<Place>>((ref) async {
+  final ids = await ref.watch(favoriteIdsProvider.future);
+  final all = await ref.watch(placesRepositoryProvider).all();
+  final byId = {for (final p in all) p.id: p};
+  return [for (final id in ids) ?byId[id]];
+});
+
+// ---- Places inside a mall (mall directory) ----
+final mallVenuesProvider = FutureProvider.family<List<Place>, String>((ref, mallId) async {
+  final all = await ref.watch(placesRepositoryProvider).all();
+  return all.where((p) => p.parentMallId == mallId).toList();
+});
+
+// ---- Location ("Near me") ----
+final locationServiceProvider = Provider((_) => LocationService());

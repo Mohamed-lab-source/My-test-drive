@@ -8,29 +8,62 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
+import '../explore/explore_screen.dart';
 
+/// Saved plans and favorite places.
 class SavedPlansScreen extends ConsumerWidget {
   const SavedPlansScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plans = ref.watch(savedPlansProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Saved plans')),
-      body: AsyncView<List<OutingPlan>>(
-        value: plans,
-        builder: (list) => list.isEmpty
-            ? const EmptyState(
-                emoji: '🔖',
-                title: 'No saved plans yet',
-                message: 'Tap "Save" on a plan you like and it will show up here.',
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.all(KSpace.md),
-                itemCount: list.length,
-                separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
-                itemBuilder: (_, i) => _SavedPlanTile(plan: list[i]),
-              ),
+    final places = ref.watch(favoritePlacesProvider);
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Saved'),
+          bottom: TabBar(
+            labelColor: context.k.ink,
+            unselectedLabelColor: context.k.inkMuted,
+            indicatorColor: context.k.accent,
+            tabs: const [Tab(text: 'Plans'), Tab(text: 'Places')],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            AsyncView<List<OutingPlan>>(
+              value: plans,
+              builder: (list) => list.isEmpty
+                  ? const EmptyState(
+                      emoji: '🔖',
+                      title: 'No saved plans yet',
+                      message: 'Tap "Save" on a plan you like and it will show up here.',
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(KSpace.md),
+                      itemCount: list.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
+                      itemBuilder: (_, i) => _SavedPlanTile(plan: list[i]),
+                    ),
+            ),
+            AsyncView<List<Place>>(
+              value: places,
+              builder: (list) => list.isEmpty
+                  ? const EmptyState(
+                      emoji: '❤️',
+                      title: 'No favorite places yet',
+                      message: 'Tap the heart on any place to keep it here.',
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(KSpace.md),
+                      itemCount: list.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
+                      itemBuilder: (_, i) => PlaceTile(place: list[i]),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -44,16 +77,12 @@ class _SavedPlanTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final emojis = plan.stops.map((s) => Categories.emoji(s.category)).join(' ');
-    final date = plan.createdAt == null
-        ? ''
-        : DateFormat.MMMd().format(plan.createdAt!);
+    final date = plan.createdAt == null ? '' : DateFormat.MMMd().format(plan.createdAt!);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.sm),
-        title: Text(plan.title,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.sm),
+        title: Text(plan.title, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Text('$emojis   ${plan.stops.length} stops · $date'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push('/plan/${plan.id}'),

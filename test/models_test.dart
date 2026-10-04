@@ -13,6 +13,16 @@ void main() {
       expect(p.cuisineLabel, isNull);
     });
 
+    test('details turn into readable facts', () {
+      final p = Place.fromMap({
+        'id': 'x',
+        'details': {'wifi': true, 'cards': false, 'level': '0', 'shisha': true},
+      });
+      expect(p.details.labels, containsAll(['📶 Wi-Fi', '💵 Cash only', '💨 Shisha']));
+      expect(p.details.floorLabel, 'Ground floor');
+      expect(Place.fromMap({'id': 'y'}).details.labels, isEmpty);
+    });
+
     test('cuisine label is readable', () {
       final p = Place.fromMap({'id': 'x', 'cuisine': 'pizza;italian;fast_food;burger'});
       expect(p.cuisineLabel, 'pizza, italian, fast food');

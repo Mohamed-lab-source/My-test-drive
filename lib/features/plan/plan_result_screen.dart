@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -19,8 +20,19 @@ class PlanResultScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(planProvider(planId));
+    final loaded = plan.value;
     return Scaffold(
-      appBar: AppBar(title: const Text('Your plan')),
+      appBar: AppBar(
+        title: const Text('Your plan'),
+        actions: [
+          if (loaded != null)
+            IconButton(
+              tooltip: 'Share plan',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => SharePlus.instance.share(ShareParams(text: planShareText(loaded))),
+            ),
+        ],
+      ),
       body: AsyncView<OutingPlan?>(
         value: plan,
         onRetry: () => ref.invalidate(planProvider(planId)),
@@ -92,6 +104,7 @@ class _PlanBody extends ConsumerWidget {
             index: i,
             isFirst: i == 0,
             isLast: i == plan.stops.length - 1,
+            onSwap: () => _showSwapSheet(context, ref, plan, i),
           ),
         const SizedBox(height: KSpace.md),
         _BudgetCard(plan: plan),
@@ -181,7 +194,10 @@ class _StopTile extends StatelessWidget {
     required this.index,
     required this.isFirst,
     required this.isLast,
+    required this.onSwap,
   });
+
+  final VoidCallback onSwap;
 
   final PlanStop stop;
   final int index;
@@ -282,6 +298,14 @@ class _StopTile extends StatelessWidget {
                               const SizedBox(height: KSpace.md),
                               _RideRow(stop: stop),
                             ],
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: onSwap,
+                                icon: const Icon(Icons.swap_horiz, size: 18),
+                                label: const Text('Swap'),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -371,5 +395,83 @@ class _BudgetCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Plain text for sharing a plan (e.g. on WhatsApp), with map links.
+String planShareText(OutingPlan plan) {
+  final lines = <String>['🗺️ ${plan.title}'];
+  if (plan.summary.isNotEmpty) lines.add(plan.summary);
+  lines.add('');
+  for (var i = 0; i < plan.stops.length; i++) {
+    final s = plan.stops[i];
+    final where = s.area == null ? '' : ' (${s.area})';
+    final time = s.startTime == null ? '' : '${s.startTime} ';
+    lines.add('${i + 1}. $time${Categories.emoji(s.category)} ${s.name}$where');
+    if (s.hasLocation) {
+      lines.add('   ${Uri.https('www.google.com', '/maps/search/', {
+        'api': '1',
+        'query': '${s.lat},${s.lng}',
+      })}');
+    }
+  }
+  lines
+    ..add('')
+    ..add('Planned with Khroga');
+  return lines.join('\n');
+}
+
+/// Lets the person replace one stop with a similar real place nearby.
+Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan, int index) async {
+  final repo = ref.read(plansRepositoryProvider);
+  final uid = ref.read(uidProvider);
+  if (uid == null) return;
+  final messenger = ScaffoldMessenger.of(context);
+  final options = await repo.alternatives(plan, index);
+  if (!context.mounted) return;
+  if (options.isEmpty) {
+    showMessage(context, 'No similar places nearby to swap in.');
+    return;
+  }
+  final picked = await showModalBottomSheet<Place>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.65,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(KSpace.lg),
+        children: [
+          Text('Swap "${plan.stops[index].name}"',
+              style: Theme.of(sheetContext).textTheme.titleLarge),
+          const SizedBox(height: KSpace.xs),
+          Text('Similar real places nearby', style: Theme.of(sheetContext).textTheme.bodySmall),
+          const SizedBox(height: KSpace.md),
+          for (final p in options)
+            Card(
+              margin: const EdgeInsets.only(bottom: KSpace.sm),
+              child: ListTile(
+                leading: Text(Categories.emoji(p.category), style: const TextStyle(fontSize: 24)),
+                title: Text(p.name),
+                subtitle: Text([
+                  p.kindLabel ?? Categories.label(p.category),
+                  if (p.area != null) p.area!,
+                  if (p.cuisineLabel != null) p.cuisineLabel!,
+                  if (p.isOpenAt(DateTime.now()) == true) 'Open now',
+                ].join(' · ')),
+                onTap: () => Navigator.pop(sheetContext, p),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+  if (picked == null) return;
+  try {
+    await repo.replaceStop(uid, plan, index, picked);
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }
 }

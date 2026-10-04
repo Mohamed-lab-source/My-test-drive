@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+import '../models/place.dart';
 import '../models/plan.dart';
 import '../planner/planner.dart';
 import '../planner/services.dart';
@@ -25,7 +26,7 @@ class PlansRepository {
     final places = await _places.all();
     final weather = await weatherFuture;
 
-    final candidates = pickCandidates(places, request, weather);
+    final candidates = pickCandidates(places, request, weather, now: DateTime.now());
     if (candidates.isEmpty) {
       throw Exception(request.mallId != null
           ? "We don't have venues listed inside this mall yet."
@@ -83,6 +84,15 @@ class PlansRepository {
       .map((s) => s.docs.map((d) => OutingPlan.fromMap(d.id, d.data())).toList()
         ..sort((a, b) => (b.createdAt ?? DateTime(0))
             .compareTo(a.createdAt ?? DateTime(0))));
+
+  /// Similar real places that could replace stop [index].
+  Future<List<Place>> alternatives(OutingPlan plan, int index) async =>
+      alternativesFor(plan, index, await _places.all());
+
+  Future<void> replaceStop(String uid, OutingPlan plan, int index, Place place) =>
+      _plans(uid).doc(plan.id).update({
+        'stops': swapStop(plan, index, place).map((s) => s.toMap()).toList(),
+      });
 
   Future<void> setSaved(String uid, String planId, bool saved) =>
       _plans(uid).doc(planId).update({'saved': saved});

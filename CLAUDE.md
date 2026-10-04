@@ -41,6 +41,14 @@ How the code enforces it (keep it this way):
   build and bundled as `assets/data/places.json` (cached weekly). The committed
   file is an empty placeholder. Credit "© OpenStreetMap contributors" is shown
   in the app (`OsmCredit`).
+- Places carry extra map facts in `details` (wheelchair, wifi, floor, cards…)
+  and real photos from Wikimedia Commons (via OSM `wikimedia_commons`/`image`
+  or Wikidata P18). Shops are kept only when inside a mall (mall directory,
+  "Plan my day here"). `OpeningHours` (lib/models/opening_hours.dart) parses
+  common OSM hours for "Open now"; anything it can't read stays unknown.
+- Favorites live in `users/{uid}/favorites/{placeId}`. Plans can have a
+  stop swapped (`alternativesFor` / `swapStop` in planner.dart) and be shared
+  as text with map links.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

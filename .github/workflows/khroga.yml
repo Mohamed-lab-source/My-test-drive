@@ -228,7 +228,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: assets/data/places.json
-          key: osm-places-v1-${{ steps.week.outputs.week }}
+          key: osm-places-v2-${{ steps.week.outputs.week }}
 
       - name: Download real places from OpenStreetMap
         if: steps.places-cache.outputs.cache-hit != 'true'

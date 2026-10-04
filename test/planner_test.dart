@@ -7,7 +7,12 @@ import 'package:khroga/models/plan.dart';
 import 'package:khroga/planner/planner.dart';
 
 Place _p(String id, String category,
-        {String city = 'cairo', double? lat, double? lng, String? mall, int quality = 3}) =>
+        {String city = 'cairo',
+        double? lat,
+        double? lng,
+        String? mall,
+        int quality = 3,
+        String? hours}) =>
     Place(
         id: id,
         name: 'Test $id',
@@ -16,7 +21,8 @@ Place _p(String id, String category,
         lat: lat,
         lng: lng,
         parentMallId: mall,
-        quality: quality);
+        quality: quality,
+        openingHours: hours);
 
 final places = [
   _p('c1', 'cafe', lat: 30.06, lng: 31.22, quality: 8),
@@ -52,6 +58,7 @@ List<Place> pick(PlanRequest r, [Weather? w]) =>
     pickCandidates(places, r, w, random: Random(1));
 
 void main() {
+  _hoursAndSwapTests();
   test('candidates stay in the chosen city', () {
     final c = pick(req());
     expect(c, isNotEmpty);
@@ -150,5 +157,42 @@ void main() {
     }
     expect(prompt.contains('id=x1'), isFalse, reason: 'other cities are not offered');
     expect(prompt, contains('NEVER mention prices'));
+  });
+}
+
+
+final _monday = DateTime(2026, 10, 5, 9);
+
+void _hoursAndSwapTests() {
+  test('places known to be closed when the outing starts are pushed down', () {
+    final ps = [
+      _p('morningCafe', 'cafe', quality: 10, hours: 'Mo-Su 07:00-12:00'),
+      _p('eveningCafe', 'cafe', quality: 0, hours: 'Mo-Su 16:00-02:00'),
+    ];
+    final c = pickCandidates(ps, req(time: 'evening', stops: 1), null,
+        random: Random(1), now: _monday);
+    expect(c.first.id, 'eveningCafe');
+  });
+
+  test('swap suggests same kind of place nearby, not already in the plan', () {
+    final ps = [
+      _p('a', 'cafe', lat: 30.0, lng: 31.0),
+      _p('near', 'cafe', lat: 30.001, lng: 31.0),
+      _p('far', 'cafe', lat: 30.2, lng: 31.0),
+      _p('mid', 'cafe', lat: 30.05, lng: 31.0),
+      _p('r', 'restaurant', lat: 30.0005, lng: 31.0),
+    ];
+    final plan = OutingPlan(
+      id: 'p',
+      title: 't',
+      summary: '',
+      request: req(),
+      stops: buildStops(const [ProposedStop(placeId: 'a', startTime: '18:00')], ps),
+    );
+    final options = alternativesFor(plan, 0, ps);
+    expect(options.map((p) => p.id).toList(), ['near', 'mid', 'far']);
+    final swapped = swapStop(plan, 0, options.first);
+    expect(swapped.single.placeId, 'near');
+    expect(swapped.single.startTime, '18:00', reason: 'timing kept');
   });
 }

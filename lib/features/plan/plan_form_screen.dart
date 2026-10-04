@@ -82,7 +82,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             onPressed: () => showThemeSheet(context),
           ),
           IconButton(
-            tooltip: 'Saved plans',
+            tooltip: 'Saved plans & places',
             icon: const Icon(Icons.bookmark_outline),
             onPressed: () => context.push('/saved'),
           ),

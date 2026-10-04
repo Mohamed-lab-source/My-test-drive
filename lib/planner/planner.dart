@@ -46,24 +46,31 @@ class ProposedPlan {
 
 /// How well each category fits each vibe (0 = not at all).
 const Map<String, Map<String, int>> vibeWeights = {
-  'chill': {'cafe': 3, 'park': 2, 'restaurant': 1, 'museum': 1, 'cinema': 1},
+  'chill': {'cafe': 3, 'park': 2, 'restaurant': 1, 'museum': 1, 'cinema': 1, 'sight': 1},
   'foodie': {'restaurant': 3, 'cafe': 2},
   'active': {'escape_room': 3, 'entertainment': 3, 'activity': 3, 'park': 1},
-  'romantic': {'restaurant': 3, 'cafe': 2, 'cinema': 2, 'park': 1},
-  'family': {'entertainment': 3, 'park': 2, 'mall': 2, 'cinema': 2, 'restaurant': 1, 'museum': 1},
-  'culture': {'museum': 3, 'park': 1, 'cafe': 1},
-  'shopping': {'mall': 3, 'cafe': 1, 'restaurant': 1},
+  'romantic': {'restaurant': 3, 'cafe': 2, 'cinema': 2, 'park': 1, 'sight': 1},
+  'family': {'entertainment': 3, 'park': 2, 'mall': 2, 'cinema': 2, 'restaurant': 1, 'museum': 1, 'sight': 1},
+  'culture': {'museum': 3, 'sight': 3, 'park': 1, 'cafe': 1},
+  'shopping': {'mall': 3, 'shop': 2, 'cafe': 1, 'restaurant': 1},
   'nightlife': {'restaurant': 2, 'cafe': 2, 'cinema': 2, 'entertainment': 2},
 };
 
-const _daytimeCategories = {'museum', 'park'};
+const _daytimeCategories = {'museum', 'park', 'sight'};
+
+/// When the outing starts today, for checking opening hours.
+DateTime startTimeFor(String timeOfDay, DateTime now) {
+  final parts = (startHour[timeOfDay] ?? '18:00').split(':').map(int.parse).toList();
+  return DateTime(now.year, now.month, now.day, parts[0], parts[1]);
+}
 
 bool isBadWeather(Weather? w) =>
     w != null && (w.rainChancePct >= 50 || w.maxTempC >= 37 || w.maxTempC <= 10);
 
 bool isIndoor(Place p) => p.indoor ?? p.category != 'park';
 
-double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random random) {
+double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random random,
+    {DateTime? startsAt}) {
   var fit = 0;
   for (final v in input.vibes) {
     fit += vibeWeights[v]?[p.category] ?? 0;
@@ -78,6 +85,12 @@ double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random rand
     score -= input.timeOfDay == 'night' ? 1000 : 15;
   }
   if (isBadWeather(weather) && !isIndoor(p)) score -= 25;
+  // Real opening hours: avoid places we know are closed when the outing starts.
+  if (startsAt != null) {
+    final open = p.isOpenAt(startsAt);
+    if (open == false) score -= 40;
+    if (open == true) score += 3;
+  }
   // A little randomness so "Another one" feels fresh.
   score += random.nextDouble() * 8;
   return score;
@@ -98,15 +111,17 @@ List<Place> pickCandidates(
   Weather? weather, {
   math.Random? random,
   int limit = 40,
+  DateTime? now,
 }) {
   final rnd = random ?? math.Random();
+  final startsAt = now == null ? null : startTimeFor(input.timeOfDay, now);
   final exclude = input.excludePlaceIds.toSet();
 
   List<Place> rank(bool useExclude) {
     final scored = <(Place, double)>[
       for (final p in places)
         if (passesFilters(p, input) && (!useExclude || !exclude.contains(p.id)))
-          (p, scorePlace(p, input, weather, rnd)),
+          (p, scorePlace(p, input, weather, rnd, startsAt: startsAt)),
     ]..removeWhere((x) => x.$2 < -500);
     scored.sort((a, b) => b.$2.compareTo(a.$2));
     return [for (final x in scored) x.$1];
@@ -171,6 +186,8 @@ String buildPrompt(PlanRequest input, List<Place> candidates, Weather? weather, 
       'category=${p.category}',
       if (p.area != null) 'area=${p.area}',
       if (p.cuisineLabel != null) 'cuisine=${p.cuisineLabel}',
+      if (p.kindLabel != null) 'type=${p.kindLabel}',
+      if (p.details.floorLabel != null) 'floor=${p.details.floorLabel}',
       isIndoor(p) ? 'indoor' : 'outdoor',
       if (p.openingHours != null) 'hours=${p.openingHours}',
     ];
@@ -371,4 +388,59 @@ String? weatherNote(String city, Weather? w) {
           : 'no rain expected';
   final extra = isBadWeather(w) ? ' We leaned towards indoor places.' : '';
   return 'Today in $name: up to ${w.maxTempC.round()}°C, $rain.$extra';
+}
+
+/// Recomputes the straight-line distance between consecutive stops.
+List<PlanStop> withDistances(List<PlanStop> stops) {
+  final out = <PlanStop>[];
+  for (var i = 0; i < stops.length; i++) {
+    final s = stops[i];
+    final prev = i == 0 ? null : stops[i - 1];
+    double? km;
+    if (prev != null && prev.hasLocation && s.hasLocation) {
+      km = (haversineKm(prev.lat!, prev.lng!, s.lat!, s.lng!) * 10).round() / 10;
+    }
+    out.add(PlanStop.fromMap({...s.toMap(), 'kmFromPrevious': km}));
+  }
+  return out;
+}
+
+/// Real places that could replace stop [index]: same kind of place first,
+/// within the same city (or mall), not already in the plan, nearest first.
+List<Place> alternativesFor(OutingPlan plan, int index, List<Place> places, {int limit = 10}) {
+  final stop = plan.stops[index];
+  final used = {for (final s in plan.stops) s.placeId};
+  final pool = places
+      .where((p) => !used.contains(p.id) && passesFilters(p, plan.request) && p.category != 'shop')
+      .toList();
+  double distance(Place p) => stop.hasLocation && p.hasLocation
+      ? haversineKm(stop.lat!, stop.lng!, p.lat!, p.lng!)
+      : 9999;
+  int fit(Place p) => p.category == stop.category ? 0 : 1;
+  pool.sort((a, b) {
+    final f = fit(a).compareTo(fit(b));
+    if (f != 0) return f;
+    final d = distance(a).compareTo(distance(b));
+    return d != 0 ? d : b.quality.compareTo(a.quality);
+  });
+  final sameKind = pool.where((p) => p.category == stop.category).toList();
+  return (sameKind.length >= 3 ? sameKind : pool).take(limit).toList();
+}
+
+/// The plan's stops with stop [index] replaced by [place]; keeps the timing.
+List<PlanStop> swapStop(OutingPlan plan, int index, Place place) {
+  final old = plan.stops[index];
+  final stops = [...plan.stops];
+  stops[index] = PlanStop(
+    placeId: place.id,
+    name: place.name,
+    category: place.category,
+    area: place.area,
+    lat: place.lat,
+    lng: place.lng,
+    cuisine: place.cuisineLabel,
+    startTime: old.startTime,
+    durationMinutes: old.durationMinutes,
+  );
+  return withDistances(stops);
 }

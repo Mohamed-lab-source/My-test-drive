@@ -190,3 +190,20 @@ test("friendships: request, accept by receiver only, delete by either", async ()
   await assertSucceeds(getDocs(query(collection(as(BOB), "friendships"), where("uids", "array-contains", BOB))));
   await assertSucceeds(deleteDoc(ref(as(ALICE))));
 });
+
+test("favorites: only your own", async () => {
+  const fav = (db, uid, id) => doc(db, `users/${uid}/favorites/${id}`);
+  await assertSucceeds(setDoc(fav(as(ALICE), ALICE, "osm-node-1"), { createdAt: serverTimestamp() }));
+  await assertFails(setDoc(fav(as(BOB), ALICE, "osm-node-2"), { createdAt: serverTimestamp() }));
+  await assertFails(setDoc(fav(as(ALICE), ALICE, "osm-node-3"), { createdAt: serverTimestamp(), note: "x" }));
+  await assertSucceeds(getDocs(collection(as(ALICE), "users/alice/favorites")));
+  await assertFails(getDocs(collection(as(BOB), "users/alice/favorites")));
+  await assertSucceeds(deleteDoc(fav(as(ALICE), ALICE, "osm-node-1")));
+});
+
+test("plans: owner can swap stops, max 5", async () => {
+  const ref = (db) => doc(db, "users/alice/plans/plan1");
+  await assertSucceeds(updateDoc(ref(as(ALICE)), { stops: [{ placeId: "a" }] }));
+  await assertFails(updateDoc(ref(as(ALICE)), { stops: [1, 2, 3, 4, 5, 6] }));
+  await assertFails(updateDoc(ref(as(BOB)), { stops: [] }));
+});

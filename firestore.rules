@@ -32,7 +32,21 @@ service cloud.firestore {
           && newData().title is string && newData().title.size() <= 80
           && newData().saved == false
           && newData().createdAt == request.time;
-        allow update: if isMe(uid) && changed().hasOnly(['saved']) && newData().saved is bool;
+        // Owner can (un)save, or swap stops (still at most 5).
+        allow update: if isMe(uid)
+          && changed().hasOnly(['saved', 'stops'])
+          && newData().saved is bool
+          && newData().stops is list && newData().stops.size() <= 5;
+      }
+
+      // Favorite places: just a place id and when it was added.
+      match /favorites/{placeId} {
+        allow read, delete: if isMe(uid);
+        allow create: if isMe(uid)
+          && placeId.size() <= 60
+          && newData().keys().hasOnly(['createdAt'])
+          && newData().createdAt == request.time;
+        allow update: if false;
       }
     }
 
