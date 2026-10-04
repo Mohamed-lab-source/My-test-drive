@@ -7,7 +7,7 @@
 // The app shows these credits. Nothing is invented: every field is copied
 // from the map (or Wikidata's photo link), or left out.
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const CITIES = {
@@ -252,19 +252,24 @@ export function convert(city, elements, shapes = []) {
   });
 }
 
-function placesQuery(iso) {
-  return `[out:json][timeout:TIMEOUT];
+/** Smaller searches per city: busy public servers handle these far better. */
+export function placeQueries(iso) {
+  const wrap = (body) => `[out:json][timeout:TIMEOUT];
 area["ISO3166-2"="${iso}"]->.a;
 (
-  nwr(area.a)["amenity"~"^(restaurant|fast_food|cafe|ice_cream|cinema|arts_centre|theatre)$"]["name"];
-  nwr(area.a)["shop"="mall"]["name"];
+${body}
+);
+out tags center;`;
+  return {
+    food: wrap(`  nwr(area.a)["amenity"~"^(restaurant|fast_food|cafe|ice_cream)$"]["name"];`),
+    fun: wrap(`  nwr(area.a)["amenity"~"^(cinema|arts_centre|theatre)$"]["name"];
   nwr(area.a)["leisure"~"^(escape_game|bowling_alley|amusement_arcade|trampoline_park|water_park|park|garden|sports_centre|ice_rink|horse_riding)$"]["name"];
   nwr(area.a)["tourism"~"^(museum|gallery|theme_park|zoo|aquarium|attraction|viewpoint)$"]["name"];
   nwr(area.a)["historic"~"^(${SIGHT_HISTORIC.join("|")})$"]["name"];
-  nwr(area.a)["sport"="karting"]["name"];
-  node(area.a)["place"~"^(suburb|neighbourhood|quarter)$"]["name"];
-);
-out tags center;`;
+  nwr(area.a)["sport"="karting"]["name"];`),
+    malls: wrap(`  nwr(area.a)["shop"="mall"]["name"];
+  node(area.a)["place"~"^(suburb|neighbourhood|quarter)$"]["name"];`),
+  };
 }
 
 function mallsQuery(iso) {
@@ -340,31 +345,81 @@ async function addWikidataPhotos(places) {
   return added;
 }
 
-async function main() {
-  const all = [];
-  for (const [city, iso] of Object.entries(CITIES)) {
-    console.log(`Downloading ${city}...`);
-    const elements = await overpass(placesQuery(iso), { seconds: 200 });
-    let malls = [];
-    try {
-      malls = await overpass(mallsQuery(iso), { seconds: 120 });
-    } catch (e) {
-      console.warn(`  Mall outlines skipped (${e.message}).`);
-    }
-    // Shops inside malls are a nice extra: strict time limit, one server.
-    let shops = [];
+/** Downloads one city. Throws if its main searches fail. */
+async function fetchCity(city, iso) {
+  const queries = placeQueries(iso);
+  const elements = [];
+  for (const [name, q] of Object.entries(queries)) {
+    const got = await overpass(q, { seconds: 150 });
+    console.log(`  ${name}: ${got.length} map items`);
+    elements.push(...got);
+  }
+  let malls = [];
+  try {
+    malls = await overpass(mallsQuery(iso), { seconds: 120 });
+  } catch (e) {
+    console.warn(`  Mall outlines skipped (${e.message}).`);
+  }
+  // Shops inside malls are a nice extra: strict time limit, one server.
+  let shops = [];
+  if (malls.length) {
     try {
       shops = await overpass(mallShopsQuery(iso), { seconds: 90, endpoints: ENDPOINTS.slice(0, 1) });
     } catch (e) {
       console.warn(`  Shops inside malls skipped (${e.message}).`);
     }
-    const places = convert(city, [...elements, ...shops], mallShapes(malls));
-    const counts = {};
-    for (const p of places) counts[p.category] = (counts[p.category] ?? 0) + 1;
-    console.log(`  ${places.length} places`, counts,
-      `${places.filter((p) => p.parentMallId).length} inside malls`);
-    all.push(...places);
   }
+  return convert(city, [...elements, ...shops], mallShapes(malls));
+}
+
+function summary(places) {
+  const counts = {};
+  for (const p of places) counts[p.category] = (counts[p.category] ?? 0) + 1;
+  return `${places.length} places ${JSON.stringify(counts)}, ${places.filter((p) => p.parentMallId).length} inside malls`;
+}
+
+/** Places from the previous file (restored from the build cache), by city. */
+function previousByCity() {
+  try {
+    const old = JSON.parse(readFileSync("assets/data/places.json", "utf8")).places ?? [];
+    const by = {};
+    for (const p of old) (by[p.city] ??= []).push(p);
+    return by;
+  } catch {
+    return {};
+  }
+}
+
+async function main() {
+  const previous = previousByCity();
+  const result = {};
+  const failed = [];
+  for (const [city, iso] of Object.entries(CITIES)) {
+    console.log(`Downloading ${city}...`);
+    try {
+      result[city] = await fetchCity(city, iso);
+      console.log(`  ✔ ${city}: ${summary(result[city])}`);
+    } catch (e) {
+      console.warn(`  ✖ ${city} failed (${e.message}); will retry at the end.`);
+      failed.push(city);
+    }
+  }
+  for (const city of failed) {
+    console.log(`Retrying ${city}...`);
+    await new Promise((r) => setTimeout(r, 20000));
+    try {
+      result[city] = await fetchCity(city, CITIES[city]);
+      console.log(`  ✔ ${city}: ${summary(result[city])}`);
+    } catch (e) {
+      if (previous[city]?.length) {
+        console.warn(`::warning::${city} failed again (${e.message}); keeping its previous ${previous[city].length} places.`);
+        result[city] = previous[city];
+      } else {
+        console.warn(`::warning::${city} failed again (${e.message}) and has no previous places.`);
+      }
+    }
+  }
+  const all = Object.values(result).flat();
   if (all.length < 50) throw new Error(`Only ${all.length} places found; refusing to write a near-empty file.`);
   const photos = await addWikidataPhotos(all);
   console.log(`Added ${photos} photos from Wikidata (${all.filter((p) => p.photoUrl).length} places have photos).`);
@@ -374,7 +429,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     places: all,
   }));
-  console.log(`Wrote ${all.length} real places to assets/data/places.json`);
+  console.log(`Wrote ${all.length} real places to assets/data/places.json (${summary(all)})`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

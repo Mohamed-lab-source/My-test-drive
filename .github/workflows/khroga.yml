@@ -196,7 +196,7 @@ jobs:
     name: Build Android app
     needs: firebase
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
 
@@ -235,7 +235,7 @@ jobs:
       - name: Download real places from OpenStreetMap
         id: download
         if: steps.places-cache.outputs.cache-hit != 'true' || inputs.refresh_places
-        timeout-minutes: 25
+        timeout-minutes: 40
         continue-on-error: true
         run: node tool/fetch_osm_places.mjs
 
