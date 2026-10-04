@@ -10,8 +10,49 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    // Show a clear message instead of a crash if Firebase isn't connected yet.
+    runApp(_NotConnectedApp(error: '$e'));
+    return;
+  }
   runApp(const ProviderScope(child: KhrogaApp()));
+}
+
+class _NotConnectedApp extends StatelessWidget {
+  const _NotConnectedApp({required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: buildTheme(),
+      home: Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(KSpace.lg),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('🔌', style: TextStyle(fontSize: 48)),
+                const SizedBox(height: KSpace.md),
+                Text('Khroga isn\'t connected to its server yet',
+                    style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: KSpace.sm),
+                const Text('This test build is missing its Firebase settings.'),
+                const SizedBox(height: KSpace.md),
+                Text(error, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class KhrogaApp extends ConsumerWidget {

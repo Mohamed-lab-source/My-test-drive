@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# The shared TEST key is committed on purpose (see app/build.gradle.kts).
+!app/khroga-test.keystore

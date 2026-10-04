@@ -29,11 +29,24 @@ android {
         versionName = flutter.versionName
     }
 
+    // TEST signing key, committed so every build (on GitHub or your PC) has the
+    // same fingerprint for Google sign-in. Replace it before publishing on the
+    // Play Store.
+    signingConfigs {
+        create("khrogaTest") {
+            storeFile = file("khroga-test.keystore")
+            storePassword = "khrogatest"
+            keyAlias = "khroga"
+            keyPassword = "khrogatest"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("khrogaTest")
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("khrogaTest")
         }
     }
 }
