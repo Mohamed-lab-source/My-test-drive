@@ -8,6 +8,7 @@ import '../../data/providers.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
 import 'create_group_sheet.dart';
+import 'group_detail_screen.dart' show countdownText;
 
 class GroupsScreen extends ConsumerWidget {
   const GroupsScreen({super.key});
@@ -19,6 +20,11 @@ class GroupsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Groups'),
         actions: [
+          IconButton(
+            tooltip: 'Scan an invite QR code',
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: () => context.push('/scan'),
+          ),
           TextButton.icon(
             onPressed: () => _showJoinSheet(context),
             icon: const Icon(Icons.login),
@@ -65,7 +71,7 @@ class _GroupTile extends StatelessWidget {
     final going = group.rsvp.values.where((r) => r == Rsvp.going).length;
     final sub = [
       if (group.scheduledAt != null)
-        DateFormat('EEE d MMM, h:mm a').format(group.scheduledAt!),
+        '${countdownText(group.scheduledAt!)} · ${DateFormat('EEE d MMM, h:mm a').format(group.scheduledAt!)}',
       '${group.memberUids.length} members',
       if (going > 0) '$going going',
     ].join(' · ');

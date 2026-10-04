@@ -58,6 +58,15 @@ How the code enforces it (keep it this way):
 - Favorites live in `users/{uid}/favorites/{placeId}`. Plans can have a
   stop swapped (`alternativesFor` / `swapStop` in planner.dart) and be shared
   as text with map links.
+- Personal data per user: `users/{uid}/visited/{placeId}` ("Been there") and
+  `users/{uid}/notes/{placeId}` (private notes, ≤500 chars). Recently viewed
+  places, search history and text size live only on the phone
+  (`lib/app/local_history.dart`, `theme_settings.dart`).
+- Plan editing: reorder/remove/add stops, rename, outing day (`date`, used for
+  weather + opening hours), full-route Google Maps link, route summary
+  (straight-line km + a labeled rough time). Group extras: countdown, Google
+  Calendar link, bill splitter (user-entered totals only), invite QR
+  (`khroga:group:<code>`, scanned from Friends or Groups).
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

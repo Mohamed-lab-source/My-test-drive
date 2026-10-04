@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/theme.dart';
@@ -11,6 +12,8 @@ import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
+import '../../widgets/launchers.dart';
+import '../friends/friends_screen.dart' show groupQrPrefix;
 import 'create_group_sheet.dart';
 
 class GroupDetailScreen extends ConsumerWidget {
@@ -185,7 +188,32 @@ class _Header extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: KSpace.xs),
-              Text('$going going', style: text.bodySmall),
+              Row(
+                children: [
+                  Text('$going going', style: text.bodySmall),
+                  const Spacer(),
+                  if (group.scheduledAt != null)
+                    Text(countdownText(group.scheduledAt!),
+                        style: text.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: KSpace.xs),
+              Wrap(
+                spacing: KSpace.sm,
+                children: [
+                  if (group.scheduledAt != null)
+                    ActionChip(
+                      avatar: const Icon(Icons.event_available, size: 18),
+                      label: const Text('Add to calendar'),
+                      onPressed: () => openUri(calendarLink(group)),
+                    ),
+                  ActionChip(
+                    avatar: const Icon(Icons.calculate_outlined, size: 18),
+                    label: const Text('Split the bill'),
+                    onPressed: () => _showBillSplitter(context, group),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -305,6 +333,36 @@ class _MembersSheet extends ConsumerWidget {
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: KSpace.sm),
+          OutlinedButton.icon(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: Text('Join "${group.name}"', textAlign: TextAlign.center),
+                content: SizedBox(
+                  width: 240,
+                  height: 280,
+                  child: Column(
+                    children: [
+                      Container(
+                        color: Colors.white, // QR codes need a light background to scan
+                        padding: const EdgeInsets.all(8),
+                        child: QrImageView(data: '$groupQrPrefix${group.joinCode}', size: 220),
+                      ),
+                      const SizedBox(height: KSpace.sm),
+                      const Text('Friends scan this from Friends → Scan'),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext), child: const Text('Done')),
+                ],
+              ),
+            ),
+            icon: const Icon(Icons.qr_code),
+            label: const Text('Show invite QR code'),
           ),
           const SizedBox(height: KSpace.sm),
           OutlinedButton.icon(
@@ -600,6 +658,146 @@ class _ComposerState extends ConsumerState<_Composer> {
           IconButton.filled(
             onPressed: _sending ? null : _send,
             icon: const Icon(Icons.send_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "In 3 days", "Tomorrow", "In 5 hours", "Today", "Happened".
+String countdownText(DateTime when) {
+  final diff = when.difference(DateTime.now());
+  if (diff.isNegative) return diff.inHours > -6 ? 'Happening now' : 'Already happened';
+  final today = DateTime.now();
+  final daysAway = DateTime(when.year, when.month, when.day)
+      .difference(DateTime(today.year, today.month, today.day))
+      .inDays;
+  if (daysAway == 0) return diff.inHours >= 1 ? '⏳ In ${diff.inHours} h' : '⏳ In ${diff.inMinutes} min';
+  if (daysAway == 1) return '⏳ Tomorrow';
+  return '⏳ In $daysAway days';
+}
+
+/// A Google Calendar "add event" link for the group's outing.
+Uri calendarLink(Group group) {
+  String fmt(DateTime d) {
+    final u = d.toUtc();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${u.year}${two(u.month)}${two(u.day)}T${two(u.hour)}${two(u.minute)}00Z';
+  }
+
+  final start = group.scheduledAt!;
+  final end = start.add(const Duration(hours: 3));
+  final stops = group.planStops.map((s) => s['name']).whereType<String>().join(', ');
+  return Uri.https('calendar.google.com', '/calendar/render', {
+    'action': 'TEMPLATE',
+    'text': group.name,
+    'dates': '${fmt(start)}/${fmt(end)}',
+    'details': [
+      if (group.planTitle != null) 'Plan: ${group.planTitle}',
+      if (stops.isNotEmpty) 'Stops: $stops',
+      'Planned with Khroga',
+    ].join('\n'),
+  });
+}
+
+/// Type the total bill, see what each paying person owes. Nothing is saved
+/// and no prices are guessed: the number comes from you.
+void _showBillSplitter(BuildContext context, Group group) {
+  final paying = group.payingUids.length;
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => _BillSplitter(defaultPeople: paying > 0 ? paying : group.memberUids.length),
+  );
+}
+
+class _BillSplitter extends StatefulWidget {
+  const _BillSplitter({required this.defaultPeople});
+
+  final int defaultPeople;
+
+  @override
+  State<_BillSplitter> createState() => _BillSplitterState();
+}
+
+class _BillSplitterState extends State<_BillSplitter> {
+  final _total = TextEditingController();
+  late int _people = widget.defaultPeople.clamp(1, 50);
+  int _tipPercent = 0;
+
+  @override
+  void dispose() {
+    _total.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final total = double.tryParse(_total.text.replaceAll(',', '').trim()) ?? 0;
+    final withTip = total * (1 + _tipPercent / 100);
+    final each = _people == 0 ? 0 : withTip / _people;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          KSpace.lg, KSpace.lg, KSpace.lg, KSpace.lg + MediaQuery.viewInsetsOf(context).bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Split the bill', style: text.titleLarge),
+          const SizedBox(height: KSpace.md),
+          TextField(
+            controller: _total,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Total bill', suffixText: 'EGP'),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: KSpace.md),
+          Row(
+            children: [
+              const Expanded(child: Text('People paying')),
+              IconButton.outlined(
+                onPressed: _people > 1 ? () => setState(() => _people--) : null,
+                icon: const Icon(Icons.remove),
+              ),
+              SizedBox(width: 40, child: Text('$_people', textAlign: TextAlign.center, style: text.titleLarge)),
+              IconButton.outlined(
+                onPressed: () => setState(() => _people++),
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+          const SizedBox(height: KSpace.sm),
+          Wrap(
+            spacing: KSpace.sm,
+            children: [
+              for (final t in [0, 10, 12, 15])
+                ChoiceChip(
+                  label: Text(t == 0 ? 'No tip' : '+$t%'),
+                  selected: _tipPercent == t,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _tipPercent = t),
+                ),
+            ],
+          ),
+          const SizedBox(height: KSpace.lg),
+          Container(
+            padding: const EdgeInsets.all(KSpace.md),
+            decoration: BoxDecoration(
+              color: context.k.accentSoft,
+              borderRadius: BorderRadius.circular(KRadius.card),
+            ),
+            child: Column(
+              children: [
+                Text('Each person pays', style: text.bodyMedium),
+                Text('${each.ceil()} EGP', style: text.headlineMedium),
+                if (_tipPercent > 0)
+                  Text('Total with tip: ${withTip.ceil()} EGP', style: text.bodySmall),
+              ],
+            ),
           ),
         ],
       ),

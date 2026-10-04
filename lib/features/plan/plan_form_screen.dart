@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -24,6 +25,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   int _people = 2;
   final Set<String> _vibes = {'chill'};
   String _time = 'evening';
+  DateTime? _date; // null = today
   int _stops = 3;
   String? _mallId;
   final _budget = TextEditingController();
@@ -60,6 +62,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
       stops: _stops,
       mallId: _mallId,
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+      date: _date == null ? null : DateFormat('yyyy-MM-dd').format(_date!),
     );
     final id = await runPlanGeneration(context, ref, request);
     if (id != null && mounted) context.push('/plan/$id');
@@ -100,6 +103,64 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           const SizedBox(height: KSpace.xs),
           Text('Tell us the vibe. We only suggest real places.',
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+          const SectionTitle('Quick start'),
+          Wrap(
+            spacing: KSpace.sm,
+            runSpacing: KSpace.sm,
+            children: [
+              for (final preset in _presets)
+                ActionChip(
+                  label: Text(preset.label),
+                  onPressed: () => setState(() {
+                    _people = preset.people;
+                    _vibes
+                      ..clear()
+                      ..addAll(preset.vibes);
+                    _time = preset.time;
+                    _stops = preset.stops;
+                    showMessage(context, '${preset.label} picked. Change anything, then tap Plan.');
+                  }),
+                ),
+            ],
+          ),
+          const SectionTitle('When?'),
+          Wrap(
+            spacing: KSpace.sm,
+            runSpacing: KSpace.sm,
+            children: [
+              ChoiceChip(
+                label: const Text('Today'),
+                selected: _date == null,
+                showCheckmark: false,
+                onSelected: (_) => setState(() => _date = null),
+              ),
+              ChoiceChip(
+                label: const Text('Tomorrow'),
+                selected: _isTomorrow(_date),
+                showCheckmark: false,
+                onSelected: (_) => setState(() {
+                  final now = DateTime.now();
+                  _date = DateTime(now.year, now.month, now.day + 1);
+                }),
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.event_outlined, size: 18),
+                label: Text(_date == null || _isTomorrow(_date)
+                    ? 'Pick a day'
+                    : DateFormat('EEE d MMM').format(_date!)),
+                onPressed: () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _date ?? now,
+                    firstDate: DateTime(now.year, now.month, now.day),
+                    lastDate: now.add(const Duration(days: 60)),
+                  );
+                  if (picked != null) setState(() => _date = picked);
+                },
+              ),
+            ],
+          ),
           const SectionTitle('City'),
           SegmentedButton<String>(
             showSelectedIcon: false,
@@ -136,7 +197,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 ),
             ],
           ),
-          const SectionTitle('When?'),
+          const SectionTitle('Time of day'),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
@@ -291,3 +352,27 @@ class _Stepper extends StatelessWidget {
     );
   }
 }
+
+bool _isTomorrow(DateTime? d) {
+  if (d == null) return false;
+  final t = DateTime.now().add(const Duration(days: 1));
+  return d.year == t.year && d.month == t.month && d.day == t.day;
+}
+
+class _Preset {
+  const _Preset(this.label, this.people, this.vibes, this.time, this.stops);
+  final String label;
+  final int people;
+  final List<String> vibes;
+  final String time;
+  final int stops;
+}
+
+const _presets = [
+  _Preset('💕 Date night', 2, ['romantic', 'foodie'], 'evening', 2),
+  _Preset('👨‍👩‍👧 Family day', 4, ['family'], 'afternoon', 3),
+  _Preset('👯 Friends hangout', 5, ['active', 'chill'], 'evening', 3),
+  _Preset('🌧️ Rainy / hot day', 3, ['shopping', 'chill'], 'afternoon', 3),
+  _Preset('🏛️ Culture trip', 2, ['culture'], 'morning', 3),
+  _Preset('🌙 Late night', 4, ['nightlife', 'foodie'], 'night', 2),
+];

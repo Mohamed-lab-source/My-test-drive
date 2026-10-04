@@ -22,18 +22,19 @@ class PlansRepository {
   /// The AI only chooses from real places we hand it. If it fails (no
   /// internet, busy, free quota used up), we build the plan ourselves.
   Future<String> generate(String uid, PlanRequest request) async {
-    final weatherFuture = fetchWeather(request.city);
+    final day = request.day;
+    final weatherFuture = fetchWeather(request.city, day: day);
     final places = await _places.all();
     final weather = await weatherFuture;
 
-    final candidates = pickCandidates(places, request, weather, now: DateTime.now());
+    final candidates = pickCandidates(places, request, weather, now: day);
     if (candidates.isEmpty) {
       throw Exception(request.mallId != null
           ? "We don't have venues listed inside this mall yet."
           : "We couldn't find places matching that. Try another vibe.");
     }
 
-    final weekday = DateFormat('EEEE').format(DateTime.now());
+    final weekday = DateFormat('EEEE').format(day);
     final prompt = buildPrompt(request, candidates, weather, weekday);
 
     ProposedPlan? plan;
@@ -60,7 +61,7 @@ class PlansRepository {
       tips: plan.tips,
       stops: buildStops(plan.stops, candidates),
       request: request,
-      weatherNote: weatherNote(request.city, weather),
+      weatherNote: weatherNote(request.city, weather, day: day),
       source: source,
     );
     final doc = _plans(uid).doc();
@@ -93,6 +94,21 @@ class PlansRepository {
       _plans(uid).doc(plan.id).update({
         'stops': swapStop(plan, index, place).map((s) => s.toMap()).toList(),
       });
+
+  /// Every plan you've made, newest first.
+  Stream<List<OutingPlan>> watchAll(String uid) => _plans(uid)
+      .orderBy('createdAt', descending: true)
+      .limit(100)
+      .snapshots()
+      .map((s) => s.docs.map((d) => OutingPlan.fromMap(d.id, d.data())).toList());
+
+  Future<void> updateStops(String uid, String planId, List<PlanStop> stops) =>
+      _plans(uid).doc(planId).update({'stops': stops.map((s) => s.toMap()).toList()});
+
+  Future<void> rename(String uid, String planId, String title) {
+    final t = title.trim();
+    return _plans(uid).doc(planId).update({'title': t.length > 80 ? t.substring(0, 80) : t});
+  }
 
   Future<void> setSaved(String uid, String planId, bool saved) =>
       _plans(uid).doc(planId).update({'saved': saved});

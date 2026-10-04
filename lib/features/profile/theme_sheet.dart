@@ -9,7 +9,7 @@ Future<void> showThemeSheet(BuildContext context) => showModalBottomSheet(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (_) => const Padding(
+      builder: (_) => const SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(KSpace.lg, KSpace.lg, KSpace.lg, KSpace.xl),
         child: ThemePicker(),
       ),
@@ -29,7 +29,7 @@ class ThemePicker extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Look & colors', style: text.titleLarge),
+        Text('Look, colors & text size', style: text.titleLarge),
         const SizedBox(height: KSpace.md),
         SegmentedButton<ThemeMode>(
           showSelectedIcon: false,
@@ -43,6 +43,21 @@ class ThemePicker extends ConsumerWidget {
           ],
           selected: {settings.mode},
           onSelectionChanged: (s) => notifier.setMode(s.first),
+        ),
+        const SizedBox(height: KSpace.lg),
+        Text('Text size', style: text.titleMedium),
+        const SizedBox(height: KSpace.sm),
+        SegmentedButton<double>(
+          showSelectedIcon: false,
+          segments: [
+            for (final e in textScales.entries)
+              ButtonSegment(
+                value: e.key,
+                label: Text(e.value, style: TextStyle(fontSize: 13 * e.key)),
+              ),
+          ],
+          selected: {settings.textScale},
+          onSelectionChanged: (s) => notifier.setTextScale(s.first),
         ),
         const SizedBox(height: KSpace.lg),
         Text('Theme', style: text.titleMedium),

@@ -71,3 +71,17 @@ Future<bool> openWebsite(String url) {
 
 Future<bool> callPhone(String phone) =>
     launchUrl(Uri(scheme: 'tel', path: phone.replaceAll(' ', '')));
+
+/// Turn-by-turn directions in Google Maps ("walking" or "driving").
+Future<bool> openDirections({required double lat, required double lng, String mode = 'driving'}) =>
+    launchUrl(
+      Uri.https('www.google.com', '/maps/dir/', {
+        'api': '1',
+        'destination': '$lat,$lng',
+        'travelmode': mode,
+      }),
+      mode: LaunchMode.externalApplication,
+    );
+
+/// Any web link (e.g. a full-route Google Maps link).
+Future<bool> openUri(Uri uri) => launchUrl(uri, mode: LaunchMode.externalApplication);

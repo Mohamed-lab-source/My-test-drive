@@ -1,26 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../app/local_history.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../widgets/common.dart';
+import '../../planner/planner.dart' show similarNearby, nearbyPlaces, haversineKm;
 import '../../widgets/launchers.dart';
 import 'explore_screen.dart';
 
-class PlaceDetailsScreen extends ConsumerWidget {
+class PlaceDetailsScreen extends ConsumerStatefulWidget {
   const PlaceDetailsScreen({super.key, required this.placeId});
 
   final String placeId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlaceDetailsScreen> createState() => _PlaceDetailsScreenState();
+}
+
+class _PlaceDetailsScreenState extends ConsumerState<PlaceDetailsScreen> {
+  String get placeId => widget.placeId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Remember it for "Recently viewed" (saved on the phone only).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(recentPlacesProvider.notifier).add(placeId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final place = ref.watch(placeProvider(placeId));
     final favorite = ref.watch(favoriteIdsProvider).value?.contains(placeId) ?? false;
+    final loaded = place.value;
     return Scaffold(
       appBar: AppBar(
         actions: [
+          if (loaded != null)
+            IconButton(
+              tooltip: 'Share',
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => SharePlus.instance.share(ShareParams(text: placeShareText(loaded))),
+            ),
           IconButton(
             tooltip: favorite ? 'Remove from favorites' : 'Add to favorites',
             icon: Icon(favorite ? Icons.favorite : Icons.favorite_border,
@@ -57,6 +84,7 @@ class _Details extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final facts = place.details;
+    final all = ref.watch(allPlacesProvider).value ?? const <Place>[];
     final mall = place.parentMallId == null
         ? null
         : ref.watch(placeProvider(place.parentMallId!)).value;
@@ -106,15 +134,14 @@ class _Details extends ConsumerWidget {
         ],
         if (place.address != null) ...[
           const SizedBox(height: KSpace.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.place_outlined, size: 20, color: context.k.inkMuted),
-              const SizedBox(width: KSpace.sm),
-              Expanded(child: Text(place.address!)),
-            ],
-          ),
+          _CopyRow(icon: Icons.place_outlined, text: place.address!, what: 'Address'),
         ],
+        if (place.phone != null) ...[
+          const SizedBox(height: KSpace.sm),
+          _CopyRow(icon: Icons.call_outlined, text: place.phone!, what: 'Phone number'),
+        ],
+        const SizedBox(height: KSpace.sm),
+        _HowFar(place: place),
         const SizedBox(height: KSpace.md),
         Wrap(
           spacing: KSpace.sm,
@@ -125,6 +152,12 @@ class _Details extends ConsumerWidget {
                 onPressed: () => openInMaps(name: place.name, lat: place.lat, lng: place.lng),
                 icon: const Icon(Icons.directions_outlined),
                 label: const Text('Directions'),
+              ),
+            if (place.hasLocation)
+              OutlinedButton.icon(
+                onPressed: () => openDirections(lat: place.lat!, lng: place.lng!, mode: 'walking'),
+                icon: const Icon(Icons.directions_walk),
+                label: const Text('Walk'),
               ),
             if (place.hasLocation)
               OutlinedButton.icon(
@@ -160,7 +193,14 @@ class _Details extends ConsumerWidget {
           const SizedBox(height: KSpace.xs),
           Text('Hours can change. Call ahead if it matters.', style: text.bodySmall),
         ],
+        const SizedBox(height: KSpace.md),
+        _VisitedAndNote(place: place),
         if (place.category == 'mall') _MallDirectory(mall: place),
+        if (place.category != 'mall') _PlaceList(
+          title: 'Similar places nearby',
+          places: similarNearby(place, all),
+        ),
+        _PlaceList(title: "What's nearby (within 500 m)", places: nearbyPlaces(place, all)),
         const SizedBox(height: KSpace.lg),
         if (place.osmUrl != null)
           TextButton(
@@ -285,6 +325,204 @@ class _MallDirectory extends ConsumerWidget {
               child: PlaceTile(place: v),
             ),
         ],
+      ],
+    );
+  }
+}
+
+/// Text for sharing a place, with a map link when we have its location.
+String placeShareText(Place p) {
+  final lines = <String>[
+    '${Categories.emoji(p.category)} ${p.name}',
+    [p.kindLabel ?? Categories.label(p.category), ?p.area].join(' · '),
+    ?p.address,
+    ?p.phone,
+    if (p.hasLocation)
+      Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '${p.lat},${p.lng}'}).toString(),
+    '',
+    'Found on Khroga',
+  ];
+  return lines.join('\n');
+}
+
+/// A line of text you can tap to copy (address, phone).
+class _CopyRow extends StatelessWidget {
+  const _CopyRow({required this.icon, required this.text, required this.what});
+
+  final IconData icon;
+  final String text;
+  final String what;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: text));
+        showMessage(context, '$what copied');
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: context.k.inkMuted),
+            const SizedBox(width: KSpace.sm),
+            Expanded(child: Text(text)),
+            Icon(Icons.copy, size: 16, color: context.k.inkMuted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "2.4 km from you" — or a button to find out.
+class _HowFar extends ConsumerStatefulWidget {
+  const _HowFar({required this.place});
+
+  final Place place;
+
+  @override
+  ConsumerState<_HowFar> createState() => _HowFarState();
+}
+
+class _HowFarState extends ConsumerState<_HowFar> {
+  bool _busy = false;
+
+  Future<void> _locate() async {
+    setState(() => _busy = true);
+    try {
+      ref.read(myLocationProvider.notifier).set(await ref.read(locationServiceProvider).current());
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.place;
+    if (!p.hasLocation) return const SizedBox.shrink();
+    final me = ref.watch(myLocationProvider);
+    if (me == null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: _busy ? null : _locate,
+          icon: _busy
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.near_me_outlined, size: 18),
+          label: const Text('How far is it from me?'),
+        ),
+      );
+    }
+    final km = haversineKm(me.$1, me.$2, p.lat!, p.lng!);
+    final text = km < 1 ? '${(km * 1000).round()} m' : '${km.toStringAsFixed(1)} km';
+    return Row(
+      children: [
+        Icon(Icons.near_me_outlined, size: 20, color: context.k.inkMuted),
+        const SizedBox(width: KSpace.sm),
+        Text('$text from you (straight line)'),
+      ],
+    );
+  }
+}
+
+/// "Been there" toggle and a private note.
+class _VisitedAndNote extends ConsumerWidget {
+  const _VisitedAndNote({required this.place});
+
+  final Place place;
+
+  Future<void> _editNote(BuildContext context, WidgetRef ref, String? current) async {
+    final uid = ref.read(uidProvider);
+    if (uid == null) return;
+    final controller = TextEditingController(text: current ?? '');
+    final text = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Your private note'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 4,
+          maxLength: 500,
+          decoration: const InputDecoration(hintText: 'e.g. Ask for the terrace table'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, controller.text),
+              child: const Text('Save')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (text == null) return;
+    try {
+      await ref.read(personalRepositoryProvider).saveNote(uid, place.id, text);
+    } catch (e) {
+      if (context.mounted) showError(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visited = ref.watch(visitedIdsProvider).value?.contains(place.id) ?? false;
+    final note = ref.watch(placeNoteProvider(place.id)).value;
+    return Card(
+      child: Column(
+        children: [
+          SwitchListTile(
+            secondary: const Text('✅', style: TextStyle(fontSize: 22)),
+            title: const Text("I've been here"),
+            subtitle: const Text('Keeps a list of places you visited'),
+            value: visited,
+            onChanged: (v) async {
+              final uid = ref.read(uidProvider);
+              if (uid == null) return;
+              try {
+                await ref.read(personalRepositoryProvider).setVisited(uid, place.id, v);
+              } catch (e) {
+                if (context.mounted) showError(context, e);
+              }
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Text('📝', style: TextStyle(fontSize: 22)),
+            title: Text(note == null ? 'Add a private note' : 'Your note'),
+            subtitle: note == null ? const Text('Only you can see it') : Text(note),
+            trailing: const Icon(Icons.edit_outlined),
+            onTap: () => _editNote(context, ref, note),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A titled list of places (nearby, similar).
+class _PlaceList extends StatelessWidget {
+  const _PlaceList({required this.title, required this.places});
+
+  final String title;
+  final List<Place> places;
+
+  @override
+  Widget build(BuildContext context) {
+    if (places.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(title),
+        for (final p in places)
+          Padding(
+            padding: const EdgeInsets.only(bottom: KSpace.sm),
+            child: PlaceTile(place: p),
+          ),
       ],
     );
   }

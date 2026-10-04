@@ -12,7 +12,18 @@ class PlanRequest {
     this.mallId,
     this.notes,
     this.excludePlaceIds = const [],
+    this.date,
   });
+
+  /// The day of the outing as "yyyy-MM-dd" (null = today).
+  final String? date;
+
+  /// The outing day, or today when none was picked.
+  DateTime get day {
+    final parsed = date == null ? null : DateTime.tryParse(date!);
+    final now = DateTime.now();
+    return parsed ?? DateTime(now.year, now.month, now.day);
+  }
 
   final String city;
   final int groupSize;
@@ -36,6 +47,7 @@ class PlanRequest {
         'mallId': mallId,
         'notes': notes,
         'excludePlaceIds': excludePlaceIds,
+        'date': date,
       };
 
   factory PlanRequest.fromMap(Map<String, dynamic> m) => PlanRequest(
@@ -50,6 +62,7 @@ class PlanRequest {
         excludePlaceIds: ((m['excludePlaceIds'] as List?) ?? const [])
             .whereType<String>()
             .toList(),
+        date: m['date'] as String?,
       );
 
   PlanRequest copyWith({List<String>? excludePlaceIds}) => PlanRequest(
@@ -62,6 +75,7 @@ class PlanRequest {
         mallId: mallId,
         notes: notes,
         excludePlaceIds: excludePlaceIds ?? this.excludePlaceIds,
+        date: date,
       );
 }
 

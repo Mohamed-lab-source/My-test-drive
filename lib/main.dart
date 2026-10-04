@@ -42,6 +42,17 @@ class KhrogaApp extends ConsumerWidget {
       darkTheme: buildTheme(accent: look.accent, brightness: Brightness.dark),
       themeMode: look.mode,
       routerConfig: ref.watch(routerProvider),
+      // "Bigger text" setting, on top of the phone's own text size.
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(
+                (media.textScaler.scale(14) / 14 * look.textScale).clamp(0.8, 2.0)),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

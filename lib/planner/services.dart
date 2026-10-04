@@ -25,15 +25,22 @@ const _cityCoords = {
 };
 
 /// Today's real forecast from Open-Meteo (free, no key). Null if unavailable.
-Future<Weather?> fetchWeather(String city, {http.Client? client}) async {
+Future<Weather?> fetchWeather(String city, {DateTime? day, http.Client? client}) async {
   final coords = _cityCoords[city];
   if (coords == null) return null;
+  final today = DateTime.now();
+  final target = day ?? DateTime(today.year, today.month, today.day);
+  final daysAhead = target.difference(DateTime(today.year, today.month, today.day)).inDays;
+  if (daysAhead < 0 || daysAhead > 15) return null; // forecasts only go 16 days ahead
+  final ymd = '${target.year.toString().padLeft(4, '0')}-'
+      '${target.month.toString().padLeft(2, '0')}-${target.day.toString().padLeft(2, '0')}';
   final uri = Uri.https('api.open-meteo.com', '/v1/forecast', {
     'latitude': '${coords.$1}',
     'longitude': '${coords.$2}',
     'daily': 'temperature_2m_max,precipitation_probability_max',
     'timezone': 'Africa/Cairo',
-    'forecast_days': '1',
+    'start_date': ymd,
+    'end_date': ymd,
   });
   try {
     final res = await (client ?? http.Client())

@@ -33,10 +33,34 @@ service cloud.firestore {
           && newData().saved == false
           && newData().createdAt == request.time;
         // Owner can (un)save, or swap stops (still at most 5).
+        // Owner can (un)save, rename, or edit stops (still at most 5).
         allow update: if isMe(uid)
-          && changed().hasOnly(['saved', 'stops'])
+          && changed().hasOnly(['saved', 'stops', 'title'])
           && newData().saved is bool
-          && newData().stops is list && newData().stops.size() <= 5;
+          && newData().stops is list && newData().stops.size() <= 5
+          && newData().title is string && newData().title.size() > 0
+          && newData().title.size() <= 80;
+      }
+
+      // Places you've been to: just a place id and when.
+      match /visited/{placeId} {
+        allow read, delete: if isMe(uid);
+        allow create: if isMe(uid)
+          && placeId.size() <= 80
+          && newData().keys().hasOnly(['createdAt'])
+          && newData().createdAt == request.time;
+        allow update: if false;
+      }
+
+      // Private notes on places (only you can see them).
+      match /notes/{placeId} {
+        allow read, delete: if isMe(uid);
+        allow create, update: if isMe(uid)
+          && placeId.size() <= 80
+          && newData().keys().hasOnly(['text', 'updatedAt'])
+          && newData().text is string
+          && newData().text.size() > 0 && newData().text.size() <= 500
+          && newData().updatedAt == request.time;
       }
 
       // Favorite places: just a place id and when it was added.

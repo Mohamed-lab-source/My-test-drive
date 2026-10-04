@@ -14,6 +14,9 @@ import '../auth/username_sheet.dart';
 /// QR codes encode this prefix + uid, so we never act on random QR codes.
 const qrPrefix = 'khroga:user:';
 
+/// Group invite QR codes: this prefix + the group's invite code.
+const groupQrPrefix = 'khroga:group:';
+
 class FriendsScreen extends ConsumerWidget {
   const FriendsScreen({super.key});
 

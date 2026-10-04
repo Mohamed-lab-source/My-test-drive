@@ -7,16 +7,28 @@ import 'theme.dart';
 /// The person's look: light/dark/system mode and a colorful theme.
 /// Saved on the phone only (free, no account needed).
 class ThemeSettings {
-  const ThemeSettings({this.mode = ThemeMode.dark, this.accentId = 'coral'});
+  const ThemeSettings({
+    this.mode = ThemeMode.dark,
+    this.accentId = 'coral',
+    this.textScale = 1.0,
+  });
 
   final ThemeMode mode;
   final String accentId;
 
+  /// 1.0 = normal, 1.15 = large, 1.3 = extra large.
+  final double textScale;
+
   AccentTheme get accent => accentById(accentId);
 
-  ThemeSettings copyWith({ThemeMode? mode, String? accentId}) =>
-      ThemeSettings(mode: mode ?? this.mode, accentId: accentId ?? this.accentId);
+  ThemeSettings copyWith({ThemeMode? mode, String? accentId, double? textScale}) => ThemeSettings(
+        mode: mode ?? this.mode,
+        accentId: accentId ?? this.accentId,
+        textScale: textScale ?? this.textScale,
+      );
 }
+
+final textScales = <double, String>{1.0: 'Normal', 1.15: 'Large', 1.3: 'Extra large'};
 
 /// Loaded once in main() before the app starts, so there's no color flash.
 final sharedPrefsProvider = Provider<SharedPreferences?>((_) => null);
@@ -24,6 +36,7 @@ final sharedPrefsProvider = Provider<SharedPreferences?>((_) => null);
 class ThemeSettingsNotifier extends Notifier<ThemeSettings> {
   static const _modeKey = 'theme.mode';
   static const _accentKey = 'theme.accent';
+  static const _scaleKey = 'theme.textScale';
 
   @override
   ThemeSettings build() {
@@ -33,12 +46,22 @@ class ThemeSettingsNotifier extends Notifier<ThemeSettings> {
       'system' => ThemeMode.system,
       _ => ThemeMode.dark, // dark by default: easiest to read
     };
-    return ThemeSettings(mode: mode, accentId: prefs?.getString(_accentKey) ?? 'coral');
+    final scale = prefs?.getDouble(_scaleKey) ?? 1.0;
+    return ThemeSettings(
+      mode: mode,
+      accentId: prefs?.getString(_accentKey) ?? 'coral',
+      textScale: textScales.containsKey(scale) ? scale : 1.0,
+    );
   }
 
   void setMode(ThemeMode mode) {
     state = state.copyWith(mode: mode);
     ref.read(sharedPrefsProvider)?.setString(_modeKey, mode.name);
+  }
+
+  void setTextScale(double scale) {
+    state = state.copyWith(textScale: scale);
+    ref.read(sharedPrefsProvider)?.setDouble(_scaleKey, scale);
   }
 
   void setAccent(String id) {

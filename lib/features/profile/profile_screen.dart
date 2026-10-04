@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../data/providers.dart';
+import '../../models/social.dart';
 import '../../widgets/common.dart';
 import '../auth/username_sheet.dart';
 import 'theme_sheet.dart';
@@ -32,13 +33,15 @@ class ProfileScreen extends ConsumerWidget {
                   style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
             ),
           const SizedBox(height: KSpace.lg),
+          const _Stats(),
+          const SizedBox(height: KSpace.md),
           Card(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Icons.palette_outlined),
                   title: const Text('Look & colors'),
-                  subtitle: const Text('Dark mode and color themes'),
+                  subtitle: const Text('Dark mode, color themes, bigger text'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => showThemeSheet(context),
                 ),
@@ -142,5 +145,46 @@ class ProfileScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) showError(context, e);
     }
+  }
+}
+
+/// A few numbers about how you use Khroga (all from your own account).
+class _Stats extends ConsumerWidget {
+  const _Stats();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plans = ref.watch(allPlansProvider).value?.length;
+    final favorites = ref.watch(favoriteIdsProvider).value?.length;
+    final visited = ref.watch(visitedIdsProvider).value?.length;
+    final groups = ref.watch(myGroupsProvider).value?.length;
+    final friends = ref
+        .watch(friendshipsProvider)
+        .value
+        ?.where((f) => f.status == FriendshipStatus.accepted)
+        .length;
+    Widget stat(String emoji, int? n, String label) => Expanded(
+          child: Column(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 22)),
+              Text(n == null ? '–' : '$n', style: Theme.of(context).textTheme.titleLarge),
+              Text(label, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+            ],
+          ),
+        );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: KSpace.md),
+        child: Row(
+          children: [
+            stat('🗺️', plans, 'Plans'),
+            stat('❤️', favorites, 'Favorites'),
+            stat('✅', visited, 'Been there'),
+            stat('👯', groups, 'Groups'),
+            stat('🤝', friends, 'Friends'),
+          ],
+        ),
+      ),
+    );
   }
 }

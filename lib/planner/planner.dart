@@ -378,16 +378,20 @@ List<PlanStop> buildStops(List<ProposedStop> stops, List<Place> candidates) {
   return out;
 }
 
-String? weatherNote(String city, Weather? w) {
+String? weatherNote(String city, Weather? w, {DateTime? day}) {
   if (w == null) return null;
   final name = Cities.all[city] ?? city;
+  final now = DateTime.now();
+  final isToday = day == null || (day.year == now.year && day.month == now.month && day.day == now.day);
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  final when = isToday ? 'Today' : 'On ${weekdays[day.weekday - 1]}';
   final rain = w.rainChancePct >= 50
       ? 'rain likely'
       : w.rainChancePct >= 20
           ? 'some chance of rain'
           : 'no rain expected';
   final extra = isBadWeather(w) ? ' We leaned towards indoor places.' : '';
-  return 'Today in $name: up to ${w.maxTempC.round()}°C, $rain.$extra';
+  return '$when in $name: up to ${w.maxTempC.round()}°C, $rain.$extra';
 }
 
 /// Recomputes the straight-line distance between consecutive stops.
@@ -443,4 +447,109 @@ List<PlanStop> swapStop(OutingPlan plan, int index, Place place) {
     durationMinutes: old.durationMinutes,
   );
   return withDistances(stops);
+}
+
+// ---------------------------------------------------------------------------
+// Helpers for place pages and plan editing (all from real coordinates)
+// ---------------------------------------------------------------------------
+
+double? distanceKm(Place a, Place b) => a.hasLocation && b.hasLocation
+    ? haversineKm(a.lat!, a.lng!, b.lat!, b.lng!)
+    : null;
+
+/// Other places within [radiusKm], nearest first (shops only from the same mall).
+List<Place> nearbyPlaces(Place place, List<Place> all, {double radiusKm = 0.5, int limit = 8}) {
+  if (!place.hasLocation) return const [];
+  final list = <(Place, double)>[];
+  for (final p in all) {
+    if (p.id == place.id || !p.hasLocation) continue;
+    if (p.category == 'shop' && (place.parentMallId == null || p.parentMallId != place.parentMallId)) continue;
+    final d = haversineKm(place.lat!, place.lng!, p.lat!, p.lng!);
+    if (d <= radiusKm) list.add((p, d));
+  }
+  list.sort((a, b) => a.$2.compareTo(b.$2));
+  return [for (final x in list.take(limit)) x.$1];
+}
+
+/// Same kind of place nearby (within [radiusKm]), best-documented first.
+List<Place> similarNearby(Place place, List<Place> all, {double radiusKm = 3, int limit = 6}) {
+  if (!place.hasLocation) return const [];
+  final list = <(Place, double)>[];
+  for (final p in all) {
+    if (p.id == place.id || p.category != place.category || !p.hasLocation) continue;
+    final d = haversineKm(place.lat!, place.lng!, p.lat!, p.lng!);
+    if (d <= radiusKm) list.add((p, d));
+  }
+  list.sort((a, b) {
+    final q = b.$1.quality.compareTo(a.$1.quality);
+    return q != 0 ? q : a.$2.compareTo(b.$2);
+  });
+  return [for (final x in list.take(limit)) x.$1];
+}
+
+/// Straight-line distance across the whole route, and a rough driving time.
+/// The time is an estimate (about 20 km/h in city traffic), shown as such.
+({double km, int minutes})? routeSummary(List<PlanStop> stops) {
+  var km = 0.0;
+  var legs = 0;
+  for (final s in stops) {
+    if (s.kmFromPrevious != null) {
+      km += s.kmFromPrevious!;
+      legs++;
+    }
+  }
+  if (legs == 0) return null;
+  return (km: (km * 10).round() / 10, minutes: (km / 20 * 60).round() + legs * 5);
+}
+
+/// A Google Maps link with every stop as a waypoint (only stops with coordinates).
+Uri? routeMapsUrl(List<PlanStop> stops) {
+  final pts = stops.where((s) => s.hasLocation).map((s) => '${s.lat},${s.lng}').toList();
+  if (pts.length < 2) return null;
+  return Uri.https('www.google.com', '/maps/dir/', {
+    'api': '1',
+    'origin': pts.first,
+    'destination': pts.last,
+    if (pts.length > 2) 'waypoints': pts.sublist(1, pts.length - 1).join('|'),
+    'travelmode': 'driving',
+  });
+}
+
+/// Moves stop [from] to [to] and recalculates distances.
+List<PlanStop> moveStop(List<PlanStop> stops, int from, int to) {
+  final list = [...stops];
+  final s = list.removeAt(from);
+  list.insert(to.clamp(0, list.length), s);
+  return withDistances(list);
+}
+
+/// Removes stop [index] and recalculates distances.
+List<PlanStop> removeStop(List<PlanStop> stops, int index) =>
+    withDistances([...stops]..removeAt(index));
+
+/// Adds a real place as a new last stop (starting after the previous one).
+List<PlanStop> addStop(List<PlanStop> stops, Place place) {
+  String? start;
+  if (stops.isNotEmpty) {
+    final last = stops.last;
+    final parts = last.startTime?.split(':');
+    if (parts != null && parts.length == 2) {
+      final m = int.parse(parts[0]) * 60 + int.parse(parts[1]) + (last.durationMinutes ?? 90) + 20;
+      start = _hhmm(m);
+    }
+  }
+  return withDistances([
+    ...stops,
+    PlanStop(
+      placeId: place.id,
+      name: place.name,
+      category: place.category,
+      area: place.area,
+      lat: place.lat,
+      lng: place.lng,
+      cuisine: place.cuisineLabel,
+      startTime: start,
+      durationMinutes: _defaultMinutes[place.category] ?? 60,
+    ),
+  ]);
 }

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
+import '../../planner/planner.dart';
 import '../../widgets/common.dart';
 import '../../widgets/launchers.dart';
 import '../groups/create_group_sheet.dart';
@@ -68,7 +70,20 @@ class _PlanBody extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
       children: [
-        Text(plan.title, style: text.headlineMedium),
+        InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _rename(context, ref, plan),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: Text(plan.title, style: text.headlineMedium)),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Icon(Icons.edit_outlined, size: 20, color: context.k.inkMuted),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: KSpace.sm),
         if (plan.summary.isNotEmpty)
           Text(plan.summary,
@@ -82,6 +97,7 @@ class _PlanBody extends ConsumerWidget {
                 '${plan.request.groupSize == 1 ? 'person' : 'people'}'),
             Pill(Cities.all[plan.request.city] ?? plan.request.city),
             Pill(TimesOfDay.all[plan.request.timeOfDay] ?? plan.request.timeOfDay),
+            if (plan.request.date != null) Pill(DateFormat('EEE d MMM').format(plan.request.day)),
             if (plan.isMallLocked) const Pill('🛍️ One mall'),
           ],
         ),
@@ -105,6 +121,23 @@ class _PlanBody extends ConsumerWidget {
             isFirst: i == 0,
             isLast: i == plan.stops.length - 1,
             onSwap: () => _showSwapSheet(context, ref, plan, i),
+            onUp: i == 0 ? null : () => _editStops(context, ref, plan, moveStop(plan.stops, i, i - 1)),
+            onDown: i == plan.stops.length - 1
+                ? null
+                : () => _editStops(context, ref, plan, moveStop(plan.stops, i, i + 1)),
+            onRemove: plan.stops.length <= 1
+                ? null
+                : () => _editStops(context, ref, plan, removeStop(plan.stops, i)),
+          ),
+        _RouteCard(plan: plan),
+        if (plan.stops.length < 5)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _showAddStopSheet(context, ref, plan),
+              icon: const Icon(Icons.add_location_alt_outlined),
+              label: const Text('Add a stop'),
+            ),
           ),
         const SizedBox(height: KSpace.md),
         _BudgetCard(plan: plan),
@@ -195,9 +228,15 @@ class _StopTile extends StatelessWidget {
     required this.isFirst,
     required this.isLast,
     required this.onSwap,
+    this.onUp,
+    this.onDown,
+    this.onRemove,
   });
 
   final VoidCallback onSwap;
+  final VoidCallback? onUp;
+  final VoidCallback? onDown;
+  final VoidCallback? onRemove;
 
   final PlanStop stop;
   final int index;
@@ -298,13 +337,30 @@ class _StopTile extends StatelessWidget {
                               const SizedBox(height: KSpace.md),
                               _RideRow(stop: stop),
                             ],
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed: onSwap,
-                                icon: const Icon(Icons.swap_horiz, size: 18),
-                                label: const Text('Swap'),
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Move up',
+                                  onPressed: onUp,
+                                  icon: const Icon(Icons.arrow_upward, size: 20),
+                                ),
+                                IconButton(
+                                  tooltip: 'Move down',
+                                  onPressed: onDown,
+                                  icon: const Icon(Icons.arrow_downward, size: 20),
+                                ),
+                                IconButton(
+                                  tooltip: 'Remove stop',
+                                  onPressed: onRemove,
+                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                ),
+                                TextButton.icon(
+                                  onPressed: onSwap,
+                                  icon: const Icon(Icons.swap_horiz, size: 18),
+                                  label: const Text('Swap'),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -473,5 +529,121 @@ Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan
     await repo.replaceStop(uid, plan, index, picked);
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(friendlyError(e))));
+  }
+}
+
+/// Saves an edited list of stops (reordered, removed or added).
+Future<void> _editStops(
+    BuildContext context, WidgetRef ref, OutingPlan plan, List<PlanStop> stops) async {
+  final uid = ref.read(uidProvider);
+  if (uid == null) return;
+  try {
+    await ref.read(plansRepositoryProvider).updateStops(uid, plan.id, stops);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}
+
+Future<void> _rename(BuildContext context, WidgetRef ref, OutingPlan plan) async {
+  final controller = TextEditingController(text: plan.title);
+  final title = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Rename plan'),
+      content: TextField(controller: controller, autofocus: true, maxLength: 80),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Save')),
+      ],
+    ),
+  );
+  controller.dispose();
+  final uid = ref.read(uidProvider);
+  if (title == null || title.trim().isEmpty || uid == null) return;
+  try {
+    await ref.read(plansRepositoryProvider).rename(uid, plan.id, title);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}
+
+/// Lets the person add one more real place, nearest to the last stop first.
+Future<void> _showAddStopSheet(BuildContext context, WidgetRef ref, OutingPlan plan) async {
+  final all = await ref.read(placesRepositoryProvider).all();
+  final used = {for (final s in plan.stops) s.placeId};
+  final last = plan.stops.isEmpty ? null : plan.stops.last;
+  final options = all
+      .where((p) => !used.contains(p.id) && p.category != 'shop' && passesFilters(p, plan.request))
+      .toList();
+  double dist(Place p) => last != null && last.hasLocation && p.hasLocation
+      ? haversineKm(last.lat!, last.lng!, p.lat!, p.lng!)
+      : 9999;
+  options.sort((a, b) {
+    final d = dist(a).compareTo(dist(b));
+    return d != 0 ? d : b.quality.compareTo(a.quality);
+  });
+  if (!context.mounted) return;
+  final picked = await showModalBottomSheet<Place>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.7,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(KSpace.lg),
+        children: [
+          Text('Add a stop', style: Theme.of(sheetContext).textTheme.titleLarge),
+          const SizedBox(height: KSpace.xs),
+          Text('Real places near your last stop', style: Theme.of(sheetContext).textTheme.bodySmall),
+          const SizedBox(height: KSpace.md),
+          for (final p in options.take(25))
+            Card(
+              margin: const EdgeInsets.only(bottom: KSpace.sm),
+              child: ListTile(
+                leading: Text(Categories.emoji(p.category), style: const TextStyle(fontSize: 24)),
+                title: Text(p.name),
+                subtitle: Text([
+                  p.kindLabel ?? Categories.label(p.category),
+                  if (p.area != null) p.area!,
+                  if (dist(p) < 9999) '${dist(p).toStringAsFixed(1)} km away',
+                ].join(' · ')),
+                onTap: () => Navigator.pop(sheetContext, p),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+  if (picked == null || !context.mounted) return;
+  await _editStops(context, ref, plan, addStop(plan.stops, picked));
+}
+
+/// Total distance, a rough travel time, and the full route in Google Maps.
+class _RouteCard extends StatelessWidget {
+  const _RouteCard({required this.plan});
+
+  final OutingPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = routeSummary(plan.stops);
+    final url = routeMapsUrl(plan.stops);
+    if (summary == null && url == null) return const SizedBox.shrink();
+    return Card(
+      child: ListTile(
+        leading: const Text('🧭', style: TextStyle(fontSize: 24)),
+        title: Text(summary == null
+            ? 'Your route'
+            : '${summary.km} km between stops · about ${summary.minutes} min by car'),
+        subtitle: const Text('Straight-line distance; the time is a rough estimate. '
+            'Tap to open the whole route in Google Maps.'),
+        trailing: const Icon(Icons.open_in_new),
+        onTap: url == null ? null : () => openUri(url),
+      ),
+    );
   }
 }

@@ -56,7 +56,8 @@ test("plans: owner creates and saves; can't fake or edit content", async () => {
   await assertFails(addDoc(plans(as(ALICE)), { ...plan, stops: [1, 2, 3, 4, 5, 6] }));
   await assertFails(addDoc(plans(as(ALICE)), { ...plan, isAdmin: true }));
   await assertSucceeds(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { saved: true }));
-  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { title: "edited" }));
+  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { summary: "edited" }));
+  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { source: "ai" }));
   await assertFails(getDoc(doc(as(BOB), "users/alice/plans/plan1")));
   await assertFails(getDoc(doc(anon(), "users/alice/plans/plan1")));
 });
@@ -206,4 +207,23 @@ test("plans: owner can swap stops, max 5", async () => {
   await assertSucceeds(updateDoc(ref(as(ALICE)), { stops: [{ placeId: "a" }] }));
   await assertFails(updateDoc(ref(as(ALICE)), { stops: [1, 2, 3, 4, 5, 6] }));
   await assertFails(updateDoc(ref(as(BOB)), { stops: [] }));
+});
+
+test("been there and notes: only your own", async () => {
+  const v = (db, uid) => doc(db, `users/${uid}/visited/ov-123`);
+  await assertSucceeds(setDoc(v(as(ALICE), ALICE), { createdAt: serverTimestamp() }));
+  await assertFails(setDoc(v(as(BOB), ALICE), { createdAt: serverTimestamp() }));
+  const n = (db, uid) => doc(db, `users/${uid}/notes/ov-123`);
+  await assertSucceeds(setDoc(n(as(ALICE), ALICE), { text: "Ask for the terrace", updatedAt: serverTimestamp() }));
+  await assertFails(getDoc(n(as(BOB), ALICE)));
+  await assertFails(setDoc(n(as(ALICE), ALICE), { text: "x".repeat(501), updatedAt: serverTimestamp() }));
+  await assertFails(setDoc(n(as(ALICE), ALICE), { text: "", updatedAt: serverTimestamp() }));
+  await assertSucceeds(deleteDoc(n(as(ALICE), ALICE)));
+});
+
+test("plans: owner can rename, not blank", async () => {
+  const ref = (db) => doc(db, "users/alice/plans/plan1");
+  await assertSucceeds(updateDoc(ref(as(ALICE)), { title: "Friday fun" }));
+  await assertFails(updateDoc(ref(as(ALICE)), { title: "" }));
+  await assertFails(updateDoc(ref(as(BOB)), { title: "Hacked" }));
 });

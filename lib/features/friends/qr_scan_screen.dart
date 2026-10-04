@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../data/providers.dart';
@@ -21,10 +22,29 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
     final value = capture.barcodes
         .map((b) => b.rawValue)
         .whereType<String>()
-        .where((v) => v.startsWith(qrPrefix))
+        .where((v) => v.startsWith(qrPrefix) || v.startsWith(groupQrPrefix))
         .firstOrNull;
     if (value == null) return;
     _handled = true;
+
+    // A group invite QR: join the group.
+    if (value.startsWith(groupQrPrefix)) {
+      final router = GoRouter.of(context);
+      try {
+        final uid = ref.read(uidProvider);
+        if (uid == null) throw Exception('Please sign in again.');
+        final groupId = await ref
+            .read(groupsRepositoryProvider)
+            .join(uid, value.substring(groupQrPrefix.length));
+        router.pushReplacement('/group/$groupId');
+      } catch (e) {
+        if (mounted) {
+          showError(context, e);
+          Navigator.of(context).pop();
+        }
+      }
+      return;
+    }
 
     final other = value.substring(qrPrefix.length);
     final me = ref.read(uidProvider);
@@ -44,7 +64,7 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Scan a friend's code")),
+      appBar: AppBar(title: const Text("Scan a friend or group code")),
       body: MobileScanner(
         onDetect: _onDetect,
         errorBuilder: (context, error) => EmptyState(

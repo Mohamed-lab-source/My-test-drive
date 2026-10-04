@@ -8,6 +8,7 @@ import '../models/social.dart';
 import 'auth_repository.dart';
 import 'favorites_repository.dart';
 import 'location_service.dart';
+import 'personal_repository.dart';
 import 'groups_repository.dart';
 import 'places_repository.dart';
 import 'plans_repository.dart';
@@ -129,3 +130,46 @@ final mallVenuesProvider = FutureProvider.family<List<Place>, String>((ref, mall
 
 // ---- Location ("Near me") ----
 final locationServiceProvider = Provider((_) => LocationService());
+
+/// Your last known position (set when you use "Near me" or "How far?").
+/// Kept in memory only, never saved.
+class MyLocationNotifier extends Notifier<(double, double)?> {
+  @override
+  (double, double)? build() => null;
+  void set((double, double)? here) => state = here;
+}
+
+final myLocationProvider =
+    NotifierProvider<MyLocationNotifier, (double, double)?>(MyLocationNotifier.new);
+
+// ---- Personal history (been there, notes) ----
+final personalRepositoryProvider =
+    Provider((ref) => PersonalRepository(ref.watch(firestoreProvider)));
+
+final visitedIdsProvider = StreamProvider<List<String>>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(personalRepositoryProvider).watchVisited(uid);
+});
+
+final visitedPlacesProvider = FutureProvider<List<Place>>((ref) async {
+  final ids = await ref.watch(visitedIdsProvider.future);
+  final all = await ref.watch(placesRepositoryProvider).all();
+  final byId = {for (final p in all) p.id: p};
+  return [for (final id in ids) ?byId[id]];
+});
+
+final placeNoteProvider = StreamProvider.family<String?, String>((ref, placeId) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(null);
+  return ref.watch(personalRepositoryProvider).watchNote(uid, placeId);
+});
+
+final allPlansProvider = StreamProvider<List<OutingPlan>>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(plansRepositoryProvider).watchAll(uid);
+});
+
+final allPlacesProvider =
+    FutureProvider<List<Place>>((ref) => ref.watch(placesRepositoryProvider).all());
