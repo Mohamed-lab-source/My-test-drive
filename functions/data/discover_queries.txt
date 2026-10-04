@@ -1,0 +1,16 @@
+# One search per line:   city | what to search
+# Results are real Google Places data. Lines starting with # are ignored.
+cairo | escape rooms in New Cairo
+cairo | escape rooms in Heliopolis
+cairo | bowling and arcade in Cairo
+cairo | best cafes in Zamalek
+cairo | best restaurants in Maadi
+cairo | cinemas in Cairo
+cairo | museums in Cairo
+cairo | parks in Cairo
+giza | escape rooms in Sheikh Zayed
+giza | restaurants in 6th of October
+giza | cinemas in Sheikh Zayed
+alexandria | cafes in Alexandria
+alexandria | restaurants in Alexandria
+alexandria | cinemas in Alexandria
