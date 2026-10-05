@@ -15,6 +15,7 @@ import '../../widgets/common.dart';
 import '../../planner/planner.dart'
     show similarNearby, nearbyPlaces, haversineKm, addStop, otherBranches;
 import 'lists_screen.dart' show newListDialog;
+import '../../widgets/khroga_map.dart';
 import '../../widgets/launchers.dart';
 import 'explore_screen.dart';
 
@@ -151,6 +152,27 @@ class _Details extends ConsumerWidget {
               icon: Icons.my_location,
               text: '${place.lat!.toStringAsFixed(5)}, ${place.lng!.toStringAsFixed(5)}',
               what: 'Coordinates'),
+        ],
+        if (place.hasLocation) ...[
+          const SizedBox(height: KSpace.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(KRadius.card),
+            child: SizedBox(
+              height: 170,
+              child: KhrogaMap(
+                zoom: 16,
+                pins: [
+                  MapPin(
+                    lat: place.lat!,
+                    lng: place.lng!,
+                    label: place.name,
+                    emoji: Categories.emoji(place.category),
+                    onTap: () => openInMaps(name: place.name, lat: place.lat, lng: place.lng),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
         const SizedBox(height: KSpace.sm),
         _HowFar(place: place),

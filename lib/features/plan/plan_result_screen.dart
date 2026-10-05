@@ -13,6 +13,7 @@ import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../planner/planner.dart';
 import '../../widgets/common.dart';
+import '../../widgets/khroga_map.dart';
 import '../../widgets/launchers.dart';
 import '../groups/create_group_sheet.dart';
 import 'plan_form_screen.dart';
@@ -216,6 +217,29 @@ class _PlanBody extends ConsumerWidget {
             onEditLength: () => _editLength(context, ref, plan, i),
             onEditNote: () => _editNote(context, ref, plan, i),
           ),
+        if (plan.stops.where((s) => s.hasLocation).length >= 2) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(KRadius.card),
+            child: SizedBox(
+              height: 220,
+              child: KhrogaMap(
+                route: true,
+                pins: [
+                  for (final (i, s) in plan.stops.indexed)
+                    if (s.hasLocation)
+                      MapPin(
+                        lat: s.lat!,
+                        lng: s.lng!,
+                        label: s.name,
+                        number: i + 1,
+                        onTap: () => context.push('/place/${s.placeId}'),
+                      ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: KSpace.sm),
+        ],
         _RouteCard(plan: plan),
         if (plan.stops.where((s) => s.hasLocation).length >= 3)
           Align(

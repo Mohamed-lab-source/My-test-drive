@@ -9,6 +9,7 @@ import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../planner/planner.dart' show haversineKm;
 import '../../widgets/common.dart';
+import '../../widgets/khroga_map.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -51,6 +52,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   _Sort _sort = _Sort.best;
   bool _locating = false;
   bool _grid = false;
+  bool _map = false;
   final Set<_Extra> _extras = {};
   Set<String> _visited = const {};
   Set<String> _favorites = const {};
@@ -230,6 +232,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             icon: const Text('🛍️', style: TextStyle(fontSize: 20)),
             onPressed: () => context.push('/malls'),
           ),
+          IconButton(
+            tooltip: _map ? 'List' : 'Map',
+            icon: Icon(_map ? Icons.view_list_outlined : Icons.map_outlined),
+            onPressed: () => setState(() => _map = !_map),
+          ),
+          if (!_map)
           IconButton(
             tooltip: _grid ? 'List view' : 'Photo grid',
             icon: Icon(_grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
@@ -461,6 +469,42 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     message: _openNow || _extras.isNotEmpty
                         ? 'Filters only show places whose map entry says so. Try fewer filters.'
                         : null,
+                  ),
+                )
+              else if (_map)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(KRadius.card),
+                          child: SizedBox(
+                            height: MediaQuery.sizeOf(context).height * 0.6,
+                            child: KhrogaMap(
+                              me: me,
+                              pins: [
+                                for (final p in list.where((p) => p.hasLocation).take(300))
+                                  MapPin(
+                                    lat: p.lat!,
+                                    lng: p.lng!,
+                                    label: p.name,
+                                    emoji: Categories.emoji(p.category),
+                                    onTap: () => context.push('/place/${p.id}'),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: KSpace.sm),
+                        Text(
+                          list.where((p) => p.hasLocation).length > 300
+                              ? 'Showing the first 300 places. Use filters or pick an area to see others.'
+                              : 'Tap a pin to open the place.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
                 )
               else if (_grid)
