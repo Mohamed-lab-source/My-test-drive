@@ -166,3 +166,12 @@ String factText(Object? v) => switch (v) {
       'limited' => 'Limited',
       _ => '$v',
     };
+
+/// "just now", "5 min ago", "3 h ago", "2 days ago".
+String timeAgo(DateTime t, DateTime now) {
+  final d = now.difference(t);
+  if (d.inMinutes < 1) return 'just now';
+  if (d.inMinutes < 60) return '${d.inMinutes} min ago';
+  if (d.inHours < 24) return '${d.inHours} h ago';
+  return '${d.inDays} day${d.inDays == 1 ? '' : 's'} ago';
+}

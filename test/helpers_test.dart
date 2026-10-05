@@ -1,6 +1,7 @@
 // Test-only sample data (fake names on purpose, never shipped in the app).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:khroga/app/helpers.dart';
+import 'package:khroga/data/checkins_repository.dart';
 import 'package:khroga/models/opening_hours.dart';
 import 'package:khroga/models/place.dart';
 import 'package:khroga/models/plan.dart';
@@ -232,6 +233,19 @@ void moreTests() {
       expect(PlanRequest.fromMap(r.toMap()).radiusKm, 1);
       expect(PlanRequest.fromMap(const {}).radiusKm, PlanRequest.defaultRadiusKm);
     });
+  });
+
+  test('time ago and fresh check-ins', () {
+    final now = DateTime(2026, 10, 5, 20);
+    expect(timeAgo(now.subtract(const Duration(seconds: 20)), now), 'just now');
+    expect(timeAgo(now.subtract(const Duration(minutes: 5)), now), '5 min ago');
+    expect(timeAgo(now.subtract(const Duration(hours: 3)), now), '3 h ago');
+    expect(timeAgo(now.subtract(const Duration(days: 1)), now), '1 day ago');
+    CheckIn at(Duration ago) =>
+        CheckIn(uid: 'u', name: 'Test', placeId: 'p', placeName: 'Test', createdAt: now.subtract(ago));
+    expect(at(const Duration(hours: 23)).isFresh(now), isTrue);
+    expect(at(const Duration(hours: 25)).isFresh(now), isFalse);
+    expect(const CheckIn(uid: 'u', name: '', placeId: '', placeName: '').isFresh(now), isFalse);
   });
 
   test('poll counts votes', () {

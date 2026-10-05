@@ -88,6 +88,13 @@ How the code enforces it (keep it this way):
 - Phone-only extras (`lib/app/local_prefs.dart`): your lists of places, plan
   "How was it?", things-to-bring lists, settings (pure black, data saver,
   start on Explore, welcome tour seen, last "What's new" version).
+- Map: `lib/widgets/khroga_map.dart` (flutter_map + free OSM raster tiles,
+  with OSM credit). Used in Explore (map toggle, max 300 pins), plan result
+  (numbered route), place page, and the friends map.
+- Check-ins: `checkins/{uid}` holds your latest "I'm here" (place, coords,
+  `visibleTo` = your accepted friends at that moment). Friends see it for 24 h
+  (filtered in the app to accepted friends); you can remove it any time.
+  Checking in also marks the place as been there.
 - App icon: drawn by `tool/make_icon.py` (Pillow) into the Android mipmaps
   (adaptive + monochrome) and `assets/icon/khroga.png`. Re-run it to change it.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
@@ -161,5 +168,5 @@ cd rules-test && npm install && npm test   # needs Java + firebase-tools
 ## Not built yet
 
 Localization (Arabic first), user-submitted menus/prices, crowd check-ins,
-"where is everyone" map, location share, iOS build,
+iOS build,
 photos (could use Wikimedia Commons, free).

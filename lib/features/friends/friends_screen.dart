@@ -9,7 +9,10 @@ import 'package:share_plus/share_plus.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/social.dart';
+import '../../app/helpers.dart' show timeAgo;
+import '../../data/checkins_repository.dart';
 import '../../widgets/common.dart';
+import '../../widgets/khroga_map.dart';
 import '../auth/username_sheet.dart';
 
 /// QR codes encode this prefix + uid, so we never act on random QR codes.
@@ -86,6 +89,7 @@ class FriendsScreen extends ConsumerWidget {
                 onTap: () => showUsernameSheet(context),
               ),
             ),
+          const _OutNow(),
           const SizedBox(height: KSpace.sm),
           const _SearchBox(),
           AsyncView<List<Friendship>>(
@@ -315,4 +319,107 @@ class _FriendLists extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Where your friends checked in today, plus your own check-in.
+class _OutNow extends ConsumerWidget {
+  const _OutNow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final friends = ref.watch(friendsCheckInsProvider).value ?? const <CheckIn>[];
+    final mine = ref.watch(myCheckInProvider).value;
+    final myFresh = mine != null && mine.isFresh(now) ? mine : null;
+    if (friends.isEmpty && myFresh == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: KSpace.sm),
+        child: Text('📍 When friends tap "Check in" on a place, you\'ll see where they are here.',
+            style: Theme.of(context).textTheme.bodySmall),
+      );
+    }
+    final withLocation = friends.where((c) => c.lat != null && c.lng != null).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitle(
+          'Out now',
+          trailing: withLocation.isEmpty
+              ? null
+              : TextButton.icon(
+                  onPressed: () => _showFriendsMap(context, withLocation),
+                  icon: const Icon(Icons.map_outlined, size: 18),
+                  label: const Text('Map'),
+                ),
+        ),
+        if (myFresh != null)
+          Card(
+            child: ListTile(
+              leading: const Text('🙋', style: TextStyle(fontSize: 22)),
+              title: Text('You: ${myFresh.placeName}'),
+              subtitle: Text('Checked in ${timeAgo(myFresh.createdAt!, now)}'),
+              trailing: TextButton(
+                onPressed: () async {
+                  final uid = ref.read(uidProvider);
+                  if (uid == null) return;
+                  try {
+                    await ref.read(checkInsRepositoryProvider).remove(uid);
+                  } catch (e) {
+                    if (context.mounted) showError(context, e);
+                  }
+                },
+                child: const Text('Remove'),
+              ),
+              onTap: () => context.push('/place/${myFresh.placeId}'),
+            ),
+          ),
+        for (final c in friends)
+          Card(
+            child: ListTile(
+              leading: const Text('📍', style: TextStyle(fontSize: 22)),
+              title: Text('${c.name} is at ${c.placeName}'),
+              subtitle: Text([?c.area, timeAgo(c.createdAt!, now)].join(' · ')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/place/${c.placeId}'),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+void _showFriendsMap(BuildContext context, List<CheckIn> list) {
+  showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => SizedBox(
+      height: MediaQuery.sizeOf(sheetContext).height * 0.75,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(KSpace.md),
+            child: Text('Where friends are', style: Theme.of(sheetContext).textTheme.titleLarge),
+          ),
+          Expanded(
+            child: KhrogaMap(
+              pins: [
+                for (final c in list)
+                  MapPin(
+                    lat: c.lat!,
+                    lng: c.lng!,
+                    label: '${c.name} · ${c.placeName}',
+                    emoji: '🙋',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('/place/${c.placeId}');
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

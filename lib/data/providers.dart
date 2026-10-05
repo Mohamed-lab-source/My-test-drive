@@ -8,6 +8,7 @@ import '../planner/planner.dart' show areaCenters;
 import '../models/plan.dart';
 import '../models/social.dart';
 import 'auth_repository.dart';
+import 'checkins_repository.dart';
 import 'favorites_repository.dart';
 import 'location_service.dart';
 import 'personal_repository.dart';
@@ -200,4 +201,39 @@ final nextOutingProvider = Provider<Group?>((ref) {
   final upcoming = groups.where((g) => g.scheduledAt != null && g.scheduledAt!.isAfter(now)).toList()
     ..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
   return upcoming.firstOrNull;
+});
+
+// ---- Check-ins ("I'm here") ----
+final checkInsRepositoryProvider =
+    Provider((ref) => CheckInsRepository(ref.watch(firestoreProvider)));
+
+final myCheckInProvider = StreamProvider<CheckIn?>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(null);
+  return ref.watch(checkInsRepositoryProvider).watchMine(uid);
+});
+
+/// Accepted friends' check-ins from the last 24 hours, newest first.
+final friendsCheckInsProvider = StreamProvider<List<CheckIn>>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(const []);
+  final friends = {
+    for (final f in ref.watch(friendshipsProvider).value ?? const <Friendship>[])
+      if (f.status == FriendshipStatus.accepted) f.otherUid(uid),
+  };
+  return ref.watch(checkInsRepositoryProvider).watchShared(uid).map((list) {
+    final now = DateTime.now();
+    return list.where((c) => friends.contains(c.uid) && c.isFresh(now)).toList()
+      ..sort((a, b) => b.createdAt!.compareTo(a.createdAt!));
+  });
+});
+
+/// Your accepted friends' uids (for sharing a check-in with them).
+final friendUidsProvider = Provider<List<String>>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return const [];
+  return [
+    for (final f in ref.watch(friendshipsProvider).value ?? const <Friendship>[])
+      if (f.status == FriendshipStatus.accepted) f.otherUid(uid),
+  ];
 });

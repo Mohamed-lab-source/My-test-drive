@@ -122,6 +122,22 @@ service cloud.firestore {
       allow delete: if signedIn() && me() in resource.data.uids;
     }
 
+    // ---- Check-ins: "I'm here" at a place, one per person (the latest).
+    // Seen by you and the friends listed in visibleTo (the app only shows
+    // ones from accepted friends). Only you can write or remove yours.
+    match /checkins/{uid} {
+      allow read: if signedIn() && (me() == uid || me() in resource.data.visibleTo);
+      allow create, update: if isMe(uid)
+        && newData().keys().hasOnly(['name', 'placeId', 'placeName', 'area', 'lat', 'lng',
+                                     'visibleTo', 'createdAt'])
+        && newData().name is string && newData().name.size() <= 60
+        && newData().placeId is string && newData().placeId.size() <= 80
+        && newData().placeName is string && newData().placeName.size() <= 120
+        && newData().visibleTo is list && newData().visibleTo.size() <= 500
+        && newData().createdAt == request.time;
+      allow delete: if isMe(uid);
+    }
+
     // ---- Invite codes: look up one code at a time; listing is blocked ----
     match /joinCodes/{code} {
       allow get: if signedIn();

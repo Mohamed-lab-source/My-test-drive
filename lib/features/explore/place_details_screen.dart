@@ -295,6 +295,7 @@ class _Details extends ConsumerWidget {
           Text('Hours can change. Call ahead if it matters.', style: text.bodySmall),
         ],
         const SizedBox(height: KSpace.md),
+        _CheckInCard(place: place),
         _VisitedAndNote(place: place),
         _MyRating(place: place),
         if (place.category == 'mall') _MallDirectory(mall: place),
@@ -941,5 +942,78 @@ Future<void> _compare(BuildContext context, WidgetRef ref, Place place) async {
   );
   if (picked != null && context.mounted) {
     context.push(Uri(path: '/compare', queryParameters: {'a': place.id, 'b': picked.id}).toString());
+  }
+}
+
+/// "I'm here": tells your friends where you are for 24 hours, and shows
+/// which friends checked in here today.
+class _CheckInCard extends ConsumerWidget {
+  const _CheckInCard({required this.place});
+
+  final Place place;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mine = ref.watch(myCheckInProvider).value;
+    final hereNow = mine != null && mine.placeId == place.id && mine.isFresh(DateTime.now());
+    final friendsHere = (ref.watch(friendsCheckInsProvider).value ?? const [])
+        .where((c) => c.placeId == place.id)
+        .toList();
+    final friendCount = ref.watch(friendUidsProvider).length;
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Text('📍', style: TextStyle(fontSize: 22)),
+            title: Text(hereNow ? "You're checked in here" : "I'm here"),
+            subtitle: Text(hereNow
+                ? 'Your friends can see it for 24 hours'
+                : friendCount == 0
+                    ? 'Marks it as been there. Add friends to share where you are.'
+                    : 'Let your $friendCount friend${friendCount == 1 ? '' : 's'} see where you are (24 hours)'),
+            trailing: hereNow
+                ? TextButton(
+                    onPressed: () async {
+                      final uid = ref.read(uidProvider);
+                      if (uid == null) return;
+                      try {
+                        await ref.read(checkInsRepositoryProvider).remove(uid);
+                      } catch (e) {
+                        if (context.mounted) showError(context, e);
+                      }
+                    },
+                    child: const Text('Remove'),
+                  )
+                : FilledButton(
+                    onPressed: () async {
+                      final uid = ref.read(uidProvider);
+                      if (uid == null) return;
+                      try {
+                        await ref.read(checkInsRepositoryProvider).checkIn(
+                              uid: uid,
+                              name: ref.read(myProfileProvider).value?.displayName ?? 'A friend',
+                              place: place,
+                              friendUids: ref.read(friendUidsProvider),
+                            );
+                        await ref.read(personalRepositoryProvider).setVisited(uid, place.id, true);
+                        if (context.mounted) showMessage(context, 'Checked in. Have fun!');
+                      } catch (e) {
+                        if (context.mounted) showError(context, e);
+                      }
+                    },
+                    child: const Text('Check in'),
+                  ),
+          ),
+          if (friendsHere.isNotEmpty) ...[
+            const Divider(),
+            ListTile(
+              leading: const Text('👯', style: TextStyle(fontSize: 22)),
+              title: Text('${friendsHere.length} friend${friendsHere.length == 1 ? '' : 's'} here today'),
+              subtitle: Text(friendsHere.map((c) => c.name).join(', ')),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

@@ -264,3 +264,18 @@ test("organizer: pin a note, set meeting point, remove a member", async () => {
   await assertSucceeds(updateDoc(g(as(ALICE)), {
     memberUids: arrayRemove(BOB), freeUids: arrayRemove(BOB), "rsvp.bob": deleteField() }));
 });
+
+test("check-ins: only you write yours; only listed friends read it", async () => {
+  const c = (db, uid) => doc(db, `checkins/${uid}`);
+  const data = { name: "Alice", placeId: "ov-1", placeName: "Test Cafe", area: null, lat: 30, lng: 31,
+    visibleTo: [CAROL], createdAt: serverTimestamp() };
+  await assertSucceeds(setDoc(c(as(ALICE), ALICE), data));
+  await assertFails(setDoc(c(as(BOB), ALICE), data), "can't check in as someone else");
+  await assertFails(setDoc(c(as(ALICE), ALICE), { ...data, extra: 1 }));
+  await assertSucceeds(getDoc(c(as(CAROL), ALICE)), "listed friend can see it");
+  await assertFails(getDoc(c(as(EVE), ALICE)), "others can't");
+  await assertSucceeds(getDocs(query(collection(as(CAROL), "checkins"), where("visibleTo", "array-contains", CAROL))));
+  await assertFails(getDocs(collection(as(EVE), "checkins")), "no listing everyone");
+  await assertFails(deleteDoc(c(as(CAROL), ALICE)));
+  await assertSucceeds(deleteDoc(c(as(ALICE), ALICE)));
+});
