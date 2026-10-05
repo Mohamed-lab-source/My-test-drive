@@ -196,6 +196,44 @@ void moreTests() {
     });
   });
 
+  group('one part of town', () {
+    Place at(String id, double lat, {String? area, String category = 'cafe'}) => Place(
+        id: id, name: 'Test $id', category: category, city: 'cairo', lat: lat, lng: 31.0, area: area);
+
+    test('anywhere: stops stay close to the best match', () {
+      final ranked = [at('best', 30.00), at('far', 30.30), at('near', 30.02), at('near2', 30.03)];
+      expect(keepClose(ranked, 3).map((p) => p.id), ['best', 'near', 'near2']);
+    });
+
+    test('widens only when there are too few nearby', () {
+      final ranked = [at('best', 30.00), at('mid', 30.06), at('far', 30.50)];
+      expect(keepClose(ranked, 2).map((p) => p.id), ['best', 'mid']);
+      expect(keepClose(ranked, 3).length, 3, reason: 'falls back to everything');
+    });
+
+    test('area centres come from real coordinates, small areas left out', () {
+      final places = [
+        for (var i = 0; i < 5; i++) at('z$i', 30.0 + i * 0.002, area: 'Test Zamalek'),
+        at('m1', 29.96, area: 'Test Maadi'),
+        at('s1', 30.0, area: 'Test Zamalek', category: 'shop'),
+      ];
+      final areas = areaCenters(places, 'cairo');
+      expect(areas.map((a) => a.name), ['Test Zamalek']);
+      expect(areas.first.count, 5);
+      expect(areas.first.lat, closeTo(30.004, 1e-9));
+    });
+
+    test('picked distance is used and saved', () {
+      const r = PlanRequest(
+          city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening',
+          nearLat: 30.0, nearLng: 31.0, radiusKm: 1);
+      expect(passesFilters(at('a', 30.005), r), isTrue);
+      expect(passesFilters(at('b', 30.02), r), isFalse);
+      expect(PlanRequest.fromMap(r.toMap()).radiusKm, 1);
+      expect(PlanRequest.fromMap(const {}).radiusKm, PlanRequest.defaultRadiusKm);
+    });
+  });
+
   test('poll counts votes', () {
     const p = Poll(id: 'p', uid: 'u', question: 'Q', options: ['A', 'B'], votes: {'x': 0, 'y': 1, 'z': 1});
     expect(p.countFor(1), 2);

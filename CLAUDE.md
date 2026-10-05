@@ -73,6 +73,10 @@ How the code enforces it (keep it this way):
   favorites" (`preferPlaceIds`, a score boost only), "skip places I've been"
   (via `excludePlaceIds`). Plans can be copied, added to Google Calendar and
   show end times (`stopEndTime`, `planEndTime`, `planCalendarLink`).
+- Where in the city: the plan form has Anywhere / Near me / Pick an area
+  (`areaCenters` = mean of real coordinates per area) plus a distance
+  (`radiusKm`, 1–8 km). With "Anywhere", `keepClose` still keeps stops
+  within ~5 km of the best match (widening only if too few places).
 - Plan around a spot: `nearLat/nearLng/nearLabel` on PlanRequest (from a place
   page or "Near me"); `passesFilters` keeps only places within 3 km. Stops can
   have their time/length/note edited (`setStopTime`, `setStopDuration`,

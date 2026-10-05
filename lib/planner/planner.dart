@@ -107,7 +107,7 @@ bool passesFilters(Place p, PlanRequest input) {
   if (p.city != input.city) return false;
   if (input.hasAnchor) {
     return p.hasLocation &&
-        haversineKm(input.nearLat!, input.nearLng!, p.lat!, p.lng!) <= PlanRequest.nearRadiusKm;
+        haversineKm(input.nearLat!, input.nearLng!, p.lat!, p.lng!) <= input.radiusKm;
   }
   return true;
 }
@@ -139,6 +139,11 @@ List<Place> pickCandidates(
   var ranked = rank(true);
   // If "Another one" has used up the good options, allow repeats again.
   if (ranked.length < input.stops) ranked = rank(false);
+  // "Anywhere in the city": still keep every stop close together, around
+  // the best match, so nobody crosses Cairo between stops.
+  if (!input.hasAnchor && (input.mallId == null || input.mallId!.isEmpty)) {
+    ranked = keepClose(ranked, input.stops);
+  }
 
   // Keep variety: at most 12 of any one category.
   final perCategory = <String, int>{};
@@ -686,4 +691,45 @@ List<Place> otherBranches(Place place, List<Place> all, {int limit = 8}) {
   double d(Place p) => distanceKm(place, p) ?? 1e9;
   list.sort((a, b) => d(a).compareTo(d(b)));
   return list.take(limit).toList();
+}
+
+// ---------------------------------------------------------------------------
+// Keeping outings in one part of town
+// ---------------------------------------------------------------------------
+
+/// How far apart stops may be when no area was picked.
+const compactRadiusKm = 5.0;
+
+/// Keeps only places within [compactRadiusKm] of the best-ranked place that
+/// has coordinates. If that leaves too few for [stops], widens step by step.
+List<Place> keepClose(List<Place> ranked, int stops) {
+  final seed = ranked.where((p) => p.hasLocation).firstOrNull;
+  if (seed == null) return ranked;
+  for (final r in [compactRadiusKm, 8.0, 12.0]) {
+    final near = ranked
+        .where((p) => p.hasLocation && haversineKm(seed.lat!, seed.lng!, p.lat!, p.lng!) <= r)
+        .toList();
+    if (near.length >= stops) return near;
+  }
+  return ranked;
+}
+
+/// The middle of each area in a city, from the real coordinates of the
+/// places in it (shops inside malls aren't counted). Areas with fewer than
+/// [minPlaces] places are left out. Sorted by name.
+List<({String name, double lat, double lng, int count})> areaCenters(
+    List<Place> places, String city,
+    {int minPlaces = 5}) {
+  final sums = <String, (double, double, int)>{};
+  for (final p in places) {
+    if (p.city != city || p.area == null || !p.hasLocation || p.category == 'shop') continue;
+    final s = sums[p.area!] ?? (0.0, 0.0, 0);
+    sums[p.area!] = (s.$1 + p.lat!, s.$2 + p.lng!, s.$3 + 1);
+  }
+  final out = [
+    for (final e in sums.entries)
+      if (e.value.$3 >= minPlaces)
+        (name: e.key, lat: e.value.$1 / e.value.$3, lng: e.value.$2 / e.value.$3, count: e.value.$3),
+  ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  return out;
 }

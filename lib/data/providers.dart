@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/theme_settings.dart' show sharedPrefsProvider;
 import '../models/place.dart';
+import '../planner/planner.dart' show areaCenters;
 import '../models/plan.dart';
 import '../models/social.dart';
 import 'auth_repository.dart';
@@ -66,6 +67,11 @@ final placesInCityProvider = FutureProvider.family<List<Place>, String>(
 
 final placeProvider = FutureProvider.family<Place?, String>(
     (ref, id) => ref.watch(placesRepositoryProvider).place(id));
+
+/// Areas of a city with their real centre point, for "Where in the city?".
+final areaCentersProvider =
+    FutureProvider.family<List<({String name, double lat, double lng, int count})>, String>(
+        (ref, city) async => areaCenters(await ref.watch(placesRepositoryProvider).all(), city));
 
 final mallsProvider = FutureProvider.family<List<Place>, String>(
     (ref, city) => ref.watch(placesRepositoryProvider).malls(city));

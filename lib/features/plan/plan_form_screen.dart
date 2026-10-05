@@ -9,6 +9,7 @@ import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/plan.dart';
+import '../../planner/planner.dart' show compactRadiusKm;
 import '../../widgets/common.dart';
 import '../profile/about_screen.dart' show appVersion;
 import '../profile/theme_sheet.dart';
@@ -38,7 +39,24 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   bool _preferFavorites = true;
   bool _onlyOpen = true;
   (double, double, String)? _anchor;
+  double _radius = PlanRequest.defaultRadiusKm;
   bool _locating = false;
+
+  Future<void> _pickArea(String city) async {
+    final areas = await ref.read(areaCentersProvider(city).future);
+    if (!mounted) return;
+    if (areas.isEmpty) {
+      showMessage(context, "We don't have areas for this city yet.");
+      return;
+    }
+    final picked = await showModalBottomSheet<({String name, double lat, double lng, int count})>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (_) => _AreaPicker(areas: areas),
+    );
+    if (picked != null) setState(() => _anchor = (picked.lat, picked.lng, picked.name));
+  }
 
   Future<void> _useMyLocation(bool on) async {
     if (!on) {
@@ -102,6 +120,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
       nearLat: _mallId == null ? _anchor?.$1 : null,
       nearLng: _mallId == null ? _anchor?.$2 : null,
       nearLabel: _mallId == null ? _anchor?.$3 : null,
+      radiusKm: _radius,
     );
     final id = await runPlanGeneration(context, ref, request);
     if (id != null && mounted) context.push('/plan/$id');
@@ -146,21 +165,6 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const _WhatsNewCard(),
           const _NextOutingCard(),
-          if (_anchor != null && _anchor!.$3 != 'you') ...[
-            const SizedBox(height: KSpace.md),
-            Card(
-              child: ListTile(
-                leading: const Text('📍', style: TextStyle(fontSize: 24)),
-                title: Text('Around ${_anchor!.$3}'),
-                subtitle: Text('Only places within ${PlanRequest.nearRadiusKm.round()} km'),
-                trailing: IconButton(
-                  tooltip: 'Anywhere instead',
-                  icon: const Icon(Icons.close),
-                  onPressed: () => setState(() => _anchor = null),
-                ),
-              ),
-            ),
-          ],
           const SectionTitle('Quick start'),
           Wrap(
             spacing: KSpace.sm,
@@ -239,9 +243,63 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             selected: {city},
             onSelectionChanged: (s) {
               ref.read(cityProvider.notifier).set(s.first);
-              setState(() => _mallId = null);
+              setState(() {
+                _mallId = null;
+                if (_anchor?.$3 != 'you') _anchor = null;
+              });
             },
           ),
+          SectionTitle('Where in ${Cities.all[city] ?? city}?'),
+          Wrap(
+            spacing: KSpace.sm,
+            runSpacing: KSpace.sm,
+            children: [
+              ChoiceChip(
+                label: const Text('Anywhere'),
+                selected: _anchor == null,
+                showCheckmark: false,
+                onSelected: (_) => setState(() => _anchor = null),
+              ),
+              ChoiceChip(
+                avatar: _locating
+                    ? const SizedBox(
+                        width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.near_me_outlined, size: 18),
+                label: const Text('Near me'),
+                selected: _anchor?.$3 == 'you',
+                showCheckmark: false,
+                onSelected: _locating ? null : (on) => _useMyLocation(on),
+              ),
+              ChoiceChip(
+                avatar: const Icon(Icons.location_city, size: 18),
+                label: Text(_anchor != null && _anchor!.$3 != 'you' ? _anchor!.$3 : 'Pick an area'),
+                selected: _anchor != null && _anchor!.$3 != 'you',
+                showCheckmark: false,
+                onSelected: (_) => _pickArea(city),
+              ),
+            ],
+          ),
+          const SizedBox(height: KSpace.sm),
+          if (_anchor == null)
+            Text('Stops will still be close to each other (within about '
+                '${compactRadiusKm.round()} km).',
+                style: text.bodySmall)
+          else ...[
+            Text('How far are you willing to go?', style: text.bodySmall),
+            const SizedBox(height: KSpace.xs),
+            Wrap(
+              spacing: KSpace.sm,
+              children: [
+                for (final r in const [1.0, 2.0, 3.0, 5.0, 8.0])
+                  ChoiceChip(
+                    label: Text('${r.round()} km'),
+                    selected: _radius == r,
+                    showCheckmark: false,
+                    onSelected: (_) => setState(() => _radius = r),
+                  ),
+              ],
+            ),
+          ],
           const SectionTitle('How many people?'),
           _Stepper(
             value: _people,
@@ -310,15 +368,6 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             ),
           ],
           const SectionTitle('Choices'),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Near me'),
-            subtitle: Text(_locating
-                ? 'Finding you…'
-                : 'Only places within ${PlanRequest.nearRadiusKm.round()} km of where you are'),
-            value: _anchor?.$3 == 'you',
-            onChanged: _locating ? null : _useMyLocation,
-          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Only places open at that time'),
@@ -526,6 +575,53 @@ class _WhatsNewCard extends ConsumerWidget {
             context.push('/whats-new');
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Pick an area of the city (with how many places it has), searchable.
+class _AreaPicker extends StatefulWidget {
+  const _AreaPicker({required this.areas});
+
+  final List<({String name, double lat, double lng, int count})> areas;
+
+  @override
+  State<_AreaPicker> createState() => _AreaPickerState();
+}
+
+class _AreaPickerState extends State<_AreaPicker> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final shown =
+        widget.areas.where((a) => a.name.toLowerCase().contains(_q.trim().toLowerCase())).toList();
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.75,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(KSpace.md),
+            child: TextField(
+              autofocus: true,
+              decoration: const InputDecoration(
+                  hintText: 'Find an area, e.g. Zamalek', prefixIcon: Icon(Icons.search)),
+              onChanged: (v) => setState(() => _q = v),
+            ),
+          ),
+          if (shown.isEmpty)
+            const Padding(padding: EdgeInsets.all(KSpace.md), child: Text('No area with that name.')),
+          for (final a in shown)
+            ListTile(
+              leading: const Icon(Icons.place_outlined),
+              title: Text(a.name),
+              trailing: Text('${a.count} places', style: TextStyle(color: context.k.inkMuted)),
+              onTap: () => Navigator.pop(context, a),
+            ),
+        ],
       ),
     );
   }

@@ -18,14 +18,17 @@ class PlanRequest {
     this.nearLat,
     this.nearLng,
     this.nearLabel,
+    this.radiusKm = defaultRadiusKm,
   });
 
   /// Plan around a spot (a place or where you are): only places within
-  /// [nearRadiusKm] of it. Null = anywhere in the city.
+  /// [radiusKm] of it. Null = anywhere in the city (stops are still kept
+  /// close to each other, see `pickCandidates`).
   final double? nearLat;
   final double? nearLng;
   final String? nearLabel;
-  static const nearRadiusKm = 3.0;
+  final double radiusKm;
+  static const defaultRadiusKm = 3.0;
   bool get hasAnchor => nearLat != null && nearLng != null;
 
   /// Places the person likes (their favorites): ranked higher, never forced.
@@ -72,6 +75,7 @@ class PlanRequest {
         'nearLat': nearLat,
         'nearLng': nearLng,
         'nearLabel': nearLabel,
+        'radiusKm': radiusKm,
       };
 
   factory PlanRequest.fromMap(Map<String, dynamic> m) => PlanRequest(
@@ -94,6 +98,7 @@ class PlanRequest {
         nearLat: (m['nearLat'] as num?)?.toDouble(),
         nearLng: (m['nearLng'] as num?)?.toDouble(),
         nearLabel: m['nearLabel'] as String?,
+        radiusKm: (m['radiusKm'] as num?)?.toDouble() ?? defaultRadiusKm,
       );
 
   PlanRequest copyWith({List<String>? excludePlaceIds}) => PlanRequest(
@@ -112,6 +117,7 @@ class PlanRequest {
         nearLat: nearLat,
         nearLng: nearLng,
         nearLabel: nearLabel,
+        radiusKm: radiusKm,
       );
 }
 
