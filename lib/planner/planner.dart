@@ -9,6 +9,7 @@ library;
 
 import 'dart:math' as math;
 
+import '../app/i18n.dart';
 import '../models/place.dart';
 import '../models/plan.dart';
 
@@ -241,6 +242,9 @@ String buildPrompt(PlanRequest input, List<Place> candidates, Weather? weather, 
     "5. Prefer places in the same or nearby areas so the group doesn't cross the city.",
     "6. Times must be realistic and in order. Keep 'why' to one friendly sentence.",
     '7. Tips: up to 3 short practical tips (e.g. booking ahead, traffic). No prices.',
+    if (isArabic)
+      '8. Write the title, summary, every "why" and the tips in Egyptian Arabic. '
+          'Keep placeId values exactly as given.',
   ].join('\n');
 }
 
@@ -335,11 +339,11 @@ ProposedPlan fallbackPlan(PlanRequest input, List<Place> candidates) {
     stops.add(ProposedStop(placeId: p.id, startTime: _hhmm(minutes), durationMinutes: duration));
     minutes += duration + 20;
   }
-  final city = Cities.all[input.city] ?? input.city;
-  final vibe = input.vibes.isEmpty ? 'fun' : input.vibes.first;
+  final city = tr(Cities.all[input.city] ?? input.city);
+  final time = tr(TimesOfDay.all[input.timeOfDay] ?? input.timeOfDay);
   return ProposedPlan(
-    title: 'A $vibe ${input.timeOfDay} in $city',
-    summary: 'Well-known places that match your vibe.',
+    title: trf('Your {time} outing in {city}', {'time': time, 'city': city}),
+    summary: tr('Well-known places that match your vibe.'),
     stops: stops,
   );
 }
@@ -394,18 +398,24 @@ List<PlanStop> buildStops(List<ProposedStop> stops, List<Place> candidates) {
 
 String? weatherNote(String city, Weather? w, {DateTime? day}) {
   if (w == null) return null;
-  final name = Cities.all[city] ?? city;
+  final name = tr(Cities.all[city] ?? city);
   final now = DateTime.now();
   final isToday = day == null || (day.year == now.year && day.month == now.month && day.day == now.day);
   const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  final when = isToday ? 'Today' : 'On ${weekdays[day.weekday - 1]}';
-  final rain = w.rainChancePct >= 50
+  final when = isToday ? tr('Today') : trf('On {day}', {'day': tr(weekdays[day.weekday - 1])});
+  final rain = tr(w.rainChancePct >= 50
       ? 'rain likely'
       : w.rainChancePct >= 20
           ? 'some chance of rain'
-          : 'no rain expected';
-  final extra = isBadWeather(w) ? ' We leaned towards indoor places.' : '';
-  return '$when in $name: up to ${w.maxTempC.round()}°C, $rain.$extra';
+          : 'no rain expected');
+  final extra = isBadWeather(w) ? tr(' We leaned towards indoor places.') : '';
+  return trf('{when} in {city}: up to {t}°C, {rain}.', {
+        'when': when,
+        'city': name,
+        't': w.maxTempC.round(),
+        'rain': rain,
+      }) +
+      extra;
 }
 
 /// Recomputes the straight-line distance between consecutive stops.

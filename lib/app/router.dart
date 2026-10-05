@@ -1,3 +1,4 @@
+import 'i18n.dart';
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -123,18 +124,18 @@ class _Shell extends ConsumerWidget {
         onDestinationSelected: (i) =>
             shell.goBranch(i, initialLocation: i == shell.currentIndex),
         destinations: [
-          const NavigationDestination(
+          NavigationDestination(
               icon: Icon(Icons.auto_awesome_outlined),
               selectedIcon: Icon(Icons.auto_awesome),
-              label: 'Plan'),
-          const NavigationDestination(
+              label: tr('Plan')),
+          NavigationDestination(
               icon: Icon(Icons.explore_outlined),
               selectedIcon: Icon(Icons.explore),
-              label: 'Explore'),
-          const NavigationDestination(
+              label: tr('Explore')),
+          NavigationDestination(
               icon: Icon(Icons.forum_outlined),
               selectedIcon: Icon(Icons.forum),
-              label: 'Groups'),
+              label: tr('Groups')),
           NavigationDestination(
               icon: Badge(
                   isLabelVisible: requests > 0,
@@ -144,7 +145,7 @@ class _Shell extends ConsumerWidget {
                   isLabelVisible: requests > 0,
                   label: Text('$requests'),
                   child: const Icon(Icons.people)),
-              label: 'Friends'),
+              label: tr('Friends')),
         ],
       ),
     );

@@ -95,6 +95,15 @@ How the code enforces it (keep it this way):
   `visibleTo` = your accepted friends at that moment). Friends see it for 24 h
   (filtered in the app to accepted friends); you can remove it any time.
   Checking in also marks the place as been there.
+- Arabic: `lib/app/i18n.dart` — English text is the key; `tr('…')` and
+  `trf('{n} places', {'n': 3})` look it up in `lib/app/strings_ar.dart`.
+  Wrap every new piece of UI text in tr/trf and add its Arabic line;
+  `test/i18n_test.dart` fails if a tr() text has no translation or a
+  {blank} differs. Language is saved on the phone (`app.lang`, default =
+  phone language); switching rebuilds the app (`MaterialApp` key), sets RTL
+  via flutter_localizations and `Intl.defaultLocale` for dates. Places show
+  `nameAr` in Arabic mode (`Place.shownName`). Gemini writes plan text in
+  Egyptian Arabic when the app is in Arabic.
 - App icon: drawn by `tool/make_icon.py` (Pillow) into the Android mipmaps
   (adaptive + monochrome) and `assets/icon/khroga.png`. Re-run it to change it.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
@@ -167,6 +176,6 @@ cd rules-test && npm install && npm test   # needs Java + firebase-tools
 
 ## Not built yet
 
-Localization (Arabic first), user-submitted menus/prices, crowd check-ins,
+user-submitted menus/prices, crowd check-ins,
 iOS build,
 photos (could use Wikimedia Commons, free).

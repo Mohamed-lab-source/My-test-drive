@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,18 +23,18 @@ class SavedPlansScreen extends ConsumerWidget {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Saved'),
+          title: Text(tr('Saved')),
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             labelColor: context.k.ink,
             unselectedLabelColor: context.k.inkMuted,
             indicatorColor: context.k.accent,
-            tabs: const [
-              Tab(text: 'Saved plans'),
-              Tab(text: 'History'),
-              Tab(text: 'Favorites'),
-              Tab(text: 'Been there'),
+            tabs: [
+              Tab(text: tr('Saved plans')),
+              Tab(text: tr('History')),
+              Tab(text: tr('Favorites')),
+              Tab(text: tr('Been there')),
             ],
           ),
         ),
@@ -42,27 +43,27 @@ class SavedPlansScreen extends ConsumerWidget {
             _PlanList(
               value: ref.watch(savedPlansProvider),
               emptyEmoji: '🔖',
-              emptyTitle: 'No saved plans yet',
-              emptyMessage: 'Tap "Save" on a plan you like and it will show up here.',
+              emptyTitle: tr('No saved plans yet'),
+              emptyMessage: tr('Tap "Save" on a plan you like and it will show up here.'),
             ),
             _PlanList(
               value: ref.watch(allPlansProvider),
               emptyEmoji: '🕘',
               clearable: true,
-              emptyTitle: 'No plans yet',
-              emptyMessage: 'Every plan you make shows up here.',
+              emptyTitle: tr('No plans yet'),
+              emptyMessage: tr('Every plan you make shows up here.'),
             ),
             _PlaceListTab(
               value: ref.watch(favoritePlacesProvider),
               emptyEmoji: '❤️',
-              emptyTitle: 'No favorite places yet',
-              emptyMessage: 'Tap the heart on any place to keep it here.',
+              emptyTitle: tr('No favorite places yet'),
+              emptyMessage: tr('Tap the heart on any place to keep it here.'),
             ),
             _PlaceListTab(
               value: ref.watch(visitedPlacesProvider),
               emptyEmoji: '✅',
-              emptyTitle: 'No visited places yet',
-              emptyMessage: 'Turn on "I\'ve been here" on a place page.',
+              emptyTitle: tr('No visited places yet'),
+              emptyMessage: tr('Turn on "I\'ve been here" on a place page.'),
             ),
           ],
         ),
@@ -122,8 +123,8 @@ class _PlanListState extends ConsumerState<_PlanList> {
                 children: [
                   Expanded(
                     child: TextField(
-                      decoration: const InputDecoration(
-                          hintText: 'Search plans or places',
+                      decoration: InputDecoration(
+                          hintText: tr('Search plans or places'),
                           prefixIcon: Icon(Icons.search),
                           isDense: true),
                       onChanged: (v) => setState(() => _q = v),
@@ -131,12 +132,12 @@ class _PlanListState extends ConsumerState<_PlanList> {
                   ),
                   if (widget.clearable)
                     IconButton(
-                      tooltip: 'Clear plans you didn\'t save',
+                      tooltip: tr('Clear plans you didn\'t save'),
                       icon: const Icon(Icons.delete_sweep_outlined),
                       onPressed: () => _clearUnsaved(all),
                     ),
                   IconButton(
-                    tooltip: _oldestFirst ? 'Newest first' : 'Oldest first',
+                    tooltip: _oldestFirst ? tr('Newest first') : tr('Oldest first'),
                     onPressed: () => setState(() => _oldestFirst = !_oldestFirst),
                     icon: Icon(_oldestFirst ? Icons.arrow_upward : Icons.arrow_downward),
                   ),
@@ -153,17 +154,17 @@ class _PlanListState extends ConsumerState<_PlanList> {
   Future<void> _clearUnsaved(List<OutingPlan> all) async {
     final unsaved = all.where((p) => !p.saved).toList();
     if (unsaved.isEmpty) {
-      showMessage(context, 'Nothing to clear: every plan here is saved.');
+      showMessage(context, tr('Nothing to clear: every plan here is saved.'));
       return;
     }
     final ok = await showDialog<bool>(
       context: context,
       builder: (d) => AlertDialog(
-        title: Text('Delete ${unsaved.length} unsaved plan${unsaved.length == 1 ? '' : 's'}?'),
-        content: const Text('Saved plans stay.'),
+        title: Text(trf('Delete {n} unsaved plans?', {'n': unsaved.length})),
+        content: Text(tr('Saved plans stay.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(d, false), child: Text(tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(tr('Delete'))),
         ],
       ),
     );
@@ -173,7 +174,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
       for (final p in unsaved) {
         await ref.read(plansRepositoryProvider).delete(uid, p.id);
       }
-      if (mounted) showMessage(context, 'Cleared');
+      if (mounted) showMessage(context, tr('Cleared'));
     } catch (e) {
       if (mounted) showError(context, e);
     }
@@ -185,7 +186,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
               itemCount: list.length + 1,
               separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
               itemBuilder: (_, i) => i == list.length
-                  ? Text('Swipe a plan sideways to delete it.',
+                  ? Text(tr('Swipe a plan sideways to delete it.'),
                       textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall)
                   : Dismissible(
                       key: ValueKey(list[i].id),
@@ -201,14 +202,14 @@ class _PlanListState extends ConsumerState<_PlanList> {
                       confirmDismiss: (_) => showDialog<bool>(
                         context: context,
                         builder: (dialogContext) => AlertDialog(
-                          title: const Text('Delete this plan?'),
+                          title: Text(tr('Delete this plan?')),
                           actions: [
                             TextButton(
                                 onPressed: () => Navigator.pop(dialogContext, false),
-                                child: const Text('Cancel')),
+                                child: Text(tr('Cancel'))),
                             FilledButton(
                                 onPressed: () => Navigator.pop(dialogContext, true),
-                                child: const Text('Delete')),
+                                child: Text(tr('Delete'))),
                           ],
                         ),
                       ),
@@ -260,7 +261,7 @@ class _PlaceListTabState extends State<_PlaceListTab> {
                   child: TextButton.icon(
                     onPressed: () => setState(() => _map = !_map),
                     icon: Icon(_map ? Icons.view_list_outlined : Icons.map_outlined),
-                    label: Text(_map ? 'List' : 'Map'),
+                    label: Text(_map ? tr('List') : tr('Map')),
                   ),
                 ),
                 Expanded(
@@ -306,7 +307,7 @@ class _SavedPlanTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.sm),
         title: Text(plan.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text('$emojis   ${plan.stops.length} stops · $date'),
+        subtitle: Text('$emojis   ${trf('{n} stops', {'n': plan.stops.length})} · $date'),
         trailing: Consumer(
           builder: (context, ref, _) => PopupMenuButton<String>(
             onSelected: (_) async {
@@ -315,8 +316,8 @@ class _SavedPlanTile extends StatelessWidget {
                   context, ref, plan.request.copyWith(excludePlaceIds: exclude.toList()));
               if (id != null && context.mounted) context.push('/plan/$id');
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'again', child: Text('Plan again (new places)')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'again', child: Text(tr('Plan again (new places)'))),
             ],
           ),
         ),

@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,7 +36,7 @@ class GroupDetailScreen extends ConsumerWidget {
         appBar: AppBar(),
         body: EmptyState(
           emoji: '🔒',
-          title: "Can't open this group",
+          title: tr("Can't open this group"),
           message: friendlyError(e),
         ),
       ),
@@ -43,10 +44,10 @@ class GroupDetailScreen extends ConsumerWidget {
         if (g == null || uid == null || !g.memberUids.contains(uid)) {
           return Scaffold(
             appBar: AppBar(),
-            body: const EmptyState(
+            body: EmptyState(
               emoji: '👋',
-              title: "You're not in this group",
-              message: 'It may have been deleted, or you left it.',
+              title: tr("You're not in this group"),
+              message: tr('It may have been deleted, or you left it.'),
             ),
           );
         }
@@ -111,17 +112,17 @@ class _GroupViewState extends ConsumerState<_GroupView> {
               )
             : TextField(
                 autofocus: true,
-                decoration: const InputDecoration(hintText: 'Search messages', isDense: true),
+                decoration: InputDecoration(hintText: tr('Search messages'), isDense: true),
                 onChanged: (v) => setState(() => _search = v),
               ),
         actions: [
           IconButton(
-            tooltip: _search == null ? 'Search messages' : 'Close search',
+            tooltip: _search == null ? tr('Search messages') : tr('Close search'),
             icon: Icon(_search == null ? Icons.search : Icons.close),
             onPressed: () => setState(() => _search = _search == null ? '' : null),
           ),
           IconButton(
-            tooltip: 'Polls',
+            tooltip: tr('Polls'),
             icon: Badge(
               isLabelVisible: polls.isNotEmpty,
               label: Text('${polls.length}'),
@@ -130,7 +131,7 @@ class _GroupViewState extends ConsumerState<_GroupView> {
             onPressed: () => _showPolls(context, group, uid),
           ),
           IconButton(
-            tooltip: 'Members',
+            tooltip: tr('Members'),
             icon: const Icon(Icons.people_outline),
             onPressed: () => _showMembers(context, group, uid),
           ),
@@ -141,10 +142,10 @@ class _GroupViewState extends ConsumerState<_GroupView> {
                 'pin' => _pinNote(context, ref, group),
                 _ => _pickMeetingPoint(context, ref, group),
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'rename', child: Text('Rename group')),
-                PopupMenuItem(value: 'pin', child: Text('Pin a note')),
-                PopupMenuItem(value: 'meet', child: Text('Set meeting point')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'rename', child: Text(tr('Rename group'))),
+                PopupMenuItem(value: 'pin', child: Text(tr('Pin a note'))),
+                PopupMenuItem(value: 'meet', child: Text(tr('Set meeting point'))),
               ],
             ),
         ],
@@ -181,13 +182,13 @@ Future<void> _renameGroup(BuildContext context, WidgetRef ref, Group group) asyn
   final name = await showDialog<String>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Rename group'),
+      title: Text(tr('Rename group')),
       content: TextField(controller: controller, autofocus: true, maxLength: 40),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Cancel'))),
         FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Save')),
+            child: Text(tr('Save'))),
       ],
     ),
   );
@@ -205,21 +206,21 @@ Future<void> _pinNote(BuildContext context, WidgetRef ref, Group group) async {
   final text = await showDialog<String>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Pin a note'),
+      title: Text(tr('Pin a note')),
       content: TextField(
         controller: controller,
         autofocus: true,
         maxLength: 300,
         maxLines: 3,
-        decoration: const InputDecoration(hintText: 'e.g. Meet at gate 3 at 7 pm'),
+        decoration: InputDecoration(hintText: tr('e.g. Meet at gate 3 at 7 pm')),
       ),
       actions: [
         if (group.pinned != null)
-          TextButton(onPressed: () => Navigator.pop(dialogContext, ''), child: const Text('Unpin')),
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, ''), child: Text(tr('Unpin'))),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Cancel'))),
         FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Pin')),
+            child: Text(tr('Pin'))),
       ],
     ),
   );
@@ -254,14 +255,14 @@ Future<void> _pickMeetingPoint(BuildContext context, WidgetRef ref, Group group)
         controller: controller,
         padding: const EdgeInsets.all(KSpace.md),
         children: [
-          Text('Where do we meet?', style: Theme.of(sheetContext).textTheme.titleLarge),
+          Text(tr('Where do we meet?'), style: Theme.of(sheetContext).textTheme.titleLarge),
           const SizedBox(height: KSpace.xs),
-          Text('Pick a stop from the plan or one of your favorites.',
+          Text(tr('Pick a stop from the plan or one of your favorites.'),
               style: Theme.of(sheetContext).textTheme.bodySmall),
           if (options.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(KSpace.md),
-              child: Text('Attach a plan or save some favorite places first.'),
+              child: Text(tr('Attach a plan or save some favorite places first.')),
             ),
           for (final o in options)
             ListTile(
@@ -272,7 +273,7 @@ Future<void> _pickMeetingPoint(BuildContext context, WidgetRef ref, Group group)
           if (group.meetPlaceId != null)
             ListTile(
               leading: const Icon(Icons.close),
-              title: const Text('No meeting point'),
+              title: Text(tr('No meeting point')),
               onTap: () => Navigator.pop(sheetContext, ('', '')),
             ),
         ],
@@ -321,7 +322,7 @@ class _Header extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       group.scheduledAt == null
-                          ? 'No date yet'
+                          ? tr('No date yet')
                           : DateFormat('EEE d MMM · h:mm a')
                               .format(group.scheduledAt!),
                       style: text.titleMedium,
@@ -338,7 +339,7 @@ class _Header extends ConsumerWidget {
                           if (context.mounted) showError(context, e);
                         }
                       },
-                      child: Text(group.scheduledAt == null ? 'Set' : 'Change'),
+                      child: Text(group.scheduledAt == null ? tr('Set') : tr('Change')),
                     ),
                 ],
               ),
@@ -377,7 +378,7 @@ class _Header extends ConsumerWidget {
                       children: [
                         const Icon(Icons.flag_outlined, size: 20),
                         const SizedBox(width: KSpace.sm),
-                        Expanded(child: Text('Meet at ${group.meetPlaceName}')),
+                        Expanded(child: Text(trf('Meet at {place}', {'place': group.meetPlaceName}))),
                         const Icon(Icons.chevron_right, size: 20),
                       ],
                     ),
@@ -392,7 +393,7 @@ class _Header extends ConsumerWidget {
                       emptySelectionAllowed: true,
                       segments: [
                         for (final r in Rsvp.values)
-                          ButtonSegment(value: r, label: Text(r.label)),
+                          ButtonSegment(value: r, label: Text(tr(r.label))),
                       ],
                       selected: {?mine},
                       onSelectionChanged: (s) async {
@@ -434,24 +435,24 @@ class _Header extends ConsumerWidget {
                   if (group.scheduledAt != null)
                     ActionChip(
                       avatar: const Icon(Icons.event_available, size: 18),
-                      label: const Text('Add to calendar'),
+                      label: Text(tr('Add to calendar')),
                       onPressed: () => openUri(calendarLink(group)),
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.calculate_outlined, size: 18),
-                    label: const Text('Split the bill'),
+                    label: Text(tr('Split the bill')),
                     onPressed: () => _showBillSplitter(context, group),
                   ),
                   if (routeMapsUrl([for (final s in group.planStops) PlanStop.fromMap(s)]) case final url?)
                     ActionChip(
                       avatar: const Icon(Icons.route_outlined, size: 18),
-                      label: const Text('Route'),
+                      label: Text(tr('Route')),
                       onPressed: () => openUri(url),
                     ),
                   if (waiting > 0)
                     ActionChip(
                       avatar: const Icon(Icons.campaign_outlined, size: 18),
-                      label: const Text('Nudge'),
+                      label: Text(tr('Nudge')),
                       onPressed: () async {
                         final waitingUids =
                             group.memberUids.where((u) => !group.rsvp.containsKey(u)).toList();
@@ -474,7 +475,7 @@ class _Header extends ConsumerWidget {
                   if (group.scheduledAt != null && group.scheduledAt!.isAfter(DateTime.now()))
                     ActionChip(
                       avatar: const Icon(Icons.notifications_active_outlined, size: 18),
-                      label: const Text('Remind everyone'),
+                      label: Text(tr('Remind everyone')),
                       onPressed: () async {
                         try {
                           await repo.sendMessage(
@@ -578,12 +579,12 @@ class _MembersSheet extends ConsumerWidget {
         controller: controller,
         padding: const EdgeInsets.all(KSpace.lg),
         children: [
-          Text('Members', style: text.titleLarge),
+          Text(tr('Members'), style: text.titleLarge),
           const SizedBox(height: KSpace.md),
           // Join code
           Card(
             child: ListTile(
-              title: const Text('Invite code'),
+              title: Text(tr('Invite code')),
               subtitle: Text(group.joinCode,
                   style: TextStyle(
                       fontSize: 22,
@@ -594,15 +595,15 @@ class _MembersSheet extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    tooltip: 'Copy',
+                    tooltip: tr('Copy'),
                     icon: const Icon(Icons.copy),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: group.joinCode));
-                      showMessage(context, 'Code copied');
+                      showMessage(context, tr('Code copied'));
                     },
                   ),
                   IconButton(
-                    tooltip: 'Share',
+                    tooltip: tr('Share'),
                     icon: const Icon(Icons.share_outlined),
                     onPressed: () => SharePlus.instance.share(ShareParams(
                       text: 'Join "${group.name}" on Khroga with code '
@@ -630,31 +631,31 @@ class _MembersSheet extends ConsumerWidget {
                         child: QrImageView(data: '$groupQrPrefix${group.joinCode}', size: 220),
                       ),
                       const SizedBox(height: KSpace.sm),
-                      const Text('Friends scan this from Friends → Scan'),
+                      Text(tr('Friends scan this from Friends → Scan')),
                     ],
                   ),
                 ),
                 actions: [
                   TextButton(
-                      onPressed: () => Navigator.pop(dialogContext), child: const Text('Done')),
+                      onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Done'))),
                 ],
               ),
             ),
             icon: const Icon(Icons.qr_code),
-            label: const Text('Show invite QR code'),
+            label: Text(tr('Show invite QR code')),
           ),
           const SizedBox(height: KSpace.sm),
           OutlinedButton.icon(
             onPressed: () => _inviteFriend(context, ref, group),
             icon: const Icon(Icons.person_add_alt),
-            label: const Text('Add a friend'),
+            label: Text(tr('Add a friend')),
           ),
-          const SectionTitle('Who pays'),
+          SectionTitle(tr('Who pays')),
           Text(
             paying == 0
-                ? 'Nobody has said "Going" yet.'
-                : '$paying ${paying == 1 ? 'person splits' : 'people split'} the bill.'
-                    '${isOwner ? ' Tap "Free" for anyone who doesn\'t pay.' : ''}',
+                ? tr('Nobody has said "Going" yet.')
+                : trf('{n} people split the bill.', {'n': paying}) +
+                    (isOwner ? tr(' Tap "Free" for anyone who doesn\'t pay.') : ''),
             style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
           ),
           const SizedBox(height: KSpace.sm),
@@ -676,7 +677,7 @@ class _MembersSheet extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         FilterChip(
-                          label: const Text('Free'),
+                          label: Text(tr('Free')),
                           showCheckmark: false,
                           selected: group.freeUids.contains(memberUid),
                           onSelected: (on) async {
@@ -693,14 +694,14 @@ class _MembersSheet extends ConsumerWidget {
                               final ok = await showDialog<bool>(
                                 context: context,
                                 builder: (d) => AlertDialog(
-                                  title: Text('Remove ${profiles[memberUid]?.displayName ?? 'this person'}?'),
+                                  title: Text(trf('Remove {name}?', {'name': profiles[memberUid]?.displayName ?? tr('this person')})),
                                   actions: [
                                     TextButton(
                                         onPressed: () => Navigator.pop(d, false),
-                                        child: const Text('Cancel')),
+                                        child: Text(tr('Cancel'))),
                                     FilledButton(
                                         onPressed: () => Navigator.pop(d, true),
-                                        child: const Text('Remove')),
+                                        child: Text(tr('Remove'))),
                                   ],
                                 ),
                               );
@@ -711,8 +712,8 @@ class _MembersSheet extends ConsumerWidget {
                                 if (context.mounted) showError(context, e);
                               }
                             },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'remove', child: Text('Remove from group')),
+                            itemBuilder: (_) => [
+                              PopupMenuItem(value: 'remove', child: Text(tr('Remove from group'))),
                             ],
                           ),
                       ],
@@ -724,7 +725,7 @@ class _MembersSheet extends ConsumerWidget {
             style: TextButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error),
             onPressed: () => _leaveOrDelete(context, ref, group, isOwner),
-            child: Text(isOwner ? 'Delete group' : 'Leave group'),
+            child: Text(isOwner ? tr('Delete group') : tr('Leave group')),
           ),
         ],
       ),
@@ -736,17 +737,17 @@ class _MembersSheet extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(isOwner ? 'Delete this group?' : 'Leave this group?'),
+        title: Text(isOwner ? tr('Delete this group?') : tr('Leave this group?')),
         content: Text(isOwner
-            ? 'The group and all its messages will be deleted for everyone.'
-            : "You'll need a new invite code to come back."),
+            ? tr('The group and all its messages will be deleted for everyone.')
+            : tr("You'll need a new invite code to come back.")),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel')),
+              child: Text(tr('Cancel'))),
           FilledButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(isOwner ? 'Delete' : 'Leave')),
+              child: Text(isOwner ? tr('Delete') : tr('Leave'))),
         ],
       ),
     );
@@ -777,7 +778,7 @@ class _MembersSheet extends ConsumerWidget {
         .toList();
     if (friendUids.isEmpty) {
       showMessage(context,
-          'No friends to add yet. Share the invite code, or add friends first.');
+          tr('No friends to add yet. Share the invite code, or add friends first.'));
       return;
     }
     final profiles =
@@ -786,7 +787,7 @@ class _MembersSheet extends ConsumerWidget {
     final picked = await showDialog<String>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('Add a friend'),
+        title: Text(tr('Add a friend')),
         children: [
           for (final f in friendUids)
             SimpleDialogOption(
@@ -805,7 +806,7 @@ class _MembersSheet extends ConsumerWidget {
     if (picked == null || !context.mounted) return;
     try {
       await ref.read(groupsRepositoryProvider).addFriend(group.id, picked);
-      if (context.mounted) showMessage(context, 'Added to the group');
+      if (context.mounted) showMessage(context, tr('Added to the group'));
     } catch (e) {
       if (context.mounted) showError(context, e);
     }
@@ -831,13 +832,13 @@ class _Chat extends ConsumerWidget {
             ? all
             : all.where((m) => m.text.toLowerCase().contains(q) || m.name.toLowerCase().contains(q)).toList();
         if (q.isNotEmpty && list.isEmpty) {
-          return const EmptyState(emoji: '🔍', title: 'No messages match');
+          return EmptyState(emoji: '🔍', title: tr('No messages match'));
         }
         if (list.isEmpty) {
-          return const EmptyState(
+          return EmptyState(
             emoji: '💬',
-            title: 'Say hi 👋',
-            message: 'Messages here are seen by everyone in the group.',
+            title: tr('Say hi 👋'),
+            message: tr('Messages here are seen by everyone in the group.'),
           );
         }
         return ListView.builder(
@@ -914,7 +915,7 @@ class _Bubble extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Copy message'),
+              title: Text(tr('Copy message')),
               onTap: () => Navigator.pop(sheetContext, 'copy'),
             ),
           ],
@@ -924,7 +925,7 @@ class _Bubble extends ConsumerWidget {
     if (picked == null) return;
     if (picked == 'copy') {
       await Clipboard.setData(ClipboardData(text: message.text));
-      if (context.mounted) showMessage(context, 'Message copied');
+      if (context.mounted) showMessage(context, tr('Message copied'));
       return;
     }
     try {
@@ -1065,7 +1066,7 @@ class _ComposerState extends ConsumerState<_Composer> {
     final favorites = await ref.read(favoritePlacesProvider.future);
     if (!mounted) return;
     if (favorites.isEmpty) {
-      showMessage(context, 'Tap the heart on places to have favorites to send.');
+      showMessage(context, tr('Tap the heart on places to have favorites to send.'));
       return;
     }
     final picked = await showModalBottomSheet<Place>(
@@ -1079,7 +1080,7 @@ class _ComposerState extends ConsumerState<_Composer> {
           controller: controller,
           padding: const EdgeInsets.all(KSpace.md),
           children: [
-            Text('Send a favorite place', style: Theme.of(sheetContext).textTheme.titleLarge),
+            Text(tr('Send a favorite place'), style: Theme.of(sheetContext).textTheme.titleLarge),
             for (final p in favorites)
               ListTile(
                 leading: Text(Categories.emoji(p.category), style: const TextStyle(fontSize: 22)),
@@ -1142,20 +1143,20 @@ class _ComposerState extends ConsumerState<_Composer> {
               separatorBuilder: (_, _) => const SizedBox(width: KSpace.xs),
               itemBuilder: (_, i) => ActionChip(
                 visualDensity: VisualDensity.compact,
-                label: Text(_quickReplies[i]),
-                onPressed: _sending ? null : () => _send(_quickReplies[i]),
+                label: Text(tr(_quickReplies[i])),
+                onPressed: _sending ? null : () => _send(tr(_quickReplies[i])),
               ),
             ),
           ),
           Row(
         children: [
           IconButton(
-            tooltip: 'Send a favorite place',
+            tooltip: tr('Send a favorite place'),
             onPressed: _sending ? null : _sendFavorite,
             icon: const Icon(Icons.place_outlined),
           ),
           IconButton(
-            tooltip: 'Send my location',
+            tooltip: tr('Send my location'),
             onPressed: _sending ? null : _sendMyLocation,
             icon: const Icon(Icons.my_location),
           ),
@@ -1166,8 +1167,8 @@ class _ComposerState extends ConsumerState<_Composer> {
               maxLines: 4,
               maxLength: 1000,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Message',
+              decoration: InputDecoration(
+                hintText: tr('Message'),
                 counterText: '',
                 isDense: true,
               ),
@@ -1190,14 +1191,18 @@ class _ComposerState extends ConsumerState<_Composer> {
 /// "In 3 days", "Tomorrow", "In 5 hours", "Today", "Happened".
 String countdownText(DateTime when) {
   final diff = when.difference(DateTime.now());
-  if (diff.isNegative) return diff.inHours > -6 ? 'Happening now' : 'Already happened';
+  if (diff.isNegative) return tr(diff.inHours > -6 ? 'Happening now' : 'Already happened');
   final today = DateTime.now();
   final daysAway = DateTime(when.year, when.month, when.day)
       .difference(DateTime(today.year, today.month, today.day))
       .inDays;
-  if (daysAway == 0) return diff.inHours >= 1 ? '⏳ In ${diff.inHours} h' : '⏳ In ${diff.inMinutes} min';
-  if (daysAway == 1) return '⏳ Tomorrow';
-  return '⏳ In $daysAway days';
+  if (daysAway == 0) {
+    return diff.inHours >= 1
+        ? trf('⏳ In {n} h', {'n': diff.inHours})
+        : trf('⏳ In {n} min', {'n': diff.inMinutes});
+  }
+  if (daysAway == 1) return tr('⏳ Tomorrow');
+  return trf('⏳ In {n} days', {'n': daysAway});
 }
 
 /// A Google Calendar "add event" link for the group's outing.
@@ -1268,19 +1273,19 @@ class _BillSplitterState extends State<_BillSplitter> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Split the bill', style: text.titleLarge),
+          Text(tr('Split the bill'), style: text.titleLarge),
           const SizedBox(height: KSpace.md),
           TextField(
             controller: _total,
             autofocus: true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Total bill', suffixText: 'EGP'),
+            decoration: InputDecoration(labelText: tr('Total bill'), suffixText: 'EGP'),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: KSpace.md),
           Row(
             children: [
-              const Expanded(child: Text('People paying')),
+              Expanded(child: Text(tr('People paying'))),
               IconButton.outlined(
                 onPressed: _people > 1 ? () => setState(() => _people--) : null,
                 icon: const Icon(Icons.remove),
@@ -1298,7 +1303,7 @@ class _BillSplitterState extends State<_BillSplitter> {
             children: [
               for (final t in [0, 10, 12, 15])
                 ChoiceChip(
-                  label: Text(t == 0 ? 'No tip' : '+$t%'),
+                  label: Text(t == 0 ? tr('No tip') : '+$t%'),
                   selected: _tipPercent == t,
                   showCheckmark: false,
                   onSelected: (_) => setState(() => _tipPercent = t),
@@ -1314,10 +1319,10 @@ class _BillSplitterState extends State<_BillSplitter> {
             ),
             child: Column(
               children: [
-                Text('Each person pays', style: text.bodyMedium),
-                Text('${each.ceil()} EGP', style: text.headlineMedium),
+                Text(tr('Each person pays'), style: text.bodyMedium),
+                Text(trf('{n} EGP', {'n': each.ceil()}), style: text.headlineMedium),
                 if (_tipPercent > 0)
-                  Text('Total with tip: ${withTip.ceil()} EGP', style: text.bodySmall),
+                  Text(trf('Total with tip: {n} EGP', {'n': withTip.ceil()}), style: text.bodySmall),
               ],
             ),
           ),
@@ -1360,18 +1365,18 @@ class _PollsSheet extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text('Polls', style: text.titleLarge)),
+                Expanded(child: Text(tr('Polls'), style: text.titleLarge)),
                 FilledButton.icon(
                   onPressed: () => _newPoll(context, ref),
                   icon: const Icon(Icons.add),
-                  label: const Text('New poll'),
+                  label: Text(tr('New poll')),
                 ),
               ],
             ),
             if (list.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: KSpace.lg),
-                child: Text('No polls yet. Ask "Which place?" or "What time?" and everyone votes.'),
+                child: Text(tr('No polls yet. Ask "Which place?" or "What time?" and everyone votes.')),
               ),
             for (final p in list)
               Card(
@@ -1386,7 +1391,7 @@ class _PollsSheet extends ConsumerWidget {
                           Expanded(child: Text(p.question, style: text.titleMedium)),
                           if (p.uid == uid || group.isOwner(uid))
                             IconButton(
-                              tooltip: 'Delete poll',
+                              tooltip: tr('Delete poll'),
                               icon: const Icon(Icons.delete_outline, size: 20),
                               onPressed: () async {
                                 try {
@@ -1398,7 +1403,7 @@ class _PollsSheet extends ConsumerWidget {
                             ),
                         ],
                       ),
-                      Text('${p.votes.length} of ${group.memberUids.length} voted', style: text.bodySmall),
+                      Text(trf('{a} of {b} voted', {'a': p.votes.length, 'b': group.memberUids.length}), style: text.bodySmall),
                       const SizedBox(height: KSpace.sm),
                       for (final (i, option) in p.options.indexed)
                         Padding(
@@ -1449,7 +1454,7 @@ class _PollsSheet extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('New poll'),
+          title: Text(tr('New poll')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1457,7 +1462,7 @@ class _PollsSheet extends ConsumerWidget {
                 TextField(
                   controller: question,
                   maxLength: 150,
-                  decoration: const InputDecoration(hintText: 'Question, e.g. Which place?'),
+                  decoration: InputDecoration(hintText: tr('Question, e.g. Which place?')),
                 ),
                 for (final (i, c) in options.indexed)
                   Padding(
@@ -1465,19 +1470,19 @@ class _PollsSheet extends ConsumerWidget {
                     child: TextField(
                       controller: c,
                       maxLength: 60,
-                      decoration: InputDecoration(hintText: 'Option ${i + 1}', counterText: ''),
+                      decoration: InputDecoration(hintText: trf('Option {n}', {'n': i + 1}), counterText: ''),
                     ),
                   ),
                 if (options.length < 6)
                   TextButton.icon(
                     onPressed: () => setState(() => options.add(TextEditingController())),
                     icon: const Icon(Icons.add),
-                    label: const Text('Add option'),
+                    label: Text(tr('Add option')),
                   ),
                 if (stopNames.length >= 2)
                   TextButton.icon(
                     onPressed: () => setState(() {
-                      question.text = question.text.isEmpty ? 'Which place?' : question.text;
+                      question.text = question.text.isEmpty ? tr('Which place?') : question.text;
                       for (final c in options) {
                         c.dispose();
                       }
@@ -1486,14 +1491,14 @@ class _PollsSheet extends ConsumerWidget {
                         ..addAll(stopNames.map((n) => TextEditingController(text: n)));
                     }),
                     icon: const Icon(Icons.map_outlined),
-                    label: const Text("Use the plan's stops"),
+                    label: Text(tr("Use the plan's stops")),
                   ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Ask')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(tr('Ask'))),
           ],
         ),
       ),
@@ -1506,7 +1511,7 @@ class _PollsSheet extends ConsumerWidget {
     }
     if (ok != true) return;
     if (q.isEmpty || opts.length < 2) {
-      if (context.mounted) showMessage(context, 'Add a question and at least 2 options.');
+      if (context.mounted) showMessage(context, tr('Add a question and at least 2 options.'));
       return;
     }
     try {

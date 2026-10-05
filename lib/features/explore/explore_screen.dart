@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -234,31 +235,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Explore'),
+        title: Text(tr('Explore')),
         actions: [
           IconButton(
-            tooltip: 'All malls',
+            tooltip: tr('All malls'),
             icon: const Text('🛍️', style: TextStyle(fontSize: 20)),
             onPressed: () => context.push('/malls'),
           ),
           IconButton(
-            tooltip: _map ? 'List' : 'Map',
+            tooltip: _map ? tr('List') : tr('Map'),
             icon: Icon(_map ? Icons.view_list_outlined : Icons.map_outlined),
             onPressed: () => setState(() => _map = !_map),
           ),
           if (!_map)
           IconButton(
-            tooltip: _grid ? 'List view' : 'Photo grid',
+            tooltip: _grid ? tr('List view') : tr('Photo grid'),
             icon: Icon(_grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
             onPressed: () => setState(() => _grid = !_grid),
           ),
           IconButton(
-            tooltip: 'Surprise me',
+            tooltip: tr('Surprise me'),
             icon: const Text('🎲', style: TextStyle(fontSize: 22)),
             onPressed: () => places.whenData((all) => _surprise(_filter(all, me))),
           ),
           PopupMenuButton<String>(
-            tooltip: 'City',
+            tooltip: tr('City'),
             initialValue: city,
             onSelected: (c) {
               ref.read(cityProvider.notifier).set(c);
@@ -266,7 +267,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             },
             itemBuilder: (_) => [
               for (final e in Cities.all.entries)
-                PopupMenuItem(value: e.key, child: Text(e.value)),
+                PopupMenuItem(value: e.key, child: Text(tr(e.value))),
             ],
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: KSpace.md),
@@ -301,12 +302,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     controller: _search,
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
-                      hintText: 'Search places, food, areas…',
+                      hintText: tr('Search places, food, areas…'),
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _query.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: 'Clear',
+                              tooltip: tr('Clear'),
                               icon: const Icon(Icons.close),
                               onPressed: () => _useQuery(''),
                             ),
@@ -326,7 +327,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         onPressed: () => _useQuery(h),
                       ),
                     ActionChip(
-                      label: const Text('Clear'),
+                      label: Text(tr('Clear')),
                       onPressed: () => ref.read(searchHistoryProvider.notifier).clear(),
                     ),
                   ]),
@@ -336,21 +337,21 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   if (_anyFilter)
                     ActionChip(
                       avatar: const Icon(Icons.filter_alt_off_outlined, size: 18),
-                      label: const Text('Clear filters'),
+                      label: Text(tr('Clear filters')),
                       onPressed: _clearFilters,
                     ),
                   ActionChip(
                     avatar: const Text('📋'),
-                    label: const Text('My lists'),
+                    label: Text(tr('My lists')),
                     onPressed: () => context.push('/lists'),
                   ),
                   PopupMenuButton<_Sort>(
-                    tooltip: 'Sort',
+                    tooltip: tr('Sort'),
                     onSelected: _setSort,
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: _Sort.best, child: Text('Best match')),
-                      PopupMenuItem(value: _Sort.nearest, child: Text('Nearest to me')),
-                      PopupMenuItem(value: _Sort.az, child: Text('A–Z')),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(value: _Sort.best, child: Text(tr('Best match'))),
+                      PopupMenuItem(value: _Sort.nearest, child: Text(tr('Nearest to me'))),
+                      PopupMenuItem(value: _Sort.az, child: Text(tr('A–Z'))),
                     ],
                     child: Chip(
                       avatar: _locating
@@ -366,7 +367,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   ),
                   FilterChip(
                     avatar: const Icon(Icons.schedule, size: 18),
-                    label: const Text('Open now'),
+                    label: Text(tr('Open now')),
                     selected: _openNow,
                     showCheckmark: false,
                     onSelected: (v) => setState(() => _openNow = v),
@@ -380,7 +381,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   ),
                   for (final e in _Extra.values)
                     FilterChip(
-                      label: Text(e.label),
+                      label: Text(tr(e.label)),
                       selected: _extras.contains(e),
                       showCheckmark: false,
                       onSelected: (on) => _toggleExtra(e, on),
@@ -390,7 +391,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               SliverToBoxAdapter(
                 child: _ChipRow(children: [
                   ChoiceChip(
-                    label: const Text('All'),
+                    label: Text(tr('All')),
                     selected: _category == null,
                     showCheckmark: false,
                     onSelected: (_) => setState(() {
@@ -400,7 +401,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   ),
                   for (final e in Categories.all.entries)
                     ChoiceChip(
-                      label: Text('${Categories.emoji(e.key)} ${e.value} · ${catCounts[e.key] ?? 0}'),
+                      label: Text('${Categories.emoji(e.key)} ${Categories.label(e.key)} · ${catCounts[e.key] ?? 0}'),
                       selected: _category == e.key,
                       showCheckmark: false,
                       onSelected: (_) => setState(() {
@@ -426,10 +427,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: KSpace.md),
-                    child: SectionTitle('Recently viewed',
+                    child: SectionTitle(tr('Recently viewed'),
                         trailing: TextButton(
                           onPressed: () => ref.read(recentPlacesProvider.notifier).clear(),
-                          child: const Text('Clear'),
+                          child: Text(tr('Clear')),
                         )),
                   ),
                 ),
@@ -464,12 +465,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
               ),
               if (all.isEmpty)
-                const SliverFillRemaining(
+                SliverFillRemaining(
                   hasScrollBody: false,
                   child: EmptyState(
                     emoji: '🗺️',
-                    title: 'No places here yet',
-                    message: "We're still adding real places for this city.",
+                    title: tr('No places here yet'),
+                    message: tr("We're still adding real places for this city."),
                   ),
                 )
               else if (list.isEmpty)
@@ -477,9 +478,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   hasScrollBody: false,
                   child: EmptyState(
                     emoji: '🔍',
-                    title: 'Nothing matches',
+                    title: tr('Nothing matches'),
                     message: _openNow || _extras.isNotEmpty
-                        ? 'Filters only show places whose map entry says so. Try fewer filters.'
+                        ? tr('Filters only show places whose map entry says so. Try fewer filters.')
                         : null,
                   ),
                 )
@@ -511,8 +512,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         const SizedBox(height: KSpace.sm),
                         Text(
                           list.where((p) => p.hasLocation).length > 300
-                              ? 'Showing the first 300 places. Use filters or pick an area to see others.'
-                              : 'Tap a pin to open the place.',
+                              ? tr('Showing the first 300 places. Use filters or pick an area to see others.')
+                              : tr('Tap a pin to open the place.'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -600,15 +601,15 @@ class _AreaSheetState extends State<_AreaSheet> {
           Padding(
             padding: const EdgeInsets.all(KSpace.md),
             child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Find an area',
+              decoration: InputDecoration(
+                hintText: tr('Find an area'),
                 prefixIcon: Icon(Icons.search),
               ),
               onChanged: (v) => setState(() => _q = v),
             ),
           ),
           ListTile(
-            title: const Text('Any area', style: TextStyle(fontWeight: FontWeight.w700)),
+            title: Text(tr('Any area'), style: TextStyle(fontWeight: FontWeight.w700)),
             onTap: () => Navigator.pop(context, ''),
           ),
           for (final a in shown)
@@ -655,7 +656,7 @@ class PlaceGridTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(place.name, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(place.shownName, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(
                       [
                         if (from != null && place.hasLocation)
@@ -686,7 +687,7 @@ class OpenBadge extends StatelessWidget {
     final open = place.isOpenAt(now);
     if (open == null) return const SizedBox.shrink();
     // e.g. "Open · closes 23:00" or "Closed · opens 10:00 tomorrow".
-    final label = place.hours?.statusText(now) ?? (open ? 'Open now' : 'Closed now');
+    final label = place.hours?.statusText(now) ?? (open ? tr('Open now') : tr('Closed now'));
     final color = open ? const Color(0xFF2EAD6B) : Theme.of(context).colorScheme.error;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -749,7 +750,7 @@ class PlaceTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(place.name,
+                    Text(place.shownName,
                         style: text.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
                     Text(sub, style: text.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -776,8 +777,8 @@ class OsmCredit extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: KSpace.md),
       child: Text(
-        'Places: © OpenStreetMap contributors (openstreetmap.org/copyright) '
-        'and Overture Maps Foundation.\nPhotos from Wikimedia Commons.',
+        tr('Places: © OpenStreetMap contributors (openstreetmap.org/copyright) '
+        'and Overture Maps Foundation.\nPhotos from Wikimedia Commons.'),
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodySmall,
       ),
@@ -797,10 +798,10 @@ Future<void> showPlaceQuickActions(BuildContext context, Place place) =>
           shrinkWrap: true,
           padding: const EdgeInsets.all(KSpace.md),
           children: [
-            Text(place.name, style: Theme.of(context).textTheme.titleLarge),
+            Text(place.shownName, style: Theme.of(context).textTheme.titleLarge),
             ListTile(
               leading: Icon(fav ? Icons.favorite : Icons.favorite_border),
-              title: Text(fav ? 'Remove from favorites' : 'Add to favorites'),
+              title: Text(fav ? tr('Remove from favorites') : tr('Add to favorites')),
               onTap: () async {
                 final uid = ref.read(uidProvider);
                 Navigator.pop(sheetContext);
@@ -821,7 +822,7 @@ Future<void> showPlaceQuickActions(BuildContext context, Place place) =>
               ),
             ListTile(
               leading: const Icon(Icons.share_outlined),
-              title: const Text('Share'),
+              title: Text(tr('Share')),
               onTap: () {
                 Navigator.pop(sheetContext);
                 SharePlus.instance.share(ShareParams(text: placeShareText(place)));
@@ -829,7 +830,7 @@ Future<void> showPlaceQuickActions(BuildContext context, Place place) =>
             ),
             ListTile(
               leading: const Icon(Icons.open_in_new),
-              title: const Text('Open'),
+              title: Text(tr('Open')),
               onTap: () {
                 Navigator.pop(sheetContext);
                 context.push('/place/${place.id}');

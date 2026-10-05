@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,23 +30,23 @@ class ThemePicker extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Look, colors & text size', style: text.titleLarge),
+        Text(tr('Look, colors & text size'), style: text.titleLarge),
         const SizedBox(height: KSpace.md),
         SegmentedButton<ThemeMode>(
           showSelectedIcon: false,
-          segments: const [
+          segments: [
             ButtonSegment(
-                value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text('Dark')),
+                value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text(tr('Dark'))),
             ButtonSegment(
-                value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text('Light')),
+                value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text(tr('Light'))),
             ButtonSegment(
-                value: ThemeMode.system, icon: Icon(Icons.phone_android), label: Text('Phone')),
+                value: ThemeMode.system, icon: Icon(Icons.phone_android), label: Text(tr('Phone'))),
           ],
           selected: {settings.mode},
           onSelectionChanged: (s) => notifier.setMode(s.first),
         ),
         const SizedBox(height: KSpace.lg),
-        Text('Text size', style: text.titleMedium),
+        Text(tr('Text size'), style: text.titleMedium),
         const SizedBox(height: KSpace.sm),
         SegmentedButton<double>(
           showSelectedIcon: false,
@@ -60,7 +61,7 @@ class ThemePicker extends ConsumerWidget {
           onSelectionChanged: (s) => notifier.setTextScale(s.first),
         ),
         const SizedBox(height: KSpace.lg),
-        Text('Theme', style: text.titleMedium),
+        Text(tr('Theme'), style: text.titleMedium),
         const SizedBox(height: KSpace.sm),
         GridView.count(
           crossAxisCount: 3,
@@ -128,7 +129,7 @@ class _Swatch extends StatelessWidget {
                     : null,
               ),
               const SizedBox(height: KSpace.sm),
-              Text(theme.name,
+              Text(tr(theme.name),
                   style: TextStyle(fontWeight: FontWeight.w600, color: k.ink)),
             ],
           ),

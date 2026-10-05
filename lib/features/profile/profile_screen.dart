@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,7 +29,7 @@ class ProfileScreen extends ConsumerWidget {
     final auth = ref.read(authRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(title: Text(tr('Profile'))),
       body: ListView(
         padding: const EdgeInsets.all(KSpace.md),
         children: [
@@ -51,22 +52,22 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.palette_outlined),
-                  title: const Text('Look & colors'),
-                  subtitle: const Text('Dark mode, color themes, bigger text'),
+                  title: Text(tr('Look & colors')),
+                  subtitle: Text(tr('Dark mode, color themes, bigger text')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => showThemeSheet(context),
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.location_city),
-                  title: const Text('Home city'),
+                  title: Text(tr('Home city')),
                   subtitle: Text(Cities.all[ref.watch(cityProvider)] ?? ''),
                   onTap: () => _pickCity(context, ref),
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.badge_outlined),
-                  title: const Text('Display name'),
+                  title: Text(tr('Display name')),
                   subtitle: Text(me?.displayName ?? ''),
                   onTap: me == null
                       ? null
@@ -76,9 +77,9 @@ class ProfileScreen extends ConsumerWidget {
                   const Divider(),
                   ListTile(
                     leading: const Icon(Icons.alternate_email),
-                    title: const Text('Username'),
+                    title: Text(tr('Username')),
                     subtitle: Text(me?.username == null
-                        ? 'Not set'
+                        ? tr('Not set')
                         : '@${me!.username}'),
                     onTap: () => showUsernameSheet(context),
                   ),
@@ -86,8 +87,8 @@ class ProfileScreen extends ConsumerWidget {
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.cleaning_services_outlined),
-                  title: const Text('Clear history on this phone'),
-                  subtitle: const Text('Recently viewed, searches, star ratings, ticked stops'),
+                  title: Text(tr('Clear history on this phone')),
+                  subtitle: Text(tr('Recently viewed, searches, star ratings, ticked stops')),
                   onTap: () => _clearHistory(context, ref),
                 ),
               ],
@@ -101,14 +102,14 @@ class ProfileScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.ios_share),
-                  title: const Text('Export my data'),
-                  subtitle: const Text('Plans, favorites, places you\'ve been, lists'),
+                  title: Text(tr('Export my data')),
+                  subtitle: Text(tr('Plans, favorites, places you\'ve been, lists')),
                   onTap: () => _export(context, ref),
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.share_outlined),
-                  title: const Text('Share Khroga with friends'),
+                  title: Text(tr('Share Khroga with friends')),
                   onTap: () => SharePlus.instance.share(ShareParams(
                       text: 'I plan outings in Cairo, Giza and Alexandria with Khroga. '
                           'It only suggests real places and it\'s free. Ask me for the app!')),
@@ -116,21 +117,21 @@ class ProfileScreen extends ConsumerWidget {
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.new_releases_outlined),
-                  title: const Text("What's new"),
+                  title: Text(tr("What's new")),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/whats-new'),
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.school_outlined),
-                  title: const Text('Show the welcome tour again'),
+                  title: Text(tr('Show the welcome tour again')),
                   onTap: () => context.push('/welcome'),
                 ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text('About Khroga'),
-                  subtitle: const Text('Where our facts come from'),
+                  title: Text(tr('About Khroga')),
+                  subtitle: Text(tr('Where our facts come from')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/about'),
                 ),
@@ -140,36 +141,36 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           if (isGuest) ...[
             Text(
-              "You're using Khroga as a guest. Sign in to keep your plans on "
-              'any phone and to add friends.',
+              tr("You're using Khroga as a guest. Sign in to keep your plans on "
+              'any phone and to add friends.'),
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
             ),
             const SizedBox(height: KSpace.sm),
             BusyButton(
-              label: 'Sign in with Google',
+              label: tr('Sign in with Google'),
               icon: Icons.login,
               onPressed: auth.signInWithGoogle,
             ),
             const SizedBox(height: KSpace.sm),
           ],
           BusyButton(
-            label: 'Sign out',
+            label: tr('Sign out'),
             outlined: true,
             onPressed: () async {
               if (isGuest) {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (dialogContext) => AlertDialog(
-                    title: const Text('Sign out of guest account?'),
-                    content: const Text(
-                        "Guest plans and groups can't be recovered after signing out."),
+                    title: Text(tr('Sign out of guest account?')),
+                    content: Text(
+                        tr("Guest plans and groups can't be recovered after signing out.")),
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.pop(dialogContext, false),
-                          child: const Text('Cancel')),
+                          child: Text(tr('Cancel'))),
                       FilledButton(
                           onPressed: () => Navigator.pop(dialogContext, true),
-                          child: const Text('Sign out')),
+                          child: Text(tr('Sign out'))),
                     ],
                   ),
                 );
@@ -221,12 +222,12 @@ class ProfileScreen extends ConsumerWidget {
     final picked = await showDialog<String>(
       context: context,
       builder: (dialogContext) => SimpleDialog(
-        title: const Text('Home city'),
+        title: Text(tr('Home city')),
         children: [
           for (final e in Cities.all.entries)
             SimpleDialogOption(
               onPressed: () => Navigator.pop(dialogContext, e.key),
-              child: Text(e.value),
+              child: Text(tr(e.value)),
             ),
         ],
       ),
@@ -238,16 +239,16 @@ class ProfileScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Clear history on this phone?'),
-        content: const Text(
-            'Your plans, favorites, notes and groups are not affected.'),
+        title: Text(tr('Clear history on this phone?')),
+        content: Text(
+            tr('Your plans, favorites, notes and groups are not affected.')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel')),
+              child: Text(tr('Cancel'))),
           FilledButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Clear')),
+              child: Text(tr('Clear'))),
         ],
       ),
     );
@@ -256,7 +257,7 @@ class ProfileScreen extends ConsumerWidget {
     ref.read(searchHistoryProvider.notifier).clear();
     ref.read(myRatingsProvider.notifier).clear();
     ref.read(planChecklistProvider.notifier).clear();
-    if (context.mounted) showMessage(context, 'History cleared');
+    if (context.mounted) showMessage(context, tr('History cleared'));
   }
 
   Future<void> _editName(BuildContext context, WidgetRef ref, String current) async {
@@ -264,7 +265,7 @@ class ProfileScreen extends ConsumerWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Display name'),
+        title: Text(tr('Display name')),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -274,10 +275,10 @@ class ProfileScreen extends ConsumerWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel')),
+              child: Text(tr('Cancel'))),
           FilledButton(
               onPressed: () => Navigator.pop(dialogContext, controller.text),
-              child: const Text('Save')),
+              child: Text(tr('Save'))),
         ],
       ),
     );
@@ -313,7 +314,7 @@ class _Stats extends ConsumerWidget {
             children: [
               Text(emoji, style: const TextStyle(fontSize: 22)),
               Text(n == null ? '–' : '$n', style: Theme.of(context).textTheme.titleLarge),
-              Text(label, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+              Text(tr(label), style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
             ],
           ),
         );
@@ -363,7 +364,7 @@ class _Badges extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Badges · $earned of ${badges.length}', style: text.titleMedium),
+            Text(trf('Badges · {a} of {b}', {'a': earned, 'b': badges.length}), style: text.titleMedium),
             const SizedBox(height: KSpace.sm),
             Wrap(
               spacing: KSpace.sm,
@@ -398,7 +399,7 @@ class _Badges extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: KSpace.xs),
-            Text('Tap a badge to see how to earn it.', style: text.bodySmall),
+            Text(tr('Tap a badge to see how to earn it.'), style: text.bodySmall),
           ],
         ),
       ),
@@ -417,26 +418,40 @@ class _AppSettingsCard extends ConsumerWidget {
     return Card(
       child: Column(
         children: [
+          ListTile(
+            leading: const Icon(Icons.translate),
+            title: const Text('Language · اللغة'),
+            trailing: SegmentedButton<String>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 'en', label: Text('English')),
+                ButtonSegment(value: 'ar', label: Text('العربية')),
+              ],
+              selected: {s.lang},
+              onSelectionChanged: (v) => n.setLanguage(v.first),
+            ),
+          ),
+          const Divider(),
           SwitchListTile(
             secondary: const Icon(Icons.dark_mode_outlined),
-            title: const Text('Pure black dark mode'),
-            subtitle: const Text('Darker, saves battery on many phones'),
+            title: Text(tr('Pure black dark mode')),
+            subtitle: Text(tr('Darker, saves battery on many phones')),
             value: s.pureBlack,
             onChanged: n.setPureBlack,
           ),
           const Divider(),
           SwitchListTile(
             secondary: const Icon(Icons.data_saver_on_outlined),
-            title: const Text('Data saver'),
-            subtitle: const Text("Don't load place photos"),
+            title: Text(tr('Data saver')),
+            subtitle: Text(tr("Don't load place photos")),
             value: s.dataSaver,
             onChanged: n.setDataSaver,
           ),
           const Divider(),
           SwitchListTile(
             secondary: const Icon(Icons.explore_outlined),
-            title: const Text('Open the app on Explore'),
-            subtitle: const Text('Instead of Plan (next time you open it)'),
+            title: Text(tr('Open the app on Explore')),
+            subtitle: Text(tr('Instead of Plan (next time you open it)')),
             value: s.startOnExplore,
             onChanged: n.setStartOnExplore,
           ),
@@ -469,7 +484,7 @@ class _VisitedBreakdown extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Where you've been", style: text.titleMedium),
+              Text(tr("Where you've been"), style: text.titleMedium),
               const SizedBox(height: KSpace.sm),
               for (final e in top.take(6))
                 Padding(

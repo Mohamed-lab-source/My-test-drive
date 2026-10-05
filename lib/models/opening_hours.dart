@@ -1,3 +1,5 @@
+import '../app/i18n.dart';
+
 /// Reads the common forms of OpenStreetMap's `opening_hours`, e.g.
 /// "Mo-Fr 09:00-23:00; Sa,Su 10:00-02:00", "24/7", "Su off".
 ///
@@ -107,7 +109,7 @@ class OpeningHours {
   /// "Open · closes 23:00" / "Closed · opens 10:00 tomorrow", or null when
   /// we can't tell from the hours.
   String? statusText(DateTime now) {
-    if (alwaysOpen) return 'Open 24 hours';
+    if (alwaysOpen) return tr('Open 24 hours');
     final open = isOpenAt(now);
     if (open == null) return null;
     final minute = now.hour * 60 + now.minute;
@@ -115,43 +117,44 @@ class OpeningHours {
       // Find the interval we're in (today's, or a late one from yesterday).
       for (final (s, e) in _week[now.weekday] ?? const <(int, int)>[]) {
         if (minute >= s && minute < e) {
-          return e >= 1440 && s == 0 && e - s >= 1440 ? 'Open all day' : 'Open · closes ${_hhmm(e)}';
+          return e >= 1440 && s == 0 && e - s >= 1440
+              ? tr('Open all day')
+              : trf('Open · closes {t}', {'t': _hhmm(e)});
         }
       }
       for (final (_, e) in _week[(now.weekday + 5) % 7 + 1] ?? const <(int, int)>[]) {
-        if (e > 1440 && minute < e - 1440) return 'Open · closes ${_hhmm(e)}';
+        if (e > 1440 && minute < e - 1440) return trf('Open · closes {t}', {'t': _hhmm(e)});
       }
-      return 'Open';
+      return tr('Open');
     }
     // Closed: look for the next opening in the coming week.
     for (var add = 0; add < 7; add++) {
       final day = (now.weekday - 1 + add) % 7 + 1;
       for (final (s, _) in _week[day] ?? const <(int, int)>[]) {
         if (add == 0 && s <= minute) continue;
-        final when = add == 0
-            ? ''
-            : add == 1
-                ? ' tomorrow'
-                : ' ${_dayNames[day - 1]}';
-        return 'Closed · opens ${_hhmm(s)}$when';
+        if (add == 0) return trf('Closed · opens {t}', {'t': _hhmm(s)});
+        if (add == 1) return trf('Closed · opens {t} tomorrow', {'t': _hhmm(s)});
+        return trf('Closed · opens {t} {day}', {'t': _hhmm(s), 'day': tr(_dayNames[day - 1])});
       }
     }
-    return 'Closed';
+    return tr('Closed');
   }
 
   /// One line per weekday for a table, e.g. ("Mon", "10:00–23:00").
   /// Null when the hours don't cover the whole week.
   List<(String, String)>? weekTable() {
-    if (alwaysOpen) return [for (final d in _dayNames) (d, 'Open 24 hours')];
+    if (alwaysOpen) return [for (final d in _dayNames) (tr(d), tr('Open 24 hours'))];
     final out = <(String, String)>[];
     for (var d = 1; d <= 7; d++) {
       final list = _week[d];
       if (list == null) return null;
       out.add((
-        _dayNames[d - 1],
+        tr(_dayNames[d - 1]),
         list.isEmpty
-            ? 'Closed'
-            : list.map((i) => i.$1 == 0 && i.$2 >= 1440 ? '24 hours' : '${_hhmm(i.$1)}–${_hhmm(i.$2)}').join(', '),
+            ? tr('Closed')
+            : list
+                .map((i) => i.$1 == 0 && i.$2 >= 1440 ? tr('24 hours') : '${_hhmm(i.$1)}–${_hhmm(i.$2)}')
+                .join(', '),
       ));
     }
     return out;

@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,9 +46,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           padding: const EdgeInsets.all(KSpace.lg),
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(onPressed: _done, child: const Text('Skip')),
+              Row(
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.translate),
+                    label: Text(isArabic ? 'English' : 'العربية'),
+                    onPressed: () => ref
+                        .read(appSettingsProvider.notifier)
+                        .setLanguage(isArabic ? 'en' : 'ar'),
+                  ),
+                  const Spacer(),
+                  TextButton(onPressed: _done, child: Text(tr('Skip'))),
+                ],
               ),
               Expanded(
                 child: PageView(
@@ -60,9 +70,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         children: [
                           Text(emoji, style: const TextStyle(fontSize: 72)),
                           const SizedBox(height: KSpace.lg),
-                          Text(title, style: text.headlineMedium, textAlign: TextAlign.center),
+                          Text(tr(title), style: text.headlineMedium, textAlign: TextAlign.center),
                           const SizedBox(height: KSpace.sm),
-                          Text(body,
+                          Text(tr(body),
                               textAlign: TextAlign.center,
                               style: text.bodyLarge?.copyWith(color: context.k.inkMuted)),
                         ],
@@ -93,7 +103,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       ? _done
                       : () => _pages.nextPage(
                           duration: const Duration(milliseconds: 250), curve: Curves.easeOut),
-                  child: Text(last ? "Let's go" : 'Next'),
+                  child: Text(last ? tr("Let's go") : tr('Next')),
                 ),
               ),
             ],

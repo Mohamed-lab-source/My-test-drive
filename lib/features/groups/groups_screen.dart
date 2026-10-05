@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,17 +27,17 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
     final groups = ref.watch(myGroupsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Groups'),
+        title: Text(tr('Groups')),
         actions: [
           IconButton(
-            tooltip: 'Scan an invite QR code',
+            tooltip: tr('Scan an invite QR code'),
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () => context.push('/scan'),
           ),
           TextButton.icon(
             onPressed: () => _showJoinSheet(context),
             icon: const Icon(Icons.login),
-            label: const Text('Join'),
+            label: Text(tr('Join')),
           ),
           const SizedBox(width: KSpace.sm),
         ],
@@ -44,17 +45,17 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showCreateGroupSheet(context),
         icon: const Icon(Icons.add),
-        label: const Text('New group'),
+        label: Text(tr('New group')),
       ),
       body: AsyncView<List<Group>>(
         value: groups,
         builder: (list) => list.isEmpty
             ? EmptyState(
                 emoji: '👯',
-                title: 'No groups yet',
-                message: 'Make a group for your next outing, or join one with '
-                    'a code from a friend.',
-                actionLabel: 'Join with a code',
+                title: tr('No groups yet'),
+                message: tr('Make a group for your next outing, or join one with '
+                    'a code from a friend.'),
+                actionLabel: tr('Join with a code'),
                 onAction: () => _showJoinSheet(context),
               )
             : Builder(builder: (context) {
@@ -67,8 +68,8 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                   separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
                   itemBuilder: (_, i) => i == 0
                       ? TextField(
-                          decoration: const InputDecoration(
-                              hintText: 'Search your groups', prefixIcon: Icon(Icons.search)),
+                          decoration: InputDecoration(
+                              hintText: tr('Search your groups'), prefixIcon: Icon(Icons.search)),
                           onChanged: (v) => setState(() => _q = v),
                         )
                       : _GroupTile(group: shown[i - 1]),
@@ -160,11 +161,11 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
 
   Future<void> _join() async {
     if (_code.text.trim().length < 4) {
-      throw Exception('Enter the code your friend shared.');
+      throw Exception(tr('Enter the code your friend shared.'));
     }
     final router = GoRouter.of(context);
     final uid = ref.read(uidProvider);
-    if (uid == null) throw Exception('Please sign in again.');
+    if (uid == null) throw Exception(tr('Please sign in again.'));
     final id = await ref.read(groupsRepositoryProvider).join(uid, _code.text);
     if (!mounted) return;
     Navigator.of(context).pop();
@@ -180,7 +181,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Join a group', style: Theme.of(context).textTheme.titleLarge),
+          Text(tr('Join a group'), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: KSpace.md),
           TextField(
             controller: _code,
@@ -190,10 +191,10 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
             style: const TextStyle(
                 fontSize: 22, letterSpacing: 4, fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
-            decoration: const InputDecoration(hintText: 'CODE'),
+            decoration: InputDecoration(hintText: tr('CODE')),
           ),
           const SizedBox(height: KSpace.md),
-          BusyButton(label: 'Join', onPressed: _join),
+          BusyButton(label: tr('Join'), onPressed: _join),
         ],
       ),
     );

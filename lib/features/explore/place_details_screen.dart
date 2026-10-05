@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -50,12 +51,12 @@ class _PlaceDetailsScreenState extends ConsumerState<PlaceDetailsScreen> {
         actions: [
           if (loaded != null)
             IconButton(
-              tooltip: 'Share',
+              tooltip: tr('Share'),
               icon: const Icon(Icons.share_outlined),
               onPressed: () => SharePlus.instance.share(ShareParams(text: placeShareText(loaded))),
             ),
           IconButton(
-            tooltip: favorite ? 'Remove from favorites' : 'Add to favorites',
+            tooltip: favorite ? tr('Remove from favorites') : tr('Add to favorites'),
             icon: Icon(favorite ? Icons.favorite : Icons.favorite_border,
                 color: favorite ? context.k.accent : null),
             onPressed: () async {
@@ -74,7 +75,7 @@ class _PlaceDetailsScreenState extends ConsumerState<PlaceDetailsScreen> {
         value: place,
         onRetry: () => ref.invalidate(placeProvider(placeId)),
         builder: (p) => p == null
-            ? const EmptyState(emoji: '🤷', title: 'Place not found')
+            ? EmptyState(emoji: '🤷', title: tr('Place not found'))
             : _Details(place: p),
       ),
     );
@@ -103,16 +104,14 @@ class _Details extends ConsumerWidget {
         GestureDetector(
           onLongPress: () {
             Clipboard.setData(ClipboardData(text: place.name));
-            showMessage(context, 'Name copied');
+            showMessage(context, tr('Name copied'));
           },
-          child: Text(place.name, style: text.headlineMedium),
+          child: Text(place.shownName, style: text.headlineMedium),
         ),
         if (todaysHours(place, DateTime.now()) case final today?)
-          Text('Today: $today', style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
-        if (place.nameAr != null && place.nameAr != place.name)
-          Text(place.nameAr!,
-              textDirection: TextDirection.rtl,
-              style: text.titleMedium?.copyWith(color: context.k.inkMuted)),
+          Text(trf('Today: {hours}', {'hours': tr(today)}), style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+        if (place.otherName != null)
+          Text(place.otherName!, style: text.titleMedium?.copyWith(color: context.k.inkMuted)),
         const SizedBox(height: KSpace.sm),
         Wrap(
           spacing: KSpace.sm,
@@ -132,7 +131,7 @@ class _Details extends ConsumerWidget {
           Card(
             child: ListTile(
               leading: const Text('🛍️', style: TextStyle(fontSize: 24)),
-              title: Text('Inside ${mall.name}'),
+              title: Text(trf('Inside {name}', {'name': mall.name})),
               subtitle: facts.floorLabel == null ? null : Text(facts.floorLabel!),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/place/${mall.id}'),
@@ -196,7 +195,7 @@ class _Details extends ConsumerWidget {
               }).toString());
             },
             icon: const Icon(Icons.auto_awesome),
-            label: const Text('Plan an outing around here'),
+            label: Text(tr('Plan an outing around here')),
           ),
         ],
         const SizedBox(height: KSpace.md),
@@ -208,25 +207,25 @@ class _Details extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => openInMaps(name: place.name, lat: place.lat, lng: place.lng),
                 icon: const Icon(Icons.directions_outlined),
-                label: const Text('Directions'),
+                label: Text(tr('Directions')),
               ),
             if (place.hasLocation)
               OutlinedButton.icon(
                 onPressed: () => openDirections(lat: place.lat!, lng: place.lng!, mode: 'walking'),
                 icon: const Icon(Icons.directions_walk),
-                label: const Text('Walk'),
+                label: Text(tr('Walk')),
               ),
             if (place.hasLocation)
               OutlinedButton.icon(
                 onPressed: () => openUber(name: place.name, lat: place.lat!, lng: place.lng!),
                 icon: const Icon(Icons.local_taxi_outlined),
-                label: const Text('Uber'),
+                label: Text(tr('Uber')),
               ),
             if (place.phone != null)
               OutlinedButton.icon(
                 onPressed: () => callPhone(place.phone!),
                 icon: const Icon(Icons.call_outlined),
-                label: const Text('Call'),
+                label: Text(tr('Call')),
               ),
             if (place.website != null)
               OutlinedButton.icon(
@@ -238,30 +237,30 @@ class _Details extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => openUri(wazeUrl(place)!),
                 icon: const Icon(Icons.navigation_outlined),
-                label: const Text('Waze'),
+                label: Text(tr('Waze')),
               ),
             OutlinedButton.icon(
               onPressed: () => openUri(googleSearchUrl(place)),
               icon: const Icon(Icons.travel_explore),
-              label: const Text('Reviews & menus on Google'),
+              label: Text(tr('Reviews & menus on Google')),
             ),
             if (wikidataUrl(place) != null)
               OutlinedButton.icon(
                 onPressed: () => openUri(wikidataUrl(place)!),
                 icon: const Icon(Icons.menu_book_outlined),
-                label: const Text('Wikipedia / Wikidata'),
+                label: Text(tr('Wikipedia / Wikidata')),
               ),
             if (whatsappUrl(place.phone) != null)
               OutlinedButton.icon(
                 onPressed: () => openUri(whatsappUrl(place.phone)!),
                 icon: const Icon(Icons.chat_outlined),
-                label: const Text('WhatsApp'),
+                label: Text(tr('WhatsApp')),
               ),
             if (transitUrl(place) != null)
               OutlinedButton.icon(
                 onPressed: () => openUri(transitUrl(place)!),
                 icon: const Icon(Icons.directions_bus_outlined),
-                label: const Text('Transit'),
+                label: Text(tr('Transit')),
               ),
             if (place.hasLocation)
               OutlinedButton.icon(
@@ -269,41 +268,41 @@ class _Details extends ConsumerWidget {
                   Clipboard.setData(ClipboardData(
                       text: Uri.https('www.google.com', '/maps/search/',
                           {'api': '1', 'query': '${place.lat},${place.lng}'}).toString()));
-                  showMessage(context, 'Map link copied');
+                  showMessage(context, tr('Map link copied'));
                 },
                 icon: const Icon(Icons.link),
-                label: const Text('Copy map link'),
+                label: Text(tr('Copy map link')),
               ),
             if (streetViewUrl(place) != null)
               OutlinedButton.icon(
                 onPressed: () => openUri(streetViewUrl(place)!),
                 icon: const Icon(Icons.streetview),
-                label: const Text('Street View'),
+                label: Text(tr('Street View')),
               ),
             OutlinedButton.icon(
               onPressed: () => _addToList(context, ref, place),
               icon: const Icon(Icons.bookmark_add_outlined),
-              label: const Text('Add to a list'),
+              label: Text(tr('Add to a list')),
             ),
             OutlinedButton.icon(
               onPressed: () => _compare(context, ref, place),
               icon: const Icon(Icons.compare_arrows),
-              label: const Text('Compare'),
+              label: Text(tr('Compare')),
             ),
             OutlinedButton.icon(
               onPressed: () => _addToPlan(context, ref, place),
               icon: const Icon(Icons.playlist_add),
-              label: const Text('Add to a plan'),
+              label: Text(tr('Add to a plan')),
             ),
             OutlinedButton.icon(
               onPressed: () => _sendToGroup(context, ref, place),
               icon: const Icon(Icons.forum_outlined),
-              label: const Text('Send to a group'),
+              label: Text(tr('Send to a group')),
             ),
           ],
         ),
         if (facts.labels.isNotEmpty) ...[
-          const SectionTitle('Good to know'),
+          SectionTitle(tr('Good to know')),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
@@ -311,13 +310,13 @@ class _Details extends ConsumerWidget {
           ),
         ],
         if (place.openingHours != null) ...[
-          const SectionTitle('Opening hours'),
+          SectionTitle(tr('Opening hours')),
           if (place.hours?.weekTable() case final table?)
             _HoursTable(table: table)
           else
             Text(_friendlyHours(place.openingHours!), style: text.bodyMedium),
           const SizedBox(height: KSpace.xs),
-          Text('Hours can change. Call ahead if it matters.', style: text.bodySmall),
+          Text(tr('Hours can change. Call ahead if it matters.'), style: text.bodySmall),
         ],
         const SizedBox(height: KSpace.md),
         _CheckInCard(place: place),
@@ -325,22 +324,22 @@ class _Details extends ConsumerWidget {
         _MyRating(place: place),
         if (place.category == 'mall') _MallDirectory(mall: place),
         if (place.category != 'mall') _PlaceList(
-          title: 'Similar places nearby',
+          title: tr('Similar places nearby'),
           places: similarNearby(place, all),
         ),
-        _PlaceList(title: "What's nearby (within 500 m)", places: nearbyPlaces(place, all)),
-        _PlaceList(title: 'Other branches', places: otherBranches(place, all)),
+        _PlaceList(title: tr("What's nearby (within 500 m)"), places: nearbyPlaces(place, all)),
+        _PlaceList(title: tr('Other branches'), places: otherBranches(place, all)),
         const SizedBox(height: KSpace.lg),
         if (osmNoteUrl(place) != null)
           TextButton.icon(
             onPressed: () => openUri(osmNoteUrl(place)!),
             icon: const Icon(Icons.flag_outlined),
-            label: const Text('Closed or wrong? Tell OpenStreetMap'),
+            label: Text(tr('Closed or wrong? Tell OpenStreetMap')),
           ),
         if (place.osmUrl != null)
           TextButton(
             onPressed: () => openWebsite(place.osmUrl!),
-            child: const Text('Something wrong or missing? Fix it on OpenStreetMap'),
+            child: Text(tr('Something wrong or missing? Fix it on OpenStreetMap')),
           ),
         const OsmCredit(),
       ],
@@ -403,7 +402,7 @@ class _Header extends StatelessWidget {
               foregroundColor: context.k.inkMuted,
             ),
             onPressed: () => openWebsite(place.photoPage!),
-            child: const Text('Photo: Wikimedia Commons (tap for credit)',
+            child: Text(tr('Photo: Wikimedia Commons (tap for credit)'),
                 style: TextStyle(fontSize: 12)),
           ),
       ],
@@ -468,27 +467,27 @@ class _MallDirectoryState extends ConsumerState<_MallDirectory> {
                     context.push('/new-plan?mall=${mall.id}');
                   },
             icon: const Icon(Icons.auto_awesome),
-            label: const Text('Plan my day here'),
+            label: Text(tr('Plan my day here')),
           ),
         ),
-        SectionTitle('Inside this mall (${allVenues.length})'),
+        SectionTitle(trf('Inside this mall ({n})', {'n': allVenues.length})),
         if (allVenues.isEmpty)
           Text(
-            "We don't have the places inside this mall on the map yet.",
+            tr("We don't have the places inside this mall on the map yet."),
             style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
           )
         else ...[
           TextField(
-            decoration: const InputDecoration(
-                hintText: 'Search this mall', prefixIcon: Icon(Icons.search), isDense: true),
+            decoration: InputDecoration(
+                hintText: tr('Search this mall'), prefixIcon: Icon(Icons.search), isDense: true),
             onChanged: (v) => setState(() => _q = v),
           ),
           const SizedBox(height: KSpace.sm),
           SegmentedButton<bool>(
             showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: false, label: Text('By type')),
-              ButtonSegment(value: true, label: Text('By floor')),
+            segments: [
+              ButtonSegment(value: false, label: Text(tr('By type'))),
+              ButtonSegment(value: true, label: Text(tr('By floor'))),
             ],
             selected: {_byFloor},
             onSelectionChanged: (v) => setState(() => _byFloor = v.first),
@@ -539,7 +538,7 @@ class _CopyRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: () {
         Clipboard.setData(ClipboardData(text: text));
-        showMessage(context, '$what copied');
+        showMessage(context, trf('{what} copied', {'what': tr(what)}));
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -594,7 +593,7 @@ class _HowFarState extends ConsumerState<_HowFar> {
           icon: _busy
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.near_me_outlined, size: 18),
-          label: const Text('How far is it from me?'),
+          label: Text(tr('How far is it from me?')),
         ),
       );
     }
@@ -605,8 +604,8 @@ class _HowFarState extends ConsumerState<_HowFar> {
         Icon(Icons.near_me_outlined, size: 20, color: context.k.inkMuted),
         const SizedBox(width: KSpace.sm),
         Expanded(
-          child: Text('$text from you (straight line)'
-              '${km <= 3 ? ' · about ${walkingMinutes(km)} min walk' : ''}'),
+          child: Text(trf('{d} from you (straight line)', {'d': text}) +
+              (km <= 3 ? trf(' · about {n} min walk', {'n': walkingMinutes(km)}) : '')),
         ),
       ],
     );
@@ -626,19 +625,19 @@ class _VisitedAndNote extends ConsumerWidget {
     final text = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Your private note'),
+        title: Text(tr('Your private note')),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLines: 4,
           maxLength: 500,
-          decoration: const InputDecoration(hintText: 'e.g. Ask for the terrace table'),
+          decoration: InputDecoration(hintText: tr('e.g. Ask for the terrace table')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Cancel'))),
           FilledButton(
               onPressed: () => Navigator.pop(dialogContext, controller.text),
-              child: const Text('Save')),
+              child: Text(tr('Save'))),
         ],
       ),
     );
@@ -660,8 +659,8 @@ class _VisitedAndNote extends ConsumerWidget {
         children: [
           SwitchListTile(
             secondary: const Text('✅', style: TextStyle(fontSize: 22)),
-            title: const Text("I've been here"),
-            subtitle: const Text('Keeps a list of places you visited'),
+            title: Text(tr("I've been here")),
+            subtitle: Text(tr('Keeps a list of places you visited')),
             value: visited,
             onChanged: (v) async {
               final uid = ref.read(uidProvider);
@@ -676,8 +675,8 @@ class _VisitedAndNote extends ConsumerWidget {
           const Divider(),
           ListTile(
             leading: const Text('📝', style: TextStyle(fontSize: 22)),
-            title: Text(note == null ? 'Add a private note' : 'Your note'),
-            subtitle: note == null ? const Text('Only you can see it') : Text(note),
+            title: Text(note == null ? tr('Add a private note') : tr('Your note')),
+            subtitle: note == null ? Text(tr('Only you can see it')) : Text(note),
             trailing: const Icon(Icons.edit_outlined),
             onTap: () => _editNote(context, ref, note),
           ),
@@ -738,7 +737,7 @@ class _HoursTable extends StatelessWidget {
                   child: Text(hours,
                       style: TextStyle(
                           fontWeight: i == today ? FontWeight.w700 : FontWeight.w400,
-                          color: hours == 'Closed' ? context.k.inkMuted : context.k.ink)),
+                          color: hours == tr('Closed') ? context.k.inkMuted : context.k.ink)),
                 ),
               ],
             ),
@@ -766,8 +765,8 @@ class _MyRating extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Your rating', style: TextStyle(fontWeight: FontWeight.w600)),
-                  Text('Only you can see it, on this phone',
+                  Text(tr('Your rating'), style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(tr('Only you can see it, on this phone'),
                       style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
@@ -798,7 +797,7 @@ Future<void> _addToPlan(BuildContext context, WidgetRef ref, Place place) async 
       .toList();
   if (!context.mounted) return;
   if (plans.isEmpty) {
-    showMessage(context, 'No plan with room for another stop. Make a plan first.');
+    showMessage(context, tr('No plan with room for another stop. Make a plan first.'));
     return;
   }
   final picked = await showModalBottomSheet<OutingPlan>(
@@ -808,13 +807,13 @@ Future<void> _addToPlan(BuildContext context, WidgetRef ref, Place place) async 
       shrinkWrap: true,
       padding: const EdgeInsets.all(KSpace.md),
       children: [
-        Text('Add to which plan?', style: Theme.of(sheetContext).textTheme.titleLarge),
+        Text(tr('Add to which plan?'), style: Theme.of(sheetContext).textTheme.titleLarge),
         const SizedBox(height: KSpace.sm),
         for (final p in plans)
           ListTile(
             leading: const Icon(Icons.map_outlined),
             title: Text(p.title),
-            subtitle: Text('${p.stops.length} stops'),
+            subtitle: Text(trf('{n} stops', {'n': p.stops.length})),
             onTap: () => Navigator.pop(sheetContext, p),
           ),
       ],
@@ -836,7 +835,7 @@ Future<void> _sendToGroup(BuildContext context, WidgetRef ref, Place place) asyn
   final groups = await ref.read(myGroupsProvider.future);
   if (!context.mounted) return;
   if (groups.isEmpty) {
-    showMessage(context, "You're not in any group yet.");
+    showMessage(context, tr("You're not in any group yet."));
     return;
   }
   final picked = await showModalBottomSheet<String>(
@@ -846,7 +845,7 @@ Future<void> _sendToGroup(BuildContext context, WidgetRef ref, Place place) asyn
       shrinkWrap: true,
       padding: const EdgeInsets.all(KSpace.md),
       children: [
-        Text('Send to which group?', style: Theme.of(sheetContext).textTheme.titleLarge),
+        Text(tr('Send to which group?'), style: Theme.of(sheetContext).textTheme.titleLarge),
         const SizedBox(height: KSpace.sm),
         for (final g in groups)
           ListTile(
@@ -865,7 +864,7 @@ Future<void> _sendToGroup(BuildContext context, WidgetRef ref, Place place) asyn
           name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
           text: placeChatText(place),
         );
-    if (context.mounted) showMessage(context, 'Sent to the group');
+    if (context.mounted) showMessage(context, tr('Sent to the group'));
   } catch (e) {
     if (context.mounted) showError(context, e);
   }
@@ -888,7 +887,7 @@ void _showPhoto(BuildContext context, Place place) {
           ),
           SafeArea(
             child: IconButton.filled(
-              tooltip: 'Close',
+              tooltip: tr('Close'),
               onPressed: () => Navigator.pop(dialogContext),
               icon: const Icon(Icons.close),
             ),
@@ -910,7 +909,7 @@ Future<void> _addToList(BuildContext context, WidgetRef ref, Place place) async 
         shrinkWrap: true,
         padding: const EdgeInsets.all(KSpace.md),
         children: [
-          Text('Add to a list', style: Theme.of(context).textTheme.titleLarge),
+          Text(tr('Add to a list'), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: KSpace.sm),
           for (final e in lists.entries)
             CheckboxListTile(
@@ -920,7 +919,7 @@ Future<void> _addToList(BuildContext context, WidgetRef ref, Place place) async 
             ),
           ListTile(
             leading: const Icon(Icons.add),
-            title: const Text('New list'),
+            title: Text(tr('New list')),
             onTap: () async {
               final name = await newListDialog(context, ref);
               if (name != null) ref.read(placeListsProvider.notifier).toggle(name, place.id);
@@ -944,7 +943,7 @@ Future<void> _compare(BuildContext context, WidgetRef ref, Place place) async {
   final options = [for (final id in ids) ?byId[id]].take(30).toList();
   if (!context.mounted) return;
   if (options.isEmpty) {
-    showMessage(context, 'Open another place first, then compare.');
+    showMessage(context, tr('Open another place first, then compare.'));
     return;
   }
   final picked = await showModalBottomSheet<Place>(
@@ -958,7 +957,7 @@ Future<void> _compare(BuildContext context, WidgetRef ref, Place place) async {
         controller: controller,
         padding: const EdgeInsets.all(KSpace.md),
         children: [
-          Text('Compare with…', style: Theme.of(sheetContext).textTheme.titleLarge),
+          Text(tr('Compare with…'), style: Theme.of(sheetContext).textTheme.titleLarge),
           const SizedBox(height: KSpace.sm),
           for (final p in options)
             ListTile(
@@ -998,10 +997,10 @@ class _CheckInCard extends ConsumerWidget {
             leading: const Text('📍', style: TextStyle(fontSize: 22)),
             title: Text(hereNow ? "You're checked in here" : "I'm here"),
             subtitle: Text(hereNow
-                ? 'Your friends can see it for 24 hours'
+                ? tr('Your friends can see it for 24 hours')
                 : friendCount == 0
-                    ? 'Marks it as been there. Add friends to share where you are.'
-                    : 'Let your $friendCount friend${friendCount == 1 ? '' : 's'} see where you are (24 hours)'),
+                    ? tr('Marks it as been there. Add friends to share where you are.')
+                    : trf('Let your {n} friends see where you are (24 hours)', {'n': friendCount})),
             trailing: hereNow
                 ? TextButton(
                     onPressed: () async {
@@ -1013,7 +1012,7 @@ class _CheckInCard extends ConsumerWidget {
                         if (context.mounted) showError(context, e);
                       }
                     },
-                    child: const Text('Remove'),
+                    child: Text(tr('Remove')),
                   )
                 : FilledButton(
                     onPressed: () async {
@@ -1027,19 +1026,19 @@ class _CheckInCard extends ConsumerWidget {
                               friendUids: ref.read(friendUidsProvider),
                             );
                         await ref.read(personalRepositoryProvider).setVisited(uid, place.id, true);
-                        if (context.mounted) showMessage(context, 'Checked in. Have fun!');
+                        if (context.mounted) showMessage(context, tr('Checked in. Have fun!'));
                       } catch (e) {
                         if (context.mounted) showError(context, e);
                       }
                     },
-                    child: const Text('Check in'),
+                    child: Text(tr('Check in')),
                   ),
           ),
           if (friendsHere.isNotEmpty) ...[
             const Divider(),
             ListTile(
               leading: const Text('👯', style: TextStyle(fontSize: 22)),
-              title: Text('${friendsHere.length} friend${friendsHere.length == 1 ? '' : 's'} here today'),
+              title: Text(trf('{n} friends here today', {'n': friendsHere.length})),
               subtitle: Text(friendsHere.map((c) => c.name).join(', ')),
             ),
           ],

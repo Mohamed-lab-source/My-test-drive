@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,12 +36,12 @@ class CompareScreen extends ConsumerWidget {
       ('Cards', factText(pa.details.cards), factText(pb.details.cards)),
       ('Delivery', factText(pa.details.delivery), factText(pb.details.delivery)),
       ('Phone', pa.phone ?? 'Unknown', pb.phone ?? 'Unknown'),
-      ('Website', pa.website == null ? 'No' : 'Yes', pb.website == null ? 'No' : 'Yes'),
+      ('Website', pa.website == null ? tr('No') : tr('Yes'), pb.website == null ? tr('No') : tr('Yes')),
     ];
     final km = distanceKm(pa, pb);
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Compare')),
+      appBar: AppBar(title: Text(tr('Compare'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: [
@@ -71,7 +72,7 @@ class CompareScreen extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 100, child: Text(label, style: text.bodySmall)),
+                  SizedBox(width: 100, child: Text(tr(label), style: text.bodySmall)),
                   Expanded(child: Text(x, textAlign: TextAlign.center)),
                   Expanded(child: Text(y, textAlign: TextAlign.center)),
                 ],
@@ -79,7 +80,7 @@ class CompareScreen extends ConsumerWidget {
             ),
           if (km != null) ...[
             const SizedBox(height: KSpace.md),
-            Text('They are ${km.toStringAsFixed(1)} km apart (straight line).',
+            Text(trf('They are {km} km apart (straight line).', {'km': km.toStringAsFixed(1)}),
                 textAlign: TextAlign.center, style: text.bodySmall),
           ],
         ],

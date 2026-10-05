@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,7 +33,7 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
       final router = GoRouter.of(context);
       try {
         final uid = ref.read(uidProvider);
-        if (uid == null) throw Exception('Please sign in again.');
+        if (uid == null) throw Exception(tr('Please sign in again.'));
         final groupId = await ref
             .read(groupsRepositoryProvider)
             .join(uid, value.substring(groupQrPrefix.length));
@@ -50,11 +51,11 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
     final me = ref.read(uidProvider);
     final navigator = Navigator.of(context);
     try {
-      if (me == null || other == me) throw Exception("That's your own code 🙂");
+      if (me == null || other == me) throw Exception(tr("That's your own code 🙂"));
       final profile = await ref.read(socialRepositoryProvider).profile(other);
-      if (profile == null) throw Exception('That Khroga account no longer exists.');
+      if (profile == null) throw Exception(tr('That Khroga account no longer exists.'));
       await ref.read(socialRepositoryProvider).sendRequest(me, other);
-      if (mounted) showMessage(context, 'Friend request sent to ${profile.displayName}');
+      if (mounted) showMessage(context, trf('Friend request sent to {name}', {'name': profile.displayName}));
     } catch (e) {
       if (mounted) showError(context, e);
     }
@@ -64,15 +65,15 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Scan a friend or group code")),
+      appBar: AppBar(title: Text(tr("Scan a friend or group code"))),
       body: MobileScanner(
         onDetect: _onDetect,
         errorBuilder: (context, error) => EmptyState(
           emoji: '📷',
-          title: 'Camera not available',
+          title: tr('Camera not available'),
           message: error.errorCode == MobileScannerErrorCode.permissionDenied
-              ? 'Allow camera access for Khroga in your phone settings.'
-              : 'Could not start the camera.',
+              ? tr('Allow camera access for Khroga in your phone settings.')
+              : tr('Could not start the camera.'),
         ),
       ),
     );

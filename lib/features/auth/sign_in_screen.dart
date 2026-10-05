@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,29 +27,29 @@ class SignInScreen extends ConsumerWidget {
                 child: Image.asset('assets/icon/khroga.png', width: 80, height: 80),
               ),
               const SizedBox(height: KSpace.lg),
-              Text('Khroga', style: text.headlineMedium),
+              Text(tr('Khroga'), style: text.headlineMedium),
               const SizedBox(height: KSpace.sm),
               Text(
-                'Plan real outings in Cairo, Giza and Alexandria — '
-                'with real places, and your friends.',
+                tr('Plan real outings in Cairo, Giza and Alexandria — '
+                'with real places, and your friends.'),
                 style: text.bodyLarge?.copyWith(color: context.k.inkMuted),
               ),
               const Spacer(flex: 3),
               BusyButton(
-                label: 'Continue with Google',
+                label: tr('Continue with Google'),
                 icon: Icons.login,
                 onPressed: auth.signInWithGoogle,
               ),
               const SizedBox(height: KSpace.sm),
               BusyButton(
-                label: 'Try as guest',
+                label: tr('Try as guest'),
                 outlined: true,
                 onPressed: auth.signInAsGuest,
               ),
               const SizedBox(height: KSpace.md),
               Text(
-                'Guests can plan and explore. Sign in with Google later to keep '
-                'everything and add friends.',
+                tr('Guests can plan and explore. Sign in with Google later to keep '
+                'everything and add friends.'),
                 style: text.bodySmall,
                 textAlign: TextAlign.center,
               ),

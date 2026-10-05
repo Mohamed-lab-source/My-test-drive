@@ -1,7 +1,7 @@
 name: khroga
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.3.0+3
+version: 0.4.0+4
 
 environment:
   sdk: ^3.13.5
@@ -11,6 +11,8 @@ dependencies:
   firebase_auth: ^6.7.0
   firebase_core: ^4.15.0
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   flutter_map: ^8.3.2
   flutter_riverpod: ^3.4.3

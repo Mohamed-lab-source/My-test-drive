@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'i18n.dart';
 import 'theme_settings.dart' show sharedPrefsProvider;
 
 /// Your own 1–5 star ratings, kept on this phone only. They're never shown
@@ -142,7 +143,9 @@ class AppSettings {
     this.pureBlack = false,
     this.onboarded = false,
     this.seenVersion = '',
+    this.lang = 'en',
   });
+  final String lang;
   final bool startOnExplore;
   final bool dataSaver;
   final bool pureBlack;
@@ -161,11 +164,19 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
       // No storage (e.g. tests) = don't show the welcome screens.
       onboarded: p == null || (p.getBool('app.onboarded') ?? false),
       seenVersion: p?.getString('app.seenVersion') ?? '',
+      lang: appLang,
     );
   }
 
   void _setBool(String key, bool v) {
     ref.read(sharedPrefsProvider)?.setBool(key, v);
+    ref.invalidateSelf();
+  }
+
+  /// 'en' or 'ar'. The app rebuilds in the new language.
+  void setLanguage(String lang) {
+    ref.read(sharedPrefsProvider)?.setString('app.lang', lang);
+    appLang = lang;
     ref.invalidateSelf();
   }
 

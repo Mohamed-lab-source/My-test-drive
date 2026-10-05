@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -34,13 +35,13 @@ class FriendsScreen extends ConsumerWidget {
 
     if (isGuest) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Friends')),
+        appBar: AppBar(title: Text(tr('Friends'))),
         body: EmptyState(
           emoji: '🤝',
-          title: 'Sign in to add friends',
-          message: 'Guests can plan and join groups. To add friends, sign in '
-              'with Google — your plans and groups come with you.',
-          actionLabel: 'Sign in with Google',
+          title: tr('Sign in to add friends'),
+          message: tr('Guests can plan and join groups. To add friends, sign in '
+              'with Google — your plans and groups come with you.'),
+          actionLabel: tr('Sign in with Google'),
           onAction: () async {
             try {
               await ref.read(authRepositoryProvider).signInWithGoogle();
@@ -54,20 +55,20 @@ class FriendsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Friends'),
+        title: Text(tr('Friends')),
         actions: [
           if (me?.username != null)
             IconButton(
-              tooltip: 'Copy my username',
+              tooltip: tr('Copy my username'),
               icon: const Icon(Icons.copy),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: '@${me!.username}'));
-                showMessage(context, 'Username copied');
+                showMessage(context, tr('Username copied'));
               },
             ),
           if (me?.username != null)
             IconButton(
-              tooltip: 'Share my username',
+              tooltip: tr('Share my username'),
               icon: const Icon(Icons.share_outlined),
               onPressed: () => SharePlus.instance.share(ShareParams(
                   text: 'Add me on Khroga: @${me!.username}\n'
@@ -75,12 +76,12 @@ class FriendsScreen extends ConsumerWidget {
             ),
           if (me?.username != null)
             IconButton(
-              tooltip: 'My QR code',
+              tooltip: tr('My QR code'),
               icon: const Icon(Icons.qr_code),
               onPressed: () => _showMyQr(context, uid!, me!),
             ),
           IconButton(
-            tooltip: 'Scan a QR code',
+            tooltip: tr('Scan a QR code'),
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () => context.push('/scan'),
           ),
@@ -93,8 +94,8 @@ class FriendsScreen extends ConsumerWidget {
             Card(
               child: ListTile(
                 leading: const Text('🏷️', style: TextStyle(fontSize: 26)),
-                title: const Text('Pick a username'),
-                subtitle: const Text('So friends can find you'),
+                title: Text(tr('Pick a username')),
+                subtitle: Text(tr('So friends can find you')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showUsernameSheet(context),
               ),
@@ -123,7 +124,7 @@ class FriendsScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context), child: const Text('Done')),
+              onPressed: () => Navigator.pop(context), child: Text(tr('Done'))),
         ],
       ),
     );
@@ -182,7 +183,7 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
       children: [
         TextField(
           decoration: InputDecoration(
-            hintText: 'Find friends by @username',
+            hintText: tr('Find friends by @username'),
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _loading
                 ? const Padding(
@@ -200,7 +201,7 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
         if (_query.trim().length >= 2 && !_loading && visible.isEmpty)
           Padding(
             padding: const EdgeInsets.all(KSpace.md),
-            child: Text('No one with that username.',
+            child: Text(tr('No one with that username.'),
                 style: TextStyle(color: context.k.inkMuted)),
           ),
         for (final p in visible)
@@ -212,8 +213,8 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
             trailing: known.containsKey(p.uid)
                 ? Text(
                     known[p.uid]!.status == FriendshipStatus.accepted
-                        ? 'Friends'
-                        : 'Requested',
+                        ? tr('Friends')
+                        : tr('Requested'),
                     style: TextStyle(color: context.k.inkMuted))
                 : FilledButton.tonal(
                     onPressed: () async {
@@ -221,12 +222,12 @@ class _SearchBoxState extends ConsumerState<_SearchBox> {
                         await ref
                             .read(socialRepositoryProvider)
                             .sendRequest(uid!, p.uid);
-                        if (context.mounted) showMessage(context, 'Request sent');
+                        if (context.mounted) showMessage(context, tr('Request sent'));
                       } catch (e) {
                         if (context.mounted) showError(context, e);
                       }
                     },
-                    child: const Text('Add'),
+                    child: Text(tr('Add')),
                   ),
           ),
       ],
@@ -285,30 +286,30 @@ class _FriendLists extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (incoming.isNotEmpty) ...[
-          const SectionTitle('Requests'),
+          SectionTitle(tr('Requests')),
           for (final f in incoming)
             tile(f,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      tooltip: 'Decline',
+                      tooltip: tr('Decline'),
                       icon: const Icon(Icons.close),
                       onPressed: () => guard(context, () => repo.remove(f.id)),
                     ),
                     FilledButton(
                       onPressed: () => guard(context, () => repo.accept(f.id)),
-                      child: const Text('Accept'),
+                      child: Text(tr('Accept')),
                     ),
                   ],
                 )),
         ],
-        SectionTitle('Friends (${friends.length})'),
+        SectionTitle(trf('Friends ({n})', {'n': friends.length})),
         if (friends.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: KSpace.md),
             child: Text(
-              'Search for friends above, or scan their QR code.',
+              tr('Search for friends above, or scan their QR code.'),
               style: TextStyle(color: context.k.inkMuted),
             ),
           ),
@@ -316,17 +317,17 @@ class _FriendLists extends ConsumerWidget {
           tile(f,
               trailing: PopupMenuButton<String>(
                 onSelected: (_) => guard(context, () => repo.remove(f.id)),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'remove', child: Text('Remove friend')),
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: 'remove', child: Text(tr('Remove friend'))),
                 ],
               )),
         if (outgoing.isNotEmpty) ...[
-          const SectionTitle('Sent requests'),
+          SectionTitle(tr('Sent requests')),
           for (final f in outgoing)
             tile(f,
                 trailing: TextButton(
                   onPressed: () => guard(context, () => repo.remove(f.id)),
-                  child: const Text('Cancel'),
+                  child: Text(tr('Cancel')),
                 )),
         ],
       ],
@@ -347,7 +348,7 @@ class _OutNow extends ConsumerWidget {
     if (friends.isEmpty && myFresh == null) {
       return Padding(
         padding: const EdgeInsets.only(top: KSpace.sm),
-        child: Text('📍 When friends tap "Check in" on a place, you\'ll see where they are here.',
+        child: Text(tr('📍 When friends tap "Check in" on a place, you\'ll see where they are here.'),
             style: Theme.of(context).textTheme.bodySmall),
       );
     }
@@ -356,21 +357,21 @@ class _OutNow extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionTitle(
-          'Out now',
+          tr('Out now'),
           trailing: withLocation.isEmpty
               ? null
               : TextButton.icon(
                   onPressed: () => _showFriendsMap(context, withLocation),
                   icon: const Icon(Icons.map_outlined, size: 18),
-                  label: const Text('Map'),
+                  label: Text(tr('Map')),
                 ),
         ),
         if (myFresh != null)
           Card(
             child: ListTile(
               leading: const Text('🙋', style: TextStyle(fontSize: 22)),
-              title: Text('You: ${myFresh.placeName}'),
-              subtitle: Text('Checked in ${timeAgo(myFresh.createdAt!, now)}'),
+              title: Text(trf('You: {place}', {'place': myFresh.placeName})),
+              subtitle: Text(trf('Checked in {when}', {'when': timeAgo(myFresh.createdAt!, now)})),
               trailing: TextButton(
                 onPressed: () async {
                   final uid = ref.read(uidProvider);
@@ -381,7 +382,7 @@ class _OutNow extends ConsumerWidget {
                     if (context.mounted) showError(context, e);
                   }
                 },
-                child: const Text('Remove'),
+                child: Text(tr('Remove')),
               ),
               onTap: () => context.push('/place/${myFresh.placeId}'),
             ),
@@ -390,7 +391,7 @@ class _OutNow extends ConsumerWidget {
           Card(
             child: ListTile(
               leading: const Text('📍', style: TextStyle(fontSize: 22)),
-              title: Text('${c.name} is at ${c.placeName}'),
+              title: Text(trf('{name} is at {place}', {'name': c.name, 'place': c.placeName})),
               subtitle: Text([?c.area, timeAgo(c.createdAt!, now)].join(' · ')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/place/${c.placeId}'),
@@ -412,7 +413,7 @@ void _showFriendsMap(BuildContext context, List<CheckIn> list) {
         children: [
           Padding(
             padding: const EdgeInsets.all(KSpace.md),
-            child: Text('Where friends are', style: Theme.of(sheetContext).textTheme.titleLarge),
+            child: Text(tr('Where friends are'), style: Theme.of(sheetContext).textTheme.titleLarge),
           ),
           Expanded(
             child: KhrogaMap(
@@ -462,16 +463,16 @@ void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendshi
           if (checkIn != null)
             ListTile(
               leading: const Text('📍', style: TextStyle(fontSize: 22)),
-              title: Text('At ${checkIn.placeName}'),
+              title: Text(trf('At {place}', {'place': checkIn.placeName})),
               subtitle: Text(timeAgo(checkIn.createdAt!, DateTime.now())),
               onTap: () {
                 Navigator.pop(sheetContext);
                 context.push('/place/${checkIn.placeId}');
               },
             ),
-          const SectionTitle('Invite to a group'),
+          SectionTitle(tr('Invite to a group')),
           if (groups.isEmpty)
-            Text('They\'re already in all your groups, or you have none yet.', style: text.bodySmall),
+            Text(tr('They\'re already in all your groups, or you have none yet.'), style: text.bodySmall),
           for (final g in groups)
             ListTile(
               leading: const Icon(Icons.group_add_outlined),
@@ -480,7 +481,7 @@ void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendshi
                 Navigator.pop(sheetContext);
                 try {
                   await ref.read(groupsRepositoryProvider).addFriend(g.id, p.uid);
-                  if (context.mounted) showMessage(context, 'Added to ${g.name}');
+                  if (context.mounted) showMessage(context, trf('Added to {name}', {'name': g.name}));
                 } catch (e) {
                   if (context.mounted) showError(context, e);
                 }
@@ -498,7 +499,7 @@ void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendshi
                   if (context.mounted) showError(context, e);
                 }
               },
-              child: const Text('Remove friend'),
+              child: Text(tr('Remove friend')),
             ),
         ],
       );

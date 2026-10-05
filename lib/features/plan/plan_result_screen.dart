@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,22 +30,22 @@ class PlanResultScreen extends ConsumerWidget {
     final loaded = plan.value;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your plan'),
+        title: Text(tr('Your plan')),
         actions: [
           if (loaded != null)
             IconButton(
-              tooltip: 'Share plan',
+              tooltip: tr('Share plan'),
               icon: const Icon(Icons.share_outlined),
               onPressed: () => SharePlus.instance.share(ShareParams(text: planShareText(loaded))),
             ),
           if (loaded != null)
             PopupMenuButton<String>(
               onSelected: (v) => _menu(context, ref, loaded, v),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'copy', child: Text('Copy plan as text')),
-                PopupMenuItem(value: 'calendar', child: Text('Add to Google Calendar')),
-                PopupMenuItem(value: 'duplicate', child: Text('Make a copy')),
-                PopupMenuItem(value: 'group', child: Text('Send to a group chat')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'copy', child: Text(tr('Copy plan as text'))),
+                PopupMenuItem(value: 'calendar', child: Text(tr('Add to Google Calendar'))),
+                PopupMenuItem(value: 'duplicate', child: Text(tr('Make a copy'))),
+                PopupMenuItem(value: 'group', child: Text(tr('Send to a group chat'))),
               ],
             ),
         ],
@@ -53,7 +54,7 @@ class PlanResultScreen extends ConsumerWidget {
         value: plan,
         onRetry: () => ref.invalidate(planProvider(planId)),
         builder: (p) => p == null
-            ? const EmptyState(emoji: '🗺️', title: 'This plan was deleted')
+            ? EmptyState(emoji: '🗺️', title: tr('This plan was deleted'))
             : _PlanBody(plan: p),
       ),
     );
@@ -64,7 +65,7 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
   switch (action) {
     case 'copy':
       await Clipboard.setData(ClipboardData(text: planShareText(plan)));
-      if (context.mounted) showMessage(context, 'Plan copied. Paste it anywhere.');
+      if (context.mounted) showMessage(context, tr('Plan copied. Paste it anywhere.'));
     case 'calendar':
       await openUri(planCalendarLink(plan));
     case 'group':
@@ -72,7 +73,7 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
       final groups = await ref.read(myGroupsProvider.future);
       if (uid == null || !context.mounted) return;
       if (groups.isEmpty) {
-        showMessage(context, "You're not in any group yet.");
+        showMessage(context, tr("You're not in any group yet."));
         return;
       }
       final picked = await showModalBottomSheet<String>(
@@ -82,7 +83,7 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
           shrinkWrap: true,
           padding: const EdgeInsets.all(KSpace.md),
           children: [
-            Text('Send to which group?', style: Theme.of(sheetContext).textTheme.titleLarge),
+            Text(tr('Send to which group?'), style: Theme.of(sheetContext).textTheme.titleLarge),
             for (final g in groups)
               ListTile(
                 leading: const Icon(Icons.forum_outlined),
@@ -101,7 +102,7 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
               name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
               text: text.length > 1000 ? text.substring(0, 1000) : text,
             );
-        if (context.mounted) showMessage(context, 'Sent to the group');
+        if (context.mounted) showMessage(context, tr('Sent to the group'));
       } catch (e) {
         if (context.mounted) showError(context, e);
       }
@@ -111,7 +112,7 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
       try {
         final id = await ref.read(plansRepositoryProvider).duplicate(uid, plan);
         if (context.mounted) {
-          showMessage(context, 'Copy made');
+          showMessage(context, tr('Copy made'));
           context.push('/plan/$id');
         }
       } catch (e) {
@@ -169,19 +170,20 @@ class _PlanBody extends ConsumerWidget {
           spacing: KSpace.sm,
           runSpacing: KSpace.sm,
           children: [
-            Pill('${plan.request.groupSize} '
-                '${plan.request.groupSize == 1 ? 'person' : 'people'}'),
-            Pill(Cities.all[plan.request.city] ?? plan.request.city),
-            Pill(TimesOfDay.all[plan.request.timeOfDay] ?? plan.request.timeOfDay),
+            Pill(plan.request.groupSize == 1
+                ? tr('1 person')
+                : trf('{n} people', {'n': plan.request.groupSize})),
+            Pill(tr(Cities.all[plan.request.city] ?? plan.request.city)),
+            Pill(tr(TimesOfDay.all[plan.request.timeOfDay] ?? plan.request.timeOfDay)),
             if (plan.request.date != null) Pill(DateFormat('EEE d MMM').format(plan.request.day)),
-            if (plan.isMallLocked) const Pill('🛍️ One mall'),
-            if (plan.request.hasAnchor) Pill('📍 Around ${plan.request.nearLabel ?? 'a spot'}'),
+            if (plan.isMallLocked) Pill(tr('🛍️ One mall')),
+            if (plan.request.hasAnchor) Pill(trf('📍 Around {place}', {'place': plan.request.nearLabel == 'you' ? tr('you') : plan.request.nearLabel ?? tr('a spot')})),
             if (_daysAway(plan.request.day) case final d? when d > 0)
-              Pill(d == 1 ? '⏳ Tomorrow' : '⏳ In $d days'),
+              Pill(d == 1 ? tr('⏳ Tomorrow') : trf('⏳ In {n} days', {'n': d})),
             if (endsAt != null && plan.stops.first.startTime != null)
               Pill('🕘 ${plan.stops.first.startTime}–$endsAt'),
             if (totalStopMinutes(plan.stops.map((s) => s.durationMinutes)) > 0)
-              Pill('⏱ ${_StopTile._duration(totalStopMinutes(plan.stops.map((s) => s.durationMinutes)))} at stops'),
+              Pill(trf('⏱ {t} at stops', {'t': _StopTile._duration(totalStopMinutes(plan.stops.map((s) => s.durationMinutes)))})),
           ],
         ),
         if (plan.stops.isNotEmpty && plan.stops.first.hasLocation) ...[
@@ -190,7 +192,7 @@ class _PlanBody extends ConsumerWidget {
             onPressed: () =>
                 openDirections(lat: plan.stops.first.lat!, lng: plan.stops.first.lng!),
             icon: const Icon(Icons.navigation_outlined),
-            label: Text('Go to the first stop: ${plan.stops.first.name}',
+            label: Text(trf('Go to the first stop: {name}', {'name': plan.stops.first.name}),
                 overflow: TextOverflow.ellipsis),
           ),
         ],
@@ -259,10 +261,10 @@ class _PlanBody extends ConsumerWidget {
             child: TextButton.icon(
               onPressed: () async {
                 await _editStops(context, ref, plan, shortestRoute(plan.stops));
-                if (context.mounted) showMessage(context, 'Stops reordered for a shorter route');
+                if (context.mounted) showMessage(context, tr('Stops reordered for a shorter route'));
               },
               icon: const Icon(Icons.alt_route),
-              label: const Text('Shortest route'),
+              label: Text(tr('Shortest route')),
             ),
           ),
         if (plan.stops.length < 5)
@@ -271,7 +273,7 @@ class _PlanBody extends ConsumerWidget {
             child: TextButton.icon(
               onPressed: () => _showAddStopSheet(context, ref, plan),
               icon: const Icon(Icons.add_location_alt_outlined),
-              label: const Text('Add a stop'),
+              label: Text(tr('Add a stop')),
             ),
           ),
         const SizedBox(height: KSpace.md),
@@ -281,7 +283,7 @@ class _PlanBody extends ConsumerWidget {
         const SizedBox(height: KSpace.sm),
         _HowWasIt(planId: plan.id),
         if (plan.tips.isNotEmpty) ...[
-          const SectionTitle('Tips'),
+          SectionTitle(tr('Tips')),
           for (final tip in plan.tips)
             Padding(
               padding: const EdgeInsets.only(bottom: KSpace.sm),
@@ -299,7 +301,7 @@ class _PlanBody extends ConsumerWidget {
           onPressed: () => showCreateGroupSheet(context, planId: plan.id,
               suggestedName: plan.title),
           icon: const Icon(Icons.group_add_outlined),
-          label: const Text('Invite friends'),
+          label: Text(tr('Invite friends')),
         ),
         const SizedBox(height: KSpace.sm),
         Row(
@@ -316,7 +318,7 @@ class _PlanBody extends ConsumerWidget {
                   }
                 },
                 icon: Icon(plan.saved ? Icons.bookmark : Icons.bookmark_outline),
-                label: Text(plan.saved ? 'Saved' : 'Save'),
+                label: Text(plan.saved ? tr('Saved') : tr('Save')),
               ),
             ),
             const SizedBox(width: KSpace.sm),
@@ -324,7 +326,7 @@ class _PlanBody extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _regenerate(context, ref),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Another one'),
+                label: Text(tr('Another one')),
               ),
             ),
           ],
@@ -461,7 +463,7 @@ class _StopTile extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(horizontal: KSpace.sm)),
                               onPressed: () => openUri(legUrl!),
                               icon: const Icon(Icons.directions, size: 16),
-                              label: const Text('Directions'),
+                              label: Text(tr('Directions')),
                             ),
                         ],
                       ),
@@ -502,7 +504,7 @@ class _StopTile extends StatelessWidget {
                                   ),
                                 ),
                                 IconButton(
-                                  tooltip: done ? 'Not done yet' : 'Mark as done',
+                                  tooltip: done ? tr('Not done yet') : tr('Mark as done'),
                                   onPressed: onToggleDone,
                                   icon: Icon(done ? Icons.check_circle : Icons.check_circle_outline,
                                       color: done ? context.k.accent : context.k.inkMuted),
@@ -525,17 +527,17 @@ class _StopTile extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 IconButton(
-                                  tooltip: 'Move up',
+                                  tooltip: tr('Move up'),
                                   onPressed: onUp,
                                   icon: const Icon(Icons.arrow_upward, size: 20),
                                 ),
                                 IconButton(
-                                  tooltip: 'Move down',
+                                  tooltip: tr('Move down'),
                                   onPressed: onDown,
                                   icon: const Icon(Icons.arrow_downward, size: 20),
                                 ),
                                 PopupMenuButton<String>(
-                                  tooltip: 'Edit this stop',
+                                  tooltip: tr('Edit this stop'),
                                   icon: const Icon(Icons.more_horiz, size: 20),
                                   onSelected: (v) => switch (v) {
                                     'time' => onEditTime(),
@@ -544,21 +546,21 @@ class _StopTile extends StatelessWidget {
                                     _ => onRemove?.call(),
                                   },
                                   itemBuilder: (_) => [
-                                    const PopupMenuItem(value: 'time', child: Text('Change start time')),
-                                    const PopupMenuItem(value: 'length', child: Text('Change how long')),
+                                    PopupMenuItem(value: 'time', child: Text(tr('Change start time'))),
+                                    PopupMenuItem(value: 'length', child: Text(tr('Change how long'))),
                                     PopupMenuItem(
                                         value: 'note',
-                                        child: Text(stop.note == null ? 'Add a note' : 'Edit note')),
+                                        child: Text(stop.note == null ? tr('Add a note') : tr('Edit note'))),
                                     PopupMenuItem(
                                         value: 'remove',
                                         enabled: onRemove != null,
-                                        child: const Text('Remove stop')),
+                                        child: Text(tr('Remove stop'))),
                                   ],
                                 ),
                                 TextButton.icon(
                                   onPressed: onSwap,
                                   icon: const Icon(Icons.swap_horiz, size: 18),
-                                  label: const Text('Swap'),
+                                  label: Text(tr('Swap')),
                                 ),
                               ],
                             ),
@@ -599,21 +601,21 @@ class _RideRow extends StatelessWidget {
       children: [
         ActionChip(
           avatar: const Icon(Icons.local_taxi_outlined, size: 18),
-          label: const Text('Uber'),
+          label: Text(tr('Uber')),
           onPressed: () =>
               openUber(name: stop.name, lat: stop.lat!, lng: stop.lng!),
         ),
         ActionChip(
-          label: const Text('DiDi'),
+          label: Text(tr('DiDi')),
           onPressed: () => openRideApp('didi'),
         ),
         ActionChip(
-          label: const Text('inDrive'),
+          label: Text(tr('inDrive')),
           onPressed: () => openRideApp('indrive'),
         ),
         ActionChip(
           avatar: const Icon(Icons.map_outlined, size: 18),
-          label: const Text('Map'),
+          label: Text(tr('Map')),
           onPressed: () =>
               openInMaps(name: stop.name, lat: stop.lat, lng: stop.lng),
         ),
@@ -637,14 +639,14 @@ class _BudgetCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Budget', style: text.bodySmall),
+            Text(tr('Budget'), style: text.bodySmall),
             const SizedBox(height: KSpace.xs),
-            Text(budget == null ? 'No budget set' : '$budget EGP per person',
+            Text(budget == null ? tr('No budget set') : trf('{n} EGP per person', {'n': budget}),
                 style: text.titleLarge),
             const SizedBox(height: KSpace.xs),
             Text(
-              "We don't show prices we haven't confirmed. Check menus or ask "
-              'when you arrive.',
+              tr("We don't show prices we haven't confirmed. Check menus or ask "
+              'when you arrive.'),
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
             ),
           ],
@@ -686,7 +688,7 @@ Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan
   final options = await repo.alternatives(plan, index);
   if (!context.mounted) return;
   if (options.isEmpty) {
-    showMessage(context, 'No similar places nearby to swap in.');
+    showMessage(context, tr('No similar places nearby to swap in.'));
     return;
   }
   final picked = await showModalBottomSheet<Place>(
@@ -703,7 +705,7 @@ Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan
           Text('Swap "${plan.stops[index].name}"',
               style: Theme.of(sheetContext).textTheme.titleLarge),
           const SizedBox(height: KSpace.xs),
-          Text('Similar real places nearby', style: Theme.of(sheetContext).textTheme.bodySmall),
+          Text(tr('Similar real places nearby'), style: Theme.of(sheetContext).textTheme.bodySmall),
           const SizedBox(height: KSpace.md),
           for (final p in options)
             Card(
@@ -749,13 +751,13 @@ Future<void> _rename(BuildContext context, WidgetRef ref, OutingPlan plan) async
   final title = await showDialog<String>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Rename plan'),
+      title: Text(tr('Rename plan')),
       content: TextField(controller: controller, autofocus: true, maxLength: 80),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Cancel'))),
         FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Save')),
+            child: Text(tr('Save'))),
       ],
     ),
   );
@@ -796,9 +798,9 @@ Future<void> _showAddStopSheet(BuildContext context, WidgetRef ref, OutingPlan p
         controller: controller,
         padding: const EdgeInsets.all(KSpace.lg),
         children: [
-          Text('Add a stop', style: Theme.of(sheetContext).textTheme.titleLarge),
+          Text(tr('Add a stop'), style: Theme.of(sheetContext).textTheme.titleLarge),
           const SizedBox(height: KSpace.xs),
-          Text('Real places near your last stop', style: Theme.of(sheetContext).textTheme.bodySmall),
+          Text(tr('Real places near your last stop'), style: Theme.of(sheetContext).textTheme.bodySmall),
           const SizedBox(height: KSpace.md),
           for (final p in options.take(25))
             Card(
@@ -837,10 +839,10 @@ class _RouteCard extends StatelessWidget {
       child: ListTile(
         leading: const Text('🧭', style: TextStyle(fontSize: 24)),
         title: Text(summary == null
-            ? 'Your route'
+            ? tr('Your route')
             : '${summary.km} km between stops · about ${summary.minutes} min by car'),
-        subtitle: const Text('Straight-line distance; the time is a rough estimate. '
-            'Tap to open the whole route in Google Maps.'),
+        subtitle: Text(tr('Straight-line distance; the time is a rough estimate. '
+            'Tap to open the whole route in Google Maps.')),
         trailing: const Icon(Icons.open_in_new),
         onTap: url == null ? null : () => openUri(url),
       ),
@@ -870,7 +872,7 @@ Future<void> _editLength(BuildContext context, WidgetRef ref, OutingPlan plan, i
   final picked = await showDialog<int>(
     context: context,
     builder: (dialogContext) => SimpleDialog(
-      title: const Text('How long at this stop?'),
+      title: Text(tr('How long at this stop?')),
       children: [
         for (final m in options)
           SimpleDialogOption(
@@ -889,18 +891,18 @@ Future<void> _editNote(BuildContext context, WidgetRef ref, OutingPlan plan, int
   final note = await showDialog<String>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Note for this stop'),
+      title: Text(tr('Note for this stop')),
       content: TextField(
         controller: controller,
         autofocus: true,
         maxLength: 200,
-        decoration: const InputDecoration(hintText: 'e.g. Book a table for 6'),
+        decoration: InputDecoration(hintText: tr('e.g. Book a table for 6')),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Cancel'))),
         FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Save')),
+            child: Text(tr('Save'))),
       ],
     ),
   );
@@ -927,18 +929,18 @@ class _BringList extends ConsumerWidget {
       final item = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Add something to bring'),
+          title: Text(tr('Add something to bring')),
           content: TextField(
             controller: controller,
             autofocus: true,
             maxLength: 60,
-            decoration: const InputDecoration(hintText: 'e.g. Power bank, ID card'),
+            decoration: InputDecoration(hintText: tr('e.g. Power bank, ID card')),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Cancel'))),
             FilledButton(
                 onPressed: () => Navigator.pop(dialogContext, controller.text),
-                child: const Text('Add')),
+                child: Text(tr('Add'))),
           ],
         ),
       );
@@ -951,9 +953,9 @@ class _BringList extends ConsumerWidget {
         children: [
           ListTile(
             leading: const Text('🎒', style: TextStyle(fontSize: 22)),
-            title: const Text('Things to bring'),
-            subtitle: items.isEmpty ? const Text('Only on this phone') : null,
-            trailing: IconButton(tooltip: 'Add', icon: const Icon(Icons.add), onPressed: add),
+            title: Text(tr('Things to bring')),
+            subtitle: items.isEmpty ? Text(tr('Only on this phone')) : null,
+            trailing: IconButton(tooltip: tr('Add'), icon: const Icon(Icons.add), onPressed: add),
           ),
           for (final (i, item) in items.indexed)
             CheckboxListTile(
@@ -961,7 +963,7 @@ class _BringList extends ConsumerWidget {
               value: item.startsWith('✓ '),
               title: Text(item.replaceFirst('✓ ', '')),
               secondary: IconButton(
-                tooltip: 'Remove',
+                tooltip: tr('Remove'),
                 icon: const Icon(Icons.close, size: 18),
                 onPressed: () => save([...items]..removeAt(i)),
               ),
@@ -987,19 +989,19 @@ class _HowWasIt extends ConsumerWidget {
     return Card(
       child: ListTile(
         leading: const Text('💬', style: TextStyle(fontSize: 22)),
-        title: const Text('How was it?'),
-        subtitle: Text(rating == null ? 'Just for you' : rating == 'up' ? 'You loved it' : 'Not great'),
+        title: Text(tr('How was it?')),
+        subtitle: Text(rating == null ? tr('Just for you') : rating == 'up' ? tr('You loved it') : tr('Not great')),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              tooltip: 'Loved it',
+              tooltip: tr('Loved it'),
               onPressed: () => n.set(planId, rating == 'up' ? null : 'up'),
               icon: Icon(rating == 'up' ? Icons.thumb_up : Icons.thumb_up_outlined,
                   color: rating == 'up' ? context.k.accent : null),
             ),
             IconButton(
-              tooltip: 'Not great',
+              tooltip: tr('Not great'),
               onPressed: () => n.set(planId, rating == 'down' ? null : 'down'),
               icon: Icon(rating == 'down' ? Icons.thumb_down : Icons.thumb_down_outlined,
                   color: rating == 'down' ? context.k.accent : null),

@@ -1,3 +1,4 @@
+import '../app/i18n.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,21 +12,21 @@ import '../models/social.dart';
 String friendlyError(Object error) {
   if (error is GoogleSignInException) {
     return error.code == GoogleSignInExceptionCode.canceled
-        ? 'Sign-in was cancelled.'
-        : 'Google sign-in failed. Please try again.';
+        ? tr('Sign-in was cancelled.')
+        : tr('Google sign-in failed. Please try again.');
   }
   if (error is FirebaseAuthException) {
-    return error.message ?? 'Sign-in failed. Please try again.';
+    return error.message ?? tr('Sign-in failed. Please try again.');
   }
   if (error is FirebaseException) {
     return switch (error.code) {
-      'permission-denied' => "You don't have access to that.",
-      'unavailable' => "You're offline. Check your internet connection.",
-      _ => error.message ?? 'Something went wrong. Please try again.',
+      'permission-denied' => tr("You don't have access to that."),
+      'unavailable' => tr("You're offline. Check your internet connection."),
+      _ => error.message ?? tr('Something went wrong. Please try again.'),
     };
   }
   final text = error.toString().replaceFirst('Exception: ', '');
-  return text.length > 160 ? 'Something went wrong. Please try again.' : text;
+  return text.length > 160 ? tr('Something went wrong. Please try again.') : tr(text);
 }
 
 void showError(BuildContext context, Object error) {
@@ -66,7 +67,7 @@ class AsyncView<T> extends StatelessWidget {
       ),
       error: (e, _) => EmptyState(
         emoji: '⚠️',
-        title: 'Could not load this',
+        title: tr('Could not load this'),
         message: friendlyError(e),
         actionLabel: onRetry == null ? null : 'Try again',
         onAction: onRetry,
@@ -102,11 +103,11 @@ class EmptyState extends StatelessWidget {
           children: [
             Text(emoji, style: const TextStyle(fontSize: 44)),
             const SizedBox(height: KSpace.md),
-            Text(title, style: text.titleLarge, textAlign: TextAlign.center),
+            Text(tr(title), style: text.titleLarge, textAlign: TextAlign.center),
             if (message != null) ...[
               const SizedBox(height: KSpace.sm),
               Text(
-                message!,
+                tr(message!),
                 style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
                 textAlign: TextAlign.center,
               ),

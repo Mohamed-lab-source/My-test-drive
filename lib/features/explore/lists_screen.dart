@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,10 +20,10 @@ class ListsScreen extends ConsumerWidget {
     final byId = {for (final p in all) p.id: p};
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My lists'),
+        title: Text(tr('My lists')),
         actions: [
           IconButton(
-            tooltip: 'New list',
+            tooltip: tr('New list'),
             icon: const Icon(Icons.add),
             onPressed: () => newListDialog(context, ref),
           ),
@@ -31,9 +32,9 @@ class ListsScreen extends ConsumerWidget {
       body: lists.isEmpty
           ? EmptyState(
               emoji: '📋',
-              title: 'No lists yet',
-              message: 'Make a list like "Birthday ideas", then add places from any place page.',
-              actionLabel: 'New list',
+              title: tr('No lists yet'),
+              message: tr('Make a list like "Birthday ideas", then add places from any place page.'),
+              actionLabel: tr('New list'),
               onAction: () => newListDialog(context, ref),
             )
           : ListView(
@@ -44,7 +45,7 @@ class ListsScreen extends ConsumerWidget {
                     child: ExpansionTile(
                       shape: const Border(),
                       title: Text(e.key, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text('${e.value.length} places'),
+                      subtitle: Text(trf('{n} places', {'n': e.value.length})),
                       children: [
                         for (final id in e.value)
                           if (byId[id] != null)
@@ -57,7 +58,7 @@ class ListsScreen extends ConsumerWidget {
                               foregroundColor: Theme.of(context).colorScheme.error),
                           onPressed: () => ref.read(placeListsProvider.notifier).delete(e.key),
                           icon: const Icon(Icons.delete_outline),
-                          label: const Text('Delete this list'),
+                          label: Text(tr('Delete this list')),
                         ),
                       ],
                     ),
@@ -74,18 +75,18 @@ Future<String?> newListDialog(BuildContext context, WidgetRef ref) async {
   final name = await showDialog<String>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('New list'),
+      title: Text(tr('New list')),
       content: TextField(
         controller: controller,
         autofocus: true,
         maxLength: 40,
-        decoration: const InputDecoration(hintText: 'e.g. Birthday ideas'),
+        decoration: InputDecoration(hintText: tr('e.g. Birthday ideas')),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(tr('Cancel'))),
         FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Create')),
+            child: Text(tr('Create'))),
       ],
     ),
   );

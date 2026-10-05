@@ -1,3 +1,4 @@
+import '../app/i18n.dart';
 import 'opening_hours.dart';
 
 /// A real place, from OpenStreetMap (bundled in the app at build time).
@@ -69,6 +70,15 @@ class Place {
   final int quality;
 
   bool get hasLocation => lat != null && lng != null;
+
+  /// The Arabic name in Arabic mode (when the map has one), else the name.
+  String get shownName => isArabic && (nameAr?.trim().isNotEmpty ?? false) ? nameAr! : name;
+
+  /// The other-language name, to show under the main one.
+  String? get otherName {
+    final other = shownName == name ? nameAr : name;
+    return other == null || other.trim().isEmpty || other == shownName ? null : other;
+  }
 
   OpeningHours? get hours => OpeningHours.parse(openingHours);
 
@@ -173,13 +183,15 @@ class PlaceFacts {
   String? get floorLabel {
     final l = level?.split(';').first.trim();
     if (l == null || l.isEmpty) return null;
-    if (l == '0') return 'Ground floor';
-    if (l.startsWith('-')) return 'Basement ${l.substring(1)}';
-    return 'Floor $l';
+    if (l == '0') return tr('Ground floor');
+    if (l.startsWith('-')) return trf('Basement {n}', {'n': l.substring(1)});
+    return trf('Floor {n}', {'n': l});
   }
 
   /// Short, readable facts like "♿ Wheelchair access" or "📶 Wi-Fi".
-  List<String> get labels => [
+  List<String> get labels => _labels.map(tr).toList();
+
+  List<String> get _labels => [
         if (wheelchair == 'yes') '♿ Wheelchair access',
         if (wheelchair == 'limited') '♿ Limited wheelchair access',
         if (wheelchair == 'no') '♿ No wheelchair access',
@@ -220,8 +232,7 @@ class Categories {
     'activity': 'Activities',
   };
 
-  static String label(String category) =>
-      all[category] ?? category.replaceAll('_', ' ');
+  static String label(String category) => tr(all[category] ?? category.replaceAll('_', ' '));
 
   static String emoji(String category) => switch (category) {
         'restaurant' => '🍽️',

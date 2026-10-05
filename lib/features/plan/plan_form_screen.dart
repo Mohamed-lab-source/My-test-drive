@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,7 +47,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
     final areas = await ref.read(areaCentersProvider(city).future);
     if (!mounted) return;
     if (areas.isEmpty) {
-      showMessage(context, "We don't have areas for this city yet.");
+      showMessage(context, tr("We don't have areas for this city yet."));
       return;
     }
     final picked = await showModalBottomSheet<({String name, double lat, double lng, int count})>(
@@ -176,20 +177,20 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Khroga'),
+        title: Text(tr('Khroga')),
         actions: [
           IconButton(
-            tooltip: 'Look & colors',
+            tooltip: tr('Look & colors'),
             icon: const Icon(Icons.palette_outlined),
             onPressed: () => showThemeSheet(context),
           ),
           IconButton(
-            tooltip: 'Saved plans & places',
+            tooltip: tr('Saved plans & places'),
             icon: const Icon(Icons.bookmark_outline),
             onPressed: () => context.push('/saved'),
           ),
           IconButton(
-            tooltip: 'Profile',
+            tooltip: tr('Profile'),
             icon: const Icon(Icons.person_outline),
             onPressed: () => context.push('/profile'),
           ),
@@ -200,27 +201,27 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         children: [
           Text(greeting(DateTime.now().hour, ref.watch(myProfileProvider).value?.displayName),
               style: text.titleMedium?.copyWith(color: context.k.accent)),
-          Text("Where are we going?", style: text.headlineMedium),
+          Text(tr("Where are we going?"), style: text.headlineMedium),
           const SizedBox(height: KSpace.xs),
-          Text('Tell us the vibe. We only suggest real places.',
+          Text(tr('Tell us the vibe. We only suggest real places.'),
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const _WhatsNewCard(),
           const _NextOutingCard(),
           const _RecentPlans(),
-          SectionTitle('Quick start',
-              trailing: TextButton(onPressed: _reset, child: const Text('Reset'))),
+          SectionTitle(tr('Quick start'),
+              trailing: TextButton(onPressed: _reset, child: Text(tr('Reset')))),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
             children: [
               ActionChip(
                 avatar: const Text('🎲'),
-                label: const Text('Surprise plan'),
+                label: Text(tr('Surprise plan')),
                 onPressed: _surprisePlan,
               ),
               for (final preset in _presets)
                 ActionChip(
-                  label: Text(preset.label),
+                  label: Text(tr(preset.label)),
                   onPressed: () => setState(() {
                     _people = preset.people;
                     _vibes
@@ -228,24 +229,24 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                       ..addAll(preset.vibes);
                     _time = preset.time;
                     _stops = preset.stops;
-                    showMessage(context, '${preset.label} picked. Change anything, then tap Plan.');
+                    showMessage(context, trf('{preset} picked. Change anything, then tap Plan.', {'preset': tr(preset.label)}));
                   }),
                 ),
             ],
           ),
-          const SectionTitle('When?'),
+          SectionTitle(tr('When?')),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
             children: [
               ChoiceChip(
-                label: const Text('Today'),
+                label: Text(tr('Today')),
                 selected: _date == null,
                 showCheckmark: false,
                 onSelected: (_) => setState(() => _date = null),
               ),
               ChoiceChip(
-                label: const Text('Tomorrow'),
+                label: Text(tr('Tomorrow')),
                 selected: _isTomorrow(_date),
                 showCheckmark: false,
                 onSelected: (_) => setState(() {
@@ -254,7 +255,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 }),
               ),
               ChoiceChip(
-                label: const Text('Friday'),
+                label: Text(tr('Friday')),
                 selected: _date != null && _date!.weekday == DateTime.friday && !_isTomorrow(_date),
                 showCheckmark: false,
                 onSelected: (_) => setState(() {
@@ -266,7 +267,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               ActionChip(
                 avatar: const Icon(Icons.event_outlined, size: 18),
                 label: Text(_date == null || _isTomorrow(_date)
-                    ? 'Pick a day'
+                    ? tr('Pick a day')
                     : DateFormat('EEE d MMM').format(_date!)),
                 onPressed: () async {
                   final now = DateTime.now();
@@ -281,12 +282,12 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               ),
             ],
           ),
-          const SectionTitle('City'),
+          SectionTitle(tr('City')),
           SegmentedButton<String>(
             showSelectedIcon: false,
             segments: [
               for (final e in Cities.all.entries)
-                ButtonSegment(value: e.key, label: Text(e.value)),
+                ButtonSegment(value: e.key, label: Text(tr(e.value))),
             ],
             selected: {city},
             onSelectionChanged: (s) {
@@ -297,13 +298,13 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               });
             },
           ),
-          SectionTitle('Where in ${Cities.all[city] ?? city}?'),
+          SectionTitle(trf('Where in {city}?', {'city': tr(Cities.all[city] ?? city)})),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
             children: [
               ChoiceChip(
-                label: const Text('Anywhere'),
+                label: Text(tr('Anywhere')),
                 selected: _anchor == null,
                 showCheckmark: false,
                 onSelected: (_) => setState(() => _anchor = null),
@@ -313,14 +314,14 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                     ? const SizedBox(
                         width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.near_me_outlined, size: 18),
-                label: const Text('Near me'),
+                label: Text(tr('Near me')),
                 selected: _anchor?.$3 == 'you',
                 showCheckmark: false,
                 onSelected: _locating ? null : (on) => _useMyLocation(on),
               ),
               ChoiceChip(
                 avatar: const Icon(Icons.location_city, size: 18),
-                label: Text(_anchor != null && _anchor!.$3 != 'you' ? _anchor!.$3 : 'Pick an area'),
+                label: Text(_anchor != null && _anchor!.$3 != 'you' ? _anchor!.$3 : tr('Pick an area')),
                 selected: _anchor != null && _anchor!.$3 != 'you',
                 showCheckmark: false,
                 onSelected: (_) => _pickArea(city),
@@ -329,18 +330,19 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           ),
           const SizedBox(height: KSpace.sm),
           if (_anchor == null)
-            Text('Stops will still be close to each other (within about '
-                '${compactRadiusKm.round()} km).',
+            Text(
+                trf('Stops will still be close to each other (within about {n} km).',
+                    {'n': compactRadiusKm.round()}),
                 style: text.bodySmall)
           else ...[
-            Text('How far are you willing to go?', style: text.bodySmall),
+            Text(tr('How far are you willing to go?'), style: text.bodySmall),
             const SizedBox(height: KSpace.xs),
             Wrap(
               spacing: KSpace.sm,
               children: [
                 for (final r in const [1.0, 2.0, 3.0, 5.0, 8.0])
                   ChoiceChip(
-                    label: Text('${r.round()} km'),
+                    label: Text(trf('{n} km', {'n': r.round()})),
                     selected: _radius == r,
                     showCheckmark: false,
                     onSelected: (_) => setState(() => _radius = r),
@@ -348,21 +350,21 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               ],
             ),
           ],
-          const SectionTitle('How many people?'),
+          SectionTitle(tr('How many people?')),
           _Stepper(
             value: _people,
             min: 1,
             max: 20,
             onChanged: (v) => setState(() => _people = v),
           ),
-          const SectionTitle('Vibe'),
+          SectionTitle(tr('Vibe')),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
             children: [
               for (final e in Vibes.all.entries)
                 FilterChip(
-                  label: Text(e.value),
+                  label: Text(tr(e.value)),
                   selected: _vibes.contains(e.key),
                   showCheckmark: false,
                   onSelected: (on) => setState(() {
@@ -371,31 +373,31 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 ),
             ],
           ),
-          const SectionTitle('Time of day'),
+          SectionTitle(tr('Time of day')),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
             children: [
               for (final e in TimesOfDay.all.entries)
                 ChoiceChip(
-                  label: Text(e.value),
+                  label: Text(tr(e.value)),
                   selected: _time == e.key,
                   showCheckmark: false,
                   onSelected: (_) => setState(() => _time = e.key),
                 ),
             ],
           ),
-          const SectionTitle('Budget per person (optional)'),
+          SectionTitle(tr('Budget per person (optional)')),
           TextField(
             controller: _budget,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              hintText: 'e.g. 500',
+            decoration: InputDecoration(
+              hintText: tr('e.g. 500'),
               suffixText: 'EGP',
             ),
           ),
-          const SectionTitle('Number of stops'),
+          SectionTitle(tr('Number of stops')),
           _Stepper(
             value: _stops,
             min: 1,
@@ -403,46 +405,46 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             onChanged: (v) => setState(() => _stops = v),
           ),
           if (malls.isNotEmpty) ...[
-            const SectionTitle('Stay inside one mall? (optional)'),
+            SectionTitle(tr('Stay inside one mall? (optional)')),
             DropdownButtonFormField<String?>(
               initialValue: mallStillValid ? _mallId : null,
               isExpanded: true,
               items: [
-                const DropdownMenuItem(value: null, child: Text('No, anywhere')),
+                DropdownMenuItem(value: null, child: Text(tr('No, anywhere'))),
                 for (final m in malls)
                   DropdownMenuItem(value: m.id, child: Text(m.name)),
               ],
               onChanged: (v) => setState(() => _mallId = v),
             ),
           ],
-          const SectionTitle('Choices'),
+          SectionTitle(tr('Choices')),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Only places open at that time'),
-            subtitle: const Text('Uses real opening hours when the map has them'),
+            title: Text(tr('Only places open at that time')),
+            subtitle: Text(tr('Uses real opening hours when the map has them')),
             value: _onlyOpen,
             onChanged: (v) => setState(() => _onlyOpen = v),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Prefer my favorite places'),
+            title: Text(tr('Prefer my favorite places')),
             value: _preferFavorites,
             onChanged: (v) => setState(() => _preferFavorites = v),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text("Skip places I've been"),
-            subtitle: const Text('Discover somewhere new'),
+            title: Text(tr("Skip places I've been")),
+            subtitle: Text(tr('Discover somewhere new')),
             value: _skipVisited,
             onChanged: (v) => setState(() => _skipVisited = v),
           ),
-          const SectionTitle('Anything else? (optional)'),
+          SectionTitle(tr('Anything else? (optional)')),
           TextField(
             controller: _notes,
             maxLines: 2,
             maxLength: 200,
-            decoration: const InputDecoration(
-              hintText: 'e.g. no seafood, someone uses a wheelchair, birthday…',
+            decoration: InputDecoration(
+              hintText: tr('e.g. no seafood, someone uses a wheelchair, birthday…'),
             ),
           ),
           const SizedBox(height: KSpace.md),
@@ -458,7 +460,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           child: FilledButton.icon(
             onPressed: _vibes.isEmpty ? null : _generate,
             icon: const Icon(Icons.auto_awesome),
-            label: Text(_vibes.isEmpty ? 'Pick at least one vibe' : 'Plan my outing'),
+            label: Text(_vibes.isEmpty ? tr('Pick at least one vibe') : tr('Plan my outing')),
           ),
         ),
       ),
@@ -479,7 +481,7 @@ Future<String?> runPlanGeneration(
   );
   try {
     final uid = ref.read(uidProvider);
-    if (uid == null) throw Exception('Please sign in again.');
+    if (uid == null) throw Exception(tr('Please sign in again.'));
     return await ref.read(plansRepositoryProvider).generate(uid, request);
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -502,10 +504,10 @@ class _GeneratingDialog extends StatelessWidget {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: KSpace.md),
-            Text('Building your plan…',
+            Text(tr('Building your plan…'),
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             SizedBox(height: KSpace.xs),
-            Text('Picking real places and checking the weather',
+            Text(tr('Picking real places and checking the weather'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.k.inkMuted)),
           ],
@@ -588,7 +590,7 @@ class _NextOutingCard extends ConsumerWidget {
       child: Card(
         child: ListTile(
           leading: const Text('🎉', style: TextStyle(fontSize: 26)),
-          title: Text('Next outing: ${g.name}', maxLines: 1, overflow: TextOverflow.ellipsis),
+          title: Text(trf('Next outing: {name}', {'name': g.name}), maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Text(DateFormat('EEE d MMM · h:mm a').format(g.scheduledAt!)),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/group/${g.id}'),
@@ -612,9 +614,9 @@ class _WhatsNewCard extends ConsumerWidget {
         child: ListTile(
           leading: const Text('🎁', style: TextStyle(fontSize: 26)),
           title: Text("What's new in $appVersion"),
-          subtitle: const Text('Polls, reactions, lists, compare and more'),
+          subtitle: Text(tr('Arabic, maps, check-ins and more')),
           trailing: IconButton(
-            tooltip: 'Hide',
+            tooltip: tr('Hide'),
             icon: const Icon(Icons.close),
             onPressed: () => ref.read(appSettingsProvider.notifier).markSeen(appVersion),
           ),
@@ -655,18 +657,18 @@ class _AreaPickerState extends State<_AreaPicker> {
             padding: const EdgeInsets.all(KSpace.md),
             child: TextField(
               autofocus: true,
-              decoration: const InputDecoration(
-                  hintText: 'Find an area, e.g. Zamalek', prefixIcon: Icon(Icons.search)),
+              decoration: InputDecoration(
+                  hintText: tr('Find an area, e.g. Zamalek'), prefixIcon: Icon(Icons.search)),
               onChanged: (v) => setState(() => _q = v),
             ),
           ),
           if (shown.isEmpty)
-            const Padding(padding: EdgeInsets.all(KSpace.md), child: Text('No area with that name.')),
+            Padding(padding: EdgeInsets.all(KSpace.md), child: Text(tr('No area with that name.'))),
           for (final a in shown)
             ListTile(
               leading: const Icon(Icons.place_outlined),
               title: Text(a.name),
-              trailing: Text('${a.count} places', style: TextStyle(color: context.k.inkMuted)),
+              trailing: Text(trf('{n} places', {'n': a.count}), style: TextStyle(color: context.k.inkMuted)),
               onTap: () => Navigator.pop(context, a),
             ),
         ],
@@ -686,7 +688,7 @@ class _RecentPlans extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Recent plans'),
+        SectionTitle(tr('Recent plans')),
         SizedBox(
           height: 40,
           child: ListView.separated(

@@ -1,5 +1,9 @@
+import 'app/i18n.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,6 +28,9 @@ Future<void> main() async {
   } catch (_) {
     // Settings just won't be remembered; the app still works.
   }
+  // Language: what the person picked, else Arabic if the phone is in Arabic.
+  appLang = prefs?.getString('app.lang') ??
+      (PlatformDispatcher.instance.locale.languageCode == 'ar' ? 'ar' : 'en');
   runApp(ProviderScope(
     overrides: [sharedPrefsProvider.overrideWithValue(prefs)],
     child: const KhrogaApp(),
@@ -36,8 +43,13 @@ class KhrogaApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final look = ref.watch(themeSettingsProvider);
+    final lang = ref.watch(appSettingsProvider.select((s) => s.lang));
     return MaterialApp.router(
-      title: 'Khroga',
+      key: ValueKey(lang), // rebuild every screen in the new language
+      locale: Locale(lang),
+      supportedLocales: const [Locale('en'), Locale('ar')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      title: tr('Khroga'),
       debugShowCheckedModeBanner: false,
       theme: buildTheme(accent: look.accent, brightness: Brightness.light),
       darkTheme: buildTheme(
@@ -82,10 +94,10 @@ class _NotConnectedApp extends StatelessWidget {
                 children: [
                   const Text('🔌', style: TextStyle(fontSize: 48)),
                   const SizedBox(height: KSpace.md),
-                  Text("Khroga isn't connected yet",
+                  Text(tr("Khroga isn't connected yet"),
                       style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: KSpace.sm),
-                  const Text('This test build is missing its Firebase settings.'),
+                  Text(tr('This test build is missing its Firebase settings.')),
                   const SizedBox(height: KSpace.md),
                   Text(error, style: Theme.of(context).textTheme.bodySmall),
                 ],

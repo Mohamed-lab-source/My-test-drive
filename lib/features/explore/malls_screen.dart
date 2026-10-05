@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +30,7 @@ class _MallsScreenState extends ConsumerState<MallsScreen> {
       if (p.parentMallId != null) counts[p.parentMallId!] = (counts[p.parentMallId!] ?? 0) + 1;
     }
     return Scaffold(
-      appBar: AppBar(title: Text('Malls in ${Cities.all[city] ?? city}')),
+      appBar: AppBar(title: Text(trf('Malls in {city}', {'city': tr(Cities.all[city] ?? city)}))),
       body: AsyncView<List<Place>>(
         value: malls,
         builder: (list) {
@@ -42,16 +43,16 @@ class _MallsScreenState extends ConsumerState<MallsScreen> {
             padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
             children: [
               TextField(
-                decoration: const InputDecoration(
-                    hintText: 'Find a mall', prefixIcon: Icon(Icons.search)),
+                decoration: InputDecoration(
+                    hintText: tr('Find a mall'), prefixIcon: Icon(Icons.search)),
                 onChanged: (v) => setState(() => _q = v),
               ),
               const SizedBox(height: KSpace.sm),
-              Text('${shown.length} malls · most places inside first',
+              Text(trf('{n} malls · most places inside first', {'n': shown.length}),
                   style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: KSpace.sm),
               if (shown.isEmpty)
-                const EmptyState(emoji: '🛍️', title: 'No malls match'),
+                EmptyState(emoji: '🛍️', title: tr('No malls match')),
               for (final m in shown)
                 Card(
                   child: ListTile(
@@ -60,7 +61,7 @@ class _MallsScreenState extends ConsumerState<MallsScreen> {
                     subtitle: Text([
                       if (m.area != null) m.area!,
                       (counts[m.id] ?? 0) == 0
-                          ? 'No places inside listed yet'
+                          ? tr('No places inside listed yet')
                           : '${counts[m.id]} places inside',
                     ].join(' · ')),
                     trailing: const Icon(Icons.chevron_right),

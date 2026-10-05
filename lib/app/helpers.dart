@@ -2,16 +2,17 @@
 library;
 
 import '../models/place.dart';
+import 'i18n.dart';
 
 /// "Good evening, Mohamed" — from the phone's clock.
 String greeting(int hour, String? name) {
-  final part = hour < 5
+  final part = tr(hour < 5
       ? 'Up late'
       : hour < 12
           ? 'Good morning'
           : hour < 17
               ? 'Good afternoon'
-              : 'Good evening';
+              : 'Good evening');
   final first = name?.trim().split(RegExp(r'\s+')).first;
   return first == null || first.isEmpty ? part : '$part, $first';
 }
@@ -21,12 +22,12 @@ String chatDayLabel(DateTime d, DateTime now) {
   final day = DateTime(d.year, d.month, d.day);
   final today = DateTime(now.year, now.month, now.day);
   final diff = today.difference(day).inDays;
-  if (diff == 0) return 'Today';
-  if (diff == 1) return 'Yesterday';
+  if (diff == 0) return tr('Today');
+  if (diff == 1) return tr('Yesterday');
   const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  if (diff > 1 && diff < 7) return weekdays[d.weekday - 1];
-  return '${d.day} ${months[d.month - 1]}${d.year == now.year ? '' : ' ${d.year}'}';
+  if (diff > 1 && diff < 7) return tr(weekdays[d.weekday - 1]);
+  return '${d.day} ${tr(months[d.month - 1])}${d.year == now.year ? '' : ' ${d.year}'}';
 }
 
 bool sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
@@ -56,10 +57,12 @@ class MyCounts {
 }
 
 class Achievement {
-  const Achievement(this.emoji, this.title, this.hint, {required this.earned});
+  const Achievement(this.emoji, this._title, this._hint, {required this.earned});
   final String emoji;
-  final String title;
-  final String hint;
+  final String _title;
+  final String _hint;
+  String get title => tr(_title);
+  String get hint => tr(_hint);
   final bool earned;
 }
 
@@ -134,7 +137,7 @@ Map<String, List<Place>> byFloor(List<Place> venues) {
   final sorted = [...venues]..sort((a, b) => order(a).compareTo(order(b)));
   final out = <String, List<Place>>{};
   for (final v in sorted) {
-    (out[v.details.floorLabel ?? 'Floor not listed'] ??= []).add(v);
+    (out[v.details.floorLabel ?? tr('Floor not listed')] ??= []).add(v);
   }
   return out;
 }
@@ -153,27 +156,27 @@ String tipOfTheDay(DateTime now) {
     'Data saver hides photos to save mobile data.',
   ];
   final dayOfYear = now.difference(DateTime(now.year)).inDays;
-  return tips[dayOfYear % tips.length];
+  return tr(tips[dayOfYear % tips.length]);
 }
 
 /// Simple yes/no/unknown text for comparing two places.
 String factText(Object? v) => switch (v) {
-      null => 'Unknown',
-      true => 'Yes',
-      false => 'No',
-      'yes' => 'Yes',
-      'no' => 'No',
-      'limited' => 'Limited',
+      null => tr('Unknown'),
+      true => tr('Yes'),
+      false => tr('No'),
+      'yes' => tr('Yes'),
+      'no' => tr('No'),
+      'limited' => tr('Limited'),
       _ => '$v',
     };
 
 /// "just now", "5 min ago", "3 h ago", "2 days ago".
 String timeAgo(DateTime t, DateTime now) {
   final d = now.difference(t);
-  if (d.inMinutes < 1) return 'just now';
-  if (d.inMinutes < 60) return '${d.inMinutes} min ago';
-  if (d.inHours < 24) return '${d.inHours} h ago';
-  return '${d.inDays} day${d.inDays == 1 ? '' : 's'} ago';
+  if (d.inMinutes < 1) return tr('just now');
+  if (d.inMinutes < 60) return trf('{n} min ago', {'n': d.inMinutes});
+  if (d.inHours < 24) return trf('{n} h ago', {'n': d.inHours});
+  return d.inDays == 1 ? tr('1 day ago') : trf('{n} days ago', {'n': d.inDays});
 }
 
 /// An OpenStreetMap "add a note" page at the place, to report a closed place

@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,10 +50,10 @@ class _CreateGroupSheetState extends ConsumerState<_CreateGroupSheet> {
 
   Future<void> _create() async {
     final name = _name.text.trim();
-    if (name.isEmpty) throw Exception('Give your group a name.');
+    if (name.isEmpty) throw Exception(tr('Give your group a name.'));
     final router = GoRouter.of(context);
     final uid = ref.read(uidProvider);
-    if (uid == null) throw Exception('Please sign in again.');
+    if (uid == null) throw Exception(tr('Please sign in again.'));
     final plan = widget.planId == null
         ? null
         : await ref.read(plansRepositoryProvider).get(uid, widget.planId!);
@@ -76,24 +77,24 @@ class _CreateGroupSheetState extends ConsumerState<_CreateGroupSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('New group', style: Theme.of(context).textTheme.titleLarge),
+          Text(tr('New group'), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: KSpace.md),
           TextField(
             controller: _name,
             autofocus: true,
             maxLength: 40,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'e.g. Friday squad'),
+            decoration: InputDecoration(hintText: tr('e.g. Friday squad')),
           ),
           OutlinedButton.icon(
             onPressed: _pickDate,
             icon: const Icon(Icons.event_outlined),
             label: Text(_when == null
-                ? 'Pick a date (optional)'
+                ? tr('Pick a date (optional)')
                 : DateFormat('EEE d MMM, h:mm a').format(_when!)),
           ),
           const SizedBox(height: KSpace.md),
-          BusyButton(label: 'Create group', onPressed: _create),
+          BusyButton(label: tr('Create group'), onPressed: _create),
         ],
       ),
     );

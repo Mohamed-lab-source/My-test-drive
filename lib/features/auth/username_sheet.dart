@@ -1,3 +1,4 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -57,9 +58,9 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Pick a username', style: Theme.of(context).textTheme.titleLarge),
+          Text(tr('Pick a username'), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: KSpace.sm),
-          Text('Friends find you by this name.',
+          Text(tr('Friends find you by this name.'),
               style: TextStyle(color: context.k.inkMuted)),
           const SizedBox(height: KSpace.md),
           TextField(
@@ -69,12 +70,12 @@ class _UsernameSheetState extends ConsumerState<_UsernameSheet> {
             textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               prefixText: '@',
-              hintText: 'username',
+              hintText: tr('username'),
               errorText: _error,
             ),
           ),
           const SizedBox(height: KSpace.md),
-          BusyButton(label: 'Save', onPressed: _save),
+          BusyButton(label: tr('Save'), onPressed: _save),
         ],
       ),
     );

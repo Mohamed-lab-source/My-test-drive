@@ -1,9 +1,10 @@
+import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import '../../widgets/launchers.dart';
 
-const appVersion = '0.3.0';
+const appVersion = '0.4.0';
 
 /// What Khroga is, where its facts come from, and that it's free.
 class AboutScreen extends StatelessWidget {
@@ -23,9 +24,9 @@ class AboutScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: text.titleMedium),
+                    Text(tr(title), style: text.titleMedium),
                     const SizedBox(height: 2),
-                    Text(body, style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+                    Text(tr(body), style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
                   ],
                 ),
               ),
@@ -34,14 +35,14 @@ class AboutScreen extends StatelessWidget {
         );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('About Khroga')),
+      appBar: AppBar(title: Text(tr('About Khroga'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.lg, 0, KSpace.lg, KSpace.xl),
         children: [
           Center(child: Image.asset('assets/icon/khroga.png', width: 96, height: 96)),
           const SizedBox(height: KSpace.sm),
-          Center(child: Text('Khroga', style: text.headlineMedium)),
-          Center(child: Text('Version $appVersion', style: text.bodySmall)),
+          Center(child: Text(tr('Khroga'), style: text.headlineMedium)),
+          Center(child: Text(trf('Version {v}', {'v': appVersion}), style: text.bodySmall)),
           const SizedBox(height: KSpace.lg),
           section('📍', 'Only real places',
               'Every place comes from OpenStreetMap and Overture Maps. If a fact is unknown, '
@@ -58,18 +59,18 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: KSpace.sm),
           OutlinedButton(
             onPressed: () => openWebsite('https://www.openstreetmap.org/copyright'),
-            child: const Text('© OpenStreetMap contributors'),
+            child: Text(tr('© OpenStreetMap contributors')),
           ),
           const SizedBox(height: KSpace.sm),
           OutlinedButton(
             onPressed: () => openWebsite('https://overturemaps.org'),
-            child: const Text('Overture Maps Foundation'),
+            child: Text(tr('Overture Maps Foundation')),
           ),
           const SizedBox(height: KSpace.sm),
           OutlinedButton(
             onPressed: () => showLicensePage(
                 context: context, applicationName: 'Khroga', applicationVersion: appVersion),
-            child: const Text('Open-source licences'),
+            child: Text(tr('Open-source licences')),
           ),
         ],
       ),
