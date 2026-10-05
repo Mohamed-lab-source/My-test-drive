@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wedding Invitation</title>
+  <meta name="description" content="You're invited to our wedding" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Great+Vibes&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="locked">
+
+  <!-- ───── Envelope intro ───── -->
+  <div id="envelope-screen" aria-label="Open the invitation">
+    <div class="envelope" id="envelope">
+      <div class="env-back"></div>
+      <div class="env-card">
+        <span class="script" data-bind="initials"></span>
+      </div>
+      <div class="env-front"></div>
+      <div class="env-flap"></div>
+      <button class="seal" id="open-btn" aria-label="Open invitation">
+        <span data-bind="initials"></span>
+      </button>
+    </div>
+    <p class="tap-hint">Tap the seal to open</p>
+  </div>
+
+  <main id="invite">
+
+    <!-- ───── Hero ───── -->
+    <section class="hero">
+      <svg class="floral floral-top" viewBox="0 0 400 140" aria-hidden="true"><use href="#branch" /></svg>
+      <p class="eyebrow reveal">We're getting married</p>
+      <h1 class="names reveal">
+        <span data-bind="partner1"></span>
+        <span class="amp">&amp;</span>
+        <span data-bind="partner2"></span>
+      </h1>
+      <p class="invitation-line reveal" data-bind="invitationLine"></p>
+      <div class="date-block reveal">
+        <span class="rule"></span>
+        <div>
+          <p class="date-text" data-bind="dateText"></p>
+          <p class="year-text" data-bind="yearText"></p>
+          <p class="city" data-bind="city"></p>
+        </div>
+        <span class="rule"></span>
+      </div>
+      <svg class="floral floral-bottom" viewBox="0 0 400 140" aria-hidden="true"><use href="#branch" /></svg>
+      <a href="#countdown" class="scroll-cue" aria-label="Scroll down">⌄</a>
+    </section>
+
+    <!-- ───── Countdown ───── -->
+    <section id="countdown" class="section countdown">
+      <h2 class="script reveal">Counting down</h2>
+      <div class="timer reveal" id="timer">
+        <div><span id="cd-days">0</span><small>Days</small></div>
+        <div><span id="cd-hours">0</span><small>Hours</small></div>
+        <div><span id="cd-mins">0</span><small>Minutes</small></div>
+        <div><span id="cd-secs">0</span><small>Seconds</small></div>
+      </div>
+      <button class="btn btn-ghost reveal" id="add-calendar">Add to calendar</button>
+    </section>
+
+    <!-- ───── Story ───── -->
+    <section class="section story">
+      <div class="ornament reveal">❦</div>
+      <h2 class="script reveal" data-bind="story.title"></h2>
+      <p class="lead reveal" data-bind="story.text"></p>
+    </section>
+
+    <!-- ───── Schedule ───── -->
+    <section class="section schedule">
+      <h2 class="script reveal">The Day</h2>
+      <ol class="timeline" id="timeline"></ol>
+    </section>
+
+    <!-- ───── Venue & dress code ───── -->
+    <section class="section details">
+      <div class="card reveal">
+        <p class="eyebrow">Where</p>
+        <h3 data-bind="venue.name"></h3>
+        <p data-bind="venue.address"></p>
+        <a class="btn btn-ghost" id="map-link" target="_blank" rel="noopener">View map</a>
+      </div>
+      <div class="card reveal">
+        <p class="eyebrow">Attire</p>
+        <h3 data-bind="dressCode.title"></h3>
+        <p data-bind="dressCode.text"></p>
+      </div>
+    </section>
+
+    <!-- ───── RSVP ───── -->
+    <section class="section rsvp" id="rsvp">
+      <h2 class="script reveal">Will you join us?</h2>
+      <p class="eyebrow reveal" data-bind="rsvp.deadlineText"></p>
+      <form id="rsvp-form" class="reveal" novalidate>
+        <label>Full name
+          <input name="name" required autocomplete="name" />
+        </label>
+        <fieldset class="choice">
+          <legend>Attendance</legend>
+          <label><input type="radio" name="attending" value="Joyfully accepts" required /> <span>Joyfully accepts</span></label>
+          <label><input type="radio" name="attending" value="Regretfully declines" /> <span>Regretfully declines</span></label>
+        </fieldset>
+        <label>Number of guests
+          <select name="guests">
+            <option>1</option><option>2</option><option>3</option><option>4</option>
+          </select>
+        </label>
+        <label>A note for the couple <em>(optional)</em>
+          <textarea name="message" rows="3"></textarea>
+        </label>
+        <button class="btn" type="submit">Send RSVP</button>
+        <p class="form-status" id="form-status" role="status"></p>
+      </form>
+    </section>
+
+    <footer class="section footer">
+      <p class="eyebrow" data-bind="closingLine"></p>
+      <p class="script signature"><span data-bind="partner1"></span> &amp; <span data-bind="partner2"></span></p>
+    </footer>
+  </main>
+
+  <!-- Reusable floral branch -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <g id="branch" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+        <path d="M20 120 C 110 40, 290 40, 380 120" />
+        <g fill="currentColor" fill-opacity=".18">
+          <path d="M70 84 c -14 -18 -6 -34 10 -36 c 4 16 0 28 -10 36z" />
+          <path d="M110 64 c -8 -22 6 -36 22 -32 c -2 16 -10 26 -22 32z" />
+          <path d="M160 52 c 0 -22 16 -30 30 -22 c -6 14 -16 20 -30 22z" />
+          <path d="M240 52 c 0 -22 -16 -30 -30 -22 c 6 14 16 20 30 22z" />
+          <path d="M290 64 c 8 -22 -6 -36 -22 -32 c 2 16 10 26 22 32z" />
+          <path d="M330 84 c 14 -18 6 -34 -10 -36 c -4 16 0 28 10 36z" />
+        </g>
+        <g style="fill:var(--blush)" stroke="none">
+          <circle cx="200" cy="40" r="9" />
+          <circle cx="188" cy="46" r="6" />
+          <circle cx="212" cy="46" r="6" />
+        </g>
+        <circle cx="200" cy="40" r="3" style="fill:var(--gold)" stroke="none" />
+      </g>
+    </defs>
+  </svg>
+
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
