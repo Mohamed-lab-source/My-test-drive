@@ -1,30 +1,38 @@
 (() => {
   const W = window.WEDDING;
   const get = (path) => path.split(".").reduce((o, k) => (o ? o[k] : undefined), W);
+  const first = (name) => name.split(" ")[0];
 
   // ── Fill text from config ──
   const derived = {
     partner1: W.couple.partner1,
     partner2: W.couple.partner2,
+    first1: first(W.couple.partner1),
+    first2: first(W.couple.partner2),
     initials: `${W.couple.partner1[0]}&${W.couple.partner2[0]}`,
   };
   document.querySelectorAll("[data-bind]").forEach((el) => {
     const key = el.dataset.bind;
     const value = key in derived ? derived[key] : get(key);
-    if (value != null) el.textContent = value;
+    if (value) el.textContent = value;
+    else el.hidden = true;
   });
-  document.title = `${W.couple.partner1} & ${W.couple.partner2} — Wedding Invitation`;
+  document.title = `${derived.first1} & ${derived.first2} — Wedding Invitation`;
   document.getElementById("map-link").href = W.venue.mapUrl;
 
-  // ── Schedule ──
-  document.getElementById("timeline").innerHTML = W.schedule
-    .map(
-      (s) => `<li class="reveal">
-        <span class="t-time">${s.time}</span>
-        <div class="t-body"><h3>${s.title}</h3><p>${s.note || ""}</p></div>
-      </li>`
-    )
+  // ── Venue gallery + lightbox ──
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML = W.venue.photos
+    .map((src, i) => `<button><img src="${src}" alt="${W.venue.name} photo ${i + 1}" loading="lazy" /></button>`)
     .join("");
+  const lightbox = document.getElementById("lightbox");
+  gallery.addEventListener("click", (e) => {
+    const img = e.target.closest("button")?.querySelector("img");
+    if (!img) return;
+    lightbox.querySelector("img").src = img.src;
+    lightbox.showModal();
+  });
+  lightbox.addEventListener("click", () => lightbox.close());
 
   // ── Envelope ──
   const envelope = document.getElementById("envelope");
@@ -32,10 +40,20 @@
   const open = () => {
     envelope.classList.add("open");
     screen.classList.add("opened");
-    setTimeout(() => document.body.classList.remove("locked"), 1400);
+    setTimeout(() => document.body.classList.remove("locked"), 2000);
   };
-  document.getElementById("open-btn").addEventListener("click", open);
   envelope.addEventListener("click", open);
+
+  // Sparkles on the envelope screen
+  const sparkles = screen.querySelector(".sparkles");
+  for (let i = 0; i < 28; i++) {
+    const s = document.createElement("i");
+    s.style.left = `${Math.random() * 100}%`;
+    s.style.top = `${Math.random() * 100}%`;
+    s.style.animationDelay = `${Math.random() * 4}s`;
+    s.style.scale = 0.5 + Math.random();
+    sparkles.appendChild(s);
+  }
 
   // ── Reveal on scroll ──
   const io = new IntersectionObserver(
@@ -51,7 +69,7 @@
   document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
 
   // ── Countdown ──
-  const target = new Date(W.date).getTime();
+  const target = new Date(W.start).getTime();
   const els = ["days", "hours", "mins", "secs"].map((id) => document.getElementById(`cd-${id}`));
   const tick = () => {
     const diff = Math.max(0, target - Date.now());
@@ -68,20 +86,20 @@
 
   // ── Add to calendar (.ics download) ──
   document.getElementById("add-calendar").addEventListener("click", () => {
-    const start = new Date(W.date);
-    const end = new Date(start.getTime() + 6 * 36e5);
-    const fmt = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const fmt = (d) => new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const esc = (s) => s.replace(/[,;]/g, (c) => `\\${c}`);
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
       "PRODID:-//Wedding Invitation//EN",
       "BEGIN:VEVENT",
-      `UID:${fmt(start)}-wedding@invite`,
-      `DTSTAMP:${fmt(new Date())}`,
-      `DTSTART:${fmt(start)}`,
-      `DTEND:${fmt(end)}`,
-      `SUMMARY:Wedding of ${W.couple.partner1} & ${W.couple.partner2}`,
-      `LOCATION:${W.venue.name}\\, ${W.venue.address.replace(/,/g, "\\,")}`,
+      `UID:${fmt(W.start)}-wedding@invite`,
+      `DTSTAMP:${fmt(Date.now())}`,
+      `DTSTART:${fmt(W.start)}`,
+      `DTEND:${fmt(W.end)}`,
+      `SUMMARY:${esc(`Wedding of ${W.couple.partner1} & ${W.couple.partner2}`)}`,
+      `LOCATION:${esc(`${W.venue.name}, ${W.venue.address}`)}`,
+      `URL:${W.venue.mapUrl}`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
@@ -93,6 +111,11 @@
   });
 
   // ── RSVP ──
+  const { rsvp } = W;
+  if (!(rsvp.whatsapp || rsvp.email || rsvp.formEndpoint)) return;
+  const section = document.getElementById("rsvp");
+  section.hidden = false;
+
   const form = document.getElementById("rsvp-form");
   const status = document.getElementById("form-status");
   form.addEventListener("submit", async (e) => {
@@ -102,29 +125,34 @@
       status.textContent = "Please add your name and let us know if you can come.";
       return;
     }
+    const text = `RSVP — ${data.name}\nAttendance: ${data.attending}\nGuests: ${data.guests}${
+      data.message ? `\n\n${data.message}` : ""
+    }`;
 
-    if (W.rsvp.formEndpoint) {
+    if (rsvp.formEndpoint) {
       status.textContent = "Sending…";
       try {
-        const res = await fetch(W.rsvp.formEndpoint, {
+        const res = await fetch(rsvp.formEndpoint, {
           method: "POST",
           headers: { Accept: "application/json", "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
         if (!res.ok) throw new Error(res.statusText);
         form.reset();
-        status.textContent =
-          data.attending.startsWith("Joyfully") ? "Thank you! We can't wait to celebrate with you ♡" : "Thank you for letting us know — you'll be missed ♡";
+        status.textContent = data.attending.startsWith("Joyfully")
+          ? "Thank you! We can't wait to celebrate with you ♡"
+          : "Thank you for letting us know — you'll be missed ♡";
       } catch {
         status.textContent = "Something went wrong — please try again.";
       }
-      return;
+    } else if (rsvp.whatsapp) {
+      window.open(`https://wa.me/${rsvp.whatsapp}?text=${encodeURIComponent(text)}`, "_blank");
+      status.textContent = "Opening WhatsApp…";
+    } else {
+      window.location.href = `mailto:${rsvp.email}?subject=${encodeURIComponent(
+        `RSVP — ${data.name}`
+      )}&body=${encodeURIComponent(text)}`;
+      status.textContent = "Opening your email app…";
     }
-
-    const body = `Name: ${data.name}\nAttendance: ${data.attending}\nGuests: ${data.guests}\n\n${data.message || ""}`;
-    window.location.href = `mailto:${W.rsvp.email}?subject=${encodeURIComponent(
-      `RSVP — ${data.name}`
-    )}&body=${encodeURIComponent(body)}`;
-    status.textContent = "Opening your email app…";
   });
 })();

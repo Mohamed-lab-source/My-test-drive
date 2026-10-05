@@ -4,52 +4,42 @@
 // ─────────────────────────────────────────────────────────────
 window.WEDDING = {
   couple: {
-    partner1: "Amira",
-    partner2: "Youssef",
+    partner1: "Ahmed Adel",
+    partner2: "Lamia Osama",
   },
 
-  // Local date & time of the ceremony (YYYY-MM-DDTHH:MM)
-  date: "2027-06-12T16:00",
-  dateText: "Saturday, the twelfth of June",
-  yearText: "Two thousand twenty-seven",
-  city: "Alexandria, Egypt",
+  tagline: "Two hearts, one beautiful beginning",
+  invitationLine: "Invite you to celebrate the beginning of their forever",
+  closingLine: "Your presence will complete our happiness",
 
-  invitationLine:
-    "Together with their families, request the pleasure of your company at the celebration of their marriage",
-
-  story: {
-    title: "Our Story",
-    text:
-      "We met on a rainy afternoon in a tiny bookshop, both reaching for the same last copy. " +
-      "Years of coffee dates, long walks and shared playlists later, we can't wait to start forever — " +
-      "and we would love for you to be there.",
-  },
-
-  schedule: [
-    { time: "4:00 PM", title: "Ceremony", note: "Garden terrace" },
-    { time: "5:30 PM", title: "Cocktail Hour", note: "Drinks & canapés by the sea" },
-    { time: "7:00 PM", title: "Dinner", note: "Grand ballroom" },
-    { time: "9:00 PM", title: "Dancing", note: "Until the stars go out" },
-  ],
+  // Local date & time (YYYY-MM-DDTHH:MM)
+  start: "2026-11-11T19:00",
+  end: "2026-11-11T23:00",
+  dateText: "11 • 11 • 2026",
+  dayText: "Wednesday",
+  timeText: "7:00 PM – 11:00 PM",
 
   venue: {
-    name: "The Seaside Gardens",
-    address: "Corniche Road, Alexandria, Egypt",
-    mapUrl: "https://maps.google.com/?q=Corniche+Road+Alexandria",
+    name: "Talinda Hall",
+    place: "Amira Valley",
+    address: "Amira Valley for Weddings, Saqqara Tourist Road, opposite Cataract Hotel, Giza, Egypt",
+    addressAr: "وادي الاميرة للحفلات - طريق سقارة السياحي - امام فندق كتاراكت، الجيزة",
+    mapUrl: "https://www.google.com/maps/search/?api=1&query=Amira+Valley+For+Wedding+Saqqara+Road+Giza",
+    photos: [
+      "assets/venue-1.jpg",
+      "assets/venue-2.jpg",
+      "assets/venue-3.jpg",
+      "assets/venue-4.jpg",
+      "assets/venue-5.jpg",
+      "assets/venue-6.jpg",
+    ],
   },
 
-  dressCode: {
-    title: "Dress Code",
-    text: "Garden formal — soft pastels warmly welcomed. Comfortable shoes for dancing on the lawn!",
-  },
-
+  // RSVP — the section stays hidden until at least one of these is filled in.
   rsvp: {
-    deadlineText: "Kindly reply by the first of May",
-    // Option A: paste a Formspree (https://formspree.io) endpoint to collect replies online.
-    formEndpoint: "",
-    // Option B (used when formEndpoint is empty): replies open the guest's email app.
-    email: "rsvp@example.com",
+    deadlineText: "",          // e.g. "Kindly reply by the 1st of November"
+    whatsapp: "",              // e.g. "201001234567" (country code, no + or spaces)
+    email: "",                 // e.g. "ahmed.lamia@example.com"
+    formEndpoint: "",          // optional Formspree endpoint to collect replies online
   },
-
-  closingLine: "With love & gratitude",
 };
