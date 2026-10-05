@@ -19,9 +19,11 @@ class PlansRepository {
 
   /// Builds a plan on the phone and saves it. Returns the new plan's id.
   ///
-  /// The AI only chooses from real places we hand it. If it fails (no
-  /// internet, busy, free quota used up), we build the plan ourselves.
-  Future<String> generate(String uid, PlanRequest request) async {
+  /// By default the app's own planner does it: instant, works offline, and
+  /// uses none of the free AI allowance. With [useAi], Gemini chooses from
+  /// the same real places and writes the words; if it can't (offline, busy,
+  /// allowance used up), the app's planner takes over.
+  Future<String> generate(String uid, PlanRequest request, {bool useAi = false}) async {
     final day = request.day;
     final weatherFuture = fetchWeather(request.city, day: day);
     final places = await _places.all();
@@ -34,32 +36,34 @@ class PlansRepository {
           : "We couldn't find places matching that. Try another vibe.");
     }
 
-    final weekday = DateFormat('EEEE').format(day);
-    final prompt = buildPrompt(request, candidates, weather, weekday);
-
     ProposedPlan? plan;
-    var source = 'ai';
-    for (var attempt = 1; attempt <= 2 && plan == null; attempt++) {
-      try {
-        plan = validatePlan(await askGemini(prompt), candidates, request.stops);
-      } on AiUnavailable catch (e) {
-        debugPrint('$e');
-        if (e.reason == 'no key in this build') break;
-      } catch (e) {
-        debugPrint('AI attempt $attempt failed: $e');
+    var source = 'local';
+    if (useAi) {
+      final prompt = buildPrompt(request, candidates, weather, DateFormat('EEEE', 'en').format(day));
+      for (var attempt = 1; attempt <= 2 && plan == null; attempt++) {
+        try {
+          plan = validatePlan(await askGemini(prompt), candidates, request.stops);
+        } on AiUnavailable catch (e) {
+          debugPrint('$e');
+          if (e.resting || e.reason == 'no key in this build') break;
+        } catch (e) {
+          debugPrint('AI attempt $attempt failed: $e');
+        }
       }
+      source = plan == null ? 'fallback' : 'ai';
     }
-    if (plan == null) {
-      source = 'fallback';
-      plan = fallbackPlan(request, candidates);
-    }
+    plan ??= fallbackPlan(request, candidates);
+
+    var stops = buildStops(plan.stops, candidates);
+    final aiWrote = source == 'ai';
+    if (!aiWrote) stops = withLocalReasons(stops, candidates, day);
 
     final outing = OutingPlan(
       id: '',
-      title: plan.title,
-      summary: plan.summary,
-      tips: plan.tips,
-      stops: buildStops(plan.stops, candidates),
+      title: aiWrote ? plan.title : localTitle(request, stops),
+      summary: aiWrote ? plan.summary : '',
+      tips: aiWrote ? plan.tips : const [],
+      stops: stops,
       request: request,
       weatherNote: weatherNote(request.city, weather, day: day),
       source: source,
@@ -68,6 +72,36 @@ class PlansRepository {
     await doc.set({...outing.toMap(), 'createdAt': FieldValue.serverTimestamp()});
     return doc.id;
   }
+
+  /// "Make it nicer with AI": Gemini writes a title, summary, tips and a
+  /// sentence per stop for the plan's own real places. Places, order and
+  /// times stay exactly the same. Throws [AiUnavailable] when it can't.
+  Future<void> improveWithAi(String uid, OutingPlan plan) async {
+    final all = await _places.all();
+    final byId = {for (final p in all) p.id: p};
+    final stopsPlaces = [for (final s in plan.stops) ?byId[s.placeId]];
+    if (stopsPlaces.isEmpty) throw AiUnavailable('no places');
+    final day = plan.request.day;
+    final prompt = buildPrompt(
+      PlanRequest.fromMap({...plan.request.toMap(), 'stops': stopsPlaces.length}),
+      stopsPlaces,
+      null,
+      DateFormat('EEEE', 'en').format(day),
+    );
+    final words = validatePlan(await askGemini(prompt), stopsPlaces, stopsPlaces.length);
+    if (words == null) throw AiUnavailable('answer not usable');
+    final next = applyAiWords(plan, words);
+    await _plans(uid).doc(plan.id).update({
+      'title': next.title,
+      'summary': next.summary,
+      'tips': next.tips,
+      'stops': next.stops.map((s) => s.toMap()).toList(),
+      'source': 'ai',
+    });
+  }
+
+  /// How many plans you've made (one cheap count, not a download of them all).
+  Future<int> count(String uid) async => (await _plans(uid).count().get()).count ?? 0;
 
   Stream<OutingPlan?> watch(String uid, String planId) => _plans(uid)
       .doc(planId)
@@ -95,15 +129,24 @@ class PlansRepository {
         'stops': swapStop(plan, index, place).map((s) => s.toMap()).toList(),
       });
 
-  /// Every plan you've made, newest first.
-  Stream<List<OutingPlan>> watchAll(String uid) => _plans(uid)
+  /// Your newest plans, [limit] at a time (more load when you scroll).
+  Stream<List<OutingPlan>> watchRecent(String uid, {int limit = 20}) => _plans(uid)
       .orderBy('createdAt', descending: true)
-      .limit(100)
+      .limit(limit)
       .snapshots()
       .map((s) => s.docs.map((d) => OutingPlan.fromMap(d.id, d.data())).toList());
 
   Future<void> updateStops(String uid, String planId, List<PlanStop> stops) =>
       _plans(uid).doc(planId).update({'stops': stops.map((s) => s.toMap()).toList()});
+
+  /// Every plan, once (for "Export my data").
+  Future<List<OutingPlan>> getAll(String uid) async => (await _plans(uid)
+          .orderBy('createdAt', descending: true)
+          .limit(500)
+          .get())
+      .docs
+      .map((d) => OutingPlan.fromMap(d.id, d.data()))
+      .toList();
 
   Future<void> rename(String uid, String planId, String title) {
     final t = title.trim();

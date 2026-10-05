@@ -2,6 +2,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:khroga/app/helpers.dart';
 import 'package:khroga/data/checkins_repository.dart';
+import 'package:khroga/data/groups_repository.dart' show shouldUpdatePreview;
 import 'package:khroga/models/opening_hours.dart';
 import 'package:khroga/models/place.dart';
 import 'package:khroga/models/plan.dart';
@@ -24,6 +25,7 @@ PlanStop _s(String id, {String? start, int? minutes, double? lat, double? lng, S
 
 void main() {
   moreTests();
+  limitTests();
   group('opening hours status', () {
     test('open: says when it closes, also after midnight', () {
       expect(OpeningHours.parse('Mo-Su 10:00-23:00')!.statusText(mon(12)), 'Open · closes 23:00');
@@ -267,5 +269,54 @@ void moreTests() {
     const p = Poll(id: 'p', uid: 'u', question: 'Q', options: ['A', 'B'], votes: {'x': 0, 'y': 1, 'z': 1});
     expect(p.countFor(1), 2);
     expect(Poll.fromMap('p', {'options': ['A', 'B'], 'votes': {'x': 1}}).votes, {'x': 1});
+  });
+}
+
+void limitTests() {
+  group('using fewer free resources', () {
+    test('describeStop uses only map facts', () {
+      const p = Place(
+          id: 'p', name: 'Test Cafe', category: 'cafe', city: 'cairo', kind: 'cafe', cuisine: 'coffee_shop',
+          openingHours: 'Mo-Su 08:00-23:00', details: PlaceFacts(wifi: true));
+      final line = describeStop(p, at: DateTime(2026, 10, 5, 18), kmFromPrevious: 0.84);
+      expect(line, 'cafe · coffee shop · open then · 📶 Wi-Fi · 0.8 km from the last stop');
+      expect(describeStop(const Place(id: 'x', name: 'Test', category: 'park', city: 'cairo')), 'Parks');
+    });
+
+    test('local title names the vibe, time and area', () {
+      const r = PlanRequest(city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening');
+      expect(localTitle(r, const [PlanStop(placeId: 'a', name: 'Test', category: 'cafe', area: 'Test Area')]),
+          '😌 Chill Evening in Test Area');
+      expect(localTitle(r, const []), '😌 Chill Evening in Cairo');
+    });
+
+    test('AI words never change places, order or times', () {
+      final plan = OutingPlan(
+        id: 'p',
+        title: 'Old',
+        summary: '',
+        request: const PlanRequest(city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening'),
+        stops: const [
+          PlanStop(placeId: 'a', name: 'Test A', category: 'cafe', startTime: '18:00', why: 'old'),
+          PlanStop(placeId: 'b', name: 'Test B', category: 'cafe', startTime: '19:30'),
+        ],
+      );
+      const words = ProposedPlan(title: 'New', summary: 'Nice', tips: ['Tip'], stops: [
+        ProposedStop(placeId: 'b', why: 'Lovely B'),
+        ProposedStop(placeId: 'a', why: 'Lovely A'),
+      ]);
+      final next = applyAiWords(plan, words);
+      expect(next.title, 'New');
+      expect(next.stops.map((s) => s.placeId), ['a', 'b']);
+      expect(next.stops.map((s) => s.startTime), ['18:00', '19:30']);
+      expect(next.stops.map((s) => s.why), ['Lovely A', 'Lovely B']);
+    });
+
+    test('a burst of chat messages updates the group preview once', () {
+      final now = DateTime(2026, 10, 5, 20);
+      expect(shouldUpdatePreview(null, now), isTrue);
+      expect(shouldUpdatePreview(now.subtract(const Duration(seconds: 30)), now), isFalse);
+      expect(shouldUpdatePreview(now.subtract(const Duration(minutes: 3)), now), isTrue);
+    });
   });
 }

@@ -13,6 +13,7 @@ import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
+import '../../data/groups_repository.dart' show shouldUpdatePreview;
 import '../../models/social.dart';
 import '../../planner/planner.dart' show routeMapsUrl;
 import '../../widgets/common.dart';
@@ -813,7 +814,7 @@ class _MembersSheet extends ConsumerWidget {
   }
 }
 
-class _Chat extends ConsumerWidget {
+class _Chat extends ConsumerStatefulWidget {
   const _Chat({required this.group, required this.uid, required this.profiles, this.search});
 
   final Group group;
@@ -822,8 +823,20 @@ class _Chat extends ConsumerWidget {
   final String? search;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final messages = ref.watch(groupMessagesProvider(group.id));
+  ConsumerState<_Chat> createState() => _ChatState();
+}
+
+class _ChatState extends ConsumerState<_Chat> {
+  int _limit = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final group = widget.group;
+    final uid = widget.uid;
+    final search = widget.search;
+    // Searching looks a bit further back (up to 100 messages).
+    final limit = search == null || search.trim().isEmpty ? _limit : (_limit < 100 ? 100 : _limit);
+    final messages = ref.watch(groupMessagesProvider((group.id, limit)));
     return AsyncView<List<GroupMessage>>(
       value: messages,
       builder: (all) {
@@ -845,8 +858,17 @@ class _Chat extends ConsumerWidget {
           reverse: true, // newest at the bottom, and stays there
           padding: const EdgeInsets.symmetric(
               horizontal: KSpace.md, vertical: KSpace.sm),
-          itemCount: list.length,
+          itemCount: list.length + (all.length >= limit ? 1 : 0),
           itemBuilder: (_, i) {
+            if (i == list.length) {
+              return Center(
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _limit = limit + 30),
+                  icon: const Icon(Icons.history),
+                  label: Text(tr('Show older messages')),
+                ),
+              );
+            }
             final m = list[i];
             final older = i + 1 < list.length ? list[i + 1] : null;
             final newDay = m.createdAt != null &&
@@ -1115,6 +1137,7 @@ class _ComposerState extends ConsumerState<_Composer> {
             uid: widget.uid,
             name: name,
             text: text,
+            updatePreview: shouldUpdatePreview(widget.group.lastMessageAt, DateTime.now()),
           );
       if (quick == null) _controller.clear();
     } catch (e) {

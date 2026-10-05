@@ -106,6 +106,18 @@ How the code enforces it (keep it this way):
   Egyptian Arabic when the app is in Arabic.
 - App icon: drawn by `tool/make_icon.py` (Pillow) into the Android mipmaps
   (adaptive + monochrome) and `assets/icon/khroga.png`. Re-run it to change it.
+- Staying inside the free limits (keep it this way):
+  - Plans are made by the app's own planner by default (`source: 'local'`,
+    instant, offline, factual reasons from `describeStop`/`localTitle`).
+    Gemini only runs when the person turns on "Let AI pick and write" or taps
+    "Make it nicer" (`improveWithAi`: words only, same places/order/times).
+    Model default is `gemini-flash-lite-latest`; a 429 sets `aiResting` for
+    an hour and the app says so instead of retrying.
+  - Firestore: recent plans listen to 15 docs, history pages 20 at a time,
+    plan count uses `count()`, chats load 30 messages ("Show older"), the
+    group preview write is skipped during a 2-minute burst
+    (`shouldUpdatePreview`), and the offline cache is unlimited. Never add a
+    listener on a whole collection without a small `limit`.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

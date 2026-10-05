@@ -14,11 +14,18 @@ import '../explore/explore_screen.dart';
 import 'plan_form_screen.dart' show runPlanGeneration;
 
 /// Saved plans, every plan you've made, favorite places, and places you've been.
-class SavedPlansScreen extends ConsumerWidget {
+class SavedPlansScreen extends ConsumerStatefulWidget {
   const SavedPlansScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SavedPlansScreen> createState() => _SavedPlansScreenState();
+}
+
+class _SavedPlansScreenState extends ConsumerState<SavedPlansScreen> {
+  int _historyLimit = 20;
+
+  @override
+  Widget build(BuildContext context) {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
@@ -47,7 +54,9 @@ class SavedPlansScreen extends ConsumerWidget {
               emptyMessage: tr('Tap "Save" on a plan you like and it will show up here.'),
             ),
             _PlanList(
-              value: ref.watch(allPlansProvider),
+              value: ref.watch(historyPlansProvider(_historyLimit)),
+              onLoadMore: () => setState(() => _historyLimit += 20),
+              pageSize: _historyLimit,
               emptyEmoji: '🕘',
               clearable: true,
               emptyTitle: tr('No plans yet'),
@@ -79,7 +88,13 @@ class _PlanList extends ConsumerStatefulWidget {
     required this.emptyTitle,
     required this.emptyMessage,
     this.clearable = false,
+    this.onLoadMore,
+    this.pageSize,
   });
+
+  /// History only: loads 20 more older plans.
+  final VoidCallback? onLoadMore;
+  final int? pageSize;
 
   /// Shows "Clear unsaved" (History tab).
   final bool clearable;
@@ -186,8 +201,12 @@ class _PlanListState extends ConsumerState<_PlanList> {
               itemCount: list.length + 1,
               separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
               itemBuilder: (_, i) => i == list.length
-                  ? Text(tr('Swipe a plan sideways to delete it.'),
-                      textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall)
+                  ? Column(children: [
+                      if (widget.onLoadMore != null && list.length >= (widget.pageSize ?? 1 << 30))
+                        TextButton(onPressed: widget.onLoadMore, child: Text(tr('Show older plans'))),
+                      Text(tr('Swipe a plan sideways to delete it.'),
+                          textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+                    ])
                   : Dismissible(
                       key: ValueKey(list[i].id),
                       background: Container(

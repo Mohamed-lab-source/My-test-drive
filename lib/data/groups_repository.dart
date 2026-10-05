@@ -188,11 +188,13 @@ class GroupsRepository {
   Future<void> deletePoll(String groupId, String pollId) =>
       _groups.doc(groupId).collection('polls').doc(pollId).delete();
 
-  Stream<List<GroupMessage>> watchMessages(String groupId) => _groups
+  /// The newest [limit] messages. Small by default: each message loaded
+  /// counts against the free daily allowance.
+  Stream<List<GroupMessage>> watchMessages(String groupId, {int limit = 30}) => _groups
       .doc(groupId)
       .collection('messages')
       .orderBy('createdAt', descending: true)
-      .limit(200)
+      .limit(limit)
       .snapshots()
       .map((s) => s.docs.map((d) => GroupMessage.fromMap(d.id, d.data())).toList());
 
@@ -201,6 +203,7 @@ class GroupsRepository {
     required String uid,
     required String name,
     required String text,
+    bool updatePreview = true,
   }) async {
     final groupRef = _groups.doc(groupId);
     final preview = '$name: $text';
@@ -210,11 +213,20 @@ class GroupsRepository {
         'name': name,
         'text': text,
         'createdAt': FieldValue.serverTimestamp(),
-      })
-      ..update(groupRef, {
+      });
+    // The preview in the group list costs a second write, so a quick burst
+    // of messages only updates it once (see [shouldUpdatePreview]).
+    if (updatePreview) {
+      batch.update(groupRef, {
         'lastMessage': preview.length > 100 ? '${preview.substring(0, 100)}…' : preview,
         'lastMessageAt': FieldValue.serverTimestamp(),
       });
+    }
     await batch.commit();
   }
 }
+
+/// Update the group-list preview only if the last one is over 2 minutes old,
+/// so a burst of messages costs one extra write instead of one each.
+bool shouldUpdatePreview(DateTime? lastMessageAt, DateTime now) =>
+    lastMessageAt == null || now.difference(lastMessageAt) >= const Duration(minutes: 2);

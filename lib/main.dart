@@ -1,4 +1,5 @@
 import 'app/i18n.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:ui' show PlatformDispatcher;
 
@@ -17,6 +18,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    // Keep a full copy of everything already downloaded on the phone. Screens
+    // re-opened later read from it, and only changes count as new reads.
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
   } catch (e) {
     // Show a clear message instead of a crash if Firebase isn't connected yet.
     runApp(_NotConnectedApp(error: '$e'));

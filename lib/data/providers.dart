@@ -103,8 +103,9 @@ final groupProvider = StreamProvider.family<Group?, String>(
 final groupPollsProvider = StreamProvider.family<List<Poll>, String>(
     (ref, id) => ref.watch(groupsRepositoryProvider).watchPolls(id));
 
-final groupMessagesProvider = StreamProvider.family<List<GroupMessage>, String>(
-    (ref, id) => ref.watch(groupsRepositoryProvider).watchMessages(id));
+/// (group id, how many newest messages).
+final groupMessagesProvider = StreamProvider.family<List<GroupMessage>, (String, int)>(
+    (ref, key) => ref.watch(groupsRepositoryProvider).watchMessages(key.$1, limit: key.$2));
 
 /// Profiles for a set of uids, keyed by a sorted, comma-joined string so the
 /// family key stays stable across rebuilds.
@@ -185,10 +186,26 @@ final placeNoteProvider = StreamProvider.family<String?, String>((ref, placeId) 
   return ref.watch(personalRepositoryProvider).watchNote(uid, placeId);
 });
 
-final allPlansProvider = StreamProvider<List<OutingPlan>>((ref) {
+/// Your 15 newest plans (Plan tab, "Add to a plan"). Small on purpose:
+/// every document read counts against the free daily allowance.
+final recentPlansProvider = StreamProvider<List<OutingPlan>>((ref) {
   final uid = ref.watch(uidProvider);
   if (uid == null) return Stream.value(const []);
-  return ref.watch(plansRepositoryProvider).watchAll(uid);
+  return ref.watch(plansRepositoryProvider).watchRecent(uid, limit: 15);
+});
+
+/// Plan history, [limit] newest (grows by 20 with "Show more").
+final historyPlansProvider = StreamProvider.family<List<OutingPlan>, int>((ref, limit) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Stream.value(const []);
+  return ref.watch(plansRepositoryProvider).watchRecent(uid, limit: limit);
+});
+
+/// How many plans you've made (a cheap count for stats and badges).
+final plansCountProvider = FutureProvider<int>((ref) async {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return 0;
+  return ref.watch(plansRepositoryProvider).count(uid);
 });
 
 final allPlacesProvider =

@@ -743,3 +743,68 @@ List<({String name, double lat, double lng, int count})> areaCenters(
   ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// Plans written by the app itself (no AI needed)
+// ---------------------------------------------------------------------------
+
+/// One honest line about a stop, built only from map facts, e.g.
+/// "Café · Italian · open then · 📶 Wi-Fi · 0.8 km from the last stop".
+String describeStop(Place p, {DateTime? at, double? kmFromPrevious}) {
+  final parts = <String>[
+    p.kindLabel ?? Categories.label(p.category),
+    ?p.cuisineLabel,
+    if (at != null && p.isOpenAt(at) == true) tr('open then'),
+    if (p.details.floorLabel != null && p.parentMallId != null) p.details.floorLabel!,
+    ...p.details.labels.take(2),
+    if (kmFromPrevious != null) trf('{km} km from the last stop', {'km': kmFromPrevious.toStringAsFixed(1)}),
+  ];
+  return parts.join(' · ');
+}
+
+/// A title for a plan the app made: "😌 Chill evening in Zamalek".
+String localTitle(PlanRequest r, List<PlanStop> stops) {
+  final vibe = r.vibes.isEmpty ? '' : tr(Vibes.all[r.vibes.first] ?? r.vibes.first);
+  final time = tr(TimesOfDay.all[r.timeOfDay] ?? r.timeOfDay);
+  final where = r.nearLabel != null && r.nearLabel != 'you'
+      ? r.nearLabel!
+      : stops.map((s) => s.area).whereType<String>().firstOrNull ?? tr(Cities.all[r.city] ?? r.city);
+  return _clip(trf('{vibe} {time} in {area}', {'vibe': vibe, 'time': time, 'area': where}).trim(), 60);
+}
+
+/// Fills in a factual "why" for stops that have none.
+List<PlanStop> withLocalReasons(List<PlanStop> stops, List<Place> places, DateTime day) {
+  final byId = {for (final p in places) p.id: p};
+  return [
+    for (final s in stops)
+      if (s.why != null || byId[s.placeId] == null)
+        s
+      else
+        PlanStop.fromMap({
+          ...s.toMap(),
+          'why': describeStop(byId[s.placeId]!,
+              at: _atTime(day, s.startTime), kmFromPrevious: s.kmFromPrevious),
+        }),
+  ];
+}
+
+DateTime? _atTime(DateTime day, String? hhmm) {
+  final m = _minutesOf(hhmm);
+  return m == null ? null : DateTime(day.year, day.month, day.day).add(Duration(minutes: m));
+}
+
+/// Puts the AI's words (title, summary, tips, one "why" per place) on an
+/// existing plan without changing its places, order or times.
+({String title, String summary, List<String> tips, List<PlanStop> stops}) applyAiWords(
+    OutingPlan plan, ProposedPlan words) {
+  final why = {for (final s in words.stops) s.placeId: s.why};
+  return (
+    title: words.title,
+    summary: words.summary,
+    tips: words.tips,
+    stops: [
+      for (final s in plan.stops)
+        why[s.placeId] == null ? s : PlanStop.fromMap({...s.toMap(), 'why': why[s.placeId]}),
+    ],
+  );
+}

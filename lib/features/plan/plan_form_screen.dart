@@ -10,6 +10,7 @@ import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/plan.dart';
+import '../../planner/services.dart' show aiResting;
 import '../../planner/planner.dart' show compactRadiusKm;
 import '../../widgets/common.dart';
 import '../profile/about_screen.dart' show appVersion;
@@ -39,6 +40,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   bool _skipVisited = false;
   bool _preferFavorites = true;
   bool _onlyOpen = true;
+  bool _useAi = false;
   (double, double, String)? _anchor;
   double _radius = PlanRequest.defaultRadiusKm;
   bool _locating = false;
@@ -164,7 +166,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
       nearLabel: _mallId == null ? _anchor?.$3 : null,
       radiusKm: _radius,
     );
-    final id = await runPlanGeneration(context, ref, request);
+    final id = await runPlanGeneration(context, ref, request, useAi: _useAi);
     if (id != null && mounted) context.push('/plan/$id');
   }
 
@@ -420,6 +422,13 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           SectionTitle(tr('Choices')),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
+            title: Text(tr('✨ Let AI pick and write the plan')),
+            subtitle: Text(tr('Takes a few seconds. Our own planner is instant and is used if the AI is busy.')),
+            value: _useAi,
+            onChanged: (v) => setState(() => _useAi = v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
             title: Text(tr('Only places open at that time')),
             subtitle: Text(tr('Uses real opening hours when the map has them')),
             value: _onlyOpen,
@@ -470,8 +479,8 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
 
 /// Shows a friendly loading dialog while the server builds the plan.
 /// Returns the new plan id, or null if it failed (an error is shown).
-Future<String?> runPlanGeneration(
-    BuildContext context, WidgetRef ref, PlanRequest request) async {
+Future<String?> runPlanGeneration(BuildContext context, WidgetRef ref, PlanRequest request,
+    {bool useAi = false}) async {
   final navigator = Navigator.of(context, rootNavigator: true);
   final messenger = ScaffoldMessenger.of(context);
   showDialog<void>(
@@ -482,7 +491,13 @@ Future<String?> runPlanGeneration(
   try {
     final uid = ref.read(uidProvider);
     if (uid == null) throw Exception(tr('Please sign in again.'));
-    return await ref.read(plansRepositoryProvider).generate(uid, request);
+    final id = await ref.read(plansRepositoryProvider).generate(uid, request, useAi: useAi);
+    ref.invalidate(plansCountProvider);
+    if (useAi && aiResting) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(tr('AI is resting for now (free daily limit). Our planner made this one.'))));
+    }
+    return id;
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(friendlyError(e))));
     return null;
@@ -683,7 +698,7 @@ class _RecentPlans extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final plans = (ref.watch(allPlansProvider).value ?? const []).take(5).toList();
+    final plans = (ref.watch(recentPlansProvider).value ?? const []).take(5).toList();
     if (plans.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

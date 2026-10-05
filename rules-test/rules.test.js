@@ -28,7 +28,7 @@ beforeEach(async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
-    await setDoc(doc(db, "users/alice/plans/plan1"), { title: "T", saved: false, stops: [] });
+    await setDoc(doc(db, "users/alice/plans/plan1"), { title: "T", saved: false, stops: [], summary: "", tips: [], source: "local" });
     await setDoc(doc(db, "publicProfiles/alice"), { displayName: "Alice", username: "alice" });
     await setDoc(doc(db, "publicProfiles/bob"), { displayName: "Bob" });
     await setDoc(doc(db, "usernames/alice"), { uid: ALICE });
@@ -56,8 +56,8 @@ test("plans: owner creates and saves; can't fake or edit content", async () => {
   await assertFails(addDoc(plans(as(ALICE)), { ...plan, stops: [1, 2, 3, 4, 5, 6] }));
   await assertFails(addDoc(plans(as(ALICE)), { ...plan, isAdmin: true }));
   await assertSucceeds(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { saved: true }));
-  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { summary: "edited" }));
-  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { source: "ai" }));
+  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { request: { city: "giza" } }));
+  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { weatherNote: "sunny" }));
   await assertFails(getDoc(doc(as(BOB), "users/alice/plans/plan1")));
   await assertFails(getDoc(doc(anon(), "users/alice/plans/plan1")));
 });
@@ -278,4 +278,13 @@ test("check-ins: only you write yours; only listed friends read it", async () =>
   await assertFails(getDocs(collection(as(EVE), "checkins")), "no listing everyone");
   await assertFails(deleteDoc(c(as(CAROL), ALICE)));
   await assertSucceeds(deleteDoc(c(as(ALICE), ALICE)));
+});
+
+test("plans: AI polish can update summary, tips and source, within limits", async () => {
+  const ref = (db) => doc(db, "users/alice/plans/plan1");
+  await assertSucceeds(updateDoc(ref(as(ALICE)), { title: "Nice", summary: "A calm evening.", tips: ["Book ahead"], source: "ai" }));
+  await assertFails(updateDoc(ref(as(ALICE)), { summary: "x".repeat(401) }));
+  await assertFails(updateDoc(ref(as(ALICE)), { tips: ["a", "b", "c", "d"] }));
+  await assertFails(updateDoc(ref(as(ALICE)), { source: "hacked" }));
+  await assertFails(updateDoc(ref(as(BOB)), { summary: "nope" }));
 });

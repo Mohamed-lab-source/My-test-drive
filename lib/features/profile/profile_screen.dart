@@ -187,7 +187,9 @@ class ProfileScreen extends ConsumerWidget {
   /// Everything you've saved, as text you can keep or send to yourself.
   Future<void> _export(BuildContext context, WidgetRef ref) async {
     try {
-      final plans = await ref.read(allPlansProvider.future);
+      final uid = ref.read(uidProvider);
+      if (uid == null) return;
+      final plans = await ref.read(plansRepositoryProvider).getAll(uid);
       final favorites = await ref.read(favoritePlacesProvider.future);
       final visited = await ref.read(visitedPlacesProvider.future);
       final all = await ref.read(allPlacesProvider.future);
@@ -300,7 +302,7 @@ class _Stats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final plans = ref.watch(allPlansProvider).value?.length;
+    final plans = ref.watch(plansCountProvider).value;
     final favorites = ref.watch(favoriteIdsProvider).value?.length;
     final visited = ref.watch(visitedIdsProvider).value?.length;
     final groups = ref.watch(myGroupsProvider).value?.length;
@@ -343,7 +345,7 @@ class _Badges extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final visitedPlaces = ref.watch(visitedPlacesProvider).value ?? const [];
     final counts = MyCounts(
-      plans: ref.watch(allPlansProvider).value?.length ?? 0,
+      plans: ref.watch(plansCountProvider).value ?? 0,
       favorites: ref.watch(favoriteIdsProvider).value?.length ?? 0,
       visited: ref.watch(visitedIdsProvider).value?.length ?? 0,
       groups: ref.watch(myGroupsProvider).value?.length ?? 0,

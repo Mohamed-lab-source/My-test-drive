@@ -9,7 +9,10 @@ import 'planner.dart';
 /// app still builds plans from real places by itself.
 const geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
 const geminiModel =
-    String.fromEnvironment('GEMINI_MODEL', defaultValue: 'gemini-flash-latest');
+    String.fromEnvironment('GEMINI_MODEL', defaultValue: 'gemini-flash-lite-latest');
+
+/// The lighter "Flash-Lite" model: plenty for short sentences, with a
+/// bigger free daily allowance than the full model.
 
 /// The key only works from this app: Google checks these two headers.
 const _androidPackage = 'com.khroga.khroga';
@@ -58,15 +61,24 @@ Future<Weather?> fetchWeather(String city, {DateTime? day, http.Client? client})
 }
 
 class AiUnavailable implements Exception {
-  AiUnavailable(this.reason);
+  AiUnavailable(this.reason, {this.resting = false});
   final String reason;
+
+  /// True when the free daily AI allowance is used up (try again later).
+  final bool resting;
   @override
   String toString() => 'AI unavailable: $reason';
 }
 
+/// After the free allowance runs out, don't ask again for a while: it would
+/// only fail and waste time. Kept in memory, so restarting the app retries.
+DateTime? _restingUntil;
+bool get aiResting => _restingUntil != null && DateTime.now().isBefore(_restingUntil!);
+
 /// Asks Gemini for a plan as structured JSON.
 Future<Map<String, dynamic>> askGemini(String prompt, {http.Client? client}) async {
   if (geminiApiKey.isEmpty) throw AiUnavailable('no key in this build');
+  if (aiResting) throw AiUnavailable('resting', resting: true);
   final uri = Uri.https('generativelanguage.googleapis.com',
       '/v1beta/models/$geminiModel:generateContent');
   final res = await (client ?? http.Client())
@@ -95,6 +107,10 @@ Future<Map<String, dynamic>> askGemini(String prompt, {http.Client? client}) asy
         }),
       )
       .timeout(const Duration(seconds: 40));
+  if (res.statusCode == 429) {
+    _restingUntil = DateTime.now().add(const Duration(hours: 1));
+    throw AiUnavailable('free allowance used up', resting: true);
+  }
   if (res.statusCode != 200) {
     final body = res.body;
     throw AiUnavailable('HTTP ${res.statusCode}: '

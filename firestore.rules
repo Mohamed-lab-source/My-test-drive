@@ -28,15 +28,20 @@ service cloud.firestore {
         allow create: if isMe(uid)
           && newData().keys().hasOnly(['title', 'summary', 'stops', 'request', 'tips',
                                        'weatherNote', 'source', 'saved', 'createdAt'])
+          && newData().source in ['ai', 'fallback', 'local']
           && newData().stops is list && newData().stops.size() <= 5
           && newData().title is string && newData().title.size() <= 80
           && newData().saved == false
           && newData().createdAt == request.time;
         // Owner can (un)save, or swap stops (still at most 5).
         // Owner can (un)save, rename, or edit stops (still at most 5).
+        // "Make it nicer with AI" may also replace the summary, tips and source.
         allow update: if isMe(uid)
-          && changed().hasOnly(['saved', 'stops', 'title'])
+          && changed().hasOnly(['saved', 'stops', 'title', 'summary', 'tips', 'source'])
           && newData().saved is bool
+          && newData().summary is string && newData().summary.size() <= 400
+          && newData().tips is list && newData().tips.size() <= 3
+          && newData().source in ['ai', 'fallback', 'local']
           && newData().stops is list && newData().stops.size() <= 5
           && newData().title is string && newData().title.size() > 0
           && newData().title.size() <= 80;

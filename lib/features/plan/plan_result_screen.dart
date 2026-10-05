@@ -13,6 +13,7 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../planner/planner.dart';
+import '../../planner/services.dart' show AiUnavailable;
 import '../../widgets/common.dart';
 import '../../widgets/khroga_map.dart';
 import '../../widgets/launchers.dart';
@@ -202,11 +203,14 @@ class _PlanBody extends ConsumerWidget {
         ],
         if (plan.source == 'fallback') ...[
           const SizedBox(height: KSpace.md),
-          const _InfoBanner(
+          _InfoBanner(
             icon: Icons.info_outline,
-            text: 'Our AI planner was busy or offline, so we picked '
-                'well-known matching places for you. Tap "Another one" to try again.',
+            text: tr('The AI was busy or offline, so our planner picked real places for you.'),
           ),
+        ],
+        if (plan.source != 'ai') ...[
+          const SizedBox(height: KSpace.md),
+          _MakeNicer(plan: plan),
         ],
         const SizedBox(height: KSpace.lg),
         for (var i = 0; i < plan.stops.length; i++)
@@ -1008,6 +1012,56 @@ class _HowWasIt extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Optional: let Gemini write a title, summary, tips and a sentence per
+/// stop. The places, order and times stay exactly the same.
+class _MakeNicer extends ConsumerStatefulWidget {
+  const _MakeNicer({required this.plan});
+
+  final OutingPlan plan;
+
+  @override
+  ConsumerState<_MakeNicer> createState() => _MakeNicerState();
+}
+
+class _MakeNicerState extends ConsumerState<_MakeNicer> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    final uid = ref.read(uidProvider);
+    if (uid == null) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(plansRepositoryProvider).improveWithAi(uid, widget.plan);
+    } on AiUnavailable catch (e) {
+      if (mounted) {
+        showMessage(
+            context,
+            e.resting
+                ? tr('AI is resting for now (free daily limit). Your plan is ready as it is.')
+                : tr("The AI couldn't help right now. Your plan is ready as it is."));
+      }
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: const Text('✨', style: TextStyle(fontSize: 24)),
+        title: Text(tr('Made by our planner')),
+        subtitle: Text(tr('Want a friendlier title and description? Let the AI write them.')),
+        trailing: _busy
+            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5))
+            : FilledButton.tonal(onPressed: _run, child: Text(tr('Make it nicer'))),
       ),
     );
   }

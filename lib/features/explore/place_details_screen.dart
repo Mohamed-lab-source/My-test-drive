@@ -791,7 +791,7 @@ class _MyRating extends ConsumerWidget {
 Future<void> _addToPlan(BuildContext context, WidgetRef ref, Place place) async {
   final uid = ref.read(uidProvider);
   if (uid == null) return;
-  final plans = (await ref.read(allPlansProvider.future))
+  final plans = (await ref.read(recentPlansProvider.future))
       .where((p) => p.stops.length < 5 && !p.stops.any((s) => s.placeId == place.id))
       .take(15)
       .toList();
