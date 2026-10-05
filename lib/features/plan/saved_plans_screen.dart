@@ -8,7 +8,9 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
+import '../../widgets/khroga_map.dart';
 import '../explore/explore_screen.dart';
+import 'plan_form_screen.dart' show runPlanGeneration;
 
 /// Saved plans, every plan you've made, favorite places, and places you've been.
 class SavedPlansScreen extends ConsumerWidget {
@@ -46,6 +48,7 @@ class SavedPlansScreen extends ConsumerWidget {
             _PlanList(
               value: ref.watch(allPlansProvider),
               emptyEmoji: '🕘',
+              clearable: true,
               emptyTitle: 'No plans yet',
               emptyMessage: 'Every plan you make shows up here.',
             ),
@@ -74,8 +77,11 @@ class _PlanList extends ConsumerStatefulWidget {
     required this.emptyEmoji,
     required this.emptyTitle,
     required this.emptyMessage,
+    this.clearable = false,
   });
 
+  /// Shows "Clear unsaved" (History tab).
+  final bool clearable;
   final AsyncValue<List<OutingPlan>> value;
   final String emptyEmoji;
   final String emptyTitle;
@@ -123,6 +129,12 @@ class _PlanListState extends ConsumerState<_PlanList> {
                       onChanged: (v) => setState(() => _q = v),
                     ),
                   ),
+                  if (widget.clearable)
+                    IconButton(
+                      tooltip: 'Clear plans you didn\'t save',
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      onPressed: () => _clearUnsaved(all),
+                    ),
                   IconButton(
                     tooltip: _oldestFirst ? 'Newest first' : 'Oldest first',
                     onPressed: () => setState(() => _oldestFirst = !_oldestFirst),
@@ -136,6 +148,35 @@ class _PlanListState extends ConsumerState<_PlanList> {
         );
       },
     );
+  }
+
+  Future<void> _clearUnsaved(List<OutingPlan> all) async {
+    final unsaved = all.where((p) => !p.saved).toList();
+    if (unsaved.isEmpty) {
+      showMessage(context, 'Nothing to clear: every plan here is saved.');
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('Delete ${unsaved.length} unsaved plan${unsaved.length == 1 ? '' : 's'}?'),
+        content: const Text('Saved plans stay.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    final uid = ref.read(uidProvider);
+    if (ok != true || uid == null) return;
+    try {
+      for (final p in unsaved) {
+        await ref.read(plansRepositoryProvider).delete(uid, p.id);
+      }
+      if (mounted) showMessage(context, 'Cleared');
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
   }
 
   Widget _buildList(BuildContext context, List<OutingPlan> list) {
@@ -186,7 +227,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
   }
 }
 
-class _PlaceListTab extends StatelessWidget {
+class _PlaceListTab extends StatefulWidget {
   const _PlaceListTab({
     required this.value,
     required this.emptyEmoji,
@@ -200,16 +241,48 @@ class _PlaceListTab extends StatelessWidget {
   final String emptyMessage;
 
   @override
+  State<_PlaceListTab> createState() => _PlaceListTabState();
+}
+
+class _PlaceListTabState extends State<_PlaceListTab> {
+  bool _map = false;
+
+  @override
   Widget build(BuildContext context) {
     return AsyncView<List<Place>>(
-      value: value,
+      value: widget.value,
       builder: (list) => list.isEmpty
-          ? EmptyState(emoji: emptyEmoji, title: emptyTitle, message: emptyMessage)
-          : ListView.separated(
+          ? EmptyState(emoji: widget.emptyEmoji, title: widget.emptyTitle, message: widget.emptyMessage)
+          : Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _map = !_map),
+                    icon: Icon(_map ? Icons.view_list_outlined : Icons.map_outlined),
+                    label: Text(_map ? 'List' : 'Map'),
+                  ),
+                ),
+                Expanded(
+                  child: _map
+                      ? KhrogaMap(pins: [
+                          for (final p in list.where((p) => p.hasLocation))
+                            MapPin(
+                              lat: p.lat!,
+                              lng: p.lng!,
+                              label: p.name,
+                              emoji: Categories.emoji(p.category),
+                              onTap: () => context.push('/place/${p.id}'),
+                            ),
+                        ])
+                      : ListView.separated(
               padding: const EdgeInsets.all(KSpace.md),
               itemCount: list.length,
               separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
               itemBuilder: (_, i) => PlaceTile(place: list[i]),
+            ),
+                ),
+              ],
             ),
     );
   }
@@ -223,14 +296,30 @@ class _SavedPlanTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final emojis = plan.stops.map((s) => Categories.emoji(s.category)).join(' ');
-    final date = plan.createdAt == null ? '' : DateFormat.MMMd().format(plan.createdAt!);
+    final date = plan.request.date != null
+        ? 'for ${DateFormat('EEE d MMM').format(plan.request.day)}'
+        : plan.createdAt == null
+            ? ''
+            : DateFormat.MMMd().format(plan.createdAt!);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.sm),
         title: Text(plan.title, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Text('$emojis   ${plan.stops.length} stops · $date'),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Consumer(
+          builder: (context, ref, _) => PopupMenuButton<String>(
+            onSelected: (_) async {
+              final exclude = {...plan.request.excludePlaceIds, ...plan.stops.map((s) => s.placeId)};
+              final id = await runPlanGeneration(
+                  context, ref, plan.request.copyWith(excludePlaceIds: exclude.toList()));
+              if (id != null && context.mounted) context.push('/plan/$id');
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'again', child: Text('Plan again (new places)')),
+            ],
+          ),
+        ),
         onTap: () => context.push('/plan/${plan.id}'),
       ),
     );

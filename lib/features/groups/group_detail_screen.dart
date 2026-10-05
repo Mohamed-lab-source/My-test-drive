@@ -7,6 +7,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/helpers.dart';
+import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
@@ -67,6 +68,22 @@ class _GroupView extends ConsumerStatefulWidget {
 
 class _GroupViewState extends ConsumerState<_GroupView> {
   String? _search; // null = not searching
+  late final StringMapPref _opened;
+
+  void _markRead() => _opened.set(widget.group.id, DateTime.now().toIso8601String());
+
+  @override
+  void initState() {
+    super.initState();
+    _opened = ref.read(groupOpenedProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
+  }
+
+  @override
+  void dispose() {
+    _markRead(); // messages read while the chat was open
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +98,17 @@ class _GroupViewState extends ConsumerState<_GroupView> {
     return Scaffold(
       appBar: AppBar(
         title: _search == null
-            ? Text(group.name, overflow: TextOverflow.ellipsis)
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(group.name, overflow: TextOverflow.ellipsis),
+                  Text(
+                    '${group.memberUids.length} member${group.memberUids.length == 1 ? '' : 's'}'
+                    '${group.scheduledAt == null ? '' : ' · ${DateFormat('EEE d MMM').format(group.scheduledAt!)}'}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              )
             : TextField(
                 autofocus: true,
                 decoration: const InputDecoration(hintText: 'Search messages', isDense: true),
@@ -420,6 +447,29 @@ class _Header extends ConsumerWidget {
                       avatar: const Icon(Icons.route_outlined, size: 18),
                       label: const Text('Route'),
                       onPressed: () => openUri(url),
+                    ),
+                  if (waiting > 0)
+                    ActionChip(
+                      avatar: const Icon(Icons.campaign_outlined, size: 18),
+                      label: const Text('Nudge'),
+                      onPressed: () async {
+                        final waitingUids =
+                            group.memberUids.where((u) => !group.rsvp.containsKey(u)).toList();
+                        final profiles =
+                            await ref.read(profilesProvider(profilesKey(waitingUids)).future);
+                        final names = waitingUids.map((u) => profiles[u]?.displayName ?? 'someone');
+                        try {
+                          await repo.sendMessage(
+                            groupId: group.id,
+                            uid: uid,
+                            name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
+                            text: '👋 Still waiting to hear from ${names.join(', ')}. '
+                                "Are you coming? Tap Going / Maybe / Can't at the top.",
+                          );
+                        } catch (e) {
+                          if (context.mounted) showError(context, e);
+                        }
+                      },
                     ),
                   if (group.scheduledAt != null && group.scheduledAt!.isAfter(DateTime.now()))
                     ActionChip(
@@ -922,6 +972,20 @@ class _Bubble extends ConsumerWidget {
               Text(message.text,
                   style: TextStyle(
                       color: mine ? context.k.onAccent : context.k.ink, fontSize: 15)),
+              for (final (link, _) in splitLinks(message.text).where((p) => p.$2).take(3))
+                InkWell(
+                  onTap: () => openUri(Uri.parse(link)),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      link.contains('google.com/maps') ? '🗺️ Open in Maps' : '🔗 Open link',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          decoration: TextDecoration.underline,
+                          color: mine ? context.k.onAccent : context.k.accent),
+                    ),
+                  ),
+                ),
               if (counts.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
@@ -997,6 +1061,39 @@ class _ComposerState extends ConsumerState<_Composer> {
     super.dispose();
   }
 
+  Future<void> _sendFavorite() async {
+    final favorites = await ref.read(favoritePlacesProvider.future);
+    if (!mounted) return;
+    if (favorites.isEmpty) {
+      showMessage(context, 'Tap the heart on places to have favorites to send.');
+      return;
+    }
+    final picked = await showModalBottomSheet<Place>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        builder: (_, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.all(KSpace.md),
+          children: [
+            Text('Send a favorite place', style: Theme.of(sheetContext).textTheme.titleLarge),
+            for (final p in favorites)
+              ListTile(
+                leading: Text(Categories.emoji(p.category), style: const TextStyle(fontSize: 22)),
+                title: Text(p.name),
+                subtitle: p.area == null ? null : Text(p.area!),
+                onTap: () => Navigator.pop(sheetContext, p),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) await _send(placeChatText(picked));
+  }
+
   Future<void> _sendMyLocation() async {
     try {
       final here = await ref.read(locationServiceProvider).current();
@@ -1052,6 +1149,11 @@ class _ComposerState extends ConsumerState<_Composer> {
           ),
           Row(
         children: [
+          IconButton(
+            tooltip: 'Send a favorite place',
+            onPressed: _sending ? null : _sendFavorite,
+            icon: const Icon(Icons.place_outlined),
+          ),
           IconButton(
             tooltip: 'Send my location',
             onPressed: _sending ? null : _sendMyLocation,

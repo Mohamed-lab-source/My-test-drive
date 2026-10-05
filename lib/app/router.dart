@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/providers.dart';
+import '../models/social.dart';
 import 'local_prefs.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/explore/explore_screen.dart';
@@ -104,35 +105,45 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class _Shell extends StatelessWidget {
+class _Shell extends ConsumerWidget {
   const _Shell({required this.shell});
 
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final uid = ref.watch(uidProvider);
+    final requests = (ref.watch(friendshipsProvider).value ?? const [])
+        .where((f) => f.status == FriendshipStatus.pending && f.requestedBy != uid)
+        .length;
     return Scaffold(
       body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
         onDestinationSelected: (i) =>
             shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
               icon: Icon(Icons.auto_awesome_outlined),
               selectedIcon: Icon(Icons.auto_awesome),
               label: 'Plan'),
-          NavigationDestination(
+          const NavigationDestination(
               icon: Icon(Icons.explore_outlined),
               selectedIcon: Icon(Icons.explore),
               label: 'Explore'),
-          NavigationDestination(
+          const NavigationDestination(
               icon: Icon(Icons.forum_outlined),
               selectedIcon: Icon(Icons.forum),
               label: 'Groups'),
           NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              selectedIcon: Icon(Icons.people),
+              icon: Badge(
+                  isLabelVisible: requests > 0,
+                  label: Text('$requests'),
+                  child: const Icon(Icons.people_outline)),
+              selectedIcon: Badge(
+                  isLabelVisible: requests > 0,
+                  label: Text('$requests'),
+                  child: const Icon(Icons.people)),
               label: 'Friends'),
         ],
       ),

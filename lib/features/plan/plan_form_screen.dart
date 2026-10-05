@@ -82,6 +82,16 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
     super.initState();
     _mallId = widget.initialMallId;
     _anchor = widget.anchor;
+    // Remember the last choices (saved on the phone).
+    final last = ref.read(lastPlanChoicesProvider);
+    _people = int.tryParse(last['people'] ?? '') ?? _people;
+    _stops = int.tryParse(last['stops'] ?? '') ?? _stops;
+    final vibes = (last['vibes'] ?? '').split(',').where(Vibes.all.containsKey).toList();
+    if (vibes.isNotEmpty) {
+      _vibes
+        ..clear()
+        ..addAll(vibes);
+    }
     final hour = DateTime.now().hour;
     _time = hour < 11
         ? 'morning'
@@ -99,7 +109,38 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
     super.dispose();
   }
 
+  void _reset() {
+    _budget.clear();
+    _notes.clear();
+    setState(() {
+      _people = 2;
+      _vibes
+        ..clear()
+        ..add('chill');
+      _stops = 3;
+      _date = null;
+      _mallId = null;
+      _anchor = null;
+      _radius = PlanRequest.defaultRadiusKm;
+    });
+  }
+
+  /// Random vibe, then plan straight away.
+  Future<void> _surprisePlan() async {
+    final keys = Vibes.all.keys.toList()..shuffle();
+    setState(() {
+      _vibes
+        ..clear()
+        ..addAll(keys.take(2));
+    });
+    await _generate();
+  }
+
   Future<void> _generate() async {
+    final last = ref.read(lastPlanChoicesProvider.notifier);
+    last.set('people', '$_people');
+    last.set('stops', '$_stops');
+    last.set('vibes', _vibes.join(','));
     final request = PlanRequest(
       city: ref.read(cityProvider),
       groupSize: _people,
@@ -165,11 +206,18 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const _WhatsNewCard(),
           const _NextOutingCard(),
-          const SectionTitle('Quick start'),
+          const _RecentPlans(),
+          SectionTitle('Quick start',
+              trailing: TextButton(onPressed: _reset, child: const Text('Reset'))),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
             children: [
+              ActionChip(
+                avatar: const Text('🎲'),
+                label: const Text('Surprise plan'),
+                onPressed: _surprisePlan,
+              ),
               for (final preset in _presets)
                 ActionChip(
                   label: Text(preset.label),
@@ -623,6 +671,36 @@ class _AreaPickerState extends State<_AreaPicker> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Your last few plans, one tap away.
+class _RecentPlans extends ConsumerWidget {
+  const _RecentPlans();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plans = (ref.watch(allPlansProvider).value ?? const []).take(5).toList();
+    if (plans.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('Recent plans'),
+        SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: plans.length,
+            separatorBuilder: (_, _) => const SizedBox(width: KSpace.sm),
+            itemBuilder: (_, i) => ActionChip(
+              avatar: const Icon(Icons.map_outlined, size: 18),
+              label: Text(plans[i].title, overflow: TextOverflow.ellipsis),
+              onPressed: () => context.push('/plan/${plans[i].id}'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

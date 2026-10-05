@@ -175,3 +175,51 @@ String timeAgo(DateTime t, DateTime now) {
   if (d.inHours < 24) return '${d.inHours} h ago';
   return '${d.inDays} day${d.inDays == 1 ? '' : 's'} ago';
 }
+
+/// An OpenStreetMap "add a note" page at the place, to report a closed place
+/// or a wrong fact. Volunteers fix the map; we never edit facts ourselves.
+Uri? osmNoteUrl(Place p) => p.hasLocation
+    ? Uri.parse('https://www.openstreetmap.org/note/new#map=19/${p.lat}/${p.lng}')
+    : null;
+
+/// Google Maps directions by public transport.
+Uri? transitUrl(Place p) => p.hasLocation
+    ? Uri.https('www.google.com', '/maps/dir/', {
+        'api': '1',
+        'destination': '${p.lat},${p.lng}',
+        'travelmode': 'transit',
+      })
+    : null;
+
+/// Just the domain of a website, e.g. "example.com".
+String? websiteDomain(String? url) {
+  if (url == null) return null;
+  final u = Uri.tryParse(url.startsWith('http') ? url : 'https://$url');
+  final host = u?.host ?? '';
+  if (host.isEmpty) return null;
+  return host.startsWith('www.') ? host.substring(4) : host;
+}
+
+/// Today's opening hours line, e.g. "10:00–23:00" or "Closed", or null.
+String? todaysHours(Place p, DateTime now) {
+  final table = p.hours?.weekTable();
+  return table?[now.weekday - 1].$2;
+}
+
+/// Splits text into plain parts and web links, so links can be tapped.
+List<(String, bool)> splitLinks(String text) {
+  final re = RegExp(r'https?://[^\s]+');
+  final out = <(String, bool)>[];
+  var last = 0;
+  for (final m in re.allMatches(text)) {
+    if (m.start > last) out.add((text.substring(last, m.start), false));
+    out.add((m.group(0)!, true));
+    last = m.end;
+  }
+  if (last < text.length) out.add((text.substring(last), false));
+  return out;
+}
+
+/// Total minutes spent at the stops (not counting travel).
+int totalStopMinutes(Iterable<int?> durations) =>
+    durations.fold(0, (sum, d) => sum + (d ?? 0));

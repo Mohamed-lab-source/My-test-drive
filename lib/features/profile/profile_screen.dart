@@ -9,6 +9,7 @@ import '../../app/local_prefs.dart';
 
 import '../../app/theme.dart';
 import '../../data/providers.dart';
+import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
@@ -43,6 +44,7 @@ class ProfileScreen extends ConsumerWidget {
           const _Stats(),
           const SizedBox(height: KSpace.md),
           const _Badges(),
+          const _VisitedBreakdown(),
           const SizedBox(height: KSpace.md),
           Card(
             child: Column(
@@ -439,6 +441,64 @@ class _AppSettingsCard extends ConsumerWidget {
             onChanged: n.setStartOnExplore,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// What kinds of places you've been to, as simple bars.
+class _VisitedBreakdown extends ConsumerWidget {
+  const _VisitedBreakdown();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visited = ref.watch(visitedPlacesProvider).value ?? const [];
+    if (visited.isEmpty) return const SizedBox.shrink();
+    final counts = <String, int>{};
+    for (final p in visited) {
+      counts[p.category] = (counts[p.category] ?? 0) + 1;
+    }
+    final top = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final max = top.first.value;
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.md),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(KSpace.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Where you've been", style: text.titleMedium),
+              const SizedBox(height: KSpace.sm),
+              for (final e in top.take(6))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 120,
+                        child: Text('${Categories.emoji(e.key)} ${Categories.label(e.key)}',
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: e.value / max,
+                            minHeight: 10,
+                            color: context.k.accent,
+                            backgroundColor: context.k.accentSoft,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 32, child: Text('${e.value}', textAlign: TextAlign.end)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

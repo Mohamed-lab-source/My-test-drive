@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/local_history.dart';
+import '../../app/local_prefs.dart';
+import 'package:share_plus/share_plus.dart';
+import 'place_details_screen.dart' show placeShareText;
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
@@ -184,6 +187,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final keys = counts.keys.where((k) => counts[k]! >= 2).toList()
       ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
     return keys.take(n).toList();
+  }
+
+  /// How many of these places are known to be open right now.
+  static int _openCount(List<Place> list) {
+    final now = DateTime.now();
+    return list.take(3000).where((p) => p.isOpenAt(now) == true).length;
   }
 
   void _surprise(List<Place> list) {
@@ -448,7 +457,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.sm, KSpace.md, KSpace.sm),
-                  child: Text('${list.length} places', style: Theme.of(context).textTheme.bodySmall),
+                  child: Text(
+                      '${list.length} places'
+                      '${_openCount(list) > 0 ? ' · ${_openCount(list)} open now' : ''}',
+                      style: Theme.of(context).textTheme.bodySmall),
                 ),
               ),
               if (all.isEmpty)
@@ -518,7 +530,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       childAspectRatio: 0.8,
                     ),
                     itemCount: list.length,
-                    itemBuilder: (_, i) => PlaceGridTile(place: list[i]),
+                    itemBuilder: (_, i) =>
+                        PlaceGridTile(place: list[i], from: _sort == _Sort.nearest ? me : null),
                   ),
                 )
               else
@@ -612,9 +625,12 @@ class _AreaSheetState extends State<_AreaSheet> {
 
 /// A photo card for the grid view.
 class PlaceGridTile extends StatelessWidget {
-  const PlaceGridTile({super.key, required this.place});
+  const PlaceGridTile({super.key, required this.place, this.from});
 
   final Place place;
+
+  /// When set, shows the distance from this point.
+  final (double, double)? from;
 
   @override
   Widget build(BuildContext context) {
@@ -640,7 +656,12 @@ class PlaceGridTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(place.name, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(place.area ?? place.kindLabel ?? Categories.label(place.category),
+                  Text(
+                      [
+                        if (from != null && place.hasLocation)
+                          _km(haversineKm(from!.$1, from!.$2, place.lat!, place.lng!)),
+                        place.area ?? place.kindLabel ?? Categories.label(place.category),
+                      ].join(' · '),
                       style: text.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   OpenBadge(place: place),
                 ],
@@ -712,6 +733,7 @@ class PlaceTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/place/${place.id}'),
+        onLongPress: () => showPlaceQuickActions(context, place),
         child: Padding(
           padding: const EdgeInsets.all(KSpace.sm + 4),
           child: Row(
@@ -762,3 +784,60 @@ class OsmCredit extends StatelessWidget {
     );
   }
 }
+
+/// Long-press a place: favorite, add to a list, share, or open it.
+Future<void> showPlaceQuickActions(BuildContext context, Place place) =>
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheetContext) => Consumer(builder: (context, ref, _) {
+        final fav = ref.watch(favoriteIdsProvider).value?.contains(place.id) ?? false;
+        final lists = ref.watch(placeListsProvider);
+        return ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(KSpace.md),
+          children: [
+            Text(place.name, style: Theme.of(context).textTheme.titleLarge),
+            ListTile(
+              leading: Icon(fav ? Icons.favorite : Icons.favorite_border),
+              title: Text(fav ? 'Remove from favorites' : 'Add to favorites'),
+              onTap: () async {
+                final uid = ref.read(uidProvider);
+                Navigator.pop(sheetContext);
+                if (uid == null) return;
+                try {
+                  await ref.read(favoritesRepositoryProvider).set(uid, place.id, !fav);
+                } catch (e) {
+                  if (context.mounted) showError(context, e);
+                }
+              },
+            ),
+            for (final l in lists.keys)
+              CheckboxListTile(
+                secondary: const Icon(Icons.bookmark_outline),
+                title: Text('In "$l"'),
+                value: lists[l]!.contains(place.id),
+                onChanged: (_) => ref.read(placeListsProvider.notifier).toggle(l, place.id),
+              ),
+            ListTile(
+              leading: const Icon(Icons.share_outlined),
+              title: const Text('Share'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                SharePlus.instance.share(ShareParams(text: placeShareText(place)));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new),
+              title: const Text('Open'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/place/${place.id}');
+              },
+            ),
+          ],
+        );
+      }),
+    );
+
+String _km(double km) => km < 1 ? '${(km * 1000).round()} m' : '${km.toStringAsFixed(1)} km';

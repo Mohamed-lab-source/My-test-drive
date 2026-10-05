@@ -181,3 +181,11 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
 
 final appSettingsProvider =
     NotifierProvider<AppSettingsNotifier, AppSettings>(AppSettingsNotifier.new);
+
+/// When you last opened each group chat (group id → ISO time), for unread dots.
+final groupOpenedProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('group.opened'));
+
+/// Your last plan choices (people, vibes, time, stops), so the form remembers.
+final lastPlanChoicesProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('plan.last'));

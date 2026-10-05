@@ -248,6 +248,21 @@ void moreTests() {
     expect(const CheckIn(uid: 'u', name: '', placeId: '', placeName: '').isFresh(now), isFalse);
   });
 
+  test('small helpers for links, hours and websites', () {
+    expect(websiteDomain('https://www.test-cafe.example/menu'), 'test-cafe.example');
+    expect(websiteDomain('test.example'), 'test.example');
+    expect(websiteDomain(null), isNull);
+    expect(splitLinks('see https://a.example/x now'), [('see ', false), ('https://a.example/x', true), (' now', false)]);
+    expect(splitLinks('no links'), [('no links', false)]);
+    const p = Place(id: 'x', name: 'Test', category: 'cafe', city: 'cairo', lat: 30, lng: 31,
+        openingHours: 'Mo-Fr 09:00-17:00; Sa,Su off');
+    expect(todaysHours(p, DateTime(2026, 10, 5)), '09:00–17:00');
+    expect(todaysHours(p, DateTime(2026, 10, 10)), 'Closed');
+    expect(osmNoteUrl(p).toString(), contains('map=19/30.0/31.0'));
+    expect(transitUrl(p)!.queryParameters['travelmode'], 'transit');
+    expect(totalStopMinutes([60, null, 90]), 150);
+  });
+
   test('poll counts votes', () {
     const p = Poll(id: 'p', uid: 'u', question: 'Q', options: ['A', 'B'], votes: {'x': 0, 'y': 1, 'z': 1});
     expect(p.countFor(1), 2);

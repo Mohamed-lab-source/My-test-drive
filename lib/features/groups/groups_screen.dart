@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/social.dart';
@@ -78,13 +79,17 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
   }
 }
 
-class _GroupTile extends StatelessWidget {
+class _GroupTile extends ConsumerWidget {
   const _GroupTile({required this.group});
 
   final Group group;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final opened = DateTime.tryParse(ref.watch(groupOpenedProvider)[group.id] ?? '');
+    final unread = group.lastMessage != null &&
+        group.lastMessageAt != null &&
+        (opened == null || group.lastMessageAt!.isAfter(opened));
     final going = group.rsvp.values.where((r) => r == Rsvp.going).length;
     final sub = [
       if (group.scheduledAt != null)
@@ -107,12 +112,21 @@ class _GroupTile extends StatelessWidget {
         ),
         title: Text(group.name,
             style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitleTextStyle: unread
+            ? Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)
+            : null,
         subtitle: Text(
           group.lastMessage ?? sub,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: unread
+            ? Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(color: context.k.accent, shape: BoxShape.circle),
+              )
+            : const Icon(Icons.chevron_right),
         onTap: () => context.push('/group/${group.id}'),
       ),
     );

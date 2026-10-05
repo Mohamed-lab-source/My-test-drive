@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../app/helpers.dart' show sameDay;
+import '../../app/helpers.dart' show sameDay, totalStopMinutes;
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -180,8 +180,20 @@ class _PlanBody extends ConsumerWidget {
               Pill(d == 1 ? '⏳ Tomorrow' : '⏳ In $d days'),
             if (endsAt != null && plan.stops.first.startTime != null)
               Pill('🕘 ${plan.stops.first.startTime}–$endsAt'),
+            if (totalStopMinutes(plan.stops.map((s) => s.durationMinutes)) > 0)
+              Pill('⏱ ${_StopTile._duration(totalStopMinutes(plan.stops.map((s) => s.durationMinutes)))} at stops'),
           ],
         ),
+        if (plan.stops.isNotEmpty && plan.stops.first.hasLocation) ...[
+          const SizedBox(height: KSpace.md),
+          FilledButton.icon(
+            onPressed: () =>
+                openDirections(lat: plan.stops.first.lat!, lng: plan.stops.first.lng!),
+            icon: const Icon(Icons.navigation_outlined),
+            label: Text('Go to the first stop: ${plan.stops.first.name}',
+                overflow: TextOverflow.ellipsis),
+          ),
+        ],
         if (plan.weatherNote != null) ...[
           const SizedBox(height: KSpace.md),
           _InfoBanner(icon: Icons.wb_sunny_outlined, text: plan.weatherNote!),

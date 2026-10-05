@@ -100,7 +100,15 @@ class _Details extends ConsumerWidget {
       children: [
         _Header(place: place),
         const SizedBox(height: KSpace.md),
-        Text(place.name, style: text.headlineMedium),
+        GestureDetector(
+          onLongPress: () {
+            Clipboard.setData(ClipboardData(text: place.name));
+            showMessage(context, 'Name copied');
+          },
+          child: Text(place.name, style: text.headlineMedium),
+        ),
+        if (todaysHours(place, DateTime.now()) case final today?)
+          Text('Today: $today', style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
         if (place.nameAr != null && place.nameAr != place.name)
           Text(place.nameAr!,
               textDirection: TextDirection.rtl,
@@ -224,7 +232,7 @@ class _Details extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => openWebsite(place.website!),
                 icon: const Icon(Icons.language),
-                label: const Text('Website'),
+                label: Text(websiteDomain(place.website) ?? 'Website'),
               ),
             if (wazeUrl(place) != null)
               OutlinedButton.icon(
@@ -248,6 +256,23 @@ class _Details extends ConsumerWidget {
                 onPressed: () => openUri(whatsappUrl(place.phone)!),
                 icon: const Icon(Icons.chat_outlined),
                 label: const Text('WhatsApp'),
+              ),
+            if (transitUrl(place) != null)
+              OutlinedButton.icon(
+                onPressed: () => openUri(transitUrl(place)!),
+                icon: const Icon(Icons.directions_bus_outlined),
+                label: const Text('Transit'),
+              ),
+            if (place.hasLocation)
+              OutlinedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(
+                      text: Uri.https('www.google.com', '/maps/search/',
+                          {'api': '1', 'query': '${place.lat},${place.lng}'}).toString()));
+                  showMessage(context, 'Map link copied');
+                },
+                icon: const Icon(Icons.link),
+                label: const Text('Copy map link'),
               ),
             if (streetViewUrl(place) != null)
               OutlinedButton.icon(
@@ -306,6 +331,12 @@ class _Details extends ConsumerWidget {
         _PlaceList(title: "What's nearby (within 500 m)", places: nearbyPlaces(place, all)),
         _PlaceList(title: 'Other branches', places: otherBranches(place, all)),
         const SizedBox(height: KSpace.lg),
+        if (osmNoteUrl(place) != null)
+          TextButton.icon(
+            onPressed: () => openUri(osmNoteUrl(place)!),
+            icon: const Icon(Icons.flag_outlined),
+            label: const Text('Closed or wrong? Tell OpenStreetMap'),
+          ),
         if (place.osmUrl != null)
           TextButton(
             onPressed: () => openWebsite(place.osmUrl!),

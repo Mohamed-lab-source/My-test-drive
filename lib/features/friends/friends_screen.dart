@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -55,6 +56,15 @@ class FriendsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Friends'),
         actions: [
+          if (me?.username != null)
+            IconButton(
+              tooltip: 'Copy my username',
+              icon: const Icon(Icons.copy),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: '@${me!.username}'));
+                showMessage(context, 'Username copied');
+              },
+            ),
           if (me?.username != null)
             IconButton(
               tooltip: 'Share my username',
@@ -261,6 +271,9 @@ class _FriendLists extends ConsumerWidget {
       final p = profiles[f.otherUid(uid)];
       return ListTile(
         contentPadding: EdgeInsets.zero,
+        onTap: f.status == FriendshipStatus.accepted && p != null
+            ? () => _showFriend(context, ref, p, f)
+            : null,
         leading: Avatar(profile: p),
         title: Text(p?.displayName ?? '…'),
         subtitle: p?.username == null ? null : Text('@${p!.username}'),
@@ -421,5 +434,74 @@ void _showFriendsMap(BuildContext context, List<CheckIn> list) {
         ],
       ),
     ),
+  );
+}
+
+/// A friend's card: their check-in, invite them to one of your groups, remove.
+void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendship f) {
+  showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    builder: (sheetContext) => Consumer(builder: (context, ref, _) {
+      final uid = ref.watch(uidProvider);
+      final checkIn = (ref.watch(friendsCheckInsProvider).value ?? const <CheckIn>[])
+          .where((c) => c.uid == p.uid)
+          .firstOrNull;
+      final groups = (ref.watch(myGroupsProvider).value ?? const <Group>[])
+          .where((g) => !g.memberUids.contains(p.uid))
+          .toList();
+      final text = Theme.of(context).textTheme;
+      return ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.all(KSpace.lg),
+        children: [
+          Center(child: Avatar(profile: p, size: 72)),
+          const SizedBox(height: KSpace.sm),
+          Center(child: Text(p.displayName, style: text.titleLarge)),
+          if (p.username != null) Center(child: Text('@${p.username}', style: text.bodyMedium)),
+          if (checkIn != null)
+            ListTile(
+              leading: const Text('📍', style: TextStyle(fontSize: 22)),
+              title: Text('At ${checkIn.placeName}'),
+              subtitle: Text(timeAgo(checkIn.createdAt!, DateTime.now())),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/place/${checkIn.placeId}');
+              },
+            ),
+          const SectionTitle('Invite to a group'),
+          if (groups.isEmpty)
+            Text('They\'re already in all your groups, or you have none yet.', style: text.bodySmall),
+          for (final g in groups)
+            ListTile(
+              leading: const Icon(Icons.group_add_outlined),
+              title: Text(g.name),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                try {
+                  await ref.read(groupsRepositoryProvider).addFriend(g.id, p.uid);
+                  if (context.mounted) showMessage(context, 'Added to ${g.name}');
+                } catch (e) {
+                  if (context.mounted) showError(context, e);
+                }
+              },
+            ),
+          const SizedBox(height: KSpace.md),
+          if (uid != null)
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              onPressed: () async {
+                Navigator.pop(sheetContext);
+                try {
+                  await ref.read(socialRepositoryProvider).remove(f.id);
+                } catch (e) {
+                  if (context.mounted) showError(context, e);
+                }
+              },
+              child: const Text('Remove friend'),
+            ),
+        ],
+      );
+    }),
   );
 }
