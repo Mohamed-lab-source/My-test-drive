@@ -6,8 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/providers.dart';
+import 'local_prefs.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/explore/explore_screen.dart';
+import '../features/explore/compare_screen.dart';
+import '../features/explore/lists_screen.dart';
 import '../features/explore/malls_screen.dart';
 import '../features/explore/place_details_screen.dart';
 import '../features/friends/friends_screen.dart';
@@ -18,6 +21,8 @@ import '../features/plan/plan_form_screen.dart';
 import '../features/plan/plan_result_screen.dart';
 import '../features/plan/saved_plans_screen.dart';
 import '../features/profile/about_screen.dart';
+import '../features/profile/welcome_screen.dart';
+import '../features/profile/whats_new_screen.dart';
 import '../features/profile/profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -25,14 +30,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _StreamListenable(auth.authChanges());
   ref.onDispose(refresh.dispose);
 
+  final start = ref.read(appSettingsProvider).startOnExplore ? '/explore' : '/plan';
   return GoRouter(
-    initialLocation: '/plan',
+    initialLocation: start,
     refreshListenable: refresh,
     redirect: (context, state) {
       final signedIn = FirebaseAuth.instance.currentUser != null;
       final atSignIn = state.matchedLocation == '/sign-in';
       if (!signedIn) return atSignIn ? null : '/sign-in';
-      if (atSignIn) return '/plan';
+      // First time after signing in: a short welcome.
+      final atWelcome = state.matchedLocation == '/welcome';
+      if (!ref.read(appSettingsProvider).onboarded) return atWelcome ? null : '/welcome';
+      if (atSignIn) return start;
       return null;
     },
     routes: [
@@ -56,8 +65,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/new-plan',
-        builder: (_, s) =>
-            PlanFormScreen(initialMallId: s.uri.queryParameters['mall']),
+        builder: (_, s) {
+          final q = s.uri.queryParameters;
+          final lat = double.tryParse(q['lat'] ?? '');
+          final lng = double.tryParse(q['lng'] ?? '');
+          return PlanFormScreen(
+            initialMallId: q['mall'],
+            anchor: lat == null || lng == null ? null : (lat, lng, q['label'] ?? 'this place'),
+          );
+        },
       ),
       GoRoute(
         path: '/plan/:id',
@@ -76,6 +92,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(path: '/malls', builder: (_, _) => const MallsScreen()),
       GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
+      GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
+      GoRoute(path: '/whats-new', builder: (_, _) => const WhatsNewScreen()),
+      GoRoute(path: '/lists', builder: (_, _) => const ListsScreen()),
+      GoRoute(
+        path: '/compare',
+        builder: (_, s) => CompareScreen(
+            a: s.uri.queryParameters['a'] ?? '', b: s.uri.queryParameters['b'] ?? ''),
+      ),
     ],
   );
 });

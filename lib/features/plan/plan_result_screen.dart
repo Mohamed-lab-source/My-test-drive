@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/helpers.dart' show sameDay;
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -42,6 +43,7 @@ class PlanResultScreen extends ConsumerWidget {
                 PopupMenuItem(value: 'copy', child: Text('Copy plan as text')),
                 PopupMenuItem(value: 'calendar', child: Text('Add to Google Calendar')),
                 PopupMenuItem(value: 'duplicate', child: Text('Make a copy')),
+                PopupMenuItem(value: 'group', child: Text('Send to a group chat')),
               ],
             ),
         ],
@@ -64,6 +66,44 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
       if (context.mounted) showMessage(context, 'Plan copied. Paste it anywhere.');
     case 'calendar':
       await openUri(planCalendarLink(plan));
+    case 'group':
+      final uid = ref.read(uidProvider);
+      final groups = await ref.read(myGroupsProvider.future);
+      if (uid == null || !context.mounted) return;
+      if (groups.isEmpty) {
+        showMessage(context, "You're not in any group yet.");
+        return;
+      }
+      final picked = await showModalBottomSheet<String>(
+        context: context,
+        useSafeArea: true,
+        builder: (sheetContext) => ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(KSpace.md),
+          children: [
+            Text('Send to which group?', style: Theme.of(sheetContext).textTheme.titleLarge),
+            for (final g in groups)
+              ListTile(
+                leading: const Icon(Icons.forum_outlined),
+                title: Text(g.name),
+                onTap: () => Navigator.pop(sheetContext, g.id),
+              ),
+          ],
+        ),
+      );
+      if (picked == null) return;
+      final text = planShareText(plan);
+      try {
+        await ref.read(groupsRepositoryProvider).sendMessage(
+              groupId: picked,
+              uid: uid,
+              name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
+              text: text.length > 1000 ? text.substring(0, 1000) : text,
+            );
+        if (context.mounted) showMessage(context, 'Sent to the group');
+      } catch (e) {
+        if (context.mounted) showError(context, e);
+      }
     case 'duplicate':
       final uid = ref.read(uidProvider);
       if (uid == null) return;
@@ -134,6 +174,9 @@ class _PlanBody extends ConsumerWidget {
             Pill(TimesOfDay.all[plan.request.timeOfDay] ?? plan.request.timeOfDay),
             if (plan.request.date != null) Pill(DateFormat('EEE d MMM').format(plan.request.day)),
             if (plan.isMallLocked) const Pill('🛍️ One mall'),
+            if (plan.request.hasAnchor) Pill('📍 Around ${plan.request.nearLabel ?? 'a spot'}'),
+            if (_daysAway(plan.request.day) case final d? when d > 0)
+              Pill(d == 1 ? '⏳ Tomorrow' : '⏳ In $d days'),
             if (endsAt != null && plan.stops.first.startTime != null)
               Pill('🕘 ${plan.stops.first.startTime}–$endsAt'),
           ],
@@ -169,8 +212,23 @@ class _PlanBody extends ConsumerWidget {
             onRemove: plan.stops.length <= 1
                 ? null
                 : () => _editStops(context, ref, plan, removeStop(plan.stops, i)),
+            onEditTime: () => _editTime(context, ref, plan, i),
+            onEditLength: () => _editLength(context, ref, plan, i),
+            onEditNote: () => _editNote(context, ref, plan, i),
           ),
         _RouteCard(plan: plan),
+        if (plan.stops.where((s) => s.hasLocation).length >= 3)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () async {
+                await _editStops(context, ref, plan, shortestRoute(plan.stops));
+                if (context.mounted) showMessage(context, 'Stops reordered for a shorter route');
+              },
+              icon: const Icon(Icons.alt_route),
+              label: const Text('Shortest route'),
+            ),
+          ),
         if (plan.stops.length < 5)
           Align(
             alignment: Alignment.centerLeft,
@@ -182,6 +240,10 @@ class _PlanBody extends ConsumerWidget {
           ),
         const SizedBox(height: KSpace.md),
         _BudgetCard(plan: plan),
+        const SizedBox(height: KSpace.sm),
+        _BringList(planId: plan.id),
+        const SizedBox(height: KSpace.sm),
+        _HowWasIt(planId: plan.id),
         if (plan.tips.isNotEmpty) ...[
           const SectionTitle('Tips'),
           for (final tip in plan.tips)
@@ -275,7 +337,14 @@ class _StopTile extends StatelessWidget {
     this.onUp,
     this.onDown,
     this.onRemove,
+    required this.onEditTime,
+    required this.onEditLength,
+    required this.onEditNote,
   });
+
+  final VoidCallback onEditTime;
+  final VoidCallback onEditLength;
+  final VoidCallback onEditNote;
 
   final VoidCallback onSwap;
   final bool done;
@@ -408,6 +477,10 @@ class _StopTile extends StatelessWidget {
                               const SizedBox(height: KSpace.sm),
                               Text(stop.why!, style: text.bodyMedium),
                             ],
+                            if (stop.note != null) ...[
+                              const SizedBox(height: KSpace.sm),
+                              Text('📝 ${stop.note}', style: text.bodyMedium),
+                            ],
                             if (isFirst && stop.hasLocation) ...[
                               const SizedBox(height: KSpace.md),
                               _RideRow(stop: stop),
@@ -425,10 +498,26 @@ class _StopTile extends StatelessWidget {
                                   onPressed: onDown,
                                   icon: const Icon(Icons.arrow_downward, size: 20),
                                 ),
-                                IconButton(
-                                  tooltip: 'Remove stop',
-                                  onPressed: onRemove,
-                                  icon: const Icon(Icons.delete_outline, size: 20),
+                                PopupMenuButton<String>(
+                                  tooltip: 'Edit this stop',
+                                  icon: const Icon(Icons.more_horiz, size: 20),
+                                  onSelected: (v) => switch (v) {
+                                    'time' => onEditTime(),
+                                    'length' => onEditLength(),
+                                    'note' => onEditNote(),
+                                    _ => onRemove?.call(),
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(value: 'time', child: Text('Change start time')),
+                                    const PopupMenuItem(value: 'length', child: Text('Change how long')),
+                                    PopupMenuItem(
+                                        value: 'note',
+                                        child: Text(stop.note == null ? 'Add a note' : 'Edit note')),
+                                    PopupMenuItem(
+                                        value: 'remove',
+                                        enabled: onRemove != null,
+                                        child: const Text('Remove stop')),
+                                  ],
                                 ),
                                 TextButton.icon(
                                   onPressed: onSwap,
@@ -718,6 +807,169 @@ class _RouteCard extends StatelessWidget {
             'Tap to open the whole route in Google Maps.'),
         trailing: const Icon(Icons.open_in_new),
         onTap: url == null ? null : () => openUri(url),
+      ),
+    );
+  }
+}
+
+int? _daysAway(DateTime day) {
+  final now = DateTime.now();
+  if (sameDay(day, now)) return 0;
+  return DateTime(day.year, day.month, day.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+}
+
+Future<void> _editTime(BuildContext context, WidgetRef ref, OutingPlan plan, int i) async {
+  final parts = plan.stops[i].startTime?.split(':');
+  final initial = parts == null || parts.length != 2
+      ? const TimeOfDay(hour: 18, minute: 0)
+      : TimeOfDay(hour: int.tryParse(parts[0]) ?? 18, minute: int.tryParse(parts[1]) ?? 0);
+  final t = await showTimePicker(context: context, initialTime: initial);
+  if (t == null || !context.mounted) return;
+  final hhmm = '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  await _editStops(context, ref, plan, setStopTime(plan.stops, i, hhmm));
+}
+
+Future<void> _editLength(BuildContext context, WidgetRef ref, OutingPlan plan, int i) async {
+  const options = [30, 45, 60, 90, 120, 150, 180, 240];
+  final picked = await showDialog<int>(
+    context: context,
+    builder: (dialogContext) => SimpleDialog(
+      title: const Text('How long at this stop?'),
+      children: [
+        for (final m in options)
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, m),
+            child: Text(m < 60 ? '$m min' : m % 60 == 0 ? '${m ~/ 60} h' : '${m ~/ 60} h ${m % 60} min'),
+          ),
+      ],
+    ),
+  );
+  if (picked == null || !context.mounted) return;
+  await _editStops(context, ref, plan, setStopDuration(plan.stops, i, picked));
+}
+
+Future<void> _editNote(BuildContext context, WidgetRef ref, OutingPlan plan, int i) async {
+  final controller = TextEditingController(text: plan.stops[i].note ?? '');
+  final note = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Note for this stop'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLength: 200,
+        decoration: const InputDecoration(hintText: 'e.g. Book a table for 6'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Save')),
+      ],
+    ),
+  );
+  controller.dispose();
+  if (note == null || !context.mounted) return;
+  await _editStops(context, ref, plan, setStopNote(plan.stops, i, note));
+}
+
+/// "Things to bring" checklist for this plan (saved on the phone).
+class _BringList extends ConsumerWidget {
+  const _BringList({required this.planId});
+
+  final String planId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final raw = ref.watch(bringListsProvider)[planId] ?? '';
+    final items = raw.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    final notifier = ref.read(bringListsProvider.notifier);
+    void save(List<String> list) => notifier.set(planId, list.join('\n'));
+
+    Future<void> add() async {
+      final controller = TextEditingController();
+      final item = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Add something to bring'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 60,
+            decoration: const InputDecoration(hintText: 'e.g. Power bank, ID card'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, controller.text),
+                child: const Text('Add')),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (item != null && item.trim().isNotEmpty) save([...items, item.trim()]);
+    }
+
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Text('🎒', style: TextStyle(fontSize: 22)),
+            title: const Text('Things to bring'),
+            subtitle: items.isEmpty ? const Text('Only on this phone') : null,
+            trailing: IconButton(tooltip: 'Add', icon: const Icon(Icons.add), onPressed: add),
+          ),
+          for (final (i, item) in items.indexed)
+            CheckboxListTile(
+              dense: true,
+              value: item.startsWith('✓ '),
+              title: Text(item.replaceFirst('✓ ', '')),
+              secondary: IconButton(
+                tooltip: 'Remove',
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () => save([...items]..removeAt(i)),
+              ),
+              onChanged: (on) => save([...items]
+                ..[i] = on == true ? '✓ ${item.replaceFirst('✓ ', '')}' : item.replaceFirst('✓ ', '')),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A private thumbs up / down after the outing (saved on the phone).
+class _HowWasIt extends ConsumerWidget {
+  const _HowWasIt({required this.planId});
+
+  final String planId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rating = ref.watch(planRatingsProvider)[planId];
+    final n = ref.read(planRatingsProvider.notifier);
+    return Card(
+      child: ListTile(
+        leading: const Text('💬', style: TextStyle(fontSize: 22)),
+        title: const Text('How was it?'),
+        subtitle: Text(rating == null ? 'Just for you' : rating == 'up' ? 'You loved it' : 'Not great'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'Loved it',
+              onPressed: () => n.set(planId, rating == 'up' ? null : 'up'),
+              icon: Icon(rating == 'up' ? Icons.thumb_up : Icons.thumb_up_outlined,
+                  color: rating == 'up' ? context.k.accent : null),
+            ),
+            IconButton(
+              tooltip: 'Not great',
+              onPressed: () => n.set(planId, rating == 'down' ? null : 'down'),
+              icon: Icon(rating == 'down' ? Icons.thumb_down : Icons.thumb_down_outlined,
+                  color: rating == 'down' ? context.k.accent : null),
+            ),
+          ],
+        ),
       ),
     );
   }

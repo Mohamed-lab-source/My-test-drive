@@ -15,7 +15,18 @@ class PlanRequest {
     this.date,
     this.preferPlaceIds = const [],
     this.onlyOpen = false,
+    this.nearLat,
+    this.nearLng,
+    this.nearLabel,
   });
+
+  /// Plan around a spot (a place or where you are): only places within
+  /// [nearRadiusKm] of it. Null = anywhere in the city.
+  final double? nearLat;
+  final double? nearLng;
+  final String? nearLabel;
+  static const nearRadiusKm = 3.0;
+  bool get hasAnchor => nearLat != null && nearLng != null;
 
   /// Places the person likes (their favorites): ranked higher, never forced.
   final List<String> preferPlaceIds;
@@ -58,6 +69,9 @@ class PlanRequest {
         'date': date,
         'preferPlaceIds': preferPlaceIds,
         'onlyOpen': onlyOpen,
+        'nearLat': nearLat,
+        'nearLng': nearLng,
+        'nearLabel': nearLabel,
       };
 
   factory PlanRequest.fromMap(Map<String, dynamic> m) => PlanRequest(
@@ -77,6 +91,9 @@ class PlanRequest {
             .whereType<String>()
             .toList(),
         onlyOpen: (m['onlyOpen'] as bool?) ?? false,
+        nearLat: (m['nearLat'] as num?)?.toDouble(),
+        nearLng: (m['nearLng'] as num?)?.toDouble(),
+        nearLabel: m['nearLabel'] as String?,
       );
 
   PlanRequest copyWith({List<String>? excludePlaceIds}) => PlanRequest(
@@ -92,6 +109,9 @@ class PlanRequest {
         date: date,
         preferPlaceIds: preferPlaceIds,
         onlyOpen: onlyOpen,
+        nearLat: nearLat,
+        nearLng: nearLng,
+        nearLabel: nearLabel,
       );
 }
 
@@ -170,7 +190,11 @@ class PlanStop {
     this.durationMinutes,
     this.why,
     this.kmFromPrevious,
+    this.note,
   });
+
+  /// The person's own note for this stop ("book a table").
+  final String? note;
 
   final String placeId;
   final String name;
@@ -189,6 +213,14 @@ class PlanStop {
 
   bool get hasLocation => lat != null && lng != null;
 
+  /// A copy with a new time, length or note (pass '' to clear the note).
+  PlanStop copyWith({String? startTime, int? durationMinutes, String? note}) => PlanStop.fromMap({
+        ...toMap(),
+        'startTime': ?startTime,
+        'durationMinutes': ?durationMinutes,
+        if (note != null) 'note': note.trim().isEmpty ? null : note.trim(),
+      });
+
   Map<String, dynamic> toMap() => {
         'placeId': placeId,
         'name': name,
@@ -201,6 +233,7 @@ class PlanStop {
         'durationMinutes': durationMinutes,
         'why': why,
         'kmFromPrevious': kmFromPrevious,
+        'note': note,
       };
 
   factory PlanStop.fromMap(Map<String, dynamic> m) => PlanStop(
@@ -215,6 +248,7 @@ class PlanStop {
         durationMinutes: (m['durationMinutes'] as num?)?.toInt(),
         why: m['why'] as String?,
         kmFromPrevious: (m['kmFromPrevious'] as num?)?.toDouble(),
+        note: m['note'] as String?,
       );
 }
 

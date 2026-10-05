@@ -12,7 +12,9 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
-import '../../planner/planner.dart' show similarNearby, nearbyPlaces, haversineKm, addStop;
+import '../../planner/planner.dart'
+    show similarNearby, nearbyPlaces, haversineKm, addStop, otherBranches;
+import 'lists_screen.dart' show newListDialog;
 import '../../widgets/launchers.dart';
 import 'explore_screen.dart';
 
@@ -143,8 +145,30 @@ class _Details extends ConsumerWidget {
           const SizedBox(height: KSpace.sm),
           _CopyRow(icon: Icons.call_outlined, text: place.phone!, what: 'Phone number'),
         ],
+        if (place.hasLocation) ...[
+          const SizedBox(height: KSpace.sm),
+          _CopyRow(
+              icon: Icons.my_location,
+              text: '${place.lat!.toStringAsFixed(5)}, ${place.lng!.toStringAsFixed(5)}',
+              what: 'Coordinates'),
+        ],
         const SizedBox(height: KSpace.sm),
         _HowFar(place: place),
+        if (place.hasLocation && place.category != 'shop') ...[
+          const SizedBox(height: KSpace.sm),
+          FilledButton.tonalIcon(
+            onPressed: () {
+              ref.read(cityProvider.notifier).set(place.city);
+              context.push(Uri(path: '/new-plan', queryParameters: {
+                'lat': '${place.lat}',
+                'lng': '${place.lng}',
+                'label': place.name,
+              }).toString());
+            },
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Plan an outing around here'),
+          ),
+        ],
         const SizedBox(height: KSpace.md),
         Wrap(
           spacing: KSpace.sm,
@@ -197,6 +221,28 @@ class _Details extends ConsumerWidget {
                 icon: const Icon(Icons.menu_book_outlined),
                 label: const Text('Wikipedia / Wikidata'),
               ),
+            if (whatsappUrl(place.phone) != null)
+              OutlinedButton.icon(
+                onPressed: () => openUri(whatsappUrl(place.phone)!),
+                icon: const Icon(Icons.chat_outlined),
+                label: const Text('WhatsApp'),
+              ),
+            if (streetViewUrl(place) != null)
+              OutlinedButton.icon(
+                onPressed: () => openUri(streetViewUrl(place)!),
+                icon: const Icon(Icons.streetview),
+                label: const Text('Street View'),
+              ),
+            OutlinedButton.icon(
+              onPressed: () => _addToList(context, ref, place),
+              icon: const Icon(Icons.bookmark_add_outlined),
+              label: const Text('Add to a list'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _compare(context, ref, place),
+              icon: const Icon(Icons.compare_arrows),
+              label: const Text('Compare'),
+            ),
             OutlinedButton.icon(
               onPressed: () => _addToPlan(context, ref, place),
               icon: const Icon(Icons.playlist_add),
@@ -235,6 +281,7 @@ class _Details extends ConsumerWidget {
           places: similarNearby(place, all),
         ),
         _PlaceList(title: "What's nearby (within 500 m)", places: nearbyPlaces(place, all)),
+        _PlaceList(title: 'Other branches', places: otherBranches(place, all)),
         const SizedBox(height: KSpace.lg),
         if (place.osmUrl != null)
           TextButton(
@@ -284,12 +331,15 @@ class _Header extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PlaceImage(
+        GestureDetector(
+          onTap: () => _showPhoto(context, place),
+          child: PlaceImage(
           url: place.photoUrl,
           emoji: Categories.emoji(place.category),
           height: 220,
           width: double.infinity,
           radius: KRadius.card,
+        ),
         ),
         if (place.photoPage != null)
           TextButton(
@@ -307,21 +357,48 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Everything inside a mall, grouped by type, with floors.
-class _MallDirectory extends ConsumerWidget {
+/// Everything inside a mall, grouped by type or by floor, with search.
+class _MallDirectory extends ConsumerStatefulWidget {
   const _MallDirectory({required this.mall});
 
   final Place mall;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final venues = ref.watch(mallVenuesProvider(mall.id)).value ?? const <Place>[];
+  ConsumerState<_MallDirectory> createState() => _MallDirectoryState();
+}
+
+class _MallDirectoryState extends ConsumerState<_MallDirectory> {
+  bool _byFloor = false;
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final mall = widget.mall;
+    final allVenues = ref.watch(mallVenuesProvider(mall.id)).value ?? const <Place>[];
+    final q = _q.trim().toLowerCase();
+    final venues = q.isEmpty
+        ? allVenues
+        : allVenues
+            .where((v) =>
+                v.name.toLowerCase().contains(q) ||
+                (v.kind?.toLowerCase().contains(q) ?? false) ||
+                (v.cuisine?.toLowerCase().contains(q) ?? false))
+            .toList();
     final text = Theme.of(context).textTheme;
-    final groups = <String, List<Place>>{};
-    for (final v in venues) {
-      (groups[v.category] ??= []).add(v);
+    final Map<String, List<Place>> groups;
+    if (_byFloor) {
+      groups = byFloor(venues);
+    } else {
+      final byType = <String, List<Place>>{};
+      for (final v in venues) {
+        (byType[v.category] ??= []).add(v);
+      }
+      groups = {
+        for (final cat in Categories.all.keys.where(byType.containsKey))
+          '${Categories.emoji(cat)} ${Categories.label(cat)}': byType[cat]!
+            ..sort((a, b) => (a.details.level ?? '~').compareTo(b.details.level ?? '~')),
+      };
     }
-    final order = Categories.all.keys.where(groups.containsKey).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,7 +407,7 @@ class _MallDirectory extends ConsumerWidget {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: venues.isEmpty
+            onPressed: allVenues.isEmpty
                 ? null
                 : () {
                     ref.read(cityProvider.notifier).set(mall.city);
@@ -340,20 +417,35 @@ class _MallDirectory extends ConsumerWidget {
             label: const Text('Plan my day here'),
           ),
         ),
-        SectionTitle('Inside this mall (${venues.length})'),
-        if (venues.isEmpty)
+        SectionTitle('Inside this mall (${allVenues.length})'),
+        if (allVenues.isEmpty)
           Text(
             "We don't have the places inside this mall on the map yet.",
             style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
+          )
+        else ...[
+          TextField(
+            decoration: const InputDecoration(
+                hintText: 'Search this mall', prefixIcon: Icon(Icons.search), isDense: true),
+            onChanged: (v) => setState(() => _q = v),
           ),
-        for (final cat in order) ...[
+          const SizedBox(height: KSpace.sm),
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: false, label: Text('By type')),
+              ButtonSegment(value: true, label: Text('By floor')),
+            ],
+            selected: {_byFloor},
+            onSelectionChanged: (v) => setState(() => _byFloor = v.first),
+          ),
+        ],
+        for (final e in groups.entries) ...[
           Padding(
             padding: const EdgeInsets.only(top: KSpace.sm, bottom: KSpace.xs),
-            child: Text('${Categories.emoji(cat)} ${Categories.label(cat)} (${groups[cat]!.length})',
-                style: text.titleMedium),
+            child: Text('${e.key} (${e.value.length})', style: text.titleMedium),
           ),
-          for (final v in (groups[cat]!
-            ..sort((a, b) => (a.details.level ?? '~').compareTo(b.details.level ?? '~'))))
+          for (final v in e.value)
             Padding(
               padding: const EdgeInsets.only(bottom: KSpace.sm),
               child: PlaceTile(place: v),
@@ -458,7 +550,10 @@ class _HowFarState extends ConsumerState<_HowFar> {
       children: [
         Icon(Icons.near_me_outlined, size: 20, color: context.k.inkMuted),
         const SizedBox(width: KSpace.sm),
-        Text('$text from you (straight line)'),
+        Expanded(
+          child: Text('$text from you (straight line)'
+              '${km <= 3 ? ' · about ${walkingMinutes(km)} min walk' : ''}'),
+        ),
       ],
     );
   }
@@ -719,5 +814,110 @@ Future<void> _sendToGroup(BuildContext context, WidgetRef ref, Place place) asyn
     if (context.mounted) showMessage(context, 'Sent to the group');
   } catch (e) {
     if (context.mounted) showError(context, e);
+  }
+}
+
+/// The photo full screen; pinch to zoom.
+void _showPhoto(BuildContext context, Place place) {
+  if (place.photoUrl == null) return;
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              maxScale: 5,
+              child: Image.network(place.photoUrl!, fit: BoxFit.contain),
+            ),
+          ),
+          SafeArea(
+            child: IconButton.filled(
+              tooltip: 'Close',
+              onPressed: () => Navigator.pop(dialogContext),
+              icon: const Icon(Icons.close),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Adds or removes this place from one of your lists.
+Future<void> _addToList(BuildContext context, WidgetRef ref, Place place) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    builder: (sheetContext) => Consumer(builder: (context, ref, _) {
+      final lists = ref.watch(placeListsProvider);
+      return ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.all(KSpace.md),
+        children: [
+          Text('Add to a list', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: KSpace.sm),
+          for (final e in lists.entries)
+            CheckboxListTile(
+              title: Text(e.key),
+              value: e.value.contains(place.id),
+              onChanged: (_) => ref.read(placeListsProvider.notifier).toggle(e.key, place.id),
+            ),
+          ListTile(
+            leading: const Icon(Icons.add),
+            title: const Text('New list'),
+            onTap: () async {
+              final name = await newListDialog(context, ref);
+              if (name != null) ref.read(placeListsProvider.notifier).toggle(name, place.id);
+            },
+          ),
+        ],
+      );
+    }),
+  );
+}
+
+/// Pick another place (recently viewed, favorites, similar) to compare with.
+Future<void> _compare(BuildContext context, WidgetRef ref, Place place) async {
+  final all = await ref.read(allPlacesProvider.future);
+  final byId = {for (final p in all) p.id: p};
+  final ids = <String>{
+    ...ref.read(recentPlacesProvider),
+    ...?ref.read(favoriteIdsProvider).value,
+    ...similarNearby(place, all).map((p) => p.id),
+  }..remove(place.id);
+  final options = [for (final id in ids) ?byId[id]].take(30).toList();
+  if (!context.mounted) return;
+  if (options.isEmpty) {
+    showMessage(context, 'Open another place first, then compare.');
+    return;
+  }
+  final picked = await showModalBottomSheet<Place>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(KSpace.md),
+        children: [
+          Text('Compare with…', style: Theme.of(sheetContext).textTheme.titleLarge),
+          const SizedBox(height: KSpace.sm),
+          for (final p in options)
+            ListTile(
+              leading: Text(Categories.emoji(p.category), style: const TextStyle(fontSize: 22)),
+              title: Text(p.name),
+              subtitle: Text(p.area ?? Categories.label(p.category)),
+              onTap: () => Navigator.pop(sheetContext, p),
+            ),
+        ],
+      ),
+    ),
+  );
+  if (picked != null && context.mounted) {
+    context.push(Uri(path: '/compare', queryParameters: {'a': place.id, 'b': picked.id}).toString());
   }
 }

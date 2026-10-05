@@ -5,15 +5,20 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/helpers.dart';
+import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
+import '../profile/about_screen.dart' show appVersion;
 import '../profile/theme_sheet.dart';
 
 /// The home tab: describe your outing, get a real plan.
 class PlanFormScreen extends ConsumerStatefulWidget {
-  const PlanFormScreen({super.key, this.initialMallId});
+  const PlanFormScreen({super.key, this.initialMallId, this.anchor});
+
+  /// Set when opened from a place's "Plan an outing around here".
+  final (double, double, String)? anchor;
 
   /// Set when opened from a mall's "Plan my day here".
   final String? initialMallId;
@@ -32,6 +37,25 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   bool _skipVisited = false;
   bool _preferFavorites = true;
   bool _onlyOpen = true;
+  (double, double, String)? _anchor;
+  bool _locating = false;
+
+  Future<void> _useMyLocation(bool on) async {
+    if (!on) {
+      setState(() => _anchor = null);
+      return;
+    }
+    setState(() => _locating = true);
+    try {
+      final here = await ref.read(locationServiceProvider).current();
+      ref.read(myLocationProvider.notifier).set(here);
+      if (mounted) setState(() => _anchor = (here.$1, here.$2, 'you'));
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
   final _budget = TextEditingController();
   final _notes = TextEditingController();
 
@@ -39,6 +63,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   void initState() {
     super.initState();
     _mallId = widget.initialMallId;
+    _anchor = widget.anchor;
     final hour = DateTime.now().hour;
     _time = hour < 11
         ? 'morning'
@@ -74,6 +99,9 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           ? (ref.read(favoriteIdsProvider).value ?? const <String>[]).take(50).toList()
           : const [],
       onlyOpen: _onlyOpen,
+      nearLat: _mallId == null ? _anchor?.$1 : null,
+      nearLng: _mallId == null ? _anchor?.$2 : null,
+      nearLabel: _mallId == null ? _anchor?.$3 : null,
     );
     final id = await runPlanGeneration(context, ref, request);
     if (id != null && mounted) context.push('/plan/$id');
@@ -116,7 +144,23 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           const SizedBox(height: KSpace.xs),
           Text('Tell us the vibe. We only suggest real places.',
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+          const _WhatsNewCard(),
           const _NextOutingCard(),
+          if (_anchor != null && _anchor!.$3 != 'you') ...[
+            const SizedBox(height: KSpace.md),
+            Card(
+              child: ListTile(
+                leading: const Text('📍', style: TextStyle(fontSize: 24)),
+                title: Text('Around ${_anchor!.$3}'),
+                subtitle: Text('Only places within ${PlanRequest.nearRadiusKm.round()} km'),
+                trailing: IconButton(
+                  tooltip: 'Anywhere instead',
+                  icon: const Icon(Icons.close),
+                  onPressed: () => setState(() => _anchor = null),
+                ),
+              ),
+            ),
+          ],
           const SectionTitle('Quick start'),
           Wrap(
             spacing: KSpace.sm,
@@ -268,6 +312,15 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           const SectionTitle('Choices'),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
+            title: const Text('Near me'),
+            subtitle: Text(_locating
+                ? 'Finding you…'
+                : 'Only places within ${PlanRequest.nearRadiusKm.round()} km of where you are'),
+            value: _anchor?.$3 == 'you',
+            onChanged: _locating ? null : _useMyLocation,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
             title: const Text('Only places open at that time'),
             subtitle: const Text('Uses real opening hours when the map has them'),
             value: _onlyOpen,
@@ -295,6 +348,9 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               hintText: 'e.g. no seafood, someone uses a wheelchair, birthday…',
             ),
           ),
+          const SizedBox(height: KSpace.md),
+          Text('💡 ${tipOfTheDay(DateTime.now())}',
+              style: text.bodySmall?.copyWith(color: context.k.inkMuted)),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -439,6 +495,36 @@ class _NextOutingCard extends ConsumerWidget {
           subtitle: Text(DateFormat('EEE d MMM · h:mm a').format(g.scheduledAt!)),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => context.push('/group/${g.id}'),
+        ),
+      ),
+    );
+  }
+}
+
+/// "What's new in this version", until you open it once.
+class _WhatsNewCard extends ConsumerWidget {
+  const _WhatsNewCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final seen = ref.watch(appSettingsProvider.select((s) => s.seenVersion));
+    if (seen == appVersion) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.md),
+      child: Card(
+        child: ListTile(
+          leading: const Text('🎁', style: TextStyle(fontSize: 26)),
+          title: Text("What's new in $appVersion"),
+          subtitle: const Text('Polls, reactions, lists, compare and more'),
+          trailing: IconButton(
+            tooltip: 'Hide',
+            icon: const Icon(Icons.close),
+            onPressed: () => ref.read(appSettingsProvider.notifier).markSeen(appVersion),
+          ),
+          onTap: () {
+            ref.read(appSettingsProvider.notifier).markSeen(appVersion);
+            context.push('/whats-new');
+          },
         ),
       ),
     );

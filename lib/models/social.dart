@@ -99,7 +99,17 @@ class Group {
     this.freeUids = const [],
     this.lastMessage,
     this.lastMessageAt,
+    this.pinned,
+    this.meetPlaceId,
+    this.meetPlaceName,
   });
+
+  /// A note the organizer pinned at the top ("Meet at gate 3").
+  final String? pinned;
+
+  /// Where everyone meets: a real place from our data.
+  final String? meetPlaceId;
+  final String? meetPlaceName;
 
   final String id;
   final String name;
@@ -150,6 +160,9 @@ class Group {
           ((m['freeUids'] as List?) ?? const []).whereType<String>().toList(),
       lastMessage: m['lastMessage'] as String?,
       lastMessageAt: (m['lastMessageAt'] as Timestamp?)?.toDate(),
+      pinned: m['pinned'] as String?,
+      meetPlaceId: m['meetPlaceId'] as String?,
+      meetPlaceName: m['meetPlaceName'] as String?,
     );
   }
 }
@@ -161,7 +174,11 @@ class GroupMessage {
     required this.name,
     required this.text,
     this.createdAt,
+    this.reactions = const {},
   });
+
+  /// Emoji reactions: uid → emoji.
+  final Map<String, String> reactions;
 
   final String id;
   final String uid;
@@ -175,6 +192,45 @@ class GroupMessage {
         uid: (m['uid'] as String?) ?? '',
         name: (m['name'] as String?) ?? '',
         text: (m['text'] as String?) ?? '',
+        createdAt: (m['createdAt'] as Timestamp?)?.toDate(),
+        reactions: {
+          for (final e in Map<String, dynamic>.from((m['reactions'] as Map?) ?? const {}).entries)
+            if (e.value is String) e.key: e.value as String,
+        },
+      );
+}
+
+/// A quick group vote ("Which place?"). Each member has one vote.
+class Poll {
+  const Poll({
+    required this.id,
+    required this.uid,
+    required this.question,
+    required this.options,
+    this.votes = const {},
+    this.createdAt,
+  });
+
+  final String id;
+  final String uid;
+  final String question;
+  final List<String> options;
+
+  /// uid → option index.
+  final Map<String, int> votes;
+  final DateTime? createdAt;
+
+  int countFor(int option) => votes.values.where((v) => v == option).length;
+
+  factory Poll.fromMap(String id, Map<String, dynamic> m) => Poll(
+        id: id,
+        uid: (m['uid'] as String?) ?? '',
+        question: (m['question'] as String?) ?? '',
+        options: ((m['options'] as List?) ?? const []).whereType<String>().toList(),
+        votes: {
+          for (final e in Map<String, dynamic>.from((m['votes'] as Map?) ?? const {}).entries)
+            if (e.value is num) e.key: (e.value as num).toInt(),
+        },
         createdAt: (m['createdAt'] as Timestamp?)?.toDate(),
       );
 }

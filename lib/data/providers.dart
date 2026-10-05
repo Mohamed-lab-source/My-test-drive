@@ -93,6 +93,9 @@ final myGroupsProvider = StreamProvider<List<Group>>((ref) {
 final groupProvider = StreamProvider.family<Group?, String>(
     (ref, id) => ref.watch(groupsRepositoryProvider).watch(id));
 
+final groupPollsProvider = StreamProvider.family<List<Poll>, String>(
+    (ref, id) => ref.watch(groupsRepositoryProvider).watchPolls(id));
+
 final groupMessagesProvider = StreamProvider.family<List<GroupMessage>, String>(
     (ref, id) => ref.watch(groupsRepositoryProvider).watchMessages(id));
 

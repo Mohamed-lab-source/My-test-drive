@@ -26,7 +26,16 @@ enum _Extra {
   wheelchair('♿ Wheelchair'),
   wifi('📶 Wi-Fi'),
   outdoor('🌤️ Outdoor seating'),
-  photo('📷 Has photo');
+  photo('📷 Has photo'),
+  allDay('🕛 Open 24 hours'),
+  vegetarian('🥗 Vegetarian'),
+  delivery('🛵 Delivery'),
+  cards('💳 Cards'),
+  noSmoking('🚭 No smoking'),
+  shisha('💨 Shisha'),
+  ac('❄️ Air conditioned'),
+  notVisited("🆕 Haven't been"),
+  favorites('❤️ My favorites');
 
   const _Extra(this.label);
   final String label;
@@ -43,6 +52,23 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   bool _locating = false;
   bool _grid = false;
   final Set<_Extra> _extras = {};
+  Set<String> _visited = const {};
+  Set<String> _favorites = const {};
+
+  bool get _anyFilter =>
+      _query.isNotEmpty || _category != null || _area != null || _kind != null || _openNow || _extras.isNotEmpty;
+
+  void _clearFilters() {
+    _search.clear();
+    setState(() {
+      _query = '';
+      _category = null;
+      _area = null;
+      _kind = null;
+      _openNow = false;
+      _extras.clear();
+    });
+  }
 
   @override
   void dispose() {
@@ -127,6 +153,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         _Extra.wifi => p.details.wifi == true,
         _Extra.outdoor => p.details.outdoorSeating == true,
         _Extra.photo => p.photoUrl != null,
+        _Extra.allDay => p.openingHours?.trim() == '24/7',
+        _Extra.vegetarian => p.details.vegetarian != null && p.details.vegetarian != 'no',
+        _Extra.delivery => p.details.delivery == true,
+        _Extra.cards => p.details.cards == true,
+        _Extra.noSmoking => p.details.smoking == 'no',
+        _Extra.shisha => p.details.shisha == true,
+        _Extra.ac => p.details.airConditioning == true,
+        _Extra.notVisited => !_visited.contains(p.id),
+        _Extra.favorites => _favorites.contains(p.id),
       };
       if (!ok) return false;
     }
@@ -180,6 +215,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final history = ref.watch(searchHistoryProvider);
     final recentIds = ref.watch(recentPlacesProvider);
     final allPlaces = ref.watch(allPlacesProvider).value ?? const <Place>[];
+    _visited = (ref.watch(visitedIdsProvider).value ?? const <String>[]).toSet();
+    _favorites = (ref.watch(favoriteIdsProvider).value ?? const <String>[]).toSet();
     final recent = [
       for (final id in recentIds.take(10)) ?allPlaces.where((p) => p.id == id).firstOrNull,
     ];
@@ -234,6 +271,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           final inCategory = _category == null ? all : all.where((p) => p.category == _category).toList();
           final kinds = _category == null ? const <String>[] : _top(inCategory.expand(kindsOf), 15);
           final list = _filter(all, me);
+          final catCounts = <String, int>{};
+          for (final p in all) {
+            catCounts[p.category] = (catCounts[p.category] ?? 0) + 1;
+          }
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
@@ -275,6 +316,17 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
               SliverToBoxAdapter(
                 child: _ChipRow(children: [
+                  if (_anyFilter)
+                    ActionChip(
+                      avatar: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                      label: const Text('Clear filters'),
+                      onPressed: _clearFilters,
+                    ),
+                  ActionChip(
+                    avatar: const Text('📋'),
+                    label: const Text('My lists'),
+                    onPressed: () => context.push('/lists'),
+                  ),
                   PopupMenuButton<_Sort>(
                     tooltip: 'Sort',
                     onSelected: _setSort,
@@ -331,7 +383,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   ),
                   for (final e in Categories.all.entries)
                     ChoiceChip(
-                      label: Text('${Categories.emoji(e.key)} ${e.value}'),
+                      label: Text('${Categories.emoji(e.key)} ${e.value} · ${catCounts[e.key] ?? 0}'),
                       selected: _category == e.key,
                       showCheckmark: false,
                       onSelected: (_) => setState(() {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../app/local_prefs.dart';
 import '../app/theme.dart';
 import '../models/social.dart';
 
@@ -143,8 +144,9 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-/// Network image with a calm placeholder, never a crash.
-class PlaceImage extends StatelessWidget {
+/// Network image with a calm placeholder, never a crash. With "Data saver"
+/// on, photos aren't downloaded at all.
+class PlaceImage extends ConsumerWidget {
   const PlaceImage({
     super.key,
     required this.url,
@@ -161,7 +163,8 @@ class PlaceImage extends StatelessWidget {
   final double radius;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final saver = ref.watch(appSettingsProvider.select((s) => s.dataSaver));
     final placeholder = Container(
       width: width,
       height: height,
@@ -171,7 +174,7 @@ class PlaceImage extends StatelessWidget {
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: url == null
+      child: url == null || saver
           ? placeholder
           : Image.network(
               url!,

@@ -12,6 +12,7 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../models/social.dart';
+import '../../planner/planner.dart' show routeMapsUrl;
 import '../../widgets/common.dart';
 import '../../widgets/launchers.dart';
 import '../friends/friends_screen.dart' show groupQrPrefix;
@@ -54,40 +55,210 @@ class GroupDetailScreen extends ConsumerWidget {
   }
 }
 
-class _GroupView extends ConsumerWidget {
+class _GroupView extends ConsumerStatefulWidget {
   const _GroupView({required this.group, required this.uid});
 
   final Group group;
   final String uid;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_GroupView> createState() => _GroupViewState();
+}
+
+class _GroupViewState extends ConsumerState<_GroupView> {
+  String? _search; // null = not searching
+
+  @override
+  Widget build(BuildContext context) {
+    final group = widget.group;
+    final uid = widget.uid;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final profiles =
         ref.watch(profilesProvider(profilesKey(group.memberUids))).value ??
             const {};
+    final polls = ref.watch(groupPollsProvider(group.id)).value ?? const <Poll>[];
+    final isOwner = group.isOwner(uid);
     return Scaffold(
       appBar: AppBar(
-        title: Text(group.name, overflow: TextOverflow.ellipsis),
+        title: _search == null
+            ? Text(group.name, overflow: TextOverflow.ellipsis)
+            : TextField(
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'Search messages', isDense: true),
+                onChanged: (v) => setState(() => _search = v),
+              ),
         actions: [
+          IconButton(
+            tooltip: _search == null ? 'Search messages' : 'Close search',
+            icon: Icon(_search == null ? Icons.search : Icons.close),
+            onPressed: () => setState(() => _search = _search == null ? '' : null),
+          ),
+          IconButton(
+            tooltip: 'Polls',
+            icon: Badge(
+              isLabelVisible: polls.isNotEmpty,
+              label: Text('${polls.length}'),
+              child: const Icon(Icons.how_to_vote_outlined),
+            ),
+            onPressed: () => _showPolls(context, group, uid),
+          ),
           IconButton(
             tooltip: 'Members',
             icon: const Icon(Icons.people_outline),
             onPressed: () => _showMembers(context, group, uid),
           ),
+          if (isOwner)
+            PopupMenuButton<String>(
+              onSelected: (v) => switch (v) {
+                'rename' => _renameGroup(context, ref, group),
+                'pin' => _pinNote(context, ref, group),
+                _ => _pickMeetingPoint(context, ref, group),
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'rename', child: Text('Rename group')),
+                PopupMenuItem(value: 'pin', child: Text('Pin a note')),
+                PopupMenuItem(value: 'meet', child: Text('Set meeting point')),
+              ],
+            ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
             // While typing, hide the header so the chat keeps its space.
-            if (!keyboardOpen) _Header(group: group, uid: uid),
-            Expanded(child: _Chat(group: group, uid: uid, profiles: profiles)),
-            _Composer(group: group, uid: uid),
+            if (!keyboardOpen && _search == null) _Header(group: group, uid: uid),
+            if (group.pinned != null && _search == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xs),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(KSpace.sm),
+                  decoration: BoxDecoration(
+                    color: context.k.accentSoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text('📌 ${group.pinned}'),
+                ),
+              ),
+            Expanded(child: _Chat(group: group, uid: uid, profiles: profiles, search: _search)),
+            if (_search == null) _Composer(group: group, uid: uid),
           ],
         ),
       ),
     );
+  }
+}
+
+Future<void> _renameGroup(BuildContext context, WidgetRef ref, Group group) async {
+  final controller = TextEditingController(text: group.name);
+  final name = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Rename group'),
+      content: TextField(controller: controller, autofocus: true, maxLength: 40),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Save')),
+      ],
+    ),
+  );
+  controller.dispose();
+  if (name == null || name.trim().isEmpty) return;
+  try {
+    await ref.read(groupsRepositoryProvider).rename(group.id, name);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}
+
+Future<void> _pinNote(BuildContext context, WidgetRef ref, Group group) async {
+  final controller = TextEditingController(text: group.pinned ?? '');
+  final text = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Pin a note'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLength: 300,
+        maxLines: 3,
+        decoration: const InputDecoration(hintText: 'e.g. Meet at gate 3 at 7 pm'),
+      ),
+      actions: [
+        if (group.pinned != null)
+          TextButton(onPressed: () => Navigator.pop(dialogContext, ''), child: const Text('Unpin')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+        FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Pin')),
+      ],
+    ),
+  );
+  controller.dispose();
+  if (text == null) return;
+  try {
+    await ref.read(groupsRepositoryProvider).setPinned(group.id, text);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}
+
+/// The organizer picks where everyone meets: a stop from the plan or a favorite.
+Future<void> _pickMeetingPoint(BuildContext context, WidgetRef ref, Group group) async {
+  final favorites = await ref.read(favoritePlacesProvider.future);
+  final options = <(String, String)>[
+    for (final raw in group.planStops)
+      if (raw['placeId'] is String && raw['name'] is String) (raw['placeId'] as String, raw['name'] as String),
+    for (final p in favorites.take(20)) (p.id, p.name),
+  ];
+  final seen = <String>{};
+  options.retainWhere((o) => seen.add(o.$1));
+  if (!context.mounted) return;
+  final picked = await showModalBottomSheet<(String, String)?>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(KSpace.md),
+        children: [
+          Text('Where do we meet?', style: Theme.of(sheetContext).textTheme.titleLarge),
+          const SizedBox(height: KSpace.xs),
+          Text('Pick a stop from the plan or one of your favorites.',
+              style: Theme.of(sheetContext).textTheme.bodySmall),
+          if (options.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(KSpace.md),
+              child: Text('Attach a plan or save some favorite places first.'),
+            ),
+          for (final o in options)
+            ListTile(
+              leading: const Icon(Icons.place_outlined),
+              title: Text(o.$2),
+              onTap: () => Navigator.pop(sheetContext, o),
+            ),
+          if (group.meetPlaceId != null)
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('No meeting point'),
+              onTap: () => Navigator.pop(sheetContext, ('', '')),
+            ),
+        ],
+      ),
+    ),
+  );
+  if (picked == null) return;
+  try {
+    await ref.read(groupsRepositoryProvider).setMeetingPoint(group.id,
+        placeId: picked.$1.isEmpty ? null : picked.$1,
+        placeName: picked.$2.isEmpty ? null : picked.$2);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
   }
 }
 
@@ -167,6 +338,24 @@ class _Header extends ConsumerWidget {
                   ),
                 ),
               ],
+              if (group.meetPlaceName != null)
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: group.meetPlaceId == null
+                      ? null
+                      : () => context.push('/place/${group.meetPlaceId}'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: KSpace.xs),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.flag_outlined, size: 20),
+                        const SizedBox(width: KSpace.sm),
+                        Expanded(child: Text('Meet at ${group.meetPlaceName}')),
+                        const Icon(Icons.chevron_right, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(height: KSpace.sm),
               Row(
                 children: [
@@ -213,6 +402,7 @@ class _Header extends ConsumerWidget {
               const SizedBox(height: KSpace.xs),
               Wrap(
                 spacing: KSpace.sm,
+                runSpacing: KSpace.xs,
                 children: [
                   if (group.scheduledAt != null)
                     ActionChip(
@@ -225,6 +415,32 @@ class _Header extends ConsumerWidget {
                     label: const Text('Split the bill'),
                     onPressed: () => _showBillSplitter(context, group),
                   ),
+                  if (routeMapsUrl([for (final s in group.planStops) PlanStop.fromMap(s)]) case final url?)
+                    ActionChip(
+                      avatar: const Icon(Icons.route_outlined, size: 18),
+                      label: const Text('Route'),
+                      onPressed: () => openUri(url),
+                    ),
+                  if (group.scheduledAt != null && group.scheduledAt!.isAfter(DateTime.now()))
+                    ActionChip(
+                      avatar: const Icon(Icons.notifications_active_outlined, size: 18),
+                      label: const Text('Remind everyone'),
+                      onPressed: () async {
+                        try {
+                          await repo.sendMessage(
+                            groupId: group.id,
+                            uid: uid,
+                            name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
+                            text: '⏰ Reminder: ${group.name} is '
+                                '${countdownText(group.scheduledAt!).replaceFirst('⏳ ', '').toLowerCase()} '
+                                '(${DateFormat('EEE d MMM, h:mm a').format(group.scheduledAt!)}). '
+                                'Tap Going / Maybe / Can\'t above!',
+                          );
+                        } catch (e) {
+                          if (context.mounted) showError(context, e);
+                        }
+                      },
+                    ),
                 ],
               ),
             ],
@@ -406,17 +622,50 @@ class _MembersSheet extends ConsumerWidget {
                 if (group.freeUids.contains(memberUid)) 'Free',
               ].join(' · ')),
               trailing: isOwner
-                  ? FilterChip(
-                      label: const Text('Free'),
-                      showCheckmark: false,
-                      selected: group.freeUids.contains(memberUid),
-                      onSelected: (on) async {
-                        try {
-                          await repo.setFree(group.id, memberUid, on);
-                        } catch (e) {
-                          if (context.mounted) showError(context, e);
-                        }
-                      },
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FilterChip(
+                          label: const Text('Free'),
+                          showCheckmark: false,
+                          selected: group.freeUids.contains(memberUid),
+                          onSelected: (on) async {
+                            try {
+                              await repo.setFree(group.id, memberUid, on);
+                            } catch (e) {
+                              if (context.mounted) showError(context, e);
+                            }
+                          },
+                        ),
+                        if (memberUid != uid)
+                          PopupMenuButton<String>(
+                            onSelected: (_) async {
+                              final ok = await showDialog<bool>(
+                                context: context,
+                                builder: (d) => AlertDialog(
+                                  title: Text('Remove ${profiles[memberUid]?.displayName ?? 'this person'}?'),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(d, false),
+                                        child: const Text('Cancel')),
+                                    FilledButton(
+                                        onPressed: () => Navigator.pop(d, true),
+                                        child: const Text('Remove')),
+                                  ],
+                                ),
+                              );
+                              if (ok != true) return;
+                              try {
+                                await repo.removeMember(group.id, memberUid);
+                              } catch (e) {
+                                if (context.mounted) showError(context, e);
+                              }
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'remove', child: Text('Remove from group')),
+                            ],
+                          ),
+                      ],
                     )
                   : null,
             ),
@@ -514,18 +763,26 @@ class _MembersSheet extends ConsumerWidget {
 }
 
 class _Chat extends ConsumerWidget {
-  const _Chat({required this.group, required this.uid, required this.profiles});
+  const _Chat({required this.group, required this.uid, required this.profiles, this.search});
 
   final Group group;
   final String uid;
   final Map<String, PublicProfile> profiles;
+  final String? search;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final messages = ref.watch(groupMessagesProvider(group.id));
     return AsyncView<List<GroupMessage>>(
       value: messages,
-      builder: (list) {
+      builder: (all) {
+        final q = search?.trim().toLowerCase() ?? '';
+        final list = q.isEmpty
+            ? all
+            : all.where((m) => m.text.toLowerCase().contains(q) || m.name.toLowerCase().contains(q)).toList();
+        if (q.isNotEmpty && list.isEmpty) {
+          return const EmptyState(emoji: '🔍', title: 'No messages match');
+        }
         if (list.isEmpty) {
           return const EmptyState(
             emoji: '💬',
@@ -544,7 +801,8 @@ class _Chat extends ConsumerWidget {
             final newDay = m.createdAt != null &&
                 (older?.createdAt == null || !sameDay(older!.createdAt!, m.createdAt!));
             final showName = m.uid != uid && (older?.uid != m.uid || newDay);
-            final bubble = _Bubble(message: m, mine: m.uid == uid, showName: showName);
+            final bubble = _Bubble(
+                message: m, mine: m.uid == uid, showName: showName, groupId: group.id, uid: uid);
             if (!newDay) return bubble;
             return Column(
               children: [
@@ -559,25 +817,88 @@ class _Chat extends ConsumerWidget {
   }
 }
 
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.mine, required this.showName});
+class _Bubble extends ConsumerWidget {
+  const _Bubble({
+    required this.message,
+    required this.mine,
+    required this.showName,
+    required this.groupId,
+    required this.uid,
+  });
 
   final GroupMessage message;
   final bool mine;
   final bool showName;
+  final String groupId;
+  final String uid;
+
+  static const _emojis = ['👍', '❤️', '😂', '😮', '🎉', '👎'];
+
+  Future<void> _actions(BuildContext context, WidgetRef ref) async {
+    final mineReaction = message.reactions[uid];
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.all(KSpace.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                for (final e in _emojis)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => Navigator.pop(sheetContext, e),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: e == mineReaction ? sheetContext.k.accentSoft : null,
+                      ),
+                      child: Text(e, style: const TextStyle(fontSize: 28)),
+                    ),
+                  ),
+              ],
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('Copy message'),
+              onTap: () => Navigator.pop(sheetContext, 'copy'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    if (picked == 'copy') {
+      await Clipboard.setData(ClipboardData(text: message.text));
+      if (context.mounted) showMessage(context, 'Message copied');
+      return;
+    }
+    try {
+      await ref
+          .read(groupsRepositoryProvider)
+          .react(groupId, message.id, uid, picked == mineReaction ? null : picked);
+    } catch (e) {
+      if (context.mounted) showError(context, e);
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final counts = <String, int>{};
+    for (final r in message.reactions.values) {
+      counts[r] = (counts[r] ?? 0) + 1;
+    }
     final time = message.createdAt == null
         ? ''
         : DateFormat.jm().format(message.createdAt!);
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
-        onLongPress: () {
-          Clipboard.setData(ClipboardData(text: message.text));
-          showMessage(context, 'Message copied');
-        },
+        onLongPress: () => _actions(context, ref),
         child: ConstrainedBox(
         constraints: BoxConstraints(
             maxWidth: MediaQuery.sizeOf(context).width * 0.78),
@@ -601,6 +922,14 @@ class _Bubble extends StatelessWidget {
               Text(message.text,
                   style: TextStyle(
                       color: mine ? context.k.onAccent : context.k.ink, fontSize: 15)),
+              if (counts.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    counts.entries.map((e) => e.value > 1 ? '${e.key}${e.value}' : e.key).join(' '),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
               if (time.isNotEmpty)
                 Text(time,
                     style: TextStyle(
@@ -893,5 +1222,195 @@ class _BillSplitterState extends State<_BillSplitter> {
         ],
       ),
     );
+  }
+}
+
+// ---- Polls ----
+
+void _showPolls(BuildContext context, Group group, String uid) {
+  showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (_) => _PollsSheet(group: group, uid: uid),
+  );
+}
+
+class _PollsSheet extends ConsumerWidget {
+  const _PollsSheet({required this.group, required this.uid});
+
+  final Group group;
+  final String uid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final polls = ref.watch(groupPollsProvider(group.id));
+    final repo = ref.read(groupsRepositoryProvider);
+    final text = Theme.of(context).textTheme;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.75,
+      builder: (_, controller) => AsyncView<List<Poll>>(
+        value: polls,
+        builder: (list) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.all(KSpace.lg),
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text('Polls', style: text.titleLarge)),
+                FilledButton.icon(
+                  onPressed: () => _newPoll(context, ref),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New poll'),
+                ),
+              ],
+            ),
+            if (list.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: KSpace.lg),
+                child: Text('No polls yet. Ask "Which place?" or "What time?" and everyone votes.'),
+              ),
+            for (final p in list)
+              Card(
+                margin: const EdgeInsets.only(top: KSpace.md),
+                child: Padding(
+                  padding: const EdgeInsets.all(KSpace.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: Text(p.question, style: text.titleMedium)),
+                          if (p.uid == uid || group.isOwner(uid))
+                            IconButton(
+                              tooltip: 'Delete poll',
+                              icon: const Icon(Icons.delete_outline, size: 20),
+                              onPressed: () async {
+                                try {
+                                  await repo.deletePoll(group.id, p.id);
+                                } catch (e) {
+                                  if (context.mounted) showError(context, e);
+                                }
+                              },
+                            ),
+                        ],
+                      ),
+                      Text('${p.votes.length} of ${group.memberUids.length} voted', style: text.bodySmall),
+                      const SizedBox(height: KSpace.sm),
+                      for (final (i, option) in p.options.indexed)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: KSpace.xs),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              try {
+                                await repo.vote(group.id, p.id, uid, i);
+                              } catch (e) {
+                                if (context.mounted) showError(context, e);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(KSpace.sm),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: p.votes[uid] == i ? context.k.accent : context.k.line,
+                                    width: p.votes[uid] == i ? 2 : 1),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(child: Text(option)),
+                                  Text('${p.countFor(i)}',
+                                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _newPoll(BuildContext context, WidgetRef ref) async {
+    final question = TextEditingController();
+    final options = [TextEditingController(), TextEditingController()];
+    // Suggest the plan's stops as options, a quick "which place?" poll.
+    final stopNames = group.planStops.map((s) => s['name']).whereType<String>().take(6).toList();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('New poll'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: question,
+                  maxLength: 150,
+                  decoration: const InputDecoration(hintText: 'Question, e.g. Which place?'),
+                ),
+                for (final (i, c) in options.indexed)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: KSpace.sm),
+                    child: TextField(
+                      controller: c,
+                      maxLength: 60,
+                      decoration: InputDecoration(hintText: 'Option ${i + 1}', counterText: ''),
+                    ),
+                  ),
+                if (options.length < 6)
+                  TextButton.icon(
+                    onPressed: () => setState(() => options.add(TextEditingController())),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add option'),
+                  ),
+                if (stopNames.length >= 2)
+                  TextButton.icon(
+                    onPressed: () => setState(() {
+                      question.text = question.text.isEmpty ? 'Which place?' : question.text;
+                      for (final c in options) {
+                        c.dispose();
+                      }
+                      options
+                        ..clear()
+                        ..addAll(stopNames.map((n) => TextEditingController(text: n)));
+                    }),
+                    icon: const Icon(Icons.map_outlined),
+                    label: const Text("Use the plan's stops"),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Ask')),
+          ],
+        ),
+      ),
+    );
+    final q = question.text.trim();
+    final opts = options.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
+    question.dispose();
+    for (final c in options) {
+      c.dispose();
+    }
+    if (ok != true) return;
+    if (q.isEmpty || opts.length < 2) {
+      if (context.mounted) showMessage(context, 'Add a question and at least 2 options.');
+      return;
+    }
+    try {
+      await ref.read(groupsRepositoryProvider).createPoll(group.id, uid, q, opts);
+    } catch (e) {
+      if (context.mounted) showError(context, e);
+    }
   }
 }

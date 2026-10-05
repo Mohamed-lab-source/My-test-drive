@@ -73,6 +73,17 @@ How the code enforces it (keep it this way):
   favorites" (`preferPlaceIds`, a score boost only), "skip places I've been"
   (via `excludePlaceIds`). Plans can be copied, added to Google Calendar and
   show end times (`stopEndTime`, `planEndTime`, `planCalendarLink`).
+- Plan around a spot: `nearLat/nearLng/nearLabel` on PlanRequest (from a place
+  page or "Near me"); `passesFilters` keeps only places within 3 km. Stops can
+  have their time/length/note edited (`setStopTime`, `setStopDuration`,
+  `setStopNote`) and be reordered by `shortestRoute` (nearest-neighbour).
+- Groups extras: polls in `groups/{id}/polls/{pollId}` (one vote per member,
+  own key only), emoji `reactions` on messages (own key only), organizer-only
+  `pinned` note, meeting point (`meetPlaceId/meetPlaceName`), and removing a
+  member. All enforced in firestore.rules and covered in rules-test.
+- Phone-only extras (`lib/app/local_prefs.dart`): your lists of places, plan
+  "How was it?", things-to-bring lists, settings (pure black, data saver,
+  start on Explore, welcome tour seen, last "What's new" version).
 - App icon: drawn by `tool/make_icon.py` (Pillow) into the Android mipmaps
   (adaptive + monochrome) and `assets/icon/khroga.png`. Re-run it to change it.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from

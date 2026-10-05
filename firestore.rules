@@ -192,12 +192,28 @@ service cloud.firestore {
           && newData().lastMessage is string && newData().lastMessage.size() <= 120
           && newData().lastMessageAt == request.time)
         ||
-        // The organizer: name, date and who doesn't pay.
+        // The organizer: name, date, who doesn't pay, a pinned note, the meeting point.
         (me() == resource.data.ownerUid
-          && changed().hasOnly(['scheduledAt', 'freeUids', 'name'])
+          && changed().hasOnly(['scheduledAt', 'freeUids', 'name', 'pinned',
+                                'meetPlaceId', 'meetPlaceName'])
           && newData().freeUids is list
           && validName(newData().name)
-          && (newData().scheduledAt == null || newData().scheduledAt is timestamp))
+          && (newData().scheduledAt == null || newData().scheduledAt is timestamp)
+          && (!('pinned' in newData()) || newData().pinned == null
+              || (newData().pinned is string && newData().pinned.size() <= 300))
+          && (!('meetPlaceId' in newData()) || newData().meetPlaceId == null
+              || (newData().meetPlaceId is string && newData().meetPlaceId.size() <= 80))
+          && (!('meetPlaceName' in newData()) || newData().meetPlaceName == null
+              || (newData().meetPlaceName is string && newData().meetPlaceName.size() <= 100)))
+        ||
+        // The organizer removes one member (never themselves).
+        (me() == resource.data.ownerUid
+          && changed().hasOnly(['memberUids', 'rsvp', 'freeUids'])
+          && oldMembers().difference(newMembers()).size() == 1
+          && newMembers().difference(oldMembers()).size() == 0
+          && me() in newData().memberUids
+          && newData().rsvp.keys().toSet().difference(newMembers()).size() == 0
+          && newData().freeUids.toSet().difference(newMembers()).size() == 0)
       );
 
       allow delete: if signedIn() && me() == resource.data.ownerUid;
@@ -214,9 +230,39 @@ service cloud.firestore {
           && newData().text.size() > 0 && newData().text.size() <= 1000
           && newData().name is string && newData().name.size() <= 60
           && newData().createdAt == request.time;
-        allow update: if false;
+        // Members can add, change or remove only their own emoji reaction.
+        allow update: if member()
+          && changed().hasOnly(['reactions'])
+          && newData().reactions is map
+          && newData().reactions.diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([me()])
+          && (!(me() in newData().reactions)
+              || (newData().reactions[me()] is string && newData().reactions[me()].size() <= 8));
         // Only the organizer, when deleting the whole group.
         allow delete: if signedIn() && group().ownerUid == me();
+      }
+
+      // Polls: any member asks; each member votes once (and can change it).
+      match /polls/{pollId} {
+        function group() { return get(/databases/$(database)/documents/groups/$(groupId)).data; }
+        function member() { return signedIn() && me() in group().memberUids; }
+
+        allow read: if member();
+        allow create: if member()
+          && newData().keys().hasOnly(['uid', 'question', 'options', 'votes', 'createdAt'])
+          && newData().uid == me()
+          && newData().question is string
+          && newData().question.size() > 0 && newData().question.size() <= 150
+          && newData().options is list
+          && newData().options.size() >= 2 && newData().options.size() <= 6
+          && newData().votes == {}
+          && newData().createdAt == request.time;
+        allow update: if member()
+          && changed().hasOnly(['votes'])
+          && newData().votes.diff(resource.data.votes).affectedKeys().hasOnly([me()])
+          && (!(me() in newData().votes)
+              || (newData().votes[me()] is int && newData().votes[me()] >= 0
+                  && newData().votes[me()] < resource.data.options.size()));
+        allow delete: if signedIn() && (resource.data.uid == me() || group().ownerUid == me());
       }
     }
   }

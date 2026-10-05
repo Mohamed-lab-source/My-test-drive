@@ -102,17 +102,19 @@ class GroupsRepository {
         'rsvp.$uid': FieldValue.delete(),
       });
 
-  /// Deletes the group, its messages and its invite code (organizer only).
+  /// Deletes the group, its messages, polls and invite code (organizer only).
   Future<void> delete(Group group) async {
-    final messages = _groups.doc(group.id).collection('messages');
-    while (true) {
-      final page = await messages.limit(400).get();
-      if (page.docs.isEmpty) break;
-      final batch = _db.batch();
-      for (final d in page.docs) {
-        batch.delete(d.reference);
+    for (final sub in ['messages', 'polls']) {
+      final docs = _groups.doc(group.id).collection(sub);
+      while (true) {
+        final page = await docs.limit(400).get();
+        if (page.docs.isEmpty) break;
+        final batch = _db.batch();
+        for (final d in page.docs) {
+          batch.delete(d.reference);
+        }
+        await batch.commit();
       }
-      await batch.commit();
     }
     final batch = _db.batch()
       ..delete(_codes.doc(group.joinCode))
@@ -139,6 +141,52 @@ class GroupsRepository {
       _groups.doc(groupId).update({
         'scheduledAt': when == null ? null : Timestamp.fromDate(when),
       });
+
+  // ---- Organizer tools ----
+  Future<void> rename(String groupId, String name) =>
+      _groups.doc(groupId).update({'name': name.trim()});
+
+  Future<void> setPinned(String groupId, String? text) => _groups.doc(groupId).update({
+        'pinned': text == null || text.trim().isEmpty ? null : text.trim(),
+      });
+
+  Future<void> setMeetingPoint(String groupId, {String? placeId, String? placeName}) =>
+      _groups.doc(groupId).update({'meetPlaceId': placeId, 'meetPlaceName': placeName});
+
+  Future<void> removeMember(String groupId, String uid) => _groups.doc(groupId).update({
+        'memberUids': FieldValue.arrayRemove([uid]),
+        'freeUids': FieldValue.arrayRemove([uid]),
+        'rsvp.$uid': FieldValue.delete(),
+      });
+
+  // ---- Reactions and polls ----
+  Future<void> react(String groupId, String messageId, String uid, String? emoji) =>
+      _groups.doc(groupId).collection('messages').doc(messageId).update({
+        'reactions.$uid': emoji ?? FieldValue.delete(),
+      });
+
+  Stream<List<Poll>> watchPolls(String groupId) => _groups
+      .doc(groupId)
+      .collection('polls')
+      .orderBy('createdAt', descending: true)
+      .limit(20)
+      .snapshots()
+      .map((s) => s.docs.map((d) => Poll.fromMap(d.id, d.data())).toList());
+
+  Future<void> createPoll(String groupId, String uid, String question, List<String> options) =>
+      _groups.doc(groupId).collection('polls').add({
+        'uid': uid,
+        'question': question.trim(),
+        'options': options.map((o) => o.trim()).where((o) => o.isNotEmpty).take(6).toList(),
+        'votes': <String, int>{},
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+  Future<void> vote(String groupId, String pollId, String uid, int option) =>
+      _groups.doc(groupId).collection('polls').doc(pollId).update({'votes.$uid': option});
+
+  Future<void> deletePoll(String groupId, String pollId) =>
+      _groups.doc(groupId).collection('polls').doc(pollId).delete();
 
   Stream<List<GroupMessage>> watchMessages(String groupId) => _groups
       .doc(groupId)

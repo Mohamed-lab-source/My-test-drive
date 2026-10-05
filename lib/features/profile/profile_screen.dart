@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../app/helpers.dart';
 import '../../app/local_history.dart';
@@ -87,6 +88,42 @@ class ProfileScreen extends ConsumerWidget {
                   subtitle: const Text('Recently viewed, searches, star ratings, ticked stops'),
                   onTap: () => _clearHistory(context, ref),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KSpace.md),
+          const _AppSettingsCard(),
+          const SizedBox(height: KSpace.md),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.ios_share),
+                  title: const Text('Export my data'),
+                  subtitle: const Text('Plans, favorites, places you\'ve been, lists'),
+                  onTap: () => _export(context, ref),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.share_outlined),
+                  title: const Text('Share Khroga with friends'),
+                  onTap: () => SharePlus.instance.share(ShareParams(
+                      text: 'I plan outings in Cairo, Giza and Alexandria with Khroga. '
+                          'It only suggests real places and it\'s free. Ask me for the app!')),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.new_releases_outlined),
+                  title: const Text("What's new"),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/whats-new'),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.school_outlined),
+                  title: const Text('Show the welcome tour again'),
+                  onTap: () => context.push('/welcome'),
+                ),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
@@ -142,6 +179,40 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Everything you've saved, as text you can keep or send to yourself.
+  Future<void> _export(BuildContext context, WidgetRef ref) async {
+    try {
+      final plans = await ref.read(allPlansProvider.future);
+      final favorites = await ref.read(favoritePlacesProvider.future);
+      final visited = await ref.read(visitedPlacesProvider.future);
+      final all = await ref.read(allPlacesProvider.future);
+      final byId = {for (final p in all) p.id: p.name};
+      final lists = ref.read(placeListsProvider);
+      final out = StringBuffer('My Khroga data\n\n');
+      out.writeln('PLANS (${plans.length})');
+      for (final p in plans) {
+        out.writeln('• ${p.title}: ${p.stops.map((s) => s.name).join(' → ')}');
+      }
+      out.writeln('\nFAVORITES (${favorites.length})');
+      for (final p in favorites) {
+        out.writeln('• ${p.name}${p.area == null ? '' : ' (${p.area})'}');
+      }
+      out.writeln("\nPLACES I'VE BEEN (${visited.length})");
+      for (final p in visited) {
+        out.writeln('• ${p.name}');
+      }
+      for (final e in lists.entries) {
+        out.writeln('\nLIST: ${e.key}');
+        for (final id in e.value) {
+          if (byId[id] != null) out.writeln('• ${byId[id]}');
+        }
+      }
+      await SharePlus.instance.share(ShareParams(text: out.toString(), subject: 'My Khroga data'));
+    } catch (e) {
+      if (context.mounted) showError(context, e);
+    }
   }
 
   Future<void> _pickCity(BuildContext context, WidgetRef ref) async {
@@ -328,6 +399,46 @@ class _Badges extends ConsumerWidget {
             Text('Tap a badge to see how to earn it.', style: text.bodySmall),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Phone-only app settings.
+class _AppSettingsCard extends ConsumerWidget {
+  const _AppSettingsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(appSettingsProvider);
+    final n = ref.read(appSettingsProvider.notifier);
+    return Card(
+      child: Column(
+        children: [
+          SwitchListTile(
+            secondary: const Icon(Icons.dark_mode_outlined),
+            title: const Text('Pure black dark mode'),
+            subtitle: const Text('Darker, saves battery on many phones'),
+            value: s.pureBlack,
+            onChanged: n.setPureBlack,
+          ),
+          const Divider(),
+          SwitchListTile(
+            secondary: const Icon(Icons.data_saver_on_outlined),
+            title: const Text('Data saver'),
+            subtitle: const Text("Don't load place photos"),
+            value: s.dataSaver,
+            onChanged: n.setDataSaver,
+          ),
+          const Divider(),
+          SwitchListTile(
+            secondary: const Icon(Icons.explore_outlined),
+            title: const Text('Open the app on Explore'),
+            subtitle: const Text('Instead of Plan (next time you open it)'),
+            value: s.startOnExplore,
+            onChanged: n.setStartOnExplore,
+          ),
+        ],
       ),
     );
   }

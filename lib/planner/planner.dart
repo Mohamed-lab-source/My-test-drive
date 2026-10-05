@@ -104,7 +104,12 @@ bool passesFilters(Place p, PlanRequest input) {
   if (mallId != null && mallId.isNotEmpty) {
     return p.parentMallId == mallId; // only venues inside that mall
   }
-  return p.city == input.city;
+  if (p.city != input.city) return false;
+  if (input.hasAnchor) {
+    return p.hasLocation &&
+        haversineKm(input.nearLat!, input.nearLng!, p.lat!, p.lng!) <= PlanRequest.nearRadiusKm;
+  }
+  return true;
 }
 
 List<Place> pickCandidates(
@@ -621,4 +626,64 @@ Uri planCalendarLink(OutingPlan plan) {
     ].join('\n'),
     if (plan.stops.isNotEmpty && plan.stops.first.area != null) 'location': plan.stops.first.area!,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Editing stops: time, length, note, shortest route
+// ---------------------------------------------------------------------------
+
+/// Gives each stop a start time: the first keeps its time, each next one
+/// starts after the previous ends plus 20 minutes to get there.
+List<PlanStop> retime(List<PlanStop> stops) {
+  final out = <PlanStop>[];
+  int? next;
+  for (final s in stops) {
+    final start = next ?? _minutesOf(s.startTime);
+    final stop = start == null ? s : s.copyWith(startTime: _hhmm(start));
+    out.add(stop);
+    next = start == null ? null : start + (s.durationMinutes ?? 60) + 20;
+  }
+  return out;
+}
+
+/// Reorders stops so the route is short: keeps the first stop, then always
+/// goes to the nearest remaining one (stops without coordinates go last).
+List<PlanStop> shortestRoute(List<PlanStop> stops) {
+  if (stops.length < 3) return withDistances(stops);
+  final rest = [...stops.skip(1)];
+  final ordered = [stops.first];
+  while (rest.isNotEmpty) {
+    final cur = ordered.last;
+    rest.sort((a, b) {
+      double d(PlanStop x) => cur.hasLocation && x.hasLocation
+          ? haversineKm(cur.lat!, cur.lng!, x.lat!, x.lng!)
+          : 1e9;
+      return d(a).compareTo(d(b));
+    });
+    ordered.add(rest.removeAt(0));
+  }
+  return withDistances(retime(ordered));
+}
+
+/// Changes one stop's start time ("19:30").
+List<PlanStop> setStopTime(List<PlanStop> stops, int index, String hhmm) =>
+    [...stops]..[index] = stops[index].copyWith(startTime: hhmm);
+
+/// Changes one stop's length in minutes (15 min to 6 hours).
+List<PlanStop> setStopDuration(List<PlanStop> stops, int index, int minutes) =>
+    [...stops]..[index] = stops[index].copyWith(durationMinutes: minutes.clamp(15, 360));
+
+/// Adds, changes or clears ('' ) your own note on a stop.
+List<PlanStop> setStopNote(List<PlanStop> stops, int index, String note) => [...stops]
+  ..[index] = stops[index].copyWith(note: note.length > 200 ? note.substring(0, 200) : note);
+
+/// Same brand or same name elsewhere ("other branches"), nearest first.
+List<Place> otherBranches(Place place, List<Place> all, {int limit = 8}) {
+  String key(Place p) => (p.details.brand ?? p.name).trim().toLowerCase();
+  final k = key(place);
+  if (k.length < 3) return const [];
+  final list = all.where((p) => p.id != place.id && key(p) == k).toList();
+  double d(Place p) => distanceKm(place, p) ?? 1e9;
+  list.sort((a, b) => d(a).compareTo(d(b)));
+  return list.take(limit).toList();
 }

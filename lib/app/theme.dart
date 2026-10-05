@@ -64,19 +64,20 @@ class KPalette extends ThemeExtension<KPalette> {
   final Color surface; // cards
   final Color background; // page background
 
-  factory KPalette.of(AccentTheme theme, Brightness brightness) {
+  /// [pureBlack] = true black background (saves battery on OLED screens).
+  factory KPalette.of(AccentTheme theme, Brightness brightness, {bool pureBlack = false}) {
     if (brightness == Brightness.dark) {
       final accent = theme.dark;
-      const surface = Color(0xFF1B1E26);
+      final surface = pureBlack ? const Color(0xFF121212) : const Color(0xFF1B1E26);
       return KPalette(
         accent: accent,
         onAccent: const Color(0xFF111318),
         accentSoft: Color.alphaBlend(accent.withValues(alpha: 0.20), surface),
         ink: const Color(0xFFF3F5F9),
         inkMuted: const Color(0xFFB7BECB),
-        line: const Color(0xFF343A46),
+        line: pureBlack ? const Color(0xFF2C2C2C) : const Color(0xFF343A46),
         surface: surface,
-        background: const Color(0xFF111318),
+        background: pureBlack ? Colors.black : const Color(0xFF111318),
       );
     }
     final accent = theme.light;
@@ -155,8 +156,9 @@ ThemeData buildTheme({
   AccentTheme accent = const AccentTheme(
       id: 'coral', name: 'Coral', light: Color(0xFFC93D1B), dark: Color(0xFFFF8A65)),
   Brightness brightness = Brightness.dark,
+  bool pureBlack = false,
 }) {
-  final p = KPalette.of(accent, brightness);
+  final p = KPalette.of(accent, brightness, pureBlack: pureBlack);
   final scheme = ColorScheme.fromSeed(
     seedColor: p.accent,
     brightness: brightness,

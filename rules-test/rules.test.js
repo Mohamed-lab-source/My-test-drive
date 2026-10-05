@@ -227,3 +227,40 @@ test("plans: owner can rename, not blank", async () => {
   await assertFails(updateDoc(ref(as(ALICE)), { title: "" }));
   await assertFails(updateDoc(ref(as(BOB)), { title: "Hacked" }));
 });
+
+test("group polls: members ask and vote once; outsiders can't", async () => {
+  const polls = (db) => collection(db, "groups/g1/polls");
+  const poll = { uid: BOB, question: "Where?", options: ["A", "B"], votes: {}, createdAt: serverTimestamp() };
+  await assertSucceeds(setDoc(doc(polls(as(BOB)), "p1"), poll));
+  await assertFails(setDoc(doc(polls(as(EVE)), "p2"), { ...poll, uid: EVE }), "outsider");
+  await assertFails(setDoc(doc(polls(as(BOB)), "p3"), { ...poll, options: ["only one"] }));
+  await assertFails(setDoc(doc(polls(as(BOB)), "p4"), { ...poll, votes: { alice: 1 } }), "no fake votes");
+  const p1 = (db) => doc(db, "groups/g1/polls/p1");
+  await assertSucceeds(updateDoc(p1(as(ALICE)), { "votes.alice": 1 }));
+  await assertSucceeds(updateDoc(p1(as(ALICE)), { "votes.alice": 0 }), "can change vote");
+  await assertFails(updateDoc(p1(as(ALICE)), { "votes.bob": 0 }), "can't vote for someone else");
+  await assertFails(updateDoc(p1(as(ALICE)), { "votes.alice": 5 }), "option must exist");
+  await assertFails(updateDoc(p1(as(EVE)), { "votes.eve": 0 }));
+  await assertFails(getDoc(p1(as(EVE))));
+  await assertSucceeds(deleteDoc(p1(as(ALICE))), "organizer can delete any poll");
+});
+
+test("message reactions: only your own", async () => {
+  const m = (db) => doc(db, "groups/g1/messages/m1");
+  await assertSucceeds(updateDoc(m(as(BOB)), { "reactions.bob": "👍" }));
+  await assertFails(updateDoc(m(as(BOB)), { "reactions.alice": "👍" }));
+  await assertFails(updateDoc(m(as(BOB)), { text: "edited" }));
+  await assertFails(updateDoc(m(as(EVE)), { "reactions.eve": "👍" }));
+  await assertSucceeds(updateDoc(m(as(BOB)), { "reactions.bob": deleteField() }));
+});
+
+test("organizer: pin a note, set meeting point, remove a member", async () => {
+  const g = (db) => doc(db, "groups/g1");
+  await assertSucceeds(updateDoc(g(as(ALICE)), { pinned: "Meet at 7", meetPlaceId: "x", meetPlaceName: "Gate 1" }));
+  await assertFails(updateDoc(g(as(BOB)), { pinned: "Hi" }), "only the organizer pins");
+  await assertFails(updateDoc(g(as(ALICE)), { pinned: "x".repeat(301) }));
+  await assertFails(updateDoc(g(as(BOB)), { memberUids: arrayRemove(ALICE) }), "members can't remove others");
+  await assertFails(updateDoc(g(as(ALICE)), { memberUids: arrayRemove(ALICE) }), "organizer stays");
+  await assertSucceeds(updateDoc(g(as(ALICE)), {
+    memberUids: arrayRemove(BOB), freeUids: arrayRemove(BOB), "rsvp.bob": deleteField() }));
+});

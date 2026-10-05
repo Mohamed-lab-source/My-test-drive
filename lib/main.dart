@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app/local_prefs.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'app/theme_settings.dart';
@@ -39,7 +40,10 @@ class KhrogaApp extends ConsumerWidget {
       title: 'Khroga',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(accent: look.accent, brightness: Brightness.light),
-      darkTheme: buildTheme(accent: look.accent, brightness: Brightness.dark),
+      darkTheme: buildTheme(
+          accent: look.accent,
+          brightness: Brightness.dark,
+          pureBlack: ref.watch(appSettingsProvider.select((s) => s.pureBlack))),
       themeMode: look.mode,
       routerConfig: ref.watch(routerProvider),
       // "Bigger text" setting, on top of the phone's own text size.

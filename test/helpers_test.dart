@@ -4,6 +4,7 @@ import 'package:khroga/app/helpers.dart';
 import 'package:khroga/models/opening_hours.dart';
 import 'package:khroga/models/place.dart';
 import 'package:khroga/models/plan.dart';
+import 'package:khroga/models/social.dart';
 import 'package:khroga/planner/planner.dart';
 
 // 2026-10-05 is a Monday.
@@ -21,6 +22,7 @@ PlanStop _s(String id, {String? start, int? minutes, double? lat, double? lng, S
         area: area);
 
 void main() {
+  moreTests();
   group('opening hours status', () {
     test('open: says when it closes, also after midnight', () {
       expect(OpeningHours.parse('Mo-Su 10:00-23:00')!.statusText(mon(12)), 'Open · closes 23:00');
@@ -117,5 +119,86 @@ void main() {
       expect(wazeUrl(q)!.queryParameters['ll'], '30.0,31.0');
       expect(wikidataUrl(q).toString(), 'https://www.wikidata.org/wiki/Q1');
     });
+  });
+}
+
+void moreTests() {
+  group('new helpers', () {
+    test('WhatsApp only for Egyptian mobile numbers', () {
+      expect(whatsappUrl('010 1234 5678').toString(), 'https://wa.me/201012345678');
+      expect(whatsappUrl('+20 12 3456 7890').toString(), 'https://wa.me/201234567890');
+      expect(whatsappUrl('02 2735 0000'), isNull, reason: 'landline');
+      expect(whatsappUrl(null), isNull);
+    });
+
+    test('walking time and floors', () {
+      expect(walkingMinutes(0.75), 10);
+      const g = Place(id: 'g', name: 'Test G', category: 'shop', city: 'cairo',
+          details: PlaceFacts(level: '0'));
+      const f1 = Place(id: 'f', name: 'Test F', category: 'shop', city: 'cairo',
+          details: PlaceFacts(level: '1'));
+      const u = Place(id: 'u', name: 'Test U', category: 'shop', city: 'cairo');
+      expect(byFloor([u, f1, g]).keys.toList(), ['Ground floor', 'Floor 1', 'Floor not listed']);
+    });
+
+    test('compare text never guesses', () {
+      expect(factText(null), 'Unknown');
+      expect(factText(true), 'Yes');
+      expect(factText('limited'), 'Limited');
+    });
+
+    test('tip of the day changes daily', () {
+      expect(tipOfTheDay(DateTime(2026, 1, 1)), isNot(tipOfTheDay(DateTime(2026, 1, 2))));
+    });
+  });
+
+  group('editing stops', () {
+    test('time, length, note', () {
+      final stops = [_s('a', start: '18:00', minutes: 60)];
+      expect(setStopTime(stops, 0, '19:15').first.startTime, '19:15');
+      expect(setStopDuration(stops, 0, 5).first.durationMinutes, 15);
+      expect(setStopNote(stops, 0, ' Book a table ').first.note, 'Book a table');
+      expect(setStopNote(setStopNote(stops, 0, 'x'), 0, '').first.note, isNull);
+      expect(setStopNote(stops, 0, 'x').first.startTime, '18:00', reason: 'keeps other fields');
+    });
+
+    test('shortest route keeps the first stop and goes nearest next', () {
+      final stops = [
+        _s('start', start: '18:00', minutes: 60, lat: 30.00, lng: 31.00),
+        _s('far', minutes: 60, lat: 30.20, lng: 31.00),
+        _s('near', minutes: 60, lat: 30.01, lng: 31.00),
+      ];
+      final r = shortestRoute(stops);
+      expect(r.map((s) => s.placeId), ['start', 'near', 'far']);
+      expect(r[1].startTime, '19:20');
+      expect(r[1].kmFromPrevious, isNotNull);
+    });
+
+    test('plan around a spot only uses places nearby', () {
+      const near = Place(id: 'n', name: 'Test N', category: 'cafe', city: 'cairo', lat: 30.01, lng: 31.0);
+      const far = Place(id: 'f', name: 'Test F', category: 'cafe', city: 'cairo', lat: 30.2, lng: 31.0);
+      const noLoc = Place(id: 'x', name: 'Test X', category: 'cafe', city: 'cairo');
+      const r = PlanRequest(
+          city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening', nearLat: 30.0, nearLng: 31.0);
+      expect(passesFilters(near, r), isTrue);
+      expect(passesFilters(far, r), isFalse);
+      expect(passesFilters(noLoc, r), isFalse);
+      expect(PlanRequest.fromMap(r.toMap()).hasAnchor, isTrue);
+    });
+
+    test('other branches: same brand or name, nearest first', () {
+      const a = Place(id: 'a', name: 'Test Chain', category: 'cafe', city: 'cairo', lat: 30, lng: 31);
+      const b = Place(id: 'b', name: 'test chain', category: 'cafe', city: 'cairo', lat: 30.3, lng: 31);
+      const c = Place(id: 'c', name: 'Test Chain Zamalek', category: 'cafe', city: 'cairo', lat: 30.01, lng: 31,
+          details: PlaceFacts(brand: 'Test Chain'));
+      const d = Place(id: 'd', name: 'Other', category: 'cafe', city: 'cairo');
+      expect(otherBranches(a, [a, b, c, d]).map((p) => p.id), ['c', 'b']);
+    });
+  });
+
+  test('poll counts votes', () {
+    const p = Poll(id: 'p', uid: 'u', question: 'Q', options: ['A', 'B'], votes: {'x': 0, 'y': 1, 'z': 1});
+    expect(p.countFor(1), 2);
+    expect(Poll.fromMap('p', {'options': ['A', 'B'], 'votes': {'x': 1}}).votes, {'x': 1});
   });
 }

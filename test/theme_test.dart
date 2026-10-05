@@ -36,6 +36,18 @@ void main() {
     }
   }
 
+  for (final theme in accentThemes) {
+    test('${theme.name} pure black: text is easy to read', () {
+      final p = KPalette.of(theme, Brightness.dark, pureBlack: true);
+      expect(p.background, Colors.black);
+      expect(contrast(p.ink, p.surface), greaterThanOrEqualTo(7));
+      expect(contrast(p.inkMuted, p.surface), greaterThanOrEqualTo(4.5));
+      expect(contrast(p.onAccent, p.accent), greaterThanOrEqualTo(4.5));
+      expect(contrast(p.ink, p.accentSoft), greaterThanOrEqualTo(4.5));
+      expect(contrast(p.accent, p.surface), greaterThanOrEqualTo(3));
+    });
+  }
+
   test('unknown theme id falls back to the first theme', () {
     expect(accentById('nope').id, accentThemes.first.id);
   });

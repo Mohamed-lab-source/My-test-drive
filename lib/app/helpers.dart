@@ -100,3 +100,69 @@ String placeChatText(Place p) => [
 /// A chat message with a map link to where you are right now.
 String myLocationText(double lat, double lng) =>
     "📍 I'm here: ${Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '$lat,$lng'})}";
+
+/// WhatsApp chat link for an Egyptian mobile number (01x…), else null.
+/// It only opens a chat; it doesn't mean the place uses WhatsApp.
+Uri? whatsappUrl(String? phone) {
+  if (phone == null) return null;
+  var d = phone.split(RegExp(r'[;,/]')).first.replaceAll(RegExp(r'[^0-9]'), '');
+  if (d.startsWith('0020')) d = d.substring(2);
+  if (d.startsWith('01') && d.length == 11) d = '20${d.substring(1)}';
+  if (!(d.startsWith('201') && d.length == 12)) return null;
+  return Uri.https('wa.me', '/$d');
+}
+
+/// Google Street View at the place's real coordinates.
+Uri? streetViewUrl(Place p) => p.hasLocation
+    ? Uri.https('www.google.com', '/maps/@', {
+        'api': '1',
+        'map_action': 'pano',
+        'viewpoint': '${p.lat},${p.lng}',
+      })
+    : null;
+
+/// A rough walking time for a straight-line distance (about 4.5 km/h).
+int walkingMinutes(double km) => (km / 4.5 * 60).round().clamp(1, 100000);
+
+/// Groups mall venues by floor ("Ground floor", "Floor 1"…), unknown last.
+Map<String, List<Place>> byFloor(List<Place> venues) {
+  double order(Place p) {
+    final l = p.details.level?.split(';').first.trim();
+    return double.tryParse(l ?? '') ?? 999;
+  }
+
+  final sorted = [...venues]..sort((a, b) => order(a).compareTo(order(b)));
+  final out = <String, List<Place>>{};
+  for (final v in sorted) {
+    (out[v.details.floorLabel ?? 'Floor not listed'] ??= []).add(v);
+  }
+  return out;
+}
+
+/// A tip about using the app, a different one each day.
+String tipOfTheDay(DateTime now) {
+  const tips = [
+    'Tap 🎲 in Explore when you can\'t decide.',
+    'Long-press a chat message to copy it.',
+    'Plan around any place: open it and tap "Plan around here".',
+    'Tick stops off as you go on a plan.',
+    'Turn on "Skip places I\'ve been" to discover somewhere new.',
+    'Make lists like "Birthday ideas" from any place page.',
+    'Compare two places side by side from a place page.',
+    'Polls in a group help everyone pick a place fast.',
+    'Data saver hides photos to save mobile data.',
+  ];
+  final dayOfYear = now.difference(DateTime(now.year)).inDays;
+  return tips[dayOfYear % tips.length];
+}
+
+/// Simple yes/no/unknown text for comparing two places.
+String factText(Object? v) => switch (v) {
+      null => 'Unknown',
+      true => 'Yes',
+      false => 'No',
+      'yes' => 'Yes',
+      'no' => 'No',
+      'limited' => 'Limited',
+      _ => '$v',
+    };
