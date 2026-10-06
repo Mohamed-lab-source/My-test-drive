@@ -12,9 +12,10 @@ window.WEDDING = {
   invitationLine: "Invite you to celebrate the beginning of their forever",
   closingLine: "Your presence will complete our happiness",
 
-  // Local date & time (YYYY-MM-DDTHH:MM)
-  start: "2026-11-11T19:00",
-  end: "2026-11-11T23:00",
+  // Date & time with Cairo's UTC offset (+02:00 in November), so the
+  // countdown and calendar are right for guests in any time zone.
+  start: "2026-11-11T19:00+02:00",
+  end: "2026-11-11T23:00+02:00",
   dateText: "11 • 11 • 2026",
   dayText: "Wednesday",
   timeText: "7:00 PM – 11:00 PM",

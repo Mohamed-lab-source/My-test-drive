@@ -84,31 +84,17 @@
   tick();
   setInterval(tick, 1000);
 
-  // ── Add to calendar (.ics download) ──
-  document.getElementById("add-calendar").addEventListener("click", () => {
-    const fmt = (d) => new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-    const esc = (s) => s.replace(/[,;]/g, (c) => `\\${c}`);
-    const ics = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Wedding Invitation//EN",
-      "BEGIN:VEVENT",
-      `UID:${fmt(W.start)}-wedding@invite`,
-      `DTSTAMP:${fmt(Date.now())}`,
-      `DTSTART:${fmt(W.start)}`,
-      `DTEND:${fmt(W.end)}`,
-      `SUMMARY:${esc(`Wedding of ${W.couple.partner1} & ${W.couple.partner2}`)}`,
-      `LOCATION:${esc(`${W.venue.name}, ${W.venue.address}`)}`,
-      `URL:${W.venue.mapUrl}`,
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ].join("\r\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
-    a.download = "wedding.ics";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  });
+  // ── Add to calendar (Google Calendar link) ──
+  const gcal = (d) => new Date(d).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  document.getElementById("add-calendar").href =
+    "https://calendar.google.com/calendar/render?" +
+    new URLSearchParams({
+      action: "TEMPLATE",
+      text: `Wedding of ${W.couple.partner1} & ${W.couple.partner2}`,
+      dates: `${gcal(W.start)}/${gcal(W.end)}`,
+      location: `${W.venue.name}, ${W.venue.address}`,
+      details: `Directions: ${W.venue.mapUrl}`,
+    });
 
   // ── RSVP ──
   const { rsvp } = W;
