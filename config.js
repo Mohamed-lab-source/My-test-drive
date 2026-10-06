@@ -19,6 +19,12 @@ window.WEDDING = {
   dateText: "11 • 11 • 2026",
   dayText: "Wednesday",
   timeText: "7:00 PM – 11:00 PM",
+  // What the three scratch-off hearts reveal
+  dateParts: ["11", "Nov", "2026"],
+  dateLabels: ["Day", "Month", "Year"],
+
+  // Soft music-box melody that starts when the envelope opens (guests can pause it)
+  music: true,
 
   venue: {
     name: "Talinda Hall",

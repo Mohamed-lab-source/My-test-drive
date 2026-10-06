@@ -130,6 +130,7 @@
         if (e.isIntersecting) {
           e.target.classList.add("in");
           io.unobserve(e.target);
+          if (e.target.classList.contains("signature")) setTimeout(() => fx.show(4), 2400);
         }
       }),
     { threshold: 0.15 }
@@ -224,6 +225,35 @@
       }
     };
 
+    // Fireworks: a rocket climbs, then bursts into a ring of gold, blue and white
+    const rockets = [];
+    const SHELL = [GOLD, ["#a9bfd9", "#e8eef6", "#ffffff", "#6f8fb5"], ["#ffffff", "#f3e3bd", "#a9bfd9"]];
+    const firework = (x, y) => rockets.push({ x, y: h + 10, ty: y, vy: -(h - y) / 48, palette: SHELL[(Math.random() * SHELL.length) | 0] });
+    const explode = (r) => {
+      const n = 70;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const v = 3.2 + Math.random() * 1.6;
+        sparks.push({
+          x: r.x, y: r.y,
+          vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+          life: 1, decay: 0.009 + Math.random() * 0.008,
+          size: 1.6 + Math.random() * 2, rot: 0, vr: 0,
+          shape: "dot", glow: true,
+          color: r.palette[(Math.random() * r.palette.length) | 0],
+        });
+      }
+      burst(r.x, r.y, 18, 2.5);
+    };
+    const trail = (x, y) => {
+      sparks.push({
+        x: x + (Math.random() - 0.5) * 8, y: y + (Math.random() - 0.5) * 8,
+        vx: (Math.random() - 0.5) * 0.6, vy: -Math.random() * 0.6,
+        life: 0.9, decay: 0.03, size: 1.5 + Math.random() * 2.5, rot: 0, vr: 0,
+        shape: "star", color: GOLD[(Math.random() * GOLD.length) | 0],
+      });
+    };
+
     const star = (x, y, r) => {
       ctx.beginPath();
       for (let i = 0; i < 8; i++) {
@@ -273,13 +303,30 @@
         ctx.restore();
       }
 
+      // rockets
+      for (let i = rockets.length - 1; i >= 0; i--) {
+        const r = rockets[i];
+        r.y += r.vy;
+        r.vy *= 0.985;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#fff3d6";
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        if (t % 2 === 0) sparks.push({ x: r.x, y: r.y + 4, vx: (Math.random() - 0.5) * 0.4, vy: 0.6, life: 0.6, decay: 0.04, size: 1.5, rot: 0, vr: 0, shape: "dot", color: "#e6cf9c" });
+        if (r.y <= r.ty || r.vy > -1.2) {
+          rockets.splice(i, 1);
+          explode(r);
+        }
+      }
+
       // bursts
       for (let i = sparks.length - 1; i >= 0; i--) {
         const s = sparks[i];
         s.x += s.vx;
         s.y += s.vy;
         s.vx *= 0.97;
-        s.vy = s.vy * 0.97 + 0.12;
+        s.vy = s.vy * 0.97 + (s.glow ? 0.045 : 0.12);
         s.rot += s.vr;
         s.life -= s.decay;
         if (s.life <= 0) {
@@ -289,7 +336,18 @@
         ctx.globalAlpha = Math.min(1, s.life * 1.5);
         ctx.fillStyle = s.color;
         if (s.shape === "star") star(s.x, s.y, s.size * 1.4);
-        else {
+        else if (s.shape === "dot") {
+          if (s.glow) {
+            ctx.globalAlpha *= 0.35;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size * 2.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = Math.min(1, s.life * 1.5);
+          }
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
           ctx.save();
           ctx.translate(s.x, s.y);
           ctx.rotate(s.rot);
@@ -301,14 +359,146 @@
       requestAnimationFrame(frame);
     };
     if (!reduceMotion) requestAnimationFrame(frame);
-    return { burst: reduceMotion ? () => {} : burst };
+    const none = () => {};
+    const show = (count = 3) => {
+      for (let i = 0; i < count; i++)
+        setTimeout(() => firework(w * (0.2 + Math.random() * 0.6), h * (0.18 + Math.random() * 0.25)), i * 420);
+    };
+    return reduceMotion ? { burst: none, trail: none, show: none } : { burst, trail, show };
   })();
+
+  // A trail of gold dust follows the finger or mouse
+  let lastTrail = 0;
+  addEventListener(
+    "pointermove",
+    (e) => {
+      if (e.pointerType !== "mouse" && !e.buttons) return;
+      const now = performance.now();
+      if (now - lastTrail < 24) return;
+      lastTrail = now;
+      fx.trail(e.clientX, e.clientY);
+    },
+    { passive: true }
+  );
 
   // A little sparkle wherever a guest taps
   addEventListener("pointerdown", (e) => {
     if (e.target.closest("dialog")) return;
     fx.burst(e.clientX, e.clientY, 12, 3);
   });
+
+  // ── Music box: Pachelbel's Canon, synthesised in the browser ──
+  const music = (() => {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!W.music || !AC) return { start() {} };
+    const button = $("#music");
+    let ac, master, playing = false, timer, nextTime = 0, step = 0;
+    const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    const ROOTS = [50, 45, 47, 42, 43, 38, 43, 45]; // D A Bm F#m G D G A
+    const MINOR = [false, false, true, true, false, false, false, false];
+    const MELODY = [
+      [78, 76, 74, 73, 71, 69, 71, 73],
+      [74, 73, 71, 69, 67, 66, 67, 64],
+      [78, 81, 79, 78, 76, 74, 76, 73],
+    ];
+    const EIGHTH = 60 / 66 / 2;
+
+    const bell = (midi, time, vel, dur = 1.6) => {
+      const f = mtof(midi);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(vel, time + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+      g.connect(master);
+      [[1, 1], [2.01, 0.25], [4.02, 0.08]].forEach(([mult, amp]) => {
+        const o = ac.createOscillator();
+        const og = ac.createGain();
+        o.type = "sine";
+        o.frequency.value = f * mult;
+        og.gain.value = amp;
+        o.connect(og).connect(g);
+        o.start(time);
+        o.stop(time + dur + 0.05);
+      });
+    };
+
+    const schedule = () => {
+      while (nextTime < ac.currentTime + 0.5) {
+        const chord = Math.floor(step / 4) % 8;
+        const loop = Math.floor(step / 32);
+        const pos = step % 4;
+        const base = ROOTS[chord] + 12;
+        const third = MINOR[chord] ? 3 : 4;
+        const arp = [base, base + 7, base + 12, base + 12 + third][pos];
+        bell(arp, nextTime, 0.09, 1.4);
+        if (pos === 0) {
+          bell(ROOTS[chord], nextTime, 0.07, 2.2);
+          if (loop > 0) bell(MELODY[(loop - 1) % MELODY.length][chord], nextTime, 0.16, 2.4);
+        }
+        nextTime += EIGHTH;
+        step++;
+      }
+    };
+
+    const setUI = () => {
+      button.setAttribute("aria-pressed", String(playing));
+      button.setAttribute("aria-label", playing ? "Pause music" : "Play music");
+    };
+    const play = () => {
+      if (!ac) {
+        ac = new AC();
+        master = ac.createGain();
+        master.gain.value = 0.0001;
+        // a little room reverb
+        const verb = ac.createConvolver();
+        const len = ac.sampleRate * 2.4;
+        const ir = ac.createBuffer(2, len, ac.sampleRate);
+        for (let c = 0; c < 2; c++) {
+          const d = ir.getChannelData(c);
+          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+        }
+        verb.buffer = ir;
+        const wet = ac.createGain();
+        wet.gain.value = 0.35;
+        master.connect(ac.destination);
+        master.connect(verb).connect(wet).connect(ac.destination);
+      }
+      ac.resume();
+      nextTime = Math.max(nextTime, ac.currentTime + 0.1);
+      master.gain.cancelScheduledValues(ac.currentTime);
+      master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), ac.currentTime);
+      master.gain.exponentialRampToValueAtTime(0.9, ac.currentTime + 1.5);
+      clearInterval(timer);
+      timer = setInterval(schedule, 120);
+      schedule();
+      playing = true;
+      setUI();
+    };
+    const pause = () => {
+      if (!ac) return;
+      master.gain.cancelScheduledValues(ac.currentTime);
+      master.gain.setValueAtTime(master.gain.value, ac.currentTime);
+      master.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.4);
+      clearInterval(timer);
+      setTimeout(() => !playing && ac.suspend(), 500);
+      playing = false;
+      setUI();
+    };
+    button.addEventListener("click", () => (playing ? pause() : play()));
+    let wasPlaying = false;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        wasPlaying = playing;
+        if (playing) pause();
+      } else if (wasPlaying) play();
+    });
+    return {
+      start() {
+        button.hidden = false;
+        play();
+      },
+    };
+  })();
 
   // ── Envelope ──
   const envelope = $("#envelope");
@@ -322,6 +512,7 @@
     const cy = r.top + r.height / 2;
     envelope.classList.add("open");
     screen.classList.add("opened");
+    music.start();
     navigator.vibrate?.(30);
     fx.burst(cx, cy, 70, 7);
     setTimeout(() => fx.burst(cx, cy - 120, 90, 9), 1300);
@@ -330,6 +521,145 @@
     setTimeout(settleNames, reduceMotion ? 0 : 2300 + 4300);
   };
   envelope.addEventListener("click", open);
+
+  // ── Floating lights ──
+  $$(".bokeh").forEach((box) => {
+    for (let i = 0; i < 12; i++) {
+      const b = document.createElement("i");
+      const size = 18 + Math.random() * 70;
+      if (i % 3 === 0) b.className = "blue";
+      b.style.width = b.style.height = `${size}px`;
+      b.style.left = `${Math.random() * 100}%`;
+      b.style.top = `${30 + Math.random() * 70}%`;
+      b.style.animationDuration = `${9 + Math.random() * 8}s`;
+      b.style.animationDelay = `${-Math.random() * 15}s`;
+      b.style.setProperty("--dx", `${(Math.random() - 0.5) * 120}px`);
+      box.appendChild(b);
+    }
+  });
+
+  // ── The arch tilts toward the pointer (or with the phone on Android) ──
+  if (!reduceMotion) {
+    const tilt = $("#tilt");
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+    const apply = () => {
+      cx += (tx - cx) * 0.08;
+      cy += (ty - cy) * 0.08;
+      tilt.style.transform = `perspective(1000px) rotateX(${cy.toFixed(2)}deg) rotateY(${cx.toFixed(2)}deg)`;
+      raf = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.01 ? requestAnimationFrame(apply) : 0;
+    };
+    const aim = (x, y) => {
+      tx = Math.max(-1, Math.min(1, x)) * 7;
+      ty = Math.max(-1, Math.min(1, y)) * -5;
+      if (!raf) raf = requestAnimationFrame(apply);
+    };
+    $(".hero").addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse") return;
+      aim((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
+    });
+    $(".hero").addEventListener("pointerleave", () => aim(0, 0));
+    addEventListener("deviceorientation", (e) => {
+      if (e.gamma == null) return;
+      aim(e.gamma / 25, (e.beta - 45) / 30);
+    });
+  }
+
+  // ── Scratch-off hearts ──
+  (() => {
+    const section = $("#save-the-date");
+    const hearts = $$(".scratch-heart", section);
+    let done = 0;
+    const finish = () => {
+      section.classList.add("done");
+      fx.show(3);
+    };
+    const clearHeart = (heart) => {
+      if (heart.classList.contains("cleared")) return;
+      heart.classList.add("cleared");
+      const r = heart.getBoundingClientRect();
+      fx.burst(r.left + r.width / 2, r.top + r.height / 2, 34, 5);
+      if (++done === hearts.length) setTimeout(finish, 500);
+    };
+
+    const paint = (canvas) => {
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      const w = canvas.offsetWidth, h = canvas.offsetHeight;
+      if (!w) return false;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      const c = canvas.getContext("2d");
+      c.scale(dpr, dpr);
+      const g = c.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, "#c9a46a");
+      g.addColorStop(0.35, "#f3e1b0");
+      g.addColorStop(0.55, "#b8955a");
+      g.addColorStop(0.8, "#ecd49c");
+      g.addColorStop(1, "#a9874f");
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+      // foil grain
+      for (let i = 0; i < w * h * 0.06; i++) {
+        c.fillStyle = Math.random() < 0.5 ? "rgba(255,255,255,.35)" : "rgba(120,90,40,.18)";
+        c.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+      }
+      c.fillStyle = "rgba(255,255,255,.9)";
+      c.font = `${Math.round(w * 0.2)}px "Great Vibes", cursive`;
+      c.textAlign = "center";
+      c.fillText("✦", w / 2, h * 0.5);
+      return true;
+    };
+
+    hearts.forEach((heart) => {
+      const canvas = $("canvas", heart);
+      let ready = false, drawing = false, moves = 0, last = null;
+      const ensure = () => (ready = ready || paint(canvas));
+      const pos = (e) => {
+        const r = canvas.getBoundingClientRect();
+        return [e.clientX - r.left, e.clientY - r.top];
+      };
+      const scratch = (x, y) => {
+        const c = canvas.getContext("2d");
+        c.globalCompositeOperation = "destination-out";
+        c.lineCap = c.lineJoin = "round";
+        c.lineWidth = canvas.offsetWidth * 0.22;
+        c.beginPath();
+        c.moveTo(...(last || [x, y]));
+        c.lineTo(x, y);
+        c.stroke();
+        last = [x, y];
+        if (++moves % 6 === 0) check();
+      };
+      const check = () => {
+        const { width, height } = canvas;
+        const data = canvas.getContext("2d").getImageData(0, 0, width, height).data;
+        let clear = 0, total = 0;
+        for (let i = 3; i < data.length; i += 4 * 24) {
+          total++;
+          if (data[i] < 40) clear++;
+        }
+        if (clear / total > 0.45) clearHeart(heart);
+      };
+      canvas.addEventListener("pointerdown", (e) => {
+        if (!ensure()) return;
+        drawing = true;
+        last = null;
+        canvas.setPointerCapture(e.pointerId);
+        scratch(...pos(e));
+      });
+      canvas.addEventListener("pointermove", (e) => drawing && scratch(...pos(e)));
+      ["pointerup", "pointercancel"].forEach((ev) => canvas.addEventListener(ev, () => (drawing = false)));
+      // paint once visible and once fonts have loaded
+      requestAnimationFrame(ensure);
+      document.fonts?.ready.then(() => !heart.classList.contains("cleared") && (ready = paint(canvas)));
+      addEventListener("resize", () => !heart.classList.contains("cleared") && (ready = paint(canvas)));
+    });
+
+    $("#reveal-all").addEventListener("click", () => hearts.forEach((h, i) => setTimeout(() => clearHeart(h), i * 250)));
+    if (reduceMotion) {
+      hearts.forEach((h) => h.classList.add("cleared"));
+      section.classList.add("done");
+    }
+  })();
 
   // ── Countdown with flipping digits ──
   const target = new Date(W.start).getTime();

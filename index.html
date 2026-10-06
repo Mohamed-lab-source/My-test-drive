@@ -60,11 +60,13 @@
     <!-- ───── Hero (the invitation card, in HTML) ───── -->
     <section class="hero">
       <div class="hero-bg" aria-hidden="true"></div>
+      <div class="bokeh" aria-hidden="true"></div>
       <img class="corner h-tl" src="assets/floral-top.webp" alt="" />
       <img class="corner h-tr" src="assets/floral-top.webp" alt="" />
       <img class="corner h-bl" src="assets/floral-bottom-left.webp" alt="" />
       <img class="corner h-br" src="assets/floral-bottom-right.webp" alt="" />
 
+      <div class="tilt" id="tilt">
       <div class="arch">
         <div class="arch-glow" aria-hidden="true"></div>
         <svg class="jewel" viewBox="0 0 40 70" aria-hidden="true">
@@ -116,11 +118,28 @@
 
         <p class="closing"><span class="heart-rule"><span class="beat">♡</span></span><span data-bind="closingLine"></span></p>
       </div>
+      </div>
       <a href="#countdown" class="scroll-cue" aria-label="Scroll down"><span></span></a>
+    </section>
+
+    <!-- ───── Scratch to reveal ───── -->
+    <section class="section scratch" id="save-the-date">
+      <div class="flourish reveal" aria-hidden="true"><svg viewBox="0 0 240 30"><use href="#flourish" /></svg></div>
+      <p class="eyebrow reveal">Save the date</p>
+      <h2 class="script reveal">Scratch to reveal</h2>
+      <p class="scratch-hint reveal">Rub each heart with your finger</p>
+      <div class="hearts-row reveal">
+        <div class="scratch-heart"><div class="under"><strong data-bind="dateParts.0"></strong><small data-bind="dateLabels.0"></small></div><canvas aria-label="Scratch to reveal"></canvas></div>
+        <div class="scratch-heart"><div class="under"><strong data-bind="dateParts.1"></strong><small data-bind="dateLabels.1"></small></div><canvas aria-label="Scratch to reveal"></canvas></div>
+        <div class="scratch-heart"><div class="under"><strong data-bind="dateParts.2"></strong><small data-bind="dateLabels.2"></small></div><canvas aria-label="Scratch to reveal"></canvas></div>
+      </div>
+      <p class="scratch-done" id="scratch-done" aria-live="polite"><span data-bind="dayText"></span> · <span data-bind="timeText"></span><br /><em>We can't wait to celebrate with you</em></p>
+      <button class="link-btn" id="reveal-all" type="button">Reveal without scratching</button>
     </section>
 
     <!-- ───── Countdown ───── -->
     <section id="countdown" class="section countdown">
+      <div class="bokeh" aria-hidden="true"></div>
       <div class="flourish reveal" aria-hidden="true"><svg viewBox="0 0 240 30"><use href="#flourish" /></svg></div>
       <h2 class="script reveal">Counting down to forever</h2>
       <div class="timer reveal" id="timer">
@@ -192,6 +211,12 @@
       <p class="footer-note reveal" data-bind="closingLine"></p>
     </footer>
   </main>
+
+  <!-- Music-box melody (Pachelbel's Canon), played in the browser -->
+  <button class="music" id="music" type="button" aria-label="Pause music" aria-pressed="true" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg>
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+  </button>
 
   <!-- Lightbox for venue photos -->
   <dialog id="lightbox"><img alt="" /><button aria-label="Close">×</button></dialog>
