@@ -76,8 +76,9 @@ h1, h2, h3 { font-weight: 400; margin: 0; }
   background:
     linear-gradient(to top right, #eaf0f7 50%, transparent 50.5%) left / 50.5% 100% no-repeat,
     linear-gradient(to top left, #e6edf5 50%, transparent 50.5%) right / 50.5% 100% no-repeat,
-    linear-gradient(to top, #eef3f9 50%, transparent 50.5%) bottom / 100% 60% no-repeat;
-  border-radius: 0 0 6px 6px;
+    linear-gradient(to top, #eef3f9 50%, transparent 50.5%) bottom / 100% 60% no-repeat,
+    #e3eaf3;
+  border-radius: 6px;
   z-index: 3;
 }
 .env-flap {
