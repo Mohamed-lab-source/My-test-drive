@@ -9,7 +9,10 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
+import android.content.Context;
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
@@ -69,8 +72,16 @@ public class WakeWordService extends Service {
         threshold = "high".equals(s) ? 0.3f : "low".equals(s) ? 0.7f : 0.5f;
     }
 
+    // When on, "Hey Jarvis" listens through a connected Bluetooth headset's
+    // microphone so it hears the user with the phone away/in a pocket.
+    private static volatile boolean useHeadsetMic = false;
+    static void setHeadsetMic(boolean b) { useHeadsetMic = b; }
+
     private volatile boolean stopRequested = false;
+    private boolean scoStarted = false;
     private Thread worker;
+
+    private AudioManager audio() { return (AudioManager) getSystemService(Context.AUDIO_SERVICE); }
 
     static boolean isRunning() { return running; }
 
@@ -103,6 +114,7 @@ public class WakeWordService extends Service {
         }
         running = true;
         if (intent != null && intent.hasExtra("sensitivity")) setSensitivity(intent.getStringExtra("sensitivity"));
+        if (intent != null && intent.hasExtra("headsetMic")) useHeadsetMic = intent.getBooleanExtra("headsetMic", false);
         if (worker == null) {
             stopRequested = false;
             worker = new Thread(this::listenLoop, "jarvis-wake");
@@ -155,7 +167,7 @@ public class WakeWordService extends Service {
                 if (isPaused()) {
                     stage = "paused";
                     level = 0f;
-                    if (rec != null) { releaseRecorder(rec); rec = null; }
+                    if (rec != null) { releaseRecorder(rec); rec = null; stopSco(); }
                     Thread.sleep(200);
                     continue;
                 }
@@ -180,6 +192,7 @@ public class WakeWordService extends Service {
                 if (got < CHUNK) {
                     releaseRecorder(rec);
                     rec = null;
+                    stopSco();
                     if (!isPaused()) Thread.sleep(500);
                     continue;
                 }
@@ -230,6 +243,7 @@ public class WakeWordService extends Service {
             lastError = t.getClass().getSimpleName() + ": " + t.getMessage();
         } finally {
             if (rec != null) releaseRecorder(rec);
+            stopSco();
             if (mel != null) mel.close();
             if (emb != null) emb.close();
             if (kw != null) kw.close();
@@ -242,9 +256,13 @@ public class WakeWordService extends Service {
             return null;
         }
         try {
+            // On the go: route the wake word through the Bluetooth headset mic when one's connected.
+            AudioDeviceInfo bt = useHeadsetMic ? acquireHeadsetMic() : null;
+            int source = bt != null ? MediaRecorder.AudioSource.VOICE_COMMUNICATION : MediaRecorder.AudioSource.VOICE_RECOGNITION;
             int min = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            AudioRecord rec = new AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, SAMPLE_RATE,
+            AudioRecord rec = new AudioRecord(source, SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, CHUNK * 2 * 4));
+            if (bt != null && Build.VERSION.SDK_INT >= 23) { try { rec.setPreferredDevice(bt); } catch (Exception ignored) {} }
             if (rec.getState() != AudioRecord.STATE_INITIALIZED) { rec.release(); lastError = "Microphone could not be opened"; return null; }
             rec.startRecording();
             if (rec.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) { releaseRecorder(rec); lastError = "Microphone is busy (another app may be using it)"; return null; }
@@ -254,6 +272,45 @@ public class WakeWordService extends Service {
             lastError = "Microphone unavailable: " + e.getMessage();
             return null;
         }
+    }
+
+    /** Start Bluetooth SCO (if a headset is connected) and return its input device, or null. */
+    private AudioDeviceInfo acquireHeadsetMic() {
+        if (Build.VERSION.SDK_INT < 23) return null;
+        AudioManager am = audio();
+        if (am == null) return null;
+        try {
+            // Only bother if a Bluetooth audio device is actually connected.
+            boolean btConnected = false;
+            for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+                int t = d.getType();
+                if (t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || t == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) { btConnected = true; break; }
+            }
+            if (!btConnected) return null;
+            if (!am.isBluetoothScoOn()) {
+                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                am.startBluetoothSco();
+                am.setBluetoothScoOn(true);
+                scoStarted = true;
+                for (int i = 0; i < 20 && !am.isBluetoothScoOn() && !stopRequested; i++) {
+                    try { Thread.sleep(100); } catch (InterruptedException e) { break; }
+                }
+            }
+            for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_INPUTS)) {
+                if (d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) return d;
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "could not route to headset mic", e);
+        }
+        return null;
+    }
+
+    private void stopSco() {
+        if (!scoStarted) return;
+        scoStarted = false;
+        AudioManager am = audio();
+        if (am == null) return;
+        try { am.setBluetoothScoOn(false); am.stopBluetoothSco(); am.setMode(AudioManager.MODE_NORMAL); } catch (Exception ignored) {}
     }
 
     private static void releaseRecorder(AudioRecord rec) {

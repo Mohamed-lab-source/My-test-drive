@@ -754,7 +754,7 @@ async function startWakeWord() {
   const perm = await SpeechRecognition.requestPermissions();
   if (perm.speechRecognition !== "granted") throw new Error("Jarvis needs the microphone for this. Allow it in App info → Permissions.");
   try { await LocalNotifications.requestPermissions(); } catch {}
-  const r = await DeviceActions.setWakeWord({ enabled: true, sensitivity: state.wakeSensitivity || "normal" });
+  const r = await DeviceActions.setWakeWord({ enabled: true, sensitivity: state.wakeSensitivity || "normal", headsetMic: !!state.onTheGo });
   wakeRunning = !!r.running;
 }
 
@@ -821,9 +821,13 @@ async function setOnTheGo(on) {
   try {
     await DeviceActions.setMediaButton({ enabled: !!on });
     if (on && !state.wakeWord) {
+      // Turning on "on the go" also turns on hands-free "Hey Jarvis".
       const wt = document.getElementById("wakeWordToggle");
       if (wt) wt.checked = true;
       await setWakeWordEnabled(true);
+    } else if (state.wakeWord) {
+      // Already listening — restart so it (un)routes to the headset mic now.
+      await startWakeWord().finally(refreshWakeStatus);
     }
   } catch (e) {
     state.onTheGo = false;

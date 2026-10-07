@@ -486,6 +486,13 @@ Jarvis now comes with you. Turn on **On the go (Bluetooth)** in Settings and:
 - **Survives reboots.** It re-arms itself after a restart (and the first time
   you open the app again, if your phone's maker blocked the boot start).
 
+**No button needed — just say his name.** With On-the-Go on, "Hey Jarvis"
+listens through your Bluetooth earbuds' own microphone, so you can summon him
+by voice alone with the phone in your pocket and the screen off. (While he's
+listening through the earbuds, music plays in call quality; switch On-the-Go
+off to get full-quality music back. The headset button still works as a
+shortcut.)
+
 For the *dedicated* assistant button some earbuds have (a long-press that
 launches "your assistant"), also tap **Make Jarvis my assistant** just below
 the toggle and pick Jarvis — then that button summons him too.

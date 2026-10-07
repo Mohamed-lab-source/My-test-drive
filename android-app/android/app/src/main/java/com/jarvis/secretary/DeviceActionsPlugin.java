@@ -684,6 +684,9 @@ public class DeviceActionsPlugin extends Plugin {
         if (Build.VERSION.SDK_INT < 26) { call.reject("UNSUPPORTED"); return; }
         svc.putExtra("sensitivity", call.getString("sensitivity", "normal"));
         WakeWordService.setSensitivity(call.getString("sensitivity", "normal"));
+        boolean headsetMic = Boolean.TRUE.equals(call.getBoolean("headsetMic", false));
+        svc.putExtra("headsetMic", headsetMic);
+        WakeWordService.setHeadsetMic(headsetMic);
         if (ctx.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             call.reject("NO_MIC");
             return;
