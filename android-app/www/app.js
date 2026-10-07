@@ -2116,7 +2116,9 @@ function wireChat() {
  * Voice — tap the core to talk; in conversation mode Jarvis keeps listening
  * after each spoken reply until you dismiss him or go quiet.
  * ---------------------------------------------------------------------- */
-const DISMISSAL = /^(?:(that'?s (all|it)|that is all|thanks?( you)?,? jarvis|stop|goodbye|bye|never ?mind|nothing( else)?|no,? (thanks|thank you)|we'?re done|dismissed)\b|(خلاص|شكرا|شكراً|مع السلامة|سلام|باي|كفاية))/i;
+// A short sign-off ends the conversation. Gratitude ("thanks", "thank you",
+// "thanks Jarvis", شكرا) is NOT a goodbye — he should take it and keep going.
+const DISMISSAL = /^(?:(that'?s (all|it)|that is all|that'?ll be all|stop|goodbye|bye|never ?mind|nothing( else)?|we'?re done|dismissed|go to sleep|that'?s enough)\b|(خلاص|مع السلامة|سلام|باي|كفايه|كفاية))/i;
 
 let voiceRouted = false;
 // On the go: when a headset is connected, route the mic through it so you can
@@ -2156,7 +2158,7 @@ async function listenOnce() {
 function isDismissal(heard) {
   const full = String(heard).trim().replace(/[.!?]+$/, "");
   const t = full.replace(/[, ]+(jarvis|sir)$/i, "");
-  if (/^(stop|no|nothing|bye|goodbye|never ?mind)\b\s*\S/i.test(t) && !/^(no,? (thanks|thank you)|nothing else|stop listening)$/i.test(t)) return false;
+  if (/^(stop|no|nothing|bye|goodbye|never ?mind)\b\s*\S/i.test(t) && !/^(nothing else|stop listening)$/i.test(t)) return false;
   const m = t.match(DISMISSAL) || full.match(DISMISSAL);
   if (!m) return false;
   // "that's all for now" ends it; "thanks Jarvis, now call mom" is a new request.
