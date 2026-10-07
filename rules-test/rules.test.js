@@ -288,3 +288,40 @@ test("plans: AI polish can update summary, tips and source, within limits", asyn
   await assertFails(updateDoc(ref(as(ALICE)), { source: "hacked" }));
   await assertFails(updateDoc(ref(as(BOB)), { summary: "nope" }));
 });
+
+test("delete my account: only your own documents", async () => {
+  await assertFails(deleteDoc(doc(as(BOB), "users/alice")));
+  await assertFails(deleteDoc(doc(as(BOB), "publicProfiles/alice")));
+  await assertSucceeds(deleteDoc(doc(as(ALICE), "publicProfiles/alice")));
+  await assertSucceeds(deleteDoc(doc(as(ALICE), "users/alice")));
+});
+
+test("reports, feedback and error reports: write-only and limited", async () => {
+  const report = { by: BOB, kind: "message", targetUid: ALICE, groupId: "g1", messageId: "m1",
+    text: "hi", reason: "Rude", createdAt: serverTimestamp() };
+  await assertSucceeds(addDoc(collection(as(BOB), "reports"), report));
+  await assertFails(addDoc(collection(as(BOB), "reports"), { ...report, by: ALICE }), "can't report as someone else");
+  await assertFails(addDoc(collection(as(BOB), "reports"), { ...report, kind: "other" }));
+  await assertFails(addDoc(collection(anon(), "reports"), report));
+  await assertFails(getDocs(collection(as(BOB), "reports")), "nobody reads reports in the app");
+  await assertSucceeds(addDoc(collection(as(BOB), "feedback"),
+    { by: BOB, text: "Love it", appVersion: "0.5.0", createdAt: serverTimestamp() }));
+  await assertFails(addDoc(collection(as(BOB), "feedback"),
+    { by: BOB, text: "x".repeat(1001), appVersion: "0.5.0", createdAt: serverTimestamp() }));
+  await assertSucceeds(addDoc(collection(as(BOB), "errorReports"),
+    { by: BOB, message: "oops", stack: "at main", appVersion: "0.5.0", createdAt: serverTimestamp() }));
+  await assertFails(getDocs(collection(as(BOB), "errorReports")));
+});
+
+test("chat: reply to a message, delete only your own", async () => {
+  const msgs = (db) => collection(db, "groups/g1/messages");
+  await assertSucceeds(addDoc(msgs(as(BOB)), { uid: BOB, name: "Bob", text: "yes!", replyTo: "hi",
+    replyName: "Alice", createdAt: serverTimestamp() }));
+  await assertFails(addDoc(msgs(as(BOB)), { uid: BOB, name: "Bob", text: "x", replyTo: "y".repeat(201),
+    createdAt: serverTimestamp() }));
+  await assertFails(deleteDoc(doc(as(BOB), "groups/g1/messages/m1")), "not Bob's message");
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "groups/g1/messages/m2"), { uid: BOB, name: "Bob", text: "oops" });
+  });
+  await assertSucceeds(deleteDoc(doc(as(BOB), "groups/g1/messages/m2")));
+});

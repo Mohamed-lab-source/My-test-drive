@@ -110,6 +110,7 @@ class _PlanList extends ConsumerStatefulWidget {
 class _PlanListState extends ConsumerState<_PlanList> {
   String _q = '';
   bool _oldestFirst = false;
+  bool _upcoming = false;
 
   @override
   Widget build(BuildContext context) {
@@ -118,10 +119,17 @@ class _PlanListState extends ConsumerState<_PlanList> {
       builder: (all) {
         if (all.isEmpty) {
           return EmptyState(
-              emoji: widget.emptyEmoji, title: widget.emptyTitle, message: widget.emptyMessage);
+              emoji: widget.emptyEmoji,
+              title: widget.emptyTitle,
+              message: widget.emptyMessage,
+              actionLabel: tr('Make a plan'),
+              onAction: () => context.go('/plan'));
         }
         final q = _q.trim().toLowerCase();
+        final today = DateTime.now();
+        final todayStart = DateTime(today.year, today.month, today.day);
         final list = all
+            .where((p) => !_upcoming || (p.request.date != null && !p.request.day.isBefore(todayStart)))
             .where((p) =>
                 q.isEmpty ||
                 p.title.toLowerCase().contains(q) ||
@@ -151,6 +159,13 @@ class _PlanListState extends ConsumerState<_PlanList> {
                       icon: const Icon(Icons.delete_sweep_outlined),
                       onPressed: () => _clearUnsaved(all),
                     ),
+                  IconButton(
+                    tooltip: tr('Only upcoming outings'),
+                    isSelected: _upcoming,
+                    icon: const Icon(Icons.event_outlined),
+                    selectedIcon: const Icon(Icons.event_available),
+                    onPressed: () => setState(() => _upcoming = !_upcoming),
+                  ),
                   IconButton(
                     tooltip: _oldestFirst ? tr('Newest first') : tr('Oldest first'),
                     onPressed: () => setState(() => _oldestFirst = !_oldestFirst),
@@ -266,22 +281,37 @@ class _PlaceListTab extends StatefulWidget {
 
 class _PlaceListTabState extends State<_PlaceListTab> {
   bool _map = false;
+  bool _az = false;
 
   @override
   Widget build(BuildContext context) {
     return AsyncView<List<Place>>(
       value: widget.value,
-      builder: (list) => list.isEmpty
-          ? EmptyState(emoji: widget.emptyEmoji, title: widget.emptyTitle, message: widget.emptyMessage)
+      builder: (raw) {
+        final list = _sorted(raw);
+        return list.isEmpty
+          ? EmptyState(
+              emoji: widget.emptyEmoji,
+              title: widget.emptyTitle,
+              message: widget.emptyMessage,
+              actionLabel: tr('Explore places'),
+              onAction: () => context.go('/explore'))
           : Column(
               children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => setState(() => _az = !_az),
+                      icon: Icon(_az ? Icons.sort_by_alpha : Icons.schedule),
+                      label: Text(_az ? tr('A–Z') : tr('Newest first')),
+                    ),
+                    TextButton.icon(
                     onPressed: () => setState(() => _map = !_map),
                     icon: Icon(_map ? Icons.view_list_outlined : Icons.map_outlined),
                     label: Text(_map ? tr('List') : tr('Map')),
                   ),
+                  ],
                 ),
                 Expanded(
                   child: _map
@@ -303,9 +333,14 @@ class _PlaceListTabState extends State<_PlaceListTab> {
             ),
                 ),
               ],
-            ),
+            );
+      },
     );
   }
+
+  List<Place> _sorted(List<Place> list) => _az
+      ? ([...list]..sort((a, b) => a.shownName.toLowerCase().compareTo(b.shownName.toLowerCase())))
+      : list;
 }
 
 class _SavedPlanTile extends StatelessWidget {
@@ -317,7 +352,7 @@ class _SavedPlanTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final emojis = plan.stops.map((s) => Categories.emoji(s.category)).join(' ');
     final date = plan.request.date != null
-        ? 'for ${DateFormat('EEE d MMM').format(plan.request.day)}'
+        ? trf('for {date}', {'date': DateFormat('EEE d MMM').format(plan.request.day)})
         : plan.createdAt == null
             ? ''
             : DateFormat.MMMd().format(plan.createdAt!);
@@ -326,7 +361,11 @@ class _SavedPlanTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.sm),
         title: Text(plan.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text('$emojis   ${trf('{n} stops', {'n': plan.stops.length})} · $date'),
+        subtitle: Text([
+          '$emojis   ${trf('{n} stops', {'n': plan.stops.length})}',
+          ?plan.stops.map((s) => s.area).whereType<String>().firstOrNull,
+          if (date.isNotEmpty) date,
+        ].join(' · ')),
         trailing: Consumer(
           builder: (context, ref, _) => PopupMenuButton<String>(
             onSelected: (_) async {

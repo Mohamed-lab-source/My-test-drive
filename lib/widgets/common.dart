@@ -182,6 +182,10 @@ class PlaceImage extends ConsumerWidget {
               width: width,
               height: height,
               fit: BoxFit.cover,
+              // Decode small thumbnails small: less memory and smoother lists.
+              cacheWidth: width != null && width!.isFinite
+                  ? (width! * MediaQuery.devicePixelRatioOf(context)).round()
+                  : null,
               errorBuilder: (_, _, _) => placeholder,
               loadingBuilder: (_, child, progress) =>
                   progress == null ? child : placeholder,

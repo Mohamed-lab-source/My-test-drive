@@ -23,6 +23,7 @@ import '../features/plan/plan_form_screen.dart';
 import '../features/plan/plan_result_screen.dart';
 import '../features/plan/saved_plans_screen.dart';
 import '../features/profile/about_screen.dart';
+import '../features/profile/safety_screens.dart';
 import '../features/profile/welcome_screen.dart';
 import '../features/profile/whats_new_screen.dart';
 import '../features/profile/profile_screen.dart';
@@ -95,6 +96,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/malls', builder: (_, _) => const MallsScreen()),
       GoRoute(path: '/about', builder: (_, _) => const AboutScreen()),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
+      GoRoute(path: '/privacy', builder: (_, _) => const PrivacyScreen()),
+      GoRoute(path: '/terms', builder: (_, _) => const TermsScreen()),
+      GoRoute(path: '/feedback', builder: (_, _) => const FeedbackScreen()),
+      GoRoute(path: '/blocked', builder: (_, _) => const BlockedScreen()),
       GoRoute(path: '/whats-new', builder: (_, _) => const WhatsNewScreen()),
       GoRoute(path: '/lists', builder: (_, _) => const ListsScreen()),
       GoRoute(

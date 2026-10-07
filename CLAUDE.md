@@ -118,6 +118,16 @@ How the code enforces it (keep it this way):
     group preview write is skipped during a 2-minute burst
     (`shouldUpdatePreview`), and the offline cache is unlimited. Never add a
     listener on a whole collection without a small `limit`.
+- Safety (Play Store needs these): Profile → Delete my account
+  (`SafetyRepository.deleteAllData` + `AuthRepository.confirmIdentity` /
+  `deleteSignIn`), report a message/user (`reports`, write-only), feedback
+  (`feedback`, write-only), error reports (`errorReports`, write-only, max 3
+  per app run, can be turned off), block people (phone-only list
+  `blockedUsersProvider`; hides their messages and requests), in-app
+  privacy policy and terms (`features/profile/safety_screens.dart`).
+- Chat messages can be replies (`replyTo`/`replyName`) and deleted by their
+  sender. Phone settings: 24-hour clock, vibration, reduce motion
+  (`phoneSettingsProvider`). The GitHub build passes `BUILD_DATE`.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

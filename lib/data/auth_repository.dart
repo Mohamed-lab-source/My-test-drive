@@ -52,6 +52,23 @@ class AuthRepository {
         googleName: account.displayName, googlePhoto: account.photoUrl);
   }
 
+  /// Google asks you to confirm before an account is deleted (guests don't).
+  Future<void> confirmIdentity() async {
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous) return;
+    await _initGoogle();
+    final account = await GoogleSignIn.instance.authenticate();
+    final idToken = account.authentication.idToken;
+    if (idToken == null) throw Exception('Google did not return a sign-in token. Please try again.');
+    await user.reauthenticateWithCredential(GoogleAuthProvider.credential(idToken: idToken));
+  }
+
+  /// Removes the sign-in account itself (call after deleting the data).
+  Future<void> deleteSignIn() async {
+    await _auth.currentUser?.delete();
+    await signOut();
+  }
+
   Future<void> signInAsGuest() async {
     final result = await _auth.signInAnonymously();
     await _ensureUserDocuments(result.user!);

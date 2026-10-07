@@ -15,6 +15,7 @@ import 'personal_repository.dart';
 import 'groups_repository.dart';
 import 'places_repository.dart';
 import 'plans_repository.dart';
+import 'safety_repository.dart';
 import 'social_repository.dart';
 
 // ---- Firebase singletons ----
@@ -254,3 +255,7 @@ final friendUidsProvider = Provider<List<String>>((ref) {
       if (f.status == FriendshipStatus.accepted) f.otherUid(uid),
   ];
 });
+
+// ---- Safety: reports, feedback, account deletion ----
+final safetyRepositoryProvider = Provider((ref) =>
+    SafetyRepository(ref.watch(firestoreProvider), ref.watch(groupsRepositoryProvider)));

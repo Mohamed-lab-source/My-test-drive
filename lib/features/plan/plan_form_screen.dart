@@ -140,6 +140,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   }
 
   Future<void> _generate() async {
+    tapFeedback(ref.read(phoneSettingsProvider).haptics);
     final last = ref.read(lastPlanChoicesProvider.notifier);
     last.set('people', '$_people');
     last.set('stops', '$_stops');
@@ -266,6 +267,16 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                   _date = sameDay(fri, now) ? null : fri;
                 }),
               ),
+              ChoiceChip(
+                label: Text(tr('Saturday')),
+                selected: _date != null && _date!.weekday == DateTime.saturday && !_isTomorrow(_date),
+                showCheckmark: false,
+                onSelected: (_) => setState(() {
+                  final now = DateTime.now();
+                  final sat = nextWeekday(now, DateTime.saturday);
+                  _date = sameDay(sat, now) ? null : sat;
+                }),
+              ),
               ActionChip(
                 avatar: const Icon(Icons.event_outlined, size: 18),
                 label: Text(_date == null || _isTomorrow(_date)
@@ -353,11 +364,31 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             ),
           ],
           SectionTitle(tr('How many people?')),
-          _Stepper(
-            value: _people,
-            min: 1,
-            max: 20,
-            onChanged: (v) => setState(() => _people = v),
+          Row(
+            children: [
+              _Stepper(
+                value: _people,
+                min: 1,
+                max: 20,
+                onChanged: (v) => setState(() => _people = v),
+              ),
+              const SizedBox(width: KSpace.sm),
+              Expanded(
+                child: Wrap(
+                  spacing: KSpace.xs,
+                  children: [
+                    for (final n in const [2, 4, 6, 10])
+                      ChoiceChip(
+                        label: Text('$n'),
+                        selected: _people == n,
+                        showCheckmark: false,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (_) => setState(() => _people = n),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
           SectionTitle(tr('Vibe')),
           Wrap(
@@ -396,8 +427,23 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
               hintText: tr('e.g. 500'),
-              suffixText: 'EGP',
+              suffixText: tr('EGP'),
             ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: KSpace.xs),
+          Wrap(
+            spacing: KSpace.xs,
+            children: [
+              for (final b in const [200, 500, 1000, 2000])
+                ChoiceChip(
+                  label: Text(trf('{n} EGP', {'n': b})),
+                  selected: _budget.text == '$b',
+                  showCheckmark: false,
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (on) => setState(() => _budget.text = on ? '$b' : ''),
+                ),
+            ],
           ),
           SectionTitle(tr('Number of stops')),
           _Stepper(
@@ -456,6 +502,34 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               hintText: tr('e.g. no seafood, someone uses a wheelchair, birthday…'),
             ),
           ),
+          Wrap(
+            spacing: KSpace.xs,
+            runSpacing: KSpace.xs,
+            children: [
+              for (final n in const ['🎂 Birthday', '🦐 No seafood', '♿ Wheelchair user', '👶 With kids', '🥗 Vegetarian', '🚭 No smoking'])
+                ActionChip(
+                  visualDensity: VisualDensity.compact,
+                  label: Text(tr(n)),
+                  onPressed: () {
+                    final t = tr(n);
+                    final cur = _notes.text.trim();
+                    if (cur.contains(t)) return;
+                    _notes.text = cur.isEmpty ? t : '$cur, $t';
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: KSpace.md),
+          _ChoicesSummary(text: [
+            _people == 1 ? tr('1 person') : trf('{n} people', {'n': _people}),
+            _vibes.map((v) => tr(Vibes.all[v] ?? v)).join(' + '),
+            tr(TimesOfDay.all[_time] ?? _time),
+            if (_date != null) DateFormat('EEE d MMM').format(_date!),
+            if (_mallId != null) tr('🛍️ One mall')
+            else if (_anchor != null) '📍 ${_anchor!.$3 == 'you' ? tr('Near me') : _anchor!.$3} · ${trf('{n} km', {'n': _radius.round()})}',
+            trf('{n} stops', {'n': _stops}),
+            if (_useAi) '✨ AI',
+          ].join(' · ')),
           const SizedBox(height: KSpace.md),
           Text('💡 ${tipOfTheDay(DateTime.now())}',
               style: text.bodySmall?.copyWith(color: context.k.inkMuted)),
@@ -629,7 +703,7 @@ class _WhatsNewCard extends ConsumerWidget {
         child: ListTile(
           leading: const Text('🎁', style: TextStyle(fontSize: 26)),
           title: Text("What's new in $appVersion"),
-          subtitle: Text(tr('Arabic, maps, check-ins and more')),
+          subtitle: Text(tr('Safety tools, better chats, smarter plans and more')),
           trailing: IconButton(
             tooltip: tr('Hide'),
             icon: const Icon(Icons.close),
@@ -712,12 +786,41 @@ class _RecentPlans extends ConsumerWidget {
             separatorBuilder: (_, _) => const SizedBox(width: KSpace.sm),
             itemBuilder: (_, i) => ActionChip(
               avatar: const Icon(Icons.map_outlined, size: 18),
-              label: Text(plans[i].title, overflow: TextOverflow.ellipsis),
+              label: Text(
+                  plans[i].request.date != null
+                      ? '${plans[i].title} · ${DateFormat('d MMM').format(plans[i].request.day)}'
+                      : plans[i].title,
+                  overflow: TextOverflow.ellipsis),
               onPressed: () => context.push('/plan/${plans[i].id}'),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// One line that sums up the choices before planning.
+class _ChoicesSummary extends StatelessWidget {
+  const _ChoicesSummary({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(KSpace.md),
+      decoration: BoxDecoration(
+        color: context.k.accentSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.checklist, size: 20),
+          const SizedBox(width: KSpace.sm),
+          Expanded(child: Text(text)),
+        ],
+      ),
     );
   }
 }

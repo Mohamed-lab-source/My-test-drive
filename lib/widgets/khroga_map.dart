@@ -14,7 +14,11 @@ class MapPin {
     this.emoji,
     this.number,
     this.onTap,
+    this.dim = false,
   });
+
+  /// Greyed out (e.g. known to be closed right now).
+  final bool dim;
 
   final double lat;
   final double lng;
@@ -100,7 +104,7 @@ class KhrogaMap extends StatelessWidget {
                   child: Container(
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: k.accent,
+                      color: p.dim ? k.inkMuted : k.accent,
                       shape: BoxShape.circle,
                       border: Border.all(color: k.onAccent, width: 2),
                       boxShadow: const [BoxShadow(blurRadius: 4, color: Color(0x55000000))],

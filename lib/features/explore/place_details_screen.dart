@@ -62,6 +62,7 @@ class _PlaceDetailsScreenState extends ConsumerState<PlaceDetailsScreen> {
             onPressed: () async {
               final uid = ref.read(uidProvider);
               if (uid == null) return;
+              tapFeedback(ref.read(phoneSettingsProvider).haptics);
               try {
                 await ref.read(favoritesRepositoryProvider).set(uid, placeId, !favorite);
               } catch (e) {
@@ -295,6 +296,36 @@ class _Details extends ConsumerWidget {
               label: Text(tr('Add to a plan')),
             ),
             OutlinedButton.icon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: placeInfoText(place)));
+                showMessage(context, tr('All info copied'));
+              },
+              icon: const Icon(Icons.content_copy),
+              label: Text(tr('Copy all info')),
+            ),
+            if (geoUrl(place) != null)
+              OutlinedButton.icon(
+                onPressed: () => openUri(geoUrl(place)!),
+                icon: const Icon(Icons.map_outlined),
+                label: Text(tr('Other map app')),
+              ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final now = DateTime.now();
+                final day = await showDatePicker(
+                    context: context,
+                    initialDate: now,
+                    firstDate: DateTime(now.year, now.month, now.day),
+                    lastDate: now.add(const Duration(days: 365)));
+                if (day == null || !context.mounted) return;
+                final t = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 19, minute: 0));
+                if (t == null) return;
+                await openUri(visitCalendarUrl(place, DateTime(day.year, day.month, day.day, t.hour, t.minute)));
+              },
+              icon: const Icon(Icons.event_available),
+              label: Text(tr('Add a visit to my calendar')),
+            ),
+            OutlinedButton.icon(
               onPressed: () => _sendToGroup(context, ref, place),
               icon: const Icon(Icons.forum_outlined),
               label: Text(tr('Send to a group')),
@@ -308,6 +339,16 @@ class _Details extends ConsumerWidget {
             runSpacing: KSpace.sm,
             children: [for (final l in facts.labels) Pill(l)],
           ),
+        ],
+        if (place.hours?.minutesUntilClose(DateTime.now()) case final m? when m <= 60) ...[
+          const SizedBox(height: KSpace.sm),
+          Pill(trf('⚠️ Closes in {n} min', {'n': m}),
+              color: Theme.of(context).colorScheme.errorContainer,
+              textColor: Theme.of(context).colorScheme.onErrorContainer),
+        ],
+        if (categoryTip(place.category) case final tip?) ...[
+          const SizedBox(height: KSpace.md),
+          Text('💡 $tip', style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
         ],
         if (place.openingHours != null) ...[
           SectionTitle(tr('Opening hours')),
@@ -326,9 +367,14 @@ class _Details extends ConsumerWidget {
         if (place.category != 'mall') _PlaceList(
           title: tr('Similar places nearby'),
           places: similarNearby(place, all),
+          from: place,
         ),
-        _PlaceList(title: tr("What's nearby (within 500 m)"), places: nearbyPlaces(place, all)),
-        _PlaceList(title: tr('Other branches'), places: otherBranches(place, all)),
+        _PlaceList(
+            title: tr("What's nearby (within 500 m)"),
+            places: nearbyPlaces(place, all, limit: 20),
+            from: place,
+            filters: true),
+        _PlaceList(title: tr('Other branches'), places: otherBranches(place, all), from: place),
         const SizedBox(height: KSpace.lg),
         if (osmNoteUrl(place) != null)
           TextButton.icon(
@@ -341,6 +387,13 @@ class _Details extends ConsumerWidget {
             onPressed: () => openWebsite(place.osmUrl!),
             child: Text(tr('Something wrong or missing? Fix it on OpenStreetMap')),
           ),
+        Text(
+          buildDate.isEmpty
+              ? tr('Map facts are refreshed weekly from OpenStreetMap and Overture Maps.')
+              : trf('Map facts from {date}, refreshed weekly.', {'date': buildDate}),
+          textAlign: TextAlign.center,
+          style: text.bodySmall,
+        ),
         const OsmCredit(),
       ],
     );
@@ -422,6 +475,7 @@ class _MallDirectory extends ConsumerStatefulWidget {
 
 class _MallDirectoryState extends ConsumerState<_MallDirectory> {
   bool _byFloor = false;
+  bool _openOnly = false;
   String _q = '';
 
   @override
@@ -429,14 +483,17 @@ class _MallDirectoryState extends ConsumerState<_MallDirectory> {
     final mall = widget.mall;
     final allVenues = ref.watch(mallVenuesProvider(mall.id)).value ?? const <Place>[];
     final q = _q.trim().toLowerCase();
-    final venues = q.isEmpty
+    final now = DateTime.now();
+    final venues = (q.isEmpty
         ? allVenues
         : allVenues
             .where((v) =>
                 v.name.toLowerCase().contains(q) ||
                 (v.kind?.toLowerCase().contains(q) ?? false) ||
                 (v.cuisine?.toLowerCase().contains(q) ?? false))
-            .toList();
+            .toList())
+        .where((v) => !_openOnly || v.isOpenAt(now) == true)
+        .toList();
     final text = Theme.of(context).textTheme;
     final Map<String, List<Place>> groups;
     if (_byFloor) {
@@ -483,6 +540,14 @@ class _MallDirectoryState extends ConsumerState<_MallDirectory> {
             onChanged: (v) => setState(() => _q = v),
           ),
           const SizedBox(height: KSpace.sm),
+          FilterChip(
+            avatar: const Icon(Icons.schedule, size: 18),
+            label: Text(tr('Open now')),
+            selected: _openOnly,
+            showCheckmark: false,
+            onSelected: (v) => setState(() => _openOnly = v),
+          ),
+          const SizedBox(height: KSpace.sm),
           SegmentedButton<bool>(
             showSelectedIcon: false,
             segments: [
@@ -519,7 +584,7 @@ String placeShareText(Place p) {
     if (p.hasLocation)
       Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '${p.lat},${p.lng}'}).toString(),
     '',
-    'Found on Khroga',
+    tr('Found on Khroga'),
   ];
   return lines.join('\n');
 }
@@ -547,7 +612,11 @@ class _CopyRow extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: context.k.inkMuted),
             const SizedBox(width: KSpace.sm),
-            Expanded(child: Text(text)),
+            Expanded(
+              child: Text(text,
+                  // Phone numbers and coordinates read left-to-right even in Arabic.
+                  textDirection: RegExp(r'^[+\d\s().,-]+$').hasMatch(text) ? TextDirection.ltr : null),
+            ),
             Icon(Icons.copy, size: 16, color: context.k.inkMuted),
           ],
         ),
@@ -687,24 +756,65 @@ class _VisitedAndNote extends ConsumerWidget {
 }
 
 /// A titled list of places (nearby, similar).
-class _PlaceList extends StatelessWidget {
-  const _PlaceList({required this.title, required this.places});
+class _PlaceList extends StatefulWidget {
+  const _PlaceList({required this.title, required this.places, this.from, this.filters = false});
 
   final String title;
   final List<Place> places;
 
+  /// Distances on the tiles are measured from this place.
+  final Place? from;
+
+  /// Show category chips to narrow the list.
+  final bool filters;
+
+  @override
+  State<_PlaceList> createState() => _PlaceListState();
+}
+
+class _PlaceListState extends State<_PlaceList> {
+  String? _cat;
+  bool _all = false;
+
   @override
   Widget build(BuildContext context) {
-    if (places.isEmpty) return const SizedBox.shrink();
+    if (widget.places.isEmpty) return const SizedBox.shrink();
+    final cats = widget.places.map((p) => p.category).toSet().toList();
+    final list = widget.places.where((p) => _cat == null || p.category == _cat).toList();
+    final shown = _all ? list : list.take(8).toList();
+    final f = widget.from;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title),
-        for (final p in places)
+        SectionTitle(widget.title),
+        if (widget.filters && cats.length > 1)
+          Wrap(
+            spacing: KSpace.xs,
+            runSpacing: KSpace.xs,
+            children: [
+              ChoiceChip(
+                label: Text(tr('All')),
+                selected: _cat == null,
+                showCheckmark: false,
+                onSelected: (_) => setState(() => _cat = null),
+              ),
+              for (final c in cats)
+                ChoiceChip(
+                  label: Text('${Categories.emoji(c)} ${Categories.label(c)}'),
+                  selected: _cat == c,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _cat = c),
+                ),
+            ],
+          ),
+        if (widget.filters && cats.length > 1) const SizedBox(height: KSpace.sm),
+        for (final p in shown)
           Padding(
             padding: const EdgeInsets.only(bottom: KSpace.sm),
-            child: PlaceTile(place: p),
+            child: PlaceTile(place: p, from: f != null && f.hasLocation ? (f.lat!, f.lng!) : null),
           ),
+        if (!_all && list.length > 8)
+          TextButton(onPressed: () => setState(() => _all = true), child: Text(trf('Show all {n}', {'n': list.length}))),
       ],
     );
   }
@@ -1026,6 +1136,7 @@ class _CheckInCard extends ConsumerWidget {
                               friendUids: ref.read(friendUidsProvider),
                             );
                         await ref.read(personalRepositoryProvider).setVisited(uid, place.id, true);
+                        tapFeedback(ref.read(phoneSettingsProvider).haptics);
                         if (context.mounted) showMessage(context, tr('Checked in. Have fun!'));
                       } catch (e) {
                         if (context.mounted) showError(context, e);

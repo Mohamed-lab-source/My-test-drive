@@ -86,6 +86,22 @@ class _CreateGroupSheetState extends ConsumerState<_CreateGroupSheet> {
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(hintText: tr('e.g. Friday squad')),
           ),
+          // A quick emoji at the start of the name, so groups are easy to spot.
+          Wrap(
+            spacing: KSpace.xs,
+            children: [
+              for (final e in const ['🎉', '🍕', '☕', '🎬', '⚽', '🎂', '🏖️', '🛍️'])
+                ActionChip(
+                  label: Text(e, style: const TextStyle(fontSize: 18)),
+                  onPressed: () {
+                    final base = _name.text.replaceFirst(RegExp(r'^\S+\s'), '').trim();
+                    final hasEmoji = _name.text.isNotEmpty && !RegExp(r'^[A-Za-z0-9\u0600-\u06FF]').hasMatch(_name.text);
+                    _name.text = '$e ${hasEmoji ? base : _name.text.trim()}'.trim();
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: KSpace.sm),
           OutlinedButton.icon(
             onPressed: _pickDate,
             icon: const Icon(Icons.event_outlined),

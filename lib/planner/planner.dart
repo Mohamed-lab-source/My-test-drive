@@ -808,3 +808,9 @@ DateTime? _atTime(DateTime day, String? hhmm) {
     ],
   );
 }
+
+/// Moves every stop's start time by [minutes] (e.g. +30 or -30).
+List<PlanStop> shiftTimes(List<PlanStop> stops, int minutes) => [
+      for (final s in stops)
+        _minutesOf(s.startTime) == null ? s : s.copyWith(startTime: _hhmm(_minutesOf(s.startTime)! + minutes)),
+    ];

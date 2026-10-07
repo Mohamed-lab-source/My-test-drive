@@ -23,6 +23,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     ('🧭', 'Explore real places', 'Thousands of places in Cairo, Giza and Alexandria, straight from the map. '
         'Unknown facts say "unknown", never guesses.'),
     ('👯', 'Bring your friends', 'Make a group, vote in polls, chat and split the bill. All free.'),
+    ('🇪🇬', 'Arabic or English', 'Switch language any time in Profile. Maps, check-ins and plans work in both.'),
   ];
 
   @override

@@ -20,7 +20,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isMe(uid);
       allow create, update: if isMe(uid) && newData().keys().hasOnly(['createdAt']);
-      allow delete: if false;
+      // "Delete my account" removes everything, including this document.
+      allow delete: if isMe(uid);
 
       // Plans: only the owner can see or change them.
       match /plans/{planId} {
@@ -91,7 +92,7 @@ service cloud.firestore {
         // A new username must be one this person owns in /usernames.
         && (!('username' in changed())
             || getAfter(/databases/$(database)/documents/usernames/$(newData().username)).data.uid == me());
-      allow delete: if false;
+      allow delete: if isMe(uid);
     }
 
     // One document per username, so no two people can own the same one.
@@ -141,6 +142,38 @@ service cloud.firestore {
         && newData().visibleTo is list && newData().visibleTo.size() <= 500
         && newData().createdAt == request.time;
       allow delete: if isMe(uid);
+    }
+
+    // ---- Reports, feedback and error reports: write-only ----
+    // Nobody can read them in the app; the owner reviews them in the
+    // Firebase console. Small and limited so they can't be abused.
+    match /reports/{id} {
+      allow read, update, delete: if false;
+      allow create: if signedIn()
+        && newData().keys().hasOnly(['by', 'kind', 'targetUid', 'groupId', 'messageId', 'text',
+                                     'reason', 'createdAt'])
+        && newData().by == me()
+        && newData().kind in ['message', 'user']
+        && newData().reason is string && newData().reason.size() > 0 && newData().reason.size() <= 300
+        && (!('text' in newData()) || (newData().text is string && newData().text.size() <= 1000))
+        && newData().createdAt == request.time;
+    }
+    match /feedback/{id} {
+      allow read, update, delete: if false;
+      allow create: if signedIn()
+        && newData().keys().hasOnly(['by', 'text', 'appVersion', 'createdAt'])
+        && newData().by == me()
+        && newData().text is string && newData().text.size() > 0 && newData().text.size() <= 1000
+        && newData().createdAt == request.time;
+    }
+    match /errorReports/{id} {
+      allow read, update, delete: if false;
+      allow create: if signedIn()
+        && newData().keys().hasOnly(['by', 'message', 'stack', 'appVersion', 'createdAt'])
+        && newData().by == me()
+        && newData().message is string && newData().message.size() <= 500
+        && newData().stack is string && newData().stack.size() <= 4000
+        && newData().createdAt == request.time;
     }
 
     // ---- Invite codes: look up one code at a time; listing is blocked ----
@@ -245,7 +278,9 @@ service cloud.firestore {
 
         allow read: if member();
         allow create: if member()
-          && newData().keys().hasOnly(['uid', 'name', 'text', 'createdAt'])
+          && newData().keys().hasOnly(['uid', 'name', 'text', 'createdAt', 'replyTo', 'replyName'])
+          && (!('replyTo' in newData()) || (newData().replyTo is string && newData().replyTo.size() <= 200))
+          && (!('replyName' in newData()) || (newData().replyName is string && newData().replyName.size() <= 60))
           && newData().uid == me()
           && newData().text is string
           && newData().text.size() > 0 && newData().text.size() <= 1000
@@ -258,8 +293,8 @@ service cloud.firestore {
           && newData().reactions.diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([me()])
           && (!(me() in newData().reactions)
               || (newData().reactions[me()] is string && newData().reactions[me()].size() <= 8));
-        // Only the organizer, when deleting the whole group.
-        allow delete: if signedIn() && group().ownerUid == me();
+        // Your own messages, or all of them when the organizer deletes the group.
+        allow delete: if signedIn() && (resource.data.uid == me() || group().ownerUid == me());
       }
 
       // Polls: any member asks; each member votes once (and can change it).

@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../app/helpers.dart' show sameDay, totalStopMinutes;
+import '../../app/helpers.dart' show sameDay, totalStopMinutes, showTime, walkingMinutes, weatherIcon;
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -47,6 +47,10 @@ class PlanResultScreen extends ConsumerWidget {
                 PopupMenuItem(value: 'calendar', child: Text(tr('Add to Google Calendar'))),
                 PopupMenuItem(value: 'duplicate', child: Text(tr('Make a copy'))),
                 PopupMenuItem(value: 'group', child: Text(tr('Send to a group chat'))),
+                const PopupMenuDivider(),
+                PopupMenuItem(value: 'now', child: Text(tr('Start now'))),
+                PopupMenuItem(value: 'later', child: Text(tr('Everything 30 min later'))),
+                PopupMenuItem(value: 'earlier', child: Text(tr('Everything 30 min earlier'))),
               ],
             ),
         ],
@@ -69,6 +73,15 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
       if (context.mounted) showMessage(context, tr('Plan copied. Paste it anywhere.'));
     case 'calendar':
       await openUri(planCalendarLink(plan));
+    case 'now':
+      final n = DateTime.now();
+      final m = ((n.hour * 60 + n.minute + 14) ~/ 15) * 15; // next quarter hour
+      final hhmm = '${(m ~/ 60 % 24).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+      await _editStops(context, ref, plan, retime(setStopTime(plan.stops, 0, hhmm)));
+    case 'later':
+      await _editStops(context, ref, plan, shiftTimes(plan.stops, 30));
+    case 'earlier':
+      await _editStops(context, ref, plan, shiftTimes(plan.stops, -30));
     case 'group':
       final uid = ref.read(uidProvider);
       final groups = await ref.read(myGroupsProvider.future);
@@ -145,6 +158,9 @@ class _PlanBody extends ConsumerWidget {
     final uid = ref.watch(uidProvider)!;
     final done = ref.watch(planChecklistProvider);
     final endsAt = planEndTime(plan.stops);
+    final clock24 = ref.watch(phoneSettingsProvider.select((s) => s.clock24));
+    final legs = plan.stops.map((s) => s.kmFromPrevious).whereType<double>().toList();
+    final walkable = legs.isNotEmpty && legs.every((km) => km <= 1.0);
     return ListView(
       padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
       children: [
@@ -182,7 +198,8 @@ class _PlanBody extends ConsumerWidget {
             if (_daysAway(plan.request.day) case final d? when d > 0)
               Pill(d == 1 ? tr('⏳ Tomorrow') : trf('⏳ In {n} days', {'n': d})),
             if (endsAt != null && plan.stops.first.startTime != null)
-              Pill('🕘 ${plan.stops.first.startTime}–$endsAt'),
+              Pill('🕘 ${showTime(plan.stops.first.startTime, clock24: clock24)}–${showTime(endsAt, clock24: clock24)}'),
+            if (walkable) Pill(tr('🚶 Walkable route')),
             if (totalStopMinutes(plan.stops.map((s) => s.durationMinutes)) > 0)
               Pill(trf('⏱ {t} at stops', {'t': _StopTile._duration(totalStopMinutes(plan.stops.map((s) => s.durationMinutes)))})),
           ],
@@ -199,7 +216,7 @@ class _PlanBody extends ConsumerWidget {
         ],
         if (plan.weatherNote != null) ...[
           const SizedBox(height: KSpace.md),
-          _InfoBanner(icon: Icons.wb_sunny_outlined, text: plan.weatherNote!),
+          _InfoBanner(icon: weatherIcon(plan.weatherNote!), text: plan.weatherNote!),
         ],
         if (plan.source == 'fallback') ...[
           const SizedBox(height: KSpace.md),
@@ -216,6 +233,8 @@ class _PlanBody extends ConsumerWidget {
         for (var i = 0; i < plan.stops.length; i++)
           _StopTile(
             stop: plan.stops[i],
+            day: plan.request.day,
+            clock24: clock24,
             index: i,
             isFirst: i == 0,
             isLast: i == plan.stops.length - 1,
@@ -240,7 +259,9 @@ class _PlanBody extends ConsumerWidget {
             borderRadius: BorderRadius.circular(KRadius.card),
             child: SizedBox(
               height: 220,
-              child: KhrogaMap(
+              child: GestureDetector(
+                onDoubleTap: () => _showBigMap(context, plan),
+                child: KhrogaMap(
                 route: true,
                 pins: [
                   for (final (i, s) in plan.stops.indexed)
@@ -254,6 +275,15 @@ class _PlanBody extends ConsumerWidget {
                       ),
                 ],
               ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              onPressed: () => _showBigMap(context, plan),
+              icon: const Icon(Icons.fullscreen),
+              label: Text(tr('Bigger map')),
             ),
           ),
           const SizedBox(height: KSpace.sm),
@@ -382,8 +412,13 @@ class _StopTile extends StatelessWidget {
     required this.onEditTime,
     required this.onEditLength,
     required this.onEditNote,
+    required this.day,
+    required this.clock24,
   });
 
+  /// The outing day (for checking opening hours) and the clock style.
+  final DateTime day;
+  final bool clock24;
   final VoidCallback onEditTime;
   final VoidCallback onEditLength;
   final VoidCallback onEditNote;
@@ -407,8 +442,9 @@ class _StopTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final end = stopEndTime(stop);
+    final start = showTime(stop.startTime, clock24: clock24);
     final meta = [
-      if (stop.startTime != null) end == null ? stop.startTime! : '${stop.startTime}–$end',
+      if (stop.startTime != null) end == null ? start : '$start–${showTime(end, clock24: clock24)}',
       if (stop.durationMinutes != null) _duration(stop.durationMinutes!),
       if (stop.area != null) stop.area!,
       if (stop.cuisine != null) stop.cuisine!,
@@ -456,7 +492,11 @@ class _StopTile extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              '↓ ${stop.kmFromPrevious!.toStringAsFixed(1)} km from the last stop (straight line)',
+                              trf('↓ {km} km from the last stop (straight line)',
+                                      {'km': stop.kmFromPrevious!.toStringAsFixed(1)}) +
+                                  (stop.kmFromPrevious! <= 1.5
+                                      ? trf(' · about {n} min walk', {'n': walkingMinutes(stop.kmFromPrevious!)})
+                                      : ''),
                               style: text.bodySmall,
                             ),
                           ),
@@ -515,6 +555,7 @@ class _StopTile extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            _OpenThen(stop: stop, day: day),
                             if (stop.why != null && stop.why!.isNotEmpty) ...[
                               const SizedBox(height: KSpace.sm),
                               Text(stop.why!, style: text.bodyMedium),
@@ -623,6 +664,11 @@ class _RideRow extends StatelessWidget {
           onPressed: () =>
               openInMaps(name: stop.name, lat: stop.lat, lng: stop.lng),
         ),
+        ActionChip(
+          avatar: const Icon(Icons.navigation_outlined, size: 18),
+          label: Text(tr('Waze')),
+          onPressed: () => openUri(Uri.https('waze.com', '/ul', {'ll': '${stop.lat},${stop.lng}', 'navigate': 'yes'})),
+        ),
       ],
     );
   }
@@ -664,6 +710,8 @@ class _BudgetCard extends StatelessWidget {
 String planShareText(OutingPlan plan) {
   final lines = <String>['🗺️ ${plan.title}'];
   if (plan.summary.isNotEmpty) lines.add(plan.summary);
+  if (plan.request.date != null) lines.add('📅 ${DateFormat('EEEE d MMM').format(plan.request.day)}');
+  if (plan.weatherNote != null) lines.add('🌤️ ${plan.weatherNote}');
   lines.add('');
   for (var i = 0; i < plan.stops.length; i++) {
     final s = plan.stops[i];
@@ -677,9 +725,14 @@ String planShareText(OutingPlan plan) {
       })}');
     }
   }
+  if (routeMapsUrl(plan.stops) case final url?) {
+    lines
+      ..add('')
+      ..add('${tr('🗺️ Our route')}: $url');
+  }
   lines
     ..add('')
-    ..add('Planned with Khroga');
+    ..add(tr('Planned with Khroga'));
   return lines.join('\n');
 }
 
@@ -721,7 +774,12 @@ Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan
                   p.kindLabel ?? Categories.label(p.category),
                   if (p.area != null) p.area!,
                   if (p.cuisineLabel != null) p.cuisineLabel!,
-                  if (p.isOpenAt(DateTime.now()) == true) 'Open now',
+                  if (index > 0 && plan.stops[index - 1].hasLocation && p.hasLocation)
+                    trf('{km} km from the last stop', {
+                      'km': haversineKm(plan.stops[index - 1].lat!, plan.stops[index - 1].lng!, p.lat!, p.lng!)
+                          .toStringAsFixed(1)
+                    }),
+                  if (p.isOpenAt(DateTime.now()) == true) tr('Open now'),
                 ].join(' · ')),
                 onTap: () => Navigator.pop(sheetContext, p),
               ),
@@ -740,11 +798,23 @@ Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan
 
 /// Saves an edited list of stops (reordered, removed or added).
 Future<void> _editStops(
-    BuildContext context, WidgetRef ref, OutingPlan plan, List<PlanStop> stops) async {
+    BuildContext context, WidgetRef ref, OutingPlan plan, List<PlanStop> stops,
+    {bool undoable = true}) async {
   final uid = ref.read(uidProvider);
   if (uid == null) return;
+  final repo = ref.read(plansRepositoryProvider);
+  final before = plan.stops;
+  final messenger = ScaffoldMessenger.of(context);
   try {
-    await ref.read(plansRepositoryProvider).updateStops(uid, plan.id, stops);
+    await repo.updateStops(uid, plan.id, stops);
+    if (undoable) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(tr('Plan updated')),
+          action: SnackBarAction(label: tr('Undo'), onPressed: () => repo.updateStops(uid, plan.id, before)),
+        ));
+    }
   } catch (e) {
     if (context.mounted) showError(context, e);
   }
@@ -961,6 +1031,22 @@ class _BringList extends ConsumerWidget {
             subtitle: items.isEmpty ? Text(tr('Only on this phone')) : null,
             trailing: IconButton(tooltip: tr('Add'), icon: const Icon(Icons.add), onPressed: add),
           ),
+          if (items.length < 6)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: KSpace.md),
+              child: Wrap(
+                spacing: KSpace.xs,
+                children: [
+                  for (final sug in const ['💧 Water', '🔋 Power bank', '💵 Cash', '🪪 ID card', '🧥 Jacket', '🧴 Sunscreen'])
+                    if (!items.any((x) => x.replaceFirst('✓ ', '') == tr(sug)))
+                      ActionChip(
+                        visualDensity: VisualDensity.compact,
+                        label: Text(tr(sug)),
+                        onPressed: () => save([...items, tr(sug)]),
+                      ),
+                ],
+              ),
+            ),
           for (final (i, item) in items.indexed)
             CheckboxListTile(
               dense: true,
@@ -1065,4 +1151,72 @@ class _MakeNicerState extends ConsumerState<_MakeNicer> {
       ),
     );
   }
+}
+
+/// Opening-hours check for a stop on the outing day: open / closed / unknown.
+class _OpenThen extends ConsumerWidget {
+  const _OpenThen({required this.stop, required this.day});
+
+  final PlanStop stop;
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final place = ref.watch(placeProvider(stop.placeId)).value;
+    final parts = stop.startTime?.split(':');
+    if (place == null || parts == null || parts.length != 2) return const SizedBox.shrink();
+    final at = DateTime(day.year, day.month, day.day, int.tryParse(parts[0]) ?? 0, int.tryParse(parts[1]) ?? 0);
+    final open = place.isOpenAt(at);
+    if (open == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.xs),
+      child: Text(
+        open ? tr('✅ Open at that time') : tr('⚠️ Closed at that time. Swap it or change the time.'),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: open ? context.k.accent : Theme.of(context).colorScheme.error,
+        ),
+      ),
+    );
+  }
+}
+
+void _showBigMap(BuildContext context, OutingPlan plan) {
+  showDialog<void>(
+    context: context,
+    builder: (d) => Dialog.fullscreen(
+      child: Stack(
+        children: [
+          KhrogaMap(
+            route: true,
+            pins: [
+              for (final (i, s) in plan.stops.indexed)
+                if (s.hasLocation)
+                  MapPin(
+                    lat: s.lat!,
+                    lng: s.lng!,
+                    label: s.name,
+                    number: i + 1,
+                    onTap: () {
+                      Navigator.pop(d);
+                      context.push('/place/${s.placeId}');
+                    },
+                  ),
+            ],
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(KSpace.sm),
+              child: IconButton.filled(
+                tooltip: tr('Close'),
+                onPressed: () => Navigator.pop(d),
+                icon: const Icon(Icons.close),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

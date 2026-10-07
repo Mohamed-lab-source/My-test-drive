@@ -90,10 +90,11 @@ class Place {
       .map((c) => c.trim().replaceAll('_', ' '))
       .where((c) => c.isNotEmpty && c != 'shisha')
       .take(3)
+      .map(tr) // common food types have Arabic names
       .join(', ')
       .let((s) => s.isEmpty ? null : s);
 
-  String? get kindLabel => kind?.replaceAll('_', ' ');
+  String? get kindLabel => kind == null ? null : tr(kind!.replaceAll('_', ' '));
 
   factory Place.fromMap(Map<String, dynamic> m) {
     return Place(

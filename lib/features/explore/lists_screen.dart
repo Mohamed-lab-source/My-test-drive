@@ -54,6 +54,28 @@ class ListsScreen extends ConsumerWidget {
                               child: PlaceTile(place: byId[id]!),
                             ),
                         TextButton.icon(
+                          onPressed: () async {
+                            final controller = TextEditingController(text: e.key);
+                            final name = await showDialog<String>(
+                              context: context,
+                              builder: (d) => AlertDialog(
+                                title: Text(tr('Rename list')),
+                                content: TextField(controller: controller, autofocus: true, maxLength: 40),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(d), child: Text(tr('Cancel'))),
+                                  FilledButton(
+                                      onPressed: () => Navigator.pop(d, controller.text),
+                                      child: Text(tr('Save'))),
+                                ],
+                              ),
+                            );
+                            controller.dispose();
+                            if (name != null) ref.read(placeListsProvider.notifier).rename(e.key, name);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: Text(tr('Rename list')),
+                        ),
+                        TextButton.icon(
                           style: TextButton.styleFrom(
                               foregroundColor: Theme.of(context).colorScheme.error),
                           onPressed: () => ref.read(placeListsProvider.notifier).delete(e.key),

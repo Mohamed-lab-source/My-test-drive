@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/helpers.dart' show normalizeSearch;
 import '../../app/local_history.dart';
 import '../../app/local_prefs.dart';
 import 'package:share_plus/share_plus.dart';
@@ -32,6 +33,8 @@ enum _Extra {
   wifi('📶 Wi-Fi'),
   outdoor('🌤️ Outdoor seating'),
   photo('📷 Has photo'),
+  website('🌐 Has website'),
+  phone('📞 Has phone number'),
   allDay('🕛 Open 24 hours'),
   vegetarian('🥗 Vegetarian'),
   delivery('🛵 Delivery'),
@@ -60,6 +63,28 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final Set<_Extra> _extras = {};
   Set<String> _visited = const {};
   Set<String> _favorites = const {};
+  final _scroll = ScrollController();
+  bool _showTop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Remember the last category and sort (on this phone).
+    final mem = ref.read(exploreMemoryProvider);
+    final cat = mem['category'];
+    if (cat != null && Categories.all.containsKey(cat)) _category = cat;
+    if (mem['sort'] == 'az') _sort = _Sort.az;
+    _scroll.addListener(() {
+      final show = _scroll.offset > 1200;
+      if (show != _showTop) setState(() => _showTop = show);
+    });
+  }
+
+  void _remember() {
+    final mem = ref.read(exploreMemoryProvider.notifier);
+    mem.set('category', _category);
+    mem.set('sort', _sort == _Sort.az ? 'az' : null);
+  }
 
   bool get _anyFilter =>
       _query.isNotEmpty || _category != null || _area != null || _kind != null || _openNow || _extras.isNotEmpty;
@@ -79,6 +104,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -100,6 +126,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   Future<void> _setSort(_Sort sort) async {
     if (sort == _Sort.nearest && !await _ensureLocation()) return;
     setState(() => _sort = sort);
+    _remember();
   }
 
   void _useQuery(String q) {
@@ -116,7 +143,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   List<Place> _filter(List<Place> all, (double, double)? me) {
     final raw = _query.trim();
-    final q = raw.toLowerCase();
+    final q = normalizeSearch(raw);
     final now = DateTime.now();
     final list = all.where((p) {
       // Shops live inside malls; show them only when asked for.
@@ -127,12 +154,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       if (_openNow && p.isOpenAt(now) != true) return false;
       if (_extras.isNotEmpty && !_passesExtras(p, me, now)) return false;
       if (q.isEmpty) return true;
-      return p.name.toLowerCase().contains(q) ||
-          (p.nameAr?.contains(raw) ?? false) ||
-          (p.area?.toLowerCase().contains(q) ?? false) ||
-          (p.cuisine?.toLowerCase().contains(q) ?? false) ||
-          (p.kind?.toLowerCase().contains(q) ?? false) ||
-          Categories.label(p.category).toLowerCase().contains(q);
+      bool has(String? s) => s != null && normalizeSearch(s).contains(q);
+      return has(p.name) ||
+          has(p.nameAr) ||
+          has(p.area) ||
+          has(p.cuisine?.replaceAll('_', ' ')) ||
+          has(p.cuisineLabel) ||
+          has(p.kind?.replaceAll('_', ' ')) ||
+          has(p.kindLabel) ||
+          has(p.details.brand) ||
+          has(Categories.label(p.category));
     }).toList();
     switch (_sort) {
       case _Sort.nearest when me != null:
@@ -140,7 +171,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         list.sort((a, b) => haversineKm(me.$1, me.$2, a.lat!, a.lng!)
             .compareTo(haversineKm(me.$1, me.$2, b.lat!, b.lng!)));
       case _Sort.az:
-        list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        list.sort((a, b) => a.shownName.toLowerCase().compareTo(b.shownName.toLowerCase()));
       default:
         break; // already best-documented first
     }
@@ -159,6 +190,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         _Extra.wifi => p.details.wifi == true,
         _Extra.outdoor => p.details.outdoorSeating == true,
         _Extra.photo => p.photoUrl != null,
+        _Extra.website => p.website != null,
+        _Extra.phone => p.phone != null,
         _Extra.allDay => p.openingHours?.trim() == '24/7',
         _Extra.vegetarian => p.details.vegetarian != null && p.details.vegetarian != 'no',
         _Extra.delivery => p.details.delivery == true,
@@ -293,7 +326,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           for (final p in all) {
             catCounts[p.category] = (catCounts[p.category] ?? 0) + 1;
           }
-          return CustomScrollView(
+          final popularAreas = _area != null || _query.isNotEmpty ? const <String>[] : _top(
+              (_category == null ? all.where((p) => p.category != 'shop') : inCategory)
+                  .map((p) => p.area)
+                  .whereType<String>(),
+              6);
+          return Stack(children: [CustomScrollView(
+            controller: _scroll,
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
@@ -394,20 +433,26 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     label: Text(tr('All')),
                     selected: _category == null,
                     showCheckmark: false,
-                    onSelected: (_) => setState(() {
-                      _category = null;
-                      _kind = null;
-                    }),
+                    onSelected: (_) {
+                      setState(() {
+                        _category = null;
+                        _kind = null;
+                      });
+                      _remember();
+                    },
                   ),
                   for (final e in Categories.all.entries)
                     ChoiceChip(
                       label: Text('${Categories.emoji(e.key)} ${Categories.label(e.key)} · ${catCounts[e.key] ?? 0}'),
                       selected: _category == e.key,
                       showCheckmark: false,
-                      onSelected: (_) => setState(() {
-                        _category = e.key;
-                        _kind = null;
-                      }),
+                      onSelected: (_) {
+                        setState(() {
+                          _category = e.key;
+                          _kind = null;
+                        });
+                        _remember();
+                      },
                     ),
                 ]),
               ),
@@ -420,6 +465,17 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         selected: _kind == k,
                         showCheckmark: false,
                         onSelected: (on) => setState(() => _kind = on ? k : null),
+                      ),
+                  ]),
+                ),
+              if (popularAreas.length >= 3)
+                SliverToBoxAdapter(
+                  child: _ChipRow(children: [
+                    for (final a in popularAreas)
+                      ActionChip(
+                        avatar: const Icon(Icons.place_outlined, size: 16),
+                        label: Text(a),
+                        onPressed: () => setState(() => _area = a),
                       ),
                   ]),
                 ),
@@ -445,10 +501,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         for (final p in recent)
                           Padding(
                             padding: const EdgeInsets.only(right: KSpace.sm),
-                            child: ActionChip(
+                            child: InputChip(
                               avatar: Text(Categories.emoji(p.category)),
-                              label: Text(p.name, overflow: TextOverflow.ellipsis),
+                              label: Text(p.shownName, overflow: TextOverflow.ellipsis),
                               onPressed: () => context.push('/place/${p.id}'),
+                              deleteButtonTooltipMessage: tr('Remove'),
+                              onDeleted: () => ref.read(recentPlacesProvider.notifier).remove(p.id),
                             ),
                           ),
                       ],
@@ -503,6 +561,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                                     lng: p.lng!,
                                     label: p.name,
                                     emoji: Categories.emoji(p.category),
+                                    dim: p.isOpenAt(DateTime.now()) == false,
                                     onTap: () => context.push('/place/${p.id}'),
                                   ),
                               ],
@@ -513,7 +572,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         Text(
                           list.where((p) => p.hasLocation).length > 300
                               ? tr('Showing the first 300 places. Use filters or pick an area to see others.')
-                              : tr('Tap a pin to open the place.'),
+                              : tr('Tap a pin to open the place. Grey pins are closed right now.'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -547,7 +606,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   ),
                 ),
             ],
-          );
+          ),
+            if (_showTop)
+              PositionedDirectional(
+                end: KSpace.md,
+                bottom: KSpace.md,
+                child: FloatingActionButton.small(
+                  heroTag: null,
+                  tooltip: tr('Back to top'),
+                  onPressed: () => _scroll.animateTo(0,
+                      duration: const Duration(milliseconds: 400), curve: Curves.easeOut),
+                  child: const Icon(Icons.arrow_upward),
+                ),
+              ),
+          ]);
         },
       ),
     );
@@ -625,7 +697,7 @@ class _AreaSheetState extends State<_AreaSheet> {
 }
 
 /// A photo card for the grid view.
-class PlaceGridTile extends StatelessWidget {
+class PlaceGridTile extends ConsumerWidget {
   const PlaceGridTile({super.key, required this.place, this.from});
 
   final Place place;
@@ -634,7 +706,7 @@ class PlaceGridTile extends StatelessWidget {
   final (double, double)? from;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -664,7 +736,7 @@ class PlaceGridTile extends StatelessWidget {
                         place.area ?? place.kindLabel ?? Categories.label(place.category),
                       ].join(' · '),
                       style: text.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  OpenBadge(place: place),
+                  Row(children: [Flexible(child: OpenBadge(place: place)), PlaceMarks(id: place.id)]),
                 ],
               ),
             ),
@@ -709,7 +781,7 @@ class OpenBadge extends StatelessWidget {
   }
 }
 
-class PlaceTile extends StatelessWidget {
+class PlaceTile extends ConsumerWidget {
   const PlaceTile({super.key, required this.place, this.from});
 
   final Place place;
@@ -718,7 +790,7 @@ class PlaceTile extends StatelessWidget {
   final (double, double)? from;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final km = from != null && place.hasLocation
         ? haversineKm(from!.$1, from!.$2, place.lat!, place.lng!)
@@ -755,7 +827,7 @@ class PlaceTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(sub, style: text.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    OpenBadge(place: place),
+                    Row(children: [Flexible(child: OpenBadge(place: place)), PlaceMarks(id: place.id)]),
                   ],
                 ),
               ),
@@ -842,3 +914,21 @@ Future<void> showPlaceQuickActions(BuildContext context, Place place) =>
     );
 
 String _km(double km) => km < 1 ? '${(km * 1000).round()} m' : '${km.toStringAsFixed(1)} km';
+
+/// Tiny ❤️ / ✅ marks when a place is a favorite or one you've been to.
+class PlaceMarks extends ConsumerWidget {
+  const PlaceMarks({super.key, required this.id});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fav = ref.watch(favoriteIdsProvider.select((v) => v.value?.contains(id) ?? false));
+    final been = ref.watch(visitedIdsProvider.select((v) => v.value?.contains(id) ?? false));
+    if (!fav && !been) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 6),
+      child: Text('${fav ? '❤️' : ''}${been ? '✅' : ''}', style: const TextStyle(fontSize: 12)),
+    );
+  }
+}

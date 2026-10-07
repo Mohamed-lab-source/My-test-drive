@@ -185,6 +185,9 @@ class GroupsRepository {
   Future<void> vote(String groupId, String pollId, String uid, int option) =>
       _groups.doc(groupId).collection('polls').doc(pollId).update({'votes.$uid': option});
 
+  Future<void> deleteMessage(String groupId, String messageId) =>
+      _groups.doc(groupId).collection('messages').doc(messageId).delete();
+
   Future<void> deletePoll(String groupId, String pollId) =>
       _groups.doc(groupId).collection('polls').doc(pollId).delete();
 
@@ -204,6 +207,7 @@ class GroupsRepository {
     required String name,
     required String text,
     bool updatePreview = true,
+    GroupMessage? replyTo,
   }) async {
     final groupRef = _groups.doc(groupId);
     final preview = '$name: $text';
@@ -213,6 +217,10 @@ class GroupsRepository {
         'name': name,
         'text': text,
         'createdAt': FieldValue.serverTimestamp(),
+        if (replyTo != null) ...{
+          'replyTo': replyTo.text.length > 200 ? '${replyTo.text.substring(0, 197)}…' : replyTo.text,
+          'replyName': replyTo.name.length > 60 ? replyTo.name.substring(0, 60) : replyTo.name,
+        },
       });
     // The preview in the group list costs a second write, so a quick burst
     // of messages only updates it once (see [shouldUpdatePreview]).

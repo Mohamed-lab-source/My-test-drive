@@ -1,5 +1,6 @@
 import 'app/i18n.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:ui' show PlatformDispatcher;
 
@@ -12,6 +13,9 @@ import 'app/local_prefs.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'app/theme_settings.dart';
+import 'data/groups_repository.dart';
+import 'data/safety_repository.dart';
+import 'features/profile/about_screen.dart' show appVersion;
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -38,6 +42,7 @@ Future<void> main() async {
   // Language: what the person picked, else Arabic if the phone is in Arabic.
   appLang = prefs?.getString('app.lang') ??
       (PlatformDispatcher.instance.locale.languageCode == 'ar' ? 'ar' : 'en');
+  _catchErrors(prefs);
   runApp(ProviderScope(
     overrides: [sharedPrefsProvider.overrideWithValue(prefs)],
     child: const KhrogaApp(),
@@ -68,10 +73,12 @@ class KhrogaApp extends ConsumerWidget {
       // "Bigger text" setting, on top of the phone's own text size.
       builder: (context, child) {
         final media = MediaQuery.of(context);
+        final reduceMotion = ref.watch(phoneSettingsProvider.select((s) => s.reduceMotion));
         return MediaQuery(
           data: media.copyWith(
             textScaler: TextScaler.linear(
-                (media.textScaler.scale(14) / 14 * look.textScale).clamp(0.8, 2.0)),
+                (media.textScaler.scale(14) / 14 * look.textScale).clamp(0.8, 2.2)),
+            disableAnimations: reduceMotion || media.disableAnimations,
           ),
           child: child!,
         );
@@ -115,4 +122,30 @@ class _NotConnectedApp extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Saves a short technical note when the app hits an error, so it can be
+/// fixed (no messages or personal details; at most 3 per app run; can be
+/// turned off in Profile). Stored write-only in Firebase.
+void _catchErrors(SharedPreferences? prefs) {
+  var sent = 0;
+  void report(Object error, StackTrace? stack) {
+    if (sent >= 3 || (prefs?.getBool('set.sendErrors') ?? true) == false) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    sent++;
+    SafetyRepository(FirebaseFirestore.instance, GroupsRepository(FirebaseFirestore.instance))
+        .sendError(by: uid, message: '$error', stack: '$stack', version: appVersion)
+        .catchError((_) {});
+  }
+
+  final previous = FlutterError.onError;
+  FlutterError.onError = (details) {
+    previous?.call(details);
+    report(details.exception, details.stack);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    report(error, stack);
+    return false; // let Flutter handle it as usual too
+  };
 }

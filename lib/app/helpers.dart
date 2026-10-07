@@ -1,6 +1,9 @@
 /// Small pure helpers used across screens (tested in test/helpers_test.dart).
 library;
 
+import 'package:flutter/material.dart' show IconData, Icons;
+import 'package:flutter/services.dart' show HapticFeedback;
+
 import '../models/place.dart';
 import 'i18n.dart';
 
@@ -226,3 +229,99 @@ List<(String, bool)> splitLinks(String text) {
 /// Total minutes spent at the stops (not counting travel).
 int totalStopMinutes(Iterable<int?> durations) =>
     durations.fold(0, (sum, d) => sum + (d ?? 0));
+
+/// "18:30" → "6:30 PM" when the 24-hour clock is off. Unknown stays as is.
+String showTime(String? hhmm, {bool clock24 = true}) {
+  if (hhmm == null) return '';
+  final parts = hhmm.split(':');
+  if (clock24 || parts.length != 2) return hhmm;
+  final h = int.tryParse(parts[0]);
+  if (h == null) return hhmm;
+  final suffix = h < 12 ? tr('AM') : tr('PM');
+  final h12 = h % 12 == 0 ? 12 : h % 12;
+  return '$h12:${parts[1]} $suffix';
+}
+
+/// Arabic search: treats أ/إ/آ as ا, ة as ه, ى as ي, and ignores tashkeel;
+/// English: lowercase. So "القاهره" finds "القاهرة".
+String normalizeSearch(String s) => s
+    .toLowerCase()
+    .replaceAll(RegExp('[أإآ]'), 'ا')
+    .replaceAll('ة', 'ه')
+    .replaceAll('ى', 'ي')
+    .replaceAll(RegExp('[ً-ْـ]'), '')
+    .trim();
+
+/// True for messages made only of a few emoji (shown bigger in chat).
+bool isOnlyEmoji(String text) {
+  final t = text.replaceAll(RegExp(r'\s'), '');
+  if (t.isEmpty || t.runes.length > 8) return false;
+  return !RegExp(r'[A-Za-z0-9؀-ۿ]').hasMatch(t);
+}
+
+/// Haptic tap, when the person has it on.
+void tapFeedback(bool enabled) {
+  if (enabled) HapticFeedback.selectionClick();
+}
+
+/// A bill total from the amount the person typed (we never guess prices):
+/// service is added first, VAT is charged on food + service (as Egyptian
+/// bills do), and the tip is a % of the typed amount.
+double billTotal(double amount, {num servicePct = 0, num vatPct = 0, num tipPct = 0}) =>
+    amount * (1 + servicePct / 100) * (1 + vatPct / 100) + amount * tipPct / 100;
+
+/// A general, honest tip for a kind of place (no made-up facts about it).
+String? categoryTip(String category) => switch (category) {
+      'cinema' => tr('Check showtimes on the cinema\'s website or app before you go.'),
+      'museum' => tr('Museums often close early and may need a ticket. Check before you go.'),
+      'park' => tr('Parks are nicest before sunset. Bring water.'),
+      'escape_room' => tr('Escape rooms usually need booking ahead.'),
+      'sight' => tr('Some sights need a ticket and close early. Check before you go.'),
+      'mall' => tr('Malls get busy on Thursday and Friday evenings.'),
+      _ => null,
+    };
+
+/// Opens any installed map app at the place (Android "geo:" link).
+Uri? geoUrl(Place p) => p.hasLocation
+    ? Uri.parse('geo:${p.lat},${p.lng}?q=${p.lat},${p.lng}(${Uri.encodeComponent(p.name)})')
+    : null;
+
+/// A Google Calendar link for visiting one place at [when] (1.5 hours).
+Uri visitCalendarUrl(Place p, DateTime when) {
+  String fmt(DateTime d) {
+    final u = d.toUtc();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${u.year}${two(u.month)}${two(u.day)}T${two(u.hour)}${two(u.minute)}00Z';
+  }
+
+  return Uri.https('calendar.google.com', '/calendar/render', {
+    'action': 'TEMPLATE',
+    'text': p.name,
+    'dates': '${fmt(when)}/${fmt(when.add(const Duration(minutes: 90)))}',
+    'location': [p.name, ?p.address, ?p.area].join(', '),
+    'details': tr('Planned with Khroga'),
+  });
+}
+
+/// Everything we know about a place as plain text (for "Copy all info").
+String placeInfoText(Place p) => [
+      p.shownName,
+      [p.kindLabel ?? Categories.label(p.category), ?p.area].join(' · '),
+      ?p.address,
+      ?p.phone,
+      ?p.website,
+      if (p.openingHours != null) '${tr('Opening hours')}: ${p.openingHours}',
+      if (p.hasLocation)
+        Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '${p.lat},${p.lng}'}).toString(),
+    ].join('\n');
+
+/// When the bundled place data was built (set by the GitHub build).
+const buildDate = String.fromEnvironment('BUILD_DATE');
+
+/// A weather icon that matches the forecast text we wrote.
+IconData weatherIcon(String note) {
+  final n = note.toLowerCase();
+  if (n.contains('rain likely') || note.contains('هتمطر')) return Icons.umbrella_outlined;
+  if (RegExp(r'(3[5-9]|4\d)°').hasMatch(note)) return Icons.thermostat;
+  return Icons.wb_sunny_outlined;
+}

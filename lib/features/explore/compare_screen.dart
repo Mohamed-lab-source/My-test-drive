@@ -30,6 +30,8 @@ class CompareScreen extends ConsumerWidget {
       ('Area', pa.area ?? 'Unknown', pb.area ?? 'Unknown'),
       ('Food', pa.cuisineLabel ?? 'Unknown', pb.cuisineLabel ?? 'Unknown'),
       ('Right now', open(pa), open(pb)),
+      ('Today', todaysHours(pa, now) ?? tr('Unknown'), todaysHours(pb, now) ?? tr('Unknown')),
+      ('Floor', pa.details.floorLabel ?? tr('Unknown'), pb.details.floorLabel ?? tr('Unknown')),
       ('Wheelchair', factText(pa.details.wheelchair), factText(pb.details.wheelchair)),
       ('Wi-Fi', factText(pa.details.wifi), factText(pb.details.wifi)),
       ('Outdoor seating', factText(pa.details.outdoorSeating), factText(pb.details.outdoorSeating)),

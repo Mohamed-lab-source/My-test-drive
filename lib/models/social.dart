@@ -175,7 +175,13 @@ class GroupMessage {
     required this.text,
     this.createdAt,
     this.reactions = const {},
+    this.replyTo,
+    this.replyName,
   });
+
+  /// When this message answers another: a short copy of it and its sender.
+  final String? replyTo;
+  final String? replyName;
 
   /// Emoji reactions: uid → emoji.
   final Map<String, String> reactions;
@@ -197,6 +203,8 @@ class GroupMessage {
           for (final e in Map<String, dynamic>.from((m['reactions'] as Map?) ?? const {}).entries)
             if (e.value is String) e.key: e.value as String,
         },
+        replyTo: m['replyTo'] as String?,
+        replyName: m['replyName'] as String?,
       );
 }
 

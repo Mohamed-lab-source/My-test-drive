@@ -26,6 +26,7 @@ PlanStop _s(String id, {String? start, int? minutes, double? lat, double? lng, S
 void main() {
   moreTests();
   limitTests();
+  batch5Tests();
   group('opening hours status', () {
     test('open: says when it closes, also after midnight', () {
       expect(OpeningHours.parse('Mo-Su 10:00-23:00')!.statusText(mon(12)), 'Open · closes 23:00');
@@ -317,6 +318,63 @@ void limitTests() {
       expect(shouldUpdatePreview(null, now), isTrue);
       expect(shouldUpdatePreview(now.subtract(const Duration(seconds: 30)), now), isFalse);
       expect(shouldUpdatePreview(now.subtract(const Duration(minutes: 3)), now), isTrue);
+    });
+  });
+}
+
+void batch5Tests() {
+  group('batch 5 helpers', () {
+    test('12-hour clock', () {
+      expect(showTime('18:30', clock24: false), '6:30 PM');
+      expect(showTime('00:15', clock24: false), '12:15 AM');
+      expect(showTime('18:30'), '18:30');
+      expect(showTime(null), '');
+    });
+
+    test('Arabic search ignores spelling differences', () {
+      expect(normalizeSearch('القاهرة'), normalizeSearch('القاهره'));
+      expect(normalizeSearch('أحمد'), normalizeSearch('احمد'));
+      expect(normalizeSearch('مستشفى'), normalizeSearch('مستشفي'));
+      expect(normalizeSearch('Zamalek'), 'zamalek');
+    });
+
+    test('emoji-only messages', () {
+      expect(isOnlyEmoji('😂😂'), isTrue);
+      expect(isOnlyEmoji('ok 👍'), isFalse);
+      expect(isOnlyEmoji('تمام'), isFalse);
+      expect(isOnlyEmoji(''), isFalse);
+    });
+
+    test('bill: service first, VAT on food + service, tip on the amount', () {
+      expect(billTotal(1000), 1000);
+      expect(billTotal(1000, servicePct: 12), closeTo(1120, 1e-9));
+      expect(billTotal(1000, servicePct: 12, vatPct: 14), closeTo(1276.8, 1e-9));
+      expect(billTotal(1000, tipPct: 10), closeTo(1100, 1e-9));
+    });
+
+    test('shift all plan times', () {
+      final stops = [_s('a', start: '18:00', minutes: 60), _s('b')];
+      final later = shiftTimes(stops, 30);
+      expect(later.first.startTime, '18:30');
+      expect(later.last.startTime, isNull);
+      expect(shiftTimes(stops, -30).first.startTime, '17:30');
+    });
+
+    test('minutes until closing', () {
+      expect(OpeningHours.parse('Mo-Su 10:00-23:00')!.minutesUntilClose(mon(22, 15)), 45);
+      expect(OpeningHours.parse('Mo-Su 18:00-02:00')!.minutesUntilClose(mon(1, 30)), 30);
+      expect(OpeningHours.parse('Mo-Su 10:00-23:00')!.minutesUntilClose(mon(9)), isNull);
+      expect(OpeningHours.parse('24/7')!.minutesUntilClose(mon(9)), isNull);
+    });
+
+    test('place helpers only use real facts', () {
+      const p = Place(id: 'x', name: 'Test Cafe', category: 'cinema', city: 'cairo', lat: 30, lng: 31,
+          phone: '0100', address: 'Test St');
+      expect(categoryTip('cinema'), contains('showtimes'));
+      expect(categoryTip('cafe'), isNull);
+      expect(geoUrl(p).toString(), startsWith('geo:30.0,31.0'));
+      expect(placeInfoText(p), contains('Test St'));
+      expect(visitCalendarUrl(p, DateTime(2026, 10, 9, 19)).queryParameters['text'], 'Test Cafe');
     });
   });
 }

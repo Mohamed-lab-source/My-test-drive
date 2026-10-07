@@ -20,6 +20,11 @@ class RecentList extends Notifier<List<String>> {
     ref.read(sharedPrefsProvider)?.setStringList(key, state);
   }
 
+  void remove(String value) {
+    state = state.where((x) => x != value).toList();
+    ref.read(sharedPrefsProvider)?.setStringList(key, state);
+  }
+
   void clear() {
     state = const [];
     ref.read(sharedPrefsProvider)?.remove(key);

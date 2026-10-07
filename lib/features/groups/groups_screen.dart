@@ -21,6 +21,7 @@ class GroupsScreen extends ConsumerStatefulWidget {
 
 class _GroupsScreenState extends ConsumerState<GroupsScreen> {
   String _q = '';
+  String _sort = 'recent'; // recent, name, date
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +30,27 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
       appBar: AppBar(
         title: Text(tr('Groups')),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: tr('More'),
+            onSelected: (v) {
+              if (v == 'read') {
+                final opened = ref.read(groupOpenedProvider.notifier);
+                for (final g in ref.read(myGroupsProvider).value ?? const <Group>[]) {
+                  opened.set(g.id, DateTime.now().toIso8601String());
+                }
+                showMessage(context, tr('All marked as read'));
+              } else {
+                setState(() => _sort = v);
+              }
+            },
+            itemBuilder: (_) => [
+              CheckedPopupMenuItem(value: 'recent', checked: _sort == 'recent', child: Text(tr('Newest messages first'))),
+              CheckedPopupMenuItem(value: 'date', checked: _sort == 'date', child: Text(tr('Next outing first'))),
+              CheckedPopupMenuItem(value: 'name', checked: _sort == 'name', child: Text(tr('By name'))),
+              const PopupMenuDivider(),
+              PopupMenuItem(value: 'read', child: Text(tr('Mark all as read'))),
+            ],
+          ),
           IconButton(
             tooltip: tr('Scan an invite QR code'),
             icon: const Icon(Icons.qr_code_scanner),
@@ -62,6 +84,15 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                 final shown = list
                     .where((g) => g.name.toLowerCase().contains(_q.toLowerCase()))
                     .toList();
+                if (_sort == 'name') {
+                  shown.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+                } else if (_sort == 'date') {
+                  final far = DateTime(9999);
+                  final now = DateTime.now().subtract(const Duration(hours: 6));
+                  DateTime key(Group g) =>
+                      g.scheduledAt != null && g.scheduledAt!.isAfter(now) ? g.scheduledAt! : far;
+                  shown.sort((a, b) => key(a).compareTo(key(b)));
+                }
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 100),
                   itemCount: shown.length + 1,

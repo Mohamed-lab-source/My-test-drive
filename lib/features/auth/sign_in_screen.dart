@@ -2,6 +2,7 @@ import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../widgets/common.dart';
@@ -27,7 +28,17 @@ class SignInScreen extends ConsumerWidget {
                 child: Image.asset('assets/icon/khroga.png', width: 80, height: 80),
               ),
               const SizedBox(height: KSpace.lg),
-              Text(tr('Khroga'), style: text.headlineMedium),
+              Row(
+                children: [
+                  Expanded(child: Text(tr('Khroga'), style: text.headlineMedium)),
+                  TextButton.icon(
+                    icon: const Icon(Icons.translate),
+                    label: Text(isArabic ? 'English' : 'العربية'),
+                    onPressed: () =>
+                        ref.read(appSettingsProvider.notifier).setLanguage(isArabic ? 'en' : 'ar'),
+                  ),
+                ],
+              ),
               const SizedBox(height: KSpace.sm),
               Text(
                 tr('Plan real outings in Cairo, Giza and Alexandria — '

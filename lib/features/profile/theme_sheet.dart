@@ -48,17 +48,18 @@ class ThemePicker extends ConsumerWidget {
         const SizedBox(height: KSpace.lg),
         Text(tr('Text size'), style: text.titleMedium),
         const SizedBox(height: KSpace.sm),
-        SegmentedButton<double>(
-          showSelectedIcon: false,
-          segments: [
+        Wrap(
+          spacing: KSpace.sm,
+          runSpacing: KSpace.sm,
+          children: [
             for (final e in textScales.entries)
-              ButtonSegment(
-                value: e.key,
-                label: Text(e.value, style: TextStyle(fontSize: 13 * e.key)),
+              ChoiceChip(
+                label: Text(tr(e.value), style: TextStyle(fontSize: 12 * e.key)),
+                selected: settings.textScale == e.key,
+                showCheckmark: false,
+                onSelected: (_) => notifier.setTextScale(e.key),
               ),
           ],
-          selected: {settings.textScale},
-          onSelectionChanged: (s) => notifier.setTextScale(s.first),
         ),
         const SizedBox(height: KSpace.lg),
         Text(tr('Theme'), style: text.titleMedium),

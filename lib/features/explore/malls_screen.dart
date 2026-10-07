@@ -19,6 +19,7 @@ class MallsScreen extends ConsumerStatefulWidget {
 
 class _MallsScreenState extends ConsumerState<MallsScreen> {
   String _q = '';
+  bool _byName = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +39,9 @@ class _MallsScreenState extends ConsumerState<MallsScreen> {
               .where((m) => m.name.toLowerCase().contains(_q.toLowerCase()) ||
                   (m.area?.toLowerCase().contains(_q.toLowerCase()) ?? false))
               .toList()
-            ..sort((a, b) => (counts[b.id] ?? 0).compareTo(counts[a.id] ?? 0));
+            ..sort((a, b) => _byName
+                ? a.shownName.toLowerCase().compareTo(b.shownName.toLowerCase())
+                : (counts[b.id] ?? 0).compareTo(counts[a.id] ?? 0));
           return ListView(
             padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
             children: [
@@ -46,6 +49,16 @@ class _MallsScreenState extends ConsumerState<MallsScreen> {
                 decoration: InputDecoration(
                     hintText: tr('Find a mall'), prefixIcon: Icon(Icons.search)),
                 onChanged: (v) => setState(() => _q = v),
+              ),
+              const SizedBox(height: KSpace.sm),
+              SegmentedButton<bool>(
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(value: false, label: Text(tr('Most places'))),
+                  ButtonSegment(value: true, label: Text(tr('A–Z'))),
+                ],
+                selected: {_byName},
+                onSelectionChanged: (v) => setState(() => _byName = v.first),
               ),
               const SizedBox(height: KSpace.sm),
               Text(trf('{n} malls · most places inside first', {'n': shown.length}),
@@ -57,7 +70,7 @@ class _MallsScreenState extends ConsumerState<MallsScreen> {
                 Card(
                   child: ListTile(
                     leading: PlaceImage(url: m.photoUrl, emoji: '🛍️', width: 48, height: 48),
-                    title: Text(m.name),
+                    title: Text(m.shownName),
                     subtitle: Text([
                       if (m.area != null) m.area!,
                       (counts[m.id] ?? 0) == 0

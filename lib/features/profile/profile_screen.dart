@@ -15,7 +15,9 @@ import '../../models/plan.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
 import '../auth/username_sheet.dart';
+import 'safety_screens.dart' show deleteMyAccount;
 import 'theme_sheet.dart';
+import '../../widgets/launchers.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -123,6 +125,42 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const Divider(),
                 ListTile(
+                  leading: const Icon(Icons.feedback_outlined),
+                  title: Text(tr('Report a problem or idea')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/feedback'),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.system_update_outlined),
+                  title: Text(tr('Check for a new version')),
+                  subtitle: Text(tr('Opens the download page')),
+                  onTap: () => openWebsite(
+                      'https://github.com/Mohamed-lab-source/My-test-drive/releases/tag/latest-apk'),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.block),
+                  title: Text(tr('Blocked people')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/blocked'),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: Text(tr('Privacy policy')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/privacy'),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.gavel_outlined),
+                  title: Text(tr('Terms of use')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/terms'),
+                ),
+                const Divider(),
+                ListTile(
                   leading: const Icon(Icons.school_outlined),
                   title: Text(tr('Show the welcome tour again')),
                   onTap: () => context.push('/welcome'),
@@ -157,13 +195,14 @@ class ProfileScreen extends ConsumerWidget {
             label: tr('Sign out'),
             outlined: true,
             onPressed: () async {
-              if (isGuest) {
+              {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (dialogContext) => AlertDialog(
-                    title: Text(tr('Sign out of guest account?')),
-                    content: Text(
-                        tr("Guest plans and groups can't be recovered after signing out.")),
+                    title: Text(isGuest ? tr('Sign out of guest account?') : tr('Sign out?')),
+                    content: Text(isGuest
+                        ? tr("Guest plans and groups can't be recovered after signing out.")
+                        : tr('Your plans and groups stay safe. Sign in again to see them.')),
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.pop(dialogContext, false),
@@ -178,6 +217,13 @@ class ProfileScreen extends ConsumerWidget {
               }
               await auth.signOut();
             },
+          ),
+          const SizedBox(height: KSpace.lg),
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            onPressed: () => deleteMyAccount(context, ref),
+            icon: const Icon(Icons.delete_forever_outlined),
+            label: Text(tr('Delete my account')),
           ),
         ],
       ),
@@ -311,13 +357,17 @@ class _Stats extends ConsumerWidget {
         .value
         ?.where((f) => f.status == FriendshipStatus.accepted)
         .length;
-    Widget stat(String emoji, int? n, String label) => Expanded(
-          child: Column(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 22)),
-              Text(n == null ? '–' : '$n', style: Theme.of(context).textTheme.titleLarge),
-              Text(tr(label), style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
-            ],
+    Widget stat(String emoji, int? n, String label, String route) => Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => route == '/saved' ? context.push(route) : context.go(route),
+            child: Column(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 22)),
+                Text(n == null ? '–' : '$n', style: Theme.of(context).textTheme.titleLarge),
+                Text(tr(label), style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+              ],
+            ),
           ),
         );
     return Card(
@@ -325,11 +375,11 @@ class _Stats extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: KSpace.md),
         child: Row(
           children: [
-            stat('🗺️', plans, 'Plans'),
-            stat('❤️', favorites, 'Favorites'),
-            stat('✅', visited, 'Been there'),
-            stat('👯', groups, 'Groups'),
-            stat('🤝', friends, 'Friends'),
+            stat('🗺️', plans, 'Plans', '/saved'),
+            stat('❤️', favorites, 'Favorites', '/saved'),
+            stat('✅', visited, 'Been there', '/saved'),
+            stat('👯', groups, 'Groups', '/groups'),
+            stat('🤝', friends, 'Friends', '/friends'),
           ],
         ),
       ),
@@ -450,6 +500,43 @@ class _AppSettingsCard extends ConsumerWidget {
             onChanged: n.setDataSaver,
           ),
           const Divider(),
+          Consumer(builder: (context, ref, _) {
+            final p = ref.watch(phoneSettingsProvider);
+            final pn = ref.read(phoneSettingsProvider.notifier);
+            return Column(children: [
+              SwitchListTile(
+                secondary: const Icon(Icons.schedule),
+                title: Text(tr('24-hour clock')),
+                subtitle: Text(p.clock24 ? '18:30' : '6:30 PM'),
+                value: p.clock24,
+                onChanged: pn.setClock24,
+              ),
+              const Divider(),
+              SwitchListTile(
+                secondary: const Icon(Icons.vibration),
+                title: Text(tr('Vibrate on taps')),
+                value: p.haptics,
+                onChanged: pn.setHaptics,
+              ),
+              const Divider(),
+              SwitchListTile(
+                secondary: const Icon(Icons.animation),
+                title: Text(tr('Reduce motion')),
+                subtitle: Text(tr('Fewer animations')),
+                value: p.reduceMotion,
+                onChanged: pn.setReduceMotion,
+              ),
+              const Divider(),
+              SwitchListTile(
+                secondary: const Icon(Icons.bug_report_outlined),
+                title: Text(tr('Send error reports')),
+                subtitle: Text(tr('Short technical notes, no personal details')),
+                value: p.sendErrors,
+                onChanged: pn.setSendErrors,
+              ),
+              const Divider(),
+            ]);
+          }),
           SwitchListTile(
             secondary: const Icon(Icons.explore_outlined),
             title: Text(tr('Open the app on Explore')),

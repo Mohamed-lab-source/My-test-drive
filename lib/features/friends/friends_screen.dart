@@ -15,6 +15,8 @@ import '../../app/helpers.dart' show timeAgo;
 import '../../data/checkins_repository.dart';
 import '../../widgets/common.dart';
 import '../../widgets/khroga_map.dart';
+import '../../app/local_prefs.dart';
+import '../groups/group_detail_screen.dart' show askReportReason;
 import '../auth/username_sheet.dart';
 
 /// QR codes encode this prefix + uid, so we never act on random QR codes.
@@ -243,9 +245,13 @@ class _FriendLists extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final blocked = ref.watch(blockedUsersProvider);
+    // Requests from people you blocked don't show.
     final incoming = friendships
         .where((f) =>
-            f.status == FriendshipStatus.pending && f.requestedBy != uid)
+            f.status == FriendshipStatus.pending &&
+            f.requestedBy != uid &&
+            !blocked.containsKey(f.otherUid(uid)))
         .toList();
     final outgoing = friendships
         .where((f) =>
@@ -313,7 +319,10 @@ class _FriendLists extends ConsumerWidget {
               style: TextStyle(color: context.k.inkMuted),
             ),
           ),
-        for (final f in friends)
+        for (final f in friends
+          ..sort((a, b) => (profiles[a.otherUid(uid)]?.displayName ?? '')
+              .toLowerCase()
+              .compareTo((profiles[b.otherUid(uid)]?.displayName ?? '').toLowerCase())))
           tile(f,
               trailing: PopupMenuButton<String>(
                 onSelected: (_) => guard(context, () => repo.remove(f.id)),
@@ -321,6 +330,7 @@ class _FriendLists extends ConsumerWidget {
                   PopupMenuItem(value: 'remove', child: Text(tr('Remove friend'))),
                 ],
               )),
+        _PeopleYouMayKnow(uid: uid, known: {for (final f in friendships) f.otherUid(uid)}),
         if (outgoing.isNotEmpty) ...[
           SectionTitle(tr('Sent requests')),
           for (final f in outgoing)
@@ -489,6 +499,36 @@ void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendshi
             ),
           const SizedBox(height: KSpace.md),
           if (uid != null)
+            TextButton.icon(
+              icon: const Icon(Icons.flag_outlined),
+              onPressed: () async {
+                final reason = await askReportReason(context);
+                if (reason == null) return;
+                try {
+                  await ref.read(safetyRepositoryProvider).reportUser(by: uid, targetUid: p.uid, reason: reason);
+                  if (context.mounted) showMessage(context, tr("Thanks. We'll review it."));
+                } catch (e) {
+                  if (context.mounted) showError(context, e);
+                }
+              },
+              label: Text(tr('Report')),
+            ),
+          if (uid != null)
+            TextButton.icon(
+              icon: const Icon(Icons.block),
+              onPressed: () async {
+                Navigator.pop(sheetContext);
+                ref.read(blockedUsersProvider.notifier).set(p.uid, p.displayName);
+                try {
+                  await ref.read(socialRepositoryProvider).remove(f.id);
+                } catch (_) {}
+                if (context.mounted) {
+                  showMessage(context, trf('{name} is blocked. Unblock in Profile → Blocked people.', {'name': p.displayName}));
+                }
+              },
+              label: Text(trf('Block {name}', {'name': p.displayName})),
+            ),
+          if (uid != null)
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
               onPressed: () async {
@@ -505,4 +545,49 @@ void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendshi
       );
     }),
   );
+}
+
+/// People in your groups who aren't your friends yet (no extra searching).
+class _PeopleYouMayKnow extends ConsumerWidget {
+  const _PeopleYouMayKnow({required this.uid, required this.known});
+
+  final String uid;
+  final Set<String> known;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final blocked = ref.watch(blockedUsersProvider);
+    final candidates = <String>{
+      for (final g in ref.watch(myGroupsProvider).value ?? const <Group>[]) ...g.memberUids,
+    }..removeWhere((u) => u == uid || known.contains(u) || blocked.containsKey(u));
+    if (candidates.isEmpty) return const SizedBox.shrink();
+    final list = candidates.take(10).toList();
+    final profiles = ref.watch(profilesProvider(profilesKey(list))).value ?? const {};
+    final shown = list.where((u) => profiles[u]?.username != null).toList();
+    if (shown.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitle(tr('People you may know')),
+        for (final u in shown)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Avatar(profile: profiles[u]),
+            title: Text(profiles[u]!.displayName),
+            subtitle: Text(tr('In one of your groups')),
+            trailing: FilledButton.tonal(
+              onPressed: () async {
+                try {
+                  await ref.read(socialRepositoryProvider).sendRequest(uid, u);
+                  if (context.mounted) showMessage(context, tr('Request sent'));
+                } catch (e) {
+                  if (context.mounted) showError(context, e);
+                }
+              },
+              child: Text(tr('Add')),
+            ),
+          ),
+      ],
+    );
+  }
 }

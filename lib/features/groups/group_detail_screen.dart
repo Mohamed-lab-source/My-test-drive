@@ -70,6 +70,8 @@ class _GroupView extends ConsumerStatefulWidget {
 
 class _GroupViewState extends ConsumerState<_GroupView> {
   String? _search; // null = not searching
+  final _replyTo = ValueNotifier<GroupMessage?>(null);
+  bool _showHeader = true;
   late final StringMapPref _opened;
 
   void _markRead() => _opened.set(widget.group.id, DateTime.now().toIso8601String());
@@ -83,6 +85,7 @@ class _GroupViewState extends ConsumerState<_GroupView> {
 
   @override
   void dispose() {
+    _replyTo.dispose();
     _markRead(); // messages read while the chat was open
     super.dispose();
   }
@@ -155,7 +158,28 @@ class _GroupViewState extends ConsumerState<_GroupView> {
         child: Column(
           children: [
             // While typing, hide the header so the chat keeps its space.
-            if (!keyboardOpen && _search == null) _Header(group: group, uid: uid),
+            if (!keyboardOpen && _search == null)
+              _showHeader
+                  ? Stack(
+                      children: [
+                        _Header(group: group, uid: uid),
+                        PositionedDirectional(
+                          end: KSpace.md + 4,
+                          top: 4,
+                          child: IconButton(
+                            tooltip: tr('Hide details'),
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.expand_less),
+                            onPressed: () => setState(() => _showHeader = false),
+                          ),
+                        ),
+                      ],
+                    )
+                  : TextButton.icon(
+                      onPressed: () => setState(() => _showHeader = true),
+                      icon: const Icon(Icons.expand_more),
+                      label: Text(tr('Show details')),
+                    ),
             if (group.pinned != null && _search == null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xs),
@@ -169,8 +193,10 @@ class _GroupViewState extends ConsumerState<_GroupView> {
                   child: Text('📌 ${group.pinned}'),
                 ),
               ),
-            Expanded(child: _Chat(group: group, uid: uid, profiles: profiles, search: _search)),
-            if (_search == null) _Composer(group: group, uid: uid),
+            Expanded(
+                child: _Chat(
+                    group: group, uid: uid, profiles: profiles, search: _search, replyTo: _replyTo)),
+            if (_search == null) _Composer(group: group, uid: uid, replyTo: _replyTo),
           ],
         ),
       ),
@@ -444,12 +470,29 @@ class _Header extends ConsumerWidget {
                     label: Text(tr('Split the bill')),
                     onPressed: () => _showBillSplitter(context, group),
                   ),
-                  if (routeMapsUrl([for (final s in group.planStops) PlanStop.fromMap(s)]) case final url?)
+                  if (routeMapsUrl([for (final s in group.planStops) PlanStop.fromMap(s)]) case final url?) ...[
                     ActionChip(
                       avatar: const Icon(Icons.route_outlined, size: 18),
                       label: Text(tr('Route')),
                       onPressed: () => openUri(url),
                     ),
+                    ActionChip(
+                      avatar: const Icon(Icons.send_outlined, size: 18),
+                      label: Text(tr('Send route to chat')),
+                      onPressed: () async {
+                        try {
+                          await repo.sendMessage(
+                            groupId: group.id,
+                            uid: uid,
+                            name: ref.read(myProfileProvider).value?.displayName ?? tr('Someone'),
+                            text: '${tr('🗺️ Our route')}: $url',
+                          );
+                        } catch (e) {
+                          if (context.mounted) showError(context, e);
+                        }
+                      },
+                    ),
+                  ],
                   if (waiting > 0)
                     ActionChip(
                       avatar: const Icon(Icons.campaign_outlined, size: 18),
@@ -465,8 +508,8 @@ class _Header extends ConsumerWidget {
                             groupId: group.id,
                             uid: uid,
                             name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
-                            text: '👋 Still waiting to hear from ${names.join(', ')}. '
-                                "Are you coming? Tap Going / Maybe / Can't at the top.",
+                            text: trf('👋 Still waiting to hear from {names}. Are you coming? '
+                                "Tap Going / Maybe / Can't at the top.", {'names': names.join('، ')}),
                           );
                         } catch (e) {
                           if (context.mounted) showError(context, e);
@@ -483,10 +526,11 @@ class _Header extends ConsumerWidget {
                             groupId: group.id,
                             uid: uid,
                             name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
-                            text: '⏰ Reminder: ${group.name} is '
-                                '${countdownText(group.scheduledAt!).replaceFirst('⏳ ', '').toLowerCase()} '
-                                '(${DateFormat('EEE d MMM, h:mm a').format(group.scheduledAt!)}). '
-                                'Tap Going / Maybe / Can\'t above!',
+                            text: trf("⏰ Reminder: {group} is {when} ({date}). Tap Going / Maybe / Can't above!", {
+                              'group': group.name,
+                              'when': countdownText(group.scheduledAt!).replaceFirst('⏳ ', ''),
+                              'date': DateFormat('EEE d MMM, h:mm a').format(group.scheduledAt!),
+                            }),
                           );
                         } catch (e) {
                           if (context.mounted) showError(context, e);
@@ -815,12 +859,19 @@ class _MembersSheet extends ConsumerWidget {
 }
 
 class _Chat extends ConsumerStatefulWidget {
-  const _Chat({required this.group, required this.uid, required this.profiles, this.search});
+  const _Chat({
+    required this.group,
+    required this.uid,
+    required this.profiles,
+    required this.replyTo,
+    this.search,
+  });
 
   final Group group;
   final String uid;
   final Map<String, PublicProfile> profiles;
   final String? search;
+  final ValueNotifier<GroupMessage?> replyTo;
 
   @override
   ConsumerState<_Chat> createState() => _ChatState();
@@ -828,6 +879,23 @@ class _Chat extends ConsumerStatefulWidget {
 
 class _ChatState extends ConsumerState<_Chat> {
   int _limit = 30;
+  final _scroll = ScrollController();
+  bool _farFromBottom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      final far = _scroll.offset > 600;
+      if (far != _farFromBottom) setState(() => _farFromBottom = far);
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -839,7 +907,10 @@ class _ChatState extends ConsumerState<_Chat> {
     final messages = ref.watch(groupMessagesProvider((group.id, limit)));
     return AsyncView<List<GroupMessage>>(
       value: messages,
-      builder: (all) {
+      builder: (loaded) {
+        final blocked = ref.watch(blockedUsersProvider);
+        // Messages from people you blocked are hidden.
+        final all = blocked.isEmpty ? loaded : loaded.where((m) => !blocked.containsKey(m.uid)).toList();
         final q = search?.trim().toLowerCase() ?? '';
         final list = q.isEmpty
             ? all
@@ -854,7 +925,8 @@ class _ChatState extends ConsumerState<_Chat> {
             message: tr('Messages here are seen by everyone in the group.'),
           );
         }
-        return ListView.builder(
+        final listView = ListView.builder(
+          controller: _scroll,
           reverse: true, // newest at the bottom, and stays there
           padding: const EdgeInsets.symmetric(
               horizontal: KSpace.md, vertical: KSpace.sm),
@@ -875,7 +947,12 @@ class _ChatState extends ConsumerState<_Chat> {
                 (older?.createdAt == null || !sameDay(older!.createdAt!, m.createdAt!));
             final showName = m.uid != uid && (older?.uid != m.uid || newDay);
             final bubble = _Bubble(
-                message: m, mine: m.uid == uid, showName: showName, groupId: group.id, uid: uid);
+                message: m,
+                mine: m.uid == uid,
+                showName: showName,
+                group: group,
+                uid: uid,
+                onReply: () => widget.replyTo.value = m);
             if (!newDay) return bubble;
             return Column(
               children: [
@@ -884,6 +961,23 @@ class _ChatState extends ConsumerState<_Chat> {
               ],
             );
           },
+        );
+        return Stack(
+          children: [
+            listView,
+            if (_farFromBottom)
+              PositionedDirectional(
+                end: KSpace.md,
+                bottom: KSpace.md,
+                child: FloatingActionButton.small(
+                  heroTag: null,
+                  tooltip: tr('Newest messages'),
+                  onPressed: () => _scroll.animateTo(0,
+                      duration: const Duration(milliseconds: 300), curve: Curves.easeOut),
+                  child: const Icon(Icons.keyboard_double_arrow_down),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -895,15 +989,18 @@ class _Bubble extends ConsumerWidget {
     required this.message,
     required this.mine,
     required this.showName,
-    required this.groupId,
+    required this.group,
     required this.uid,
+    required this.onReply,
   });
 
   final GroupMessage message;
   final bool mine;
   final bool showName;
-  final String groupId;
+  final Group group;
   final String uid;
+  final VoidCallback onReply;
+  String get groupId => group.id;
 
   static const _emojis = ['👍', '❤️', '😂', '😮', '🎉', '👎'];
 
@@ -936,15 +1033,66 @@ class _Bubble extends ConsumerWidget {
               ],
             ),
             ListTile(
+              leading: const Icon(Icons.reply),
+              title: Text(tr('Reply')),
+              onTap: () => Navigator.pop(sheetContext, 'reply'),
+            ),
+            ListTile(
               leading: const Icon(Icons.copy),
               title: Text(tr('Copy message')),
               onTap: () => Navigator.pop(sheetContext, 'copy'),
             ),
+            if (mine)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: Text(tr('Delete my message')),
+                onTap: () => Navigator.pop(sheetContext, 'delete'),
+              ),
+            if (!mine) ...[
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: Text(tr('Report message')),
+                onTap: () => Navigator.pop(sheetContext, 'report'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.block),
+                title: Text(trf('Block {name}', {'name': message.name})),
+                onTap: () => Navigator.pop(sheetContext, 'block'),
+              ),
+            ],
           ],
         ),
       ),
     );
-    if (picked == null) return;
+    if (picked == null || !context.mounted) return;
+    switch (picked) {
+      case 'reply':
+        onReply();
+        return;
+      case 'delete':
+        try {
+          await ref.read(groupsRepositoryProvider).deleteMessage(groupId, message.id);
+        } catch (e) {
+          if (context.mounted) showError(context, e);
+        }
+        return;
+      case 'report':
+        final reason = await askReportReason(context);
+        if (reason == null) return;
+        try {
+          await ref
+              .read(safetyRepositoryProvider)
+              .reportMessage(by: uid, group: group, message: message, reason: reason);
+          if (context.mounted) showMessage(context, tr('Thanks. We\'ll review it.'));
+        } catch (e) {
+          if (context.mounted) showError(context, e);
+        }
+        return;
+      case 'block':
+        ref.read(blockedUsersProvider.notifier).set(message.uid, message.name);
+        showMessage(context, trf('{name} is blocked. Unblock in Profile → Blocked people.', {'name': message.name}));
+        return;
+    }
     if (picked == 'copy') {
       await Clipboard.setData(ClipboardData(text: message.text));
       if (context.mounted) showMessage(context, tr('Message copied'));
@@ -967,7 +1115,8 @@ class _Bubble extends ConsumerWidget {
     }
     final time = message.createdAt == null
         ? ''
-        : DateFormat.jm().format(message.createdAt!);
+        : DateFormat(ref.watch(phoneSettingsProvider.select((s) => s.clock24)) ? 'HH:mm' : 'h:mm a')
+            .format(message.createdAt!);
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
@@ -992,16 +1141,29 @@ class _Bubble extends ConsumerWidget {
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: context.k.accent)),
-              Text(message.text,
-                  style: TextStyle(
-                      color: mine ? context.k.onAccent : context.k.ink, fontSize: 15)),
+              if (message.replyTo != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsetsDirectional.only(start: 8, top: 2, bottom: 2),
+                  decoration: BoxDecoration(
+                    border: BorderDirectional(
+                        start: BorderSide(color: mine ? context.k.onAccent : context.k.accent, width: 3)),
+                  ),
+                  child: Text('${message.replyName ?? ''}: ${message.replyTo}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: (mine ? context.k.onAccent : context.k.ink).withValues(alpha: 0.8))),
+                ),
+              _MessageText(text: message.text, mine: mine),
               for (final (link, _) in splitLinks(message.text).where((p) => p.$2).take(3))
                 InkWell(
                   onTap: () => openUri(Uri.parse(link)),
                   child: Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      link.contains('google.com/maps') ? '🗺️ Open in Maps' : '🔗 Open link',
+                      link.contains('google.com/maps') ? tr('🗺️ Open in Maps') : tr('🔗 Open link'),
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           decoration: TextDecoration.underline,
@@ -1065,10 +1227,11 @@ const _quickReplies = [
 ];
 
 class _Composer extends ConsumerStatefulWidget {
-  const _Composer({required this.group, required this.uid});
+  const _Composer({required this.group, required this.uid, required this.replyTo});
 
   final Group group;
   final String uid;
+  final ValueNotifier<GroupMessage?> replyTo;
 
   @override
   ConsumerState<_Composer> createState() => _ComposerState();
@@ -1138,7 +1301,10 @@ class _ComposerState extends ConsumerState<_Composer> {
             name: name,
             text: text,
             updatePreview: shouldUpdatePreview(widget.group.lastMessageAt, DateTime.now()),
+            replyTo: widget.replyTo.value,
           );
+      widget.replyTo.value = null;
+      tapFeedback(ref.read(phoneSettingsProvider).haptics);
       if (quick == null) _controller.clear();
     } catch (e) {
       if (mounted) showError(context, e);
@@ -1158,6 +1324,26 @@ class _ComposerState extends ConsumerState<_Composer> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          ValueListenableBuilder<GroupMessage?>(
+            valueListenable: widget.replyTo,
+            builder: (context, m, _) => m == null
+                ? const SizedBox.shrink()
+                : Row(
+                    children: [
+                      const Icon(Icons.reply, size: 18),
+                      const SizedBox(width: KSpace.xs),
+                      Expanded(
+                        child: Text(trf('Replying to {name}: {text}', {'name': m.name, 'text': m.text}),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      IconButton(
+                        tooltip: tr('Cancel'),
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => widget.replyTo.value = null,
+                      ),
+                    ],
+                  ),
+          ),
           SizedBox(
             height: 44,
             child: ListView.separated(
@@ -1192,9 +1378,12 @@ class _ComposerState extends ConsumerState<_Composer> {
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 hintText: tr('Message'),
-                counterText: '',
+                counterText: _controller.text.length > 800 ? '${_controller.text.length}/1000' : '',
                 isDense: true,
               ),
+              onChanged: (v) {
+                if (v.length > 790 || v.isEmpty) setState(() {});
+              },
               onSubmitted: (_) => _send(),
             ),
           ),
@@ -1259,23 +1448,27 @@ void _showBillSplitter(BuildContext context, Group group) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _BillSplitter(defaultPeople: paying > 0 ? paying : group.memberUids.length),
+    builder: (_) => _BillSplitter(
+        defaultPeople: paying > 0 ? paying : group.memberUids.length, group: group),
   );
 }
 
-class _BillSplitter extends StatefulWidget {
-  const _BillSplitter({required this.defaultPeople});
+class _BillSplitter extends ConsumerStatefulWidget {
+  const _BillSplitter({required this.defaultPeople, required this.group});
 
   final int defaultPeople;
+  final Group group;
 
   @override
-  State<_BillSplitter> createState() => _BillSplitterState();
+  ConsumerState<_BillSplitter> createState() => _BillSplitterState();
 }
 
-class _BillSplitterState extends State<_BillSplitter> {
+class _BillSplitterState extends ConsumerState<_BillSplitter> {
   final _total = TextEditingController();
   late int _people = widget.defaultPeople.clamp(1, 50);
   int _tipPercent = 0;
+  bool _service = false; // many Egyptian restaurants add 12% service
+  bool _vat = false; // and 14% VAT, when it isn't already on the bill
 
   @override
   void dispose() {
@@ -1287,7 +1480,7 @@ class _BillSplitterState extends State<_BillSplitter> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final total = double.tryParse(_total.text.replaceAll(',', '').trim()) ?? 0;
-    final withTip = total * (1 + _tipPercent / 100);
+    final withTip = billTotal(total, servicePct: _service ? 12 : 0, vatPct: _vat ? 14 : 0, tipPct: _tipPercent);
     final each = _people == 0 ? 0 : withTip / _people;
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -1333,7 +1526,20 @@ class _BillSplitterState extends State<_BillSplitter> {
                 ),
             ],
           ),
-          const SizedBox(height: KSpace.lg),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(tr('Add 12% service')),
+            value: _service,
+            onChanged: (v) => setState(() => _service = v ?? false),
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(tr('Add 14% VAT')),
+            subtitle: Text(tr("Only if it isn't already on the bill")),
+            value: _vat,
+            onChanged: (v) => setState(() => _vat = v ?? false),
+          ),
+          const SizedBox(height: KSpace.sm),
           Container(
             padding: const EdgeInsets.all(KSpace.md),
             decoration: BoxDecoration(
@@ -1344,10 +1550,33 @@ class _BillSplitterState extends State<_BillSplitter> {
               children: [
                 Text(tr('Each person pays'), style: text.bodyMedium),
                 Text(trf('{n} EGP', {'n': each.ceil()}), style: text.headlineMedium),
-                if (_tipPercent > 0)
+                if (withTip != total)
                   Text(trf('Total with tip: {n} EGP', {'n': withTip.ceil()}), style: text.bodySmall),
               ],
             ),
+          ),
+          const SizedBox(height: KSpace.sm),
+          OutlinedButton.icon(
+            onPressed: total <= 0
+                ? null
+                : () async {
+                    final uid = ref.read(uidProvider);
+                    if (uid == null) return;
+                    try {
+                      await ref.read(groupsRepositoryProvider).sendMessage(
+                            groupId: widget.group.id,
+                            uid: uid,
+                            name: ref.read(myProfileProvider).value?.displayName ?? tr('Someone'),
+                            text: trf('💸 Bill: {total} EGP · {people} people · {each} EGP each',
+                                {'total': withTip.ceil(), 'people': _people, 'each': each.ceil()}),
+                          );
+                      if (context.mounted) Navigator.pop(context);
+                    } catch (e) {
+                      if (context.mounted) showError(context, e);
+                    }
+                  },
+            icon: const Icon(Icons.send_outlined),
+            label: Text(tr('Send to the group chat')),
           ),
         ],
       ),
@@ -1376,6 +1605,7 @@ class _PollsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final polls = ref.watch(groupPollsProvider(group.id));
     final repo = ref.read(groupsRepositoryProvider);
+    final names = ref.watch(profilesProvider(profilesKey(group.memberUids))).value ?? const {};
     final text = Theme.of(context).textTheme;
     return DraggableScrollableSheet(
       expand: false,
@@ -1448,11 +1678,37 @@ class _PollsSheet extends ConsumerWidget {
                                     color: p.votes[uid] == i ? context.k.accent : context.k.line,
                                     width: p.votes[uid] == i ? 2 : 1),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Expanded(child: Text(option)),
-                                  Text('${p.countFor(i)}',
-                                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  Row(
+                                    children: [
+                                      Expanded(child: Text(option)),
+                                      Text('${p.countFor(i)}',
+                                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: p.votes.isEmpty ? 0 : p.countFor(i) / p.votes.length,
+                                      minHeight: 6,
+                                      color: context.k.accent,
+                                      backgroundColor: context.k.accentSoft,
+                                    ),
+                                  ),
+                                  if (p.countFor(i) > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        p.votes.entries
+                                            .where((e) => e.value == i)
+                                            .map((e) => names[e.key]?.displayName ?? '…')
+                                            .join('، '),
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -1544,3 +1800,60 @@ class _PollsSheet extends ConsumerWidget {
     }
   }
 }
+
+/// Message text: big when it's only emoji, @mentions in bold, and long
+/// messages folded with "Read more".
+class _MessageText extends StatefulWidget {
+  const _MessageText({required this.text, required this.mine});
+
+  final String text;
+  final bool mine;
+
+  @override
+  State<_MessageText> createState() => _MessageTextState();
+}
+
+class _MessageTextState extends State<_MessageText> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.mine ? context.k.onAccent : context.k.ink;
+    if (isOnlyEmoji(widget.text)) {
+      return Text(widget.text, style: const TextStyle(fontSize: 36));
+    }
+    final long = widget.text.length > 400;
+    final shown = long && !_open ? '${widget.text.substring(0, 400)}…' : widget.text;
+    final spans = <TextSpan>[
+      for (final part in shown.split(RegExp(r'(?=@)|(?<=@\S+)(?=\s)')))
+        TextSpan(
+          text: part,
+          style: part.startsWith('@') ? const TextStyle(fontWeight: FontWeight.w800) : null,
+        ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(TextSpan(children: spans), style: TextStyle(color: color, fontSize: 15)),
+        if (long)
+          GestureDetector(
+            onTap: () => setState(() => _open = !_open),
+            child: Text(_open ? tr('Show less') : tr('Read more'),
+                style: TextStyle(color: color, fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
+          ),
+      ],
+    );
+  }
+}
+
+/// Asks why something is being reported. Returns the reason, or null.
+Future<String?> askReportReason(BuildContext context) => showDialog<String>(
+      context: context,
+      builder: (d) => SimpleDialog(
+        title: Text(tr('Why are you reporting this?')),
+        children: [
+          for (final r in const ['Rude or bullying', 'Spam', 'Hate or threats', 'Sexual content', 'Something else'])
+            SimpleDialogOption(onPressed: () => Navigator.pop(d, r), child: Text(tr(r))),
+        ],
+      ),
+    );

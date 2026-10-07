@@ -32,6 +32,8 @@ const accentThemes = <AccentTheme>[
   AccentTheme(id: 'violet', name: 'Violet', light: Color(0xFF6A2BD6), dark: Color(0xFFB99BFF)),
   AccentTheme(id: 'gold', name: 'Gold', light: Color(0xFF9A5B00), dark: Color(0xFFFFC94D)),
   AccentTheme(id: 'rose', name: 'Rose', light: Color(0xFFBE1858), dark: Color(0xFFFF7EB3)),
+  AccentTheme(id: 'teal', name: 'Teal', light: Color(0xFF00695C), dark: Color(0xFF4DD0C1)),
+  AccentTheme(id: 'indigo', name: 'Indigo', light: Color(0xFF3949AB), dark: Color(0xFFA5AFFF)),
 ];
 
 AccentTheme accentById(String? id) =>

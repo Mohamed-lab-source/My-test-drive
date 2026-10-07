@@ -28,7 +28,7 @@ class ThemeSettings {
       );
 }
 
-final textScales = <double, String>{1.0: 'Normal', 1.15: 'Large', 1.3: 'Extra large'};
+final textScales = <double, String>{1.0: 'Normal', 1.15: 'Large', 1.3: 'Extra large', 1.5: 'Huge'};
 
 /// Loaded once in main() before the app starts, so there's no color flash.
 final sharedPrefsProvider = Provider<SharedPreferences?>((_) => null);

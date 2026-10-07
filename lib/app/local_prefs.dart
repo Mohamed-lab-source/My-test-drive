@@ -98,6 +98,12 @@ class PlaceLists extends Notifier<Map<String, List<String>>> {
   }
 
   void delete(String list) => _save({...state}..remove(list));
+
+  void rename(String from, String to) {
+    final n = to.trim();
+    if (n.isEmpty || n == from || state.containsKey(n)) return;
+    _save({for (final e in state.entries) e.key == from ? n : e.key: e.value});
+  }
 }
 
 final placeListsProvider =
@@ -200,3 +206,47 @@ final groupOpenedProvider =
 /// Your last plan choices (people, vibes, time, stops), so the form remembers.
 final lastPlanChoicesProvider =
     NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('plan.last'));
+
+/// People you blocked (uid → name), on this phone. Their chat messages are
+/// hidden and their friend requests don't show.
+final blockedUsersProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('blocked.users'));
+
+/// Small phone settings: 24-hour clock, haptics, reduce motion, error reports.
+class PhoneSettings {
+  const PhoneSettings({this.clock24 = true, this.haptics = true, this.reduceMotion = false, this.sendErrors = true});
+  final bool clock24;
+  final bool haptics;
+  final bool reduceMotion;
+  final bool sendErrors;
+}
+
+class PhoneSettingsNotifier extends Notifier<PhoneSettings> {
+  @override
+  PhoneSettings build() {
+    final p = ref.watch(sharedPrefsProvider);
+    return PhoneSettings(
+      clock24: p?.getBool('set.clock24') ?? true,
+      haptics: p?.getBool('set.haptics') ?? true,
+      reduceMotion: p?.getBool('set.reduceMotion') ?? false,
+      sendErrors: p?.getBool('set.sendErrors') ?? true,
+    );
+  }
+
+  void _set(String key, bool v) {
+    ref.read(sharedPrefsProvider)?.setBool(key, v);
+    ref.invalidateSelf();
+  }
+
+  void setClock24(bool v) => _set('set.clock24', v);
+  void setHaptics(bool v) => _set('set.haptics', v);
+  void setReduceMotion(bool v) => _set('set.reduceMotion', v);
+  void setSendErrors(bool v) => _set('set.sendErrors', v);
+}
+
+final phoneSettingsProvider =
+    NotifierProvider<PhoneSettingsNotifier, PhoneSettings>(PhoneSettingsNotifier.new);
+
+/// Remembered Explore choices (category, sort).
+final exploreMemoryProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('explore.memory'));
