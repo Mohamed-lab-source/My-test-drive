@@ -2,7 +2,7 @@ import type { Category, Transaction } from '../db/types';
 
 // Merchant keywords → the seeded category they usually belong to.
 const RULES: [RegExp, RegExp][] = [
-  [/carrefour|spinneys|hyper|market|grocer|seoudi|gourmet|metro|kheir zaman|oscar|lulu|panda|danube|كارفور|سوبر|ماركت/i, /grocer/i],
+  [/carrefour|spinneys|hyper|market|grocer|\bsupe|seoudi|gourmet|metro|kheir zaman|oscar|lulu|panda|danube|كارفور|سوبر|ماركت/i, /grocer/i],
   [/uber|careem|swvl|indrive|didi|taxi|petrol|fuel|gas station|wataniya|mobil|shell|total|chillout|metro card|بنزين|وقود/i, /transport/i],
   [/restaurant|cafe|coffee|starbucks|costa|mcdonald|kfc|burger|pizza|talabat|elmenus|breadfast|cilantro|deliveroo|مطعم|كافيه/i, /dining/i],
   [/pharma|pharmacy|hospital|clinic|lab|seif|el ezaby|19011|صيدلية|مستشفى/i, /health/i],

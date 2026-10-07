@@ -51,7 +51,33 @@ export const useSmsStore = create<SmsState>((set, get) => ({
   pending: [],
   scanning: false,
 
-  refresh: async () => set({ pending: await repo.listSmsImports('pending') }),
+  // Re-reads pending items with the current parser first, so a parser fix
+  // also corrects debits that were imported (wrongly) before it.
+  refresh: async () => {
+    for (const item of await repo.listSmsImports('pending')) {
+      const parsed = item.kind === 'credit' ? parseCreditSms(item.body) : parseDebitSms(item.body);
+      if (!parsed) continue;
+      const balance = parseReportedBalance(item.body);
+      if (
+        parsed.amount !== item.amount ||
+        parsed.currency !== item.currency ||
+        parsed.merchant !== item.merchant ||
+        parsed.cardLast4 !== item.card_last4 ||
+        (balance?.amount ?? null) !== (item.balance ?? null)
+      ) {
+        await repo.updateSmsImportParsed(item.id, {
+          amount: parsed.amount,
+          currency: parsed.currency,
+          merchant: parsed.merchant,
+          card_last4: parsed.cardLast4,
+          kind: parsed.kind,
+          balance: balance?.amount ?? null,
+          balance_currency: balance?.currency ?? null,
+        });
+      }
+    }
+    set({ pending: await repo.listSmsImports('pending') });
+  },
 
   // Reads new bank SMS since the last scan and queues any debits for review.
   scan: async () => {

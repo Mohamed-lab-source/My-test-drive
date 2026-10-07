@@ -40,6 +40,7 @@ export default function SmsInboxScreen() {
   const [picked, setPicked] = useState<Record<string, string | null>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [permission, setPermission] = useState(hasSmsPermission());
+  const [receiveGranted, setReceiveGranted] = useState(hasReceivePermission());
 
   const [bankBalance, setBankBalance] = useState<{ amount: number; currency: string; date: string } | null>(null);
   useEffect(() => {
@@ -158,9 +159,9 @@ export default function SmsInboxScreen() {
               {[
                 {
                   label: 'Instant alerts',
-                  hint: hasReceivePermission()
+                  hint: receiveGranted
                     ? 'A notification the moment a debit SMS arrives, even when Anchor is closed'
-                    : 'Needs the "receive SMS" permission — turn Bank SMS off and on to grant it',
+                    : 'Needs one more permission — tap "Allow alerts" below',
                   value: smsInstantAlerts,
                   onChange: toggle(setSmsInstantAlerts),
                 },
@@ -185,7 +186,38 @@ export default function SmsInboxScreen() {
                   <Switch value={o.value} onValueChange={o.onChange} />
                 </View>
               ))}
-              <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
+                {smsInstantAlerts && !receiveGranted ? (
+                <Button
+                  title="Allow alerts"
+                  variant="secondary"
+                  onPress={async () => {
+                    await requestSmsPermission();
+                    setReceiveGranted(hasReceivePermission());
+                    syncSmsAlertConfig();
+                    if (!hasReceivePermission()) {
+                      Alert.alert(
+                        'Permission needed',
+                        'Allow SMS for Anchor in Settings → Apps → Anchor → Permissions. If it says "restricted", use ⋮ → Allow restricted settings first.'
+                      );
+                    }
+                  }}
+                  style={{ marginTop: spacing.sm }}
+                />
+              ) : null}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <Text style={[typography.body, { color: colors.label }]}>Bank SMS reading</Text>
+                  <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Turn off to stop scanning and alerts</Text>
+                </View>
+                <Switch
+                  value={smsImportEnabled}
+                  onValueChange={(v) => {
+                    setSmsImportEnabled(v);
+                    syncSmsAlertConfig();
+                  }}
+                />
+              </View>
+            <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
                 <Pressable onPress={() => scan()} disabled={scanning} style={{ marginRight: spacing.lg }}>
                   <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>{scanning ? 'Scanning…' : 'Scan now'}</Text>
                 </Pressable>
@@ -281,7 +313,22 @@ export default function SmsInboxScreen() {
                     ) : null}
                     {foreign ? (
                       <Text style={[typography.caption1, { color: colors.orange, marginTop: 4 }]}>
-                        Charged in {p.currency}; your bank may convert it to {account!.currency} — edit the amount after adding if needed.
+                        This bank alert is in {p.currency} but {account!.name} is set to {account!.currency}.{' '}
+                        <Text
+                          style={{ color: colors.blue, fontWeight: '600' }}
+                          onPress={() =>
+                            Alert.alert(
+                              `Use ${p.currency} for ${account!.name}?`,
+                              `If this account is really in ${p.currency}, switch it so amounts and balances line up. (Your main currency can be changed in Settings.)`,
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: `Switch to ${p.currency}`, onPress: () => updateAccount(account!.id, { currency: p.currency }) },
+                              ]
+                            )
+                          }
+                        >
+                          Switch it to {p.currency}
+                        </Text>
                       </Text>
                     ) : null}
                     {p.kind === 'credit' ? (

@@ -48,3 +48,15 @@ export async function latestReportedBalance(): Promise<{ amount: number; currenc
   );
   return row ? { amount: row.balance, currency: row.balance_currency, date: row.sms_date } : null;
 }
+
+// Rewrites the parsed fields of an import (used when the parser improves).
+export async function updateSmsImportParsed(
+  id: string,
+  fields: Pick<SmsImport, 'amount' | 'currency' | 'merchant' | 'card_last4' | 'kind'> & { balance: number | null; balance_currency: string | null }
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'UPDATE sms_imports SET amount = ?, currency = ?, merchant = ?, card_last4 = ?, kind = ?, balance = ?, balance_currency = ? WHERE id = ?',
+    [fields.amount, fields.currency, fields.merchant, fields.card_last4, fields.kind, fields.balance, fields.balance_currency, id]
+  );
+}

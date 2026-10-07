@@ -56,7 +56,11 @@ function findAmount(text: string): { amount: number; currency: string } | null {
   for (const [i, re] of patterns.entries()) {
     for (const m of text.matchAll(re)) {
       const [currency, amount] = i === 0 ? [m[1], m[2]] : [m[2], m[1]];
-      hits.push({ index: m.index ?? 0, amount, currency });
+      const index = m.index ?? 0;
+      // "005-375***-013 EGP 105.00": an amount-first match whose number is
+      // glued to a masked account/card number ("-013") isn't a price.
+      if (i === 1 && index > 0 && /[-*xX\d.\/]/.test(text[index - 1])) continue;
+      hits.push({ index, amount, currency });
     }
   }
   hits.sort((a, b) => a.index - b.index);
@@ -72,6 +76,8 @@ function findAmount(text: string): { amount: number; currency: string } | null {
 function findMerchant(text: string): string | null {
   const stop = '(?=\\s+(?:on|dated|with|using|via|ref|reference|card|for|from|at\\s+\\d)\\b|\\s*[.,;]\\s|\\s*[.,;]?$|\\s+\\d{1,2}[\\/\\-.]\\d|\\s+\\d{1,2}-[A-Za-z]{3})';
   const patterns = [
+    // HSBC Egypt: "07OCT26 FAWRY*FRIENDS 2 SUPE Purchase from …"
+    /^(?:From\s+HSBC\s*:\s*)?\d{1,2}[A-Z]{3}\d{2,4}\s+(.{2,40}?)\s+(?:Purchase|Payment|Withdrawal|POS|E-?Commerce|Refund|Reversal|Transfer)\b/i,
     new RegExp(`(?:\\bat\\s+|@\\s*)(.{2,40}?)${stop}`, 'i'),
     new RegExp(`\\b(?:to|towards)\\s+(.{2,40}?)${stop}`, 'i'),
     /(?:لدى|عند|في)\s+([^\d،,.]{2,40}?)(?=\s+(?:بتاريخ|يوم|في)|[،,.]|$)/,
@@ -90,7 +96,9 @@ function findMerchant(text: string): string | null {
 function findCard(text: string): string | null {
   const m =
     text.match(/(?:ending(?:\s+(?:with|in))?|ends? with|no\.?|number|\*{2,}|x{2,}|\.{3}|\b(?:card|acct|account))\s*:?\s*(\d{4})\b/i) ??
-    text.match(/(?:المنتهية|المنتهي|تنتهي|رقم)\s*(?:ب|بـ|في)?\s*\*{0,}(\d{4})\b/);
+    text.match(/(?:المنتهية|المنتهي|تنتهي|رقم)\s*(?:ب|بـ|في)?\s*\*{0,}(\d{4})\b/) ??
+    // Masked numbers like "005-375***-013": keep the visible tail.
+    text.match(/[*xX]{2,}[-\s]?(\d{3,4})\b/);
   return m ? m[1] : null;
 }
 
