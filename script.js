@@ -24,46 +24,6 @@
   document.title = `${derived.namesShort} — Wedding Invitation`;
   $("#map-link").href = W.venue.mapUrl;
 
-  // ── Split text into letters for the entrance animation ──
-  const splitLetters = (el, start, step) => {
-    const text = el.textContent;
-    el.setAttribute("aria-label", text);
-    el.textContent = "";
-    let i = 0;
-    text.split(" ").forEach((word, wi, words) => {
-      const w = document.createElement("span");
-      w.className = "w";
-      w.setAttribute("aria-hidden", "true");
-      for (const c of word) {
-        const ch = document.createElement("span");
-        ch.className = "ch";
-        ch.textContent = c;
-        ch.style.setProperty("--d", (start + i++ * step).toFixed(3));
-        w.appendChild(ch);
-      }
-      el.appendChild(w);
-      if (wi < words.length - 1) el.appendChild(document.createTextNode(" "));
-      i++;
-    });
-    return text;
-  };
-  const [tag1, tag2] = $$(".tagline.split");
-  const [name1, name2] = $$(".name-text");
-  const names = [name1, name2].map((el) => el.textContent);
-  if (!reduceMotion) {
-    splitLetters(tag1, 1.0, 0.022);
-    splitLetters(name1, 1.7, 0.07);
-    splitLetters(name2, 2.6, 0.07);
-    splitLetters(tag2, 3.3, 0.014);
-  }
-  const settleNames = () => {
-    [name1, name2].forEach((el, i) => {
-      el.textContent = names[i];
-      el.removeAttribute("aria-label");
-      el.classList.add("shine");
-    });
-  };
-
   // ── Ornamental flourishes (inline copies so each can animate on its own) ──
   const flourish = $("#flourish");
   $$(".flourish svg").forEach((svg) => {
@@ -459,9 +419,10 @@
     navigator.vibrate?.(30);
     fx.burst(cx, cy, 70, 7);
     setTimeout(() => fx.burst(cx, cy - 120, 90, 9), 1300);
-    setTimeout(() => document.body.classList.add("revealed"), reduceMotion ? 0 : 2300);
+    // start the invitation once its fonts are in, so the names never swap typeface mid-animation
+    const fontsReady = Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 2500))]);
+    setTimeout(() => fontsReady.then(() => document.body.classList.add("revealed")), reduceMotion ? 0 : 2300);
     setTimeout(() => document.body.classList.remove("locked"), reduceMotion ? 0 : 3000);
-    setTimeout(settleNames, reduceMotion ? 0 : 2300 + 4300);
   };
   envelope.addEventListener("click", open);
 
