@@ -76,6 +76,7 @@ const state = {
   meetingAlertIds: [],
   wakeWord: false,         // "Hey Jarvis" hands-free listening
   wakeSensitivity: "normal",
+  onTheGo: false,          // Bluetooth headset button summons Jarvis + routes audio to the headset
 };
 
 async function loadState() {
@@ -114,7 +115,7 @@ async function loadState() {
   state.calendarRefreshToken = await store.get("calendarRefreshToken", null);
   state.reminderIdCounter = await store.get("reminderIdCounter", 1);
   for (const key of ["wit", "hudTheme", "haptics", "silentMode", "listenLang", "emergencyName", "emergencyNumber",
-    "meetingAlerts", "convoSummary", "summaryBuffer", "activityLog", "lastBootDate", "meetingAlertIds", "wakeWord", "wakeSensitivity"]) {
+    "meetingAlerts", "convoSummary", "summaryBuffer", "activityLog", "lastBootDate", "meetingAlertIds", "wakeWord", "wakeSensitivity", "onTheGo"]) {
     state[key] = await store.get(key, state[key]);
   }
 }
@@ -2117,11 +2118,28 @@ function wireChat() {
  * ---------------------------------------------------------------------- */
 const DISMISSAL = /^(?:(that'?s (all|it)|that is all|thanks?( you)?,? jarvis|stop|goodbye|bye|never ?mind|nothing( else)?|no,? (thanks|thank you)|we'?re done|dismissed)\b|(خلاص|شكرا|شكراً|مع السلامة|سلام|باي|كفاية))/i;
 
+let voiceRouted = false;
+// On the go: when a headset is connected, route the mic through it so you can
+// talk hands-free. Best-effort — never blocks listening if routing fails.
+async function routeToHeadset() {
+  if (!state.onTheGo || voiceRouted || typeof DeviceActions.startVoiceRouting !== "function") return;
+  try {
+    const h = await DeviceActions.getHeadsetStatus();
+    if (h && h.connected) { await DeviceActions.startVoiceRouting(); voiceRouted = true; }
+  } catch {}
+}
+async function unrouteHeadset() {
+  if (!voiceRouted) return;
+  voiceRouted = false;
+  try { await DeviceActions.stopVoiceRouting(); } catch {}
+}
+
 async function listenOnce() {
   const { available } = await SpeechRecognition.available();
   if (!available) throw new Error("Speech recognition isn't available on this device");
   const perm = await SpeechRecognition.requestPermissions();
   if (perm.speechRecognition !== "granted") throw new Error("Microphone permission denied");
+  await routeToHeadset();
   setHud("listening");
   earcon("listen");
   const result = await SpeechRecognition.start({
@@ -2198,6 +2216,7 @@ async function conversation() {
     conversationActive = false;
     setHud("idle");
     if (turns > 0) earcon("end");
+    unrouteHeadset();
   }
 }
 

@@ -473,6 +473,28 @@ I wake at 6:30", "Qibla from my coordinates", "Distance between Cairo and
 Alexandria", "Paint for a 4 by 3 metre wall", "Turn this into a slug",
 "Pomodoro plan for 4 sessions", "Finish the Quran in 60 days".
 
+### 4.1 — On the go (Bluetooth headphones)
+
+Jarvis now comes with you. Turn on **On the go (Bluetooth)** in Settings and:
+
+- **Call him from your headphones.** Press the button on your Bluetooth
+  earbuds or headset and Jarvis comes up to listen — screen off, phone in
+  your pocket, hands-free. He hears you through the headset mic and answers
+  in your ears.
+- **Say his name anywhere.** On-the-go keeps "Hey Jarvis" running too, so you
+  can just speak.
+- **Survives reboots.** It re-arms itself after a restart (and the first time
+  you open the app again, if your phone's maker blocked the boot start).
+
+For the *dedicated* assistant button some earbuds have (a long-press that
+launches "your assistant"), also tap **Make Jarvis my assistant** just below
+the toggle and pick Jarvis — then that button summons him too.
+
+A note on how Android works: while another app is *actively* playing music,
+that app owns the normal play/pause button, so use the assistant-button route
+there (or pause the music first). Everything runs on your phone; nothing is
+sent anywhere until Jarvis wakes.
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:

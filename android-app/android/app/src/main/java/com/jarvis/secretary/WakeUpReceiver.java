@@ -23,6 +23,12 @@ public class WakeUpReceiver extends BroadcastReceiver {
             Summon.open(ctx, "wakeup", "com.jarvis.secretary.WAKEUP", "Good morning", "Tap to hear your briefing");
         } else if (Intent.ACTION_BOOT_COMPLETED.equals(a) || "android.intent.action.MY_PACKAGE_REPLACED".equals(a)) {
             schedule(ctx);
+            // Bring "on the go" (Bluetooth headset button) back after a reboot. Best-effort:
+            // some makers block starting a foreground service from boot, in which case the
+            // app re-enables it the next time it's opened.
+            if (ctx.getSharedPreferences(JarvisApp.PREFS, Context.MODE_PRIVATE).getBoolean("onthego", false)) {
+                try { ctx.startForegroundService(new Intent(ctx, MediaButtonService.class)); } catch (Exception ignored) {}
+            }
         }
     }
 

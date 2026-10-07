@@ -812,6 +812,30 @@ async function setWakeWordEnabled(on) {
   refreshWakeStatus();
 }
 
+// On the go: a Bluetooth headset button summons Jarvis (handled natively by
+// MediaButtonService), and the wake word is kept on so he also answers to his
+// name. One switch for the whole hands-free experience.
+async function setOnTheGo(on) {
+  state.onTheGo = !!on;
+  store.set("onTheGo", state.onTheGo);
+  try {
+    await DeviceActions.setMediaButton({ enabled: !!on });
+    if (on && !state.wakeWord) {
+      const wt = document.getElementById("wakeWordToggle");
+      if (wt) wt.checked = true;
+      await setWakeWordEnabled(true);
+    }
+  } catch (e) {
+    state.onTheGo = false;
+    store.set("onTheGo", false);
+    const t = document.getElementById("onTheGoToggle");
+    if (t) t.checked = false;
+    toast(String(e.message).includes("UNSUPPORTED") ? "Needs Android 8 or newer" : e.message, 4000);
+  }
+  const pill = document.getElementById("onTheGoStatus");
+  if (pill) pill.textContent = state.onTheGo ? "on" : "off";
+}
+
 // The recognizer sometimes reports "busy" right after speech or when another
 // app has just let go of the mic: step everything aside and try once more.
 const baseListenOnce = listenOnce;
@@ -875,6 +899,15 @@ async function initPresence() {
   }
   const popBtn = document.getElementById("popUpBtn");
   if (popBtn) popBtn.addEventListener("click", () => DeviceActions.openOverlaySettings().catch(e => toast(e.message)));
+  const otgToggle = document.getElementById("onTheGoToggle");
+  if (otgToggle) {
+    otgToggle.checked = !!state.onTheGo;
+    const pill = document.getElementById("onTheGoStatus");
+    if (pill) pill.textContent = state.onTheGo ? "on" : "off";
+    otgToggle.addEventListener("change", () => setOnTheGo(otgToggle.checked));
+  }
+  // Re-assert the headset-button service on launch (survives reboots that blocked it).
+  if (state.onTheGo) DeviceActions.setMediaButton({ enabled: true }).catch(() => {});
   if (state.wakeWord) startWakeWord().catch(e => console.warn("wake word", e)).finally(refreshWakeStatus);
   else refreshWakeStatus();
   document.querySelectorAll(".tel-mode").forEach(el => { el.hidden = !state.silentMode; });

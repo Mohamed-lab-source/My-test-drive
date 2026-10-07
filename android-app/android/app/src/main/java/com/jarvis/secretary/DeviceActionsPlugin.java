@@ -14,10 +14,13 @@ import android.content.pm.ResolveInfo;
 import android.app.ActivityManager;
 import android.database.Cursor;
 import android.media.AudioManager;
+import android.media.AudioDeviceInfo;
+import android.content.SharedPreferences;
 import android.os.Environment;
 import android.os.StatFs;
 import android.provider.CallLog;
 import android.os.Build;
+import android.util.Log;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.provider.MediaStore;
@@ -1105,5 +1108,103 @@ public class DeviceActionsPlugin extends Plugin {
             KokoroVoice.deleteRecursive(KokoroVoice.packDir(getContext()));
             call.resolve();
         });
+    }
+
+    /* ------------------------------------------------------------------ *
+     * On the go — Bluetooth headset button + headset audio routing
+     * ------------------------------------------------------------------ */
+    @PluginMethod
+    public void setMediaButton(PluginCall call) {
+        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        Context ctx = getContext();
+        Intent svc = new Intent(ctx, MediaButtonService.class);
+        ctx.getSharedPreferences(JarvisApp.PREFS, Context.MODE_PRIVATE).edit().putBoolean("onthego", enabled).apply();
+        JSObject ret = new JSObject();
+        if (!enabled) {
+            ctx.stopService(svc);
+            ret.put("running", false);
+            call.resolve(ret);
+            return;
+        }
+        if (Build.VERSION.SDK_INT < 26) { call.reject("UNSUPPORTED"); return; }
+        try {
+            ctx.startForegroundService(svc);
+        } catch (Exception e) {
+            call.reject("Could not start: " + e.getMessage());
+            return;
+        }
+        ret.put("running", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getHeadsetStatus(PluginCall call) {
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        boolean bluetooth = false, wired = false, sco = false;
+        String name = null;
+        if (am != null) {
+            try { sco = am.isBluetoothScoOn(); } catch (Exception ignored) {}
+            if (Build.VERSION.SDK_INT >= 23) {
+                for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+                    int t = d.getType();
+                    if (t == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                        bluetooth = true;
+                        try { name = String.valueOf(d.getProductName()); } catch (Exception ignored) {}
+                    } else if (t == AudioDeviceInfo.TYPE_WIRED_HEADSET || t == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) {
+                        wired = true;
+                    }
+                }
+            } else {
+                try { bluetooth = am.isBluetoothA2dpOn(); wired = am.isWiredHeadsetOn(); } catch (Exception ignored) {}
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("connected", bluetooth || wired);
+        ret.put("bluetooth", bluetooth);
+        ret.put("wired", wired);
+        ret.put("sco", sco);
+        ret.put("name", name);
+        call.resolve(ret);
+    }
+
+    /** Route the mic (and the exchange) through a Bluetooth headset for a hands-free talk. Best-effort. */
+    @PluginMethod
+    public void startVoiceRouting(PluginCall call) {
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        boolean ok = false;
+        if (am != null) {
+            try {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    for (AudioDeviceInfo d : am.getAvailableCommunicationDevices()) {
+                        if (d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) { ok = am.setCommunicationDevice(d); break; }
+                    }
+                } else {
+                    am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                    am.startBluetoothSco();
+                    am.setBluetoothScoOn(true);
+                    ok = true;
+                }
+            } catch (Exception e) { Log.w("JarvisVoice", "sco start failed", e); }
+        }
+        JSObject ret = new JSObject();
+        ret.put("routed", ok);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void stopVoiceRouting(PluginCall call) {
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        if (am != null) {
+            try {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    am.clearCommunicationDevice();
+                } else {
+                    am.setBluetoothScoOn(false);
+                    am.stopBluetoothSco();
+                    am.setMode(AudioManager.MODE_NORMAL);
+                }
+            } catch (Exception e) { Log.w("JarvisVoice", "sco stop failed", e); }
+        }
+        call.resolve();
     }
 }
