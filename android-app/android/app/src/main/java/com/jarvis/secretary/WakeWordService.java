@@ -14,6 +14,7 @@ import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
+import android.media.AudioRecordingConfiguration;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.IBinder;
@@ -81,7 +82,25 @@ public class WakeWordService extends Service {
     private boolean scoStarted = false;
     private Thread worker;
 
+    // Step aside for the camera, a call, a recorder — anything else that wants
+    // the microphone — so "always listening" never blocks video or voice calls.
+    private volatile boolean yielded = false;
+    private int currentSessionId = -1;
+    private AudioManager.AudioRecordingCallback recCb;
+
     private AudioManager audio() { return (AudioManager) getSystemService(Context.AUDIO_SERVICE); }
+
+    private void checkYield(java.util.List<AudioRecordingConfiguration> configs) {
+        if (configs == null) { yielded = false; return; }
+        boolean other = false;
+        for (AudioRecordingConfiguration c : configs) {
+            try {
+                if (c.getClientAudioSessionId() != currentSessionId) other = true;
+                else if (Build.VERSION.SDK_INT >= 29 && c.isClientSilenced()) other = true; // we got silenced → someone took over
+            } catch (Exception ignored) {}
+        }
+        yielded = other;
+    }
 
     static boolean isRunning() { return running; }
 
@@ -115,6 +134,15 @@ public class WakeWordService extends Service {
         running = true;
         if (intent != null && intent.hasExtra("sensitivity")) setSensitivity(intent.getStringExtra("sensitivity"));
         if (intent != null && intent.hasExtra("headsetMic")) useHeadsetMic = intent.getBooleanExtra("headsetMic", false);
+        if (Build.VERSION.SDK_INT >= 24 && recCb == null) {
+            AudioManager am = audio();
+            if (am != null) {
+                recCb = new AudioManager.AudioRecordingCallback() {
+                    @Override public void onRecordingConfigChanged(java.util.List<AudioRecordingConfiguration> configs) { checkYield(configs); }
+                };
+                try { am.registerAudioRecordingCallback(recCb, null); } catch (Exception ignored) {}
+            }
+        }
         if (worker == null) {
             stopRequested = false;
             worker = new Thread(this::listenLoop, "jarvis-wake");
@@ -128,6 +156,11 @@ public class WakeWordService extends Service {
         stopRequested = true;
         running = false;
         stage = "stopped";
+        if (recCb != null) {
+            AudioManager am = audio();
+            if (am != null) try { am.unregisterAudioRecordingCallback(recCb); } catch (Exception ignored) {}
+            recCb = null;
+        }
         if (worker != null) worker.interrupt();
         worker = null;
         super.onDestroy();
@@ -167,13 +200,22 @@ public class WakeWordService extends Service {
                 if (isPaused()) {
                     stage = "paused";
                     level = 0f;
-                    if (rec != null) { releaseRecorder(rec); rec = null; stopSco(); }
+                    if (rec != null) { releaseRecorder(rec); rec = null; stopSco(); currentSessionId = -1; }
                     Thread.sleep(200);
+                    continue;
+                }
+                if (yielded) {
+                    // Another app (camera, call, recorder) is using the mic: let it have it.
+                    stage = "yielding";
+                    level = 0f;
+                    if (rec != null) { releaseRecorder(rec); rec = null; stopSco(); currentSessionId = -1; }
+                    Thread.sleep(400);
                     continue;
                 }
                 if (rec == null) {
                     rec = openRecorder();
                     if (rec == null) { stage = "mic-waiting"; Thread.sleep(2000); continue; }
+                    currentSessionId = rec.getAudioSessionId();
                     stage = "listening";
                     // Fresh start: same state openWakeWord begins from.
                     Arrays.fill(raw, 0f);
@@ -263,6 +305,7 @@ public class WakeWordService extends Service {
             AudioRecord rec = new AudioRecord(source, SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, CHUNK * 2 * 4));
             if (bt != null && Build.VERSION.SDK_INT >= 23) { try { rec.setPreferredDevice(bt); } catch (Exception ignored) {} }
+            try { currentSessionId = rec.getAudioSessionId(); } catch (Exception ignored) {}
             if (rec.getState() != AudioRecord.STATE_INITIALIZED) { rec.release(); lastError = "Microphone could not be opened"; return null; }
             rec.startRecording();
             if (rec.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) { releaseRecorder(rec); lastError = "Microphone is busy (another app may be using it)"; return null; }

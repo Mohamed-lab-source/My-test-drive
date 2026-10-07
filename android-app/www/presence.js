@@ -754,13 +754,17 @@ async function startWakeWord() {
   const perm = await SpeechRecognition.requestPermissions();
   if (perm.speechRecognition !== "granted") throw new Error("Jarvis needs the microphone for this. Allow it in App info → Permissions.");
   try { await LocalNotifications.requestPermissions(); } catch {}
-  const r = await DeviceActions.setWakeWord({ enabled: true, sensitivity: state.wakeSensitivity || "normal", headsetMic: !!state.onTheGo });
+  // Idle listening always uses the phone mic so it never disturbs music or
+  // Bluetooth audio. The earbud mic is used only for the actual conversation
+  // (listenOnce → routeToHeadset), and the wake word steps aside for the
+  // camera/calls automatically (native mic-yield).
+  const r = await DeviceActions.setWakeWord({ enabled: true, sensitivity: state.wakeSensitivity || "normal", headsetMic: false });
   wakeRunning = !!r.running;
 }
 
 const WAKE_STAGES = {
   stopped: "off", loading: "starting up…", "mic-waiting": "waiting for the microphone",
-  listening: "listening", paused: "paused while Jarvis listens", error: "stopped by an error",
+  listening: "listening", paused: "paused while Jarvis listens", yielding: "paused — another app is using the mic", error: "stopped by an error",
 };
 
 async function refreshWakeStatus() {
