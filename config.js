@@ -9,7 +9,7 @@ window.WEDDING = {
   },
 
   tagline: "Two hearts, one beautiful beginning",
-  invitationLine: "Invite you to celebrate the beginning of their forever",
+  invitationLine: "Invite you to celebrate the beginning of our forever",
   closingLine: "Your presence will complete our happiness",
 
   // Date & time with Cairo's UTC offset (+02:00 in November), so the
@@ -19,11 +19,7 @@ window.WEDDING = {
   dateText: "11 • 11 • 2026",
   dayText: "Wednesday",
   timeText: "7:00 PM – 11:00 PM",
-  // What the three scratch-off hearts reveal
-  dateParts: ["11", "Nov", "2026"],
-  dateLabels: ["Day", "Month", "Year"],
-
-  // Soft music-box melody that starts when the envelope opens (guests can pause it)
+  // Background music (assets/music.mp3) starts when the envelope opens; guests can pause it
   music: true,
 
   venue: {

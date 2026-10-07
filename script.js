@@ -387,110 +387,53 @@
     fx.burst(e.clientX, e.clientY, 12, 3);
   });
 
-  // ── Music box: Pachelbel's Canon, synthesised in the browser ──
+  // ── Background music: Pachelbel's Canon for piano, violin and cello ──
   const music = (() => {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!W.music || !AC) return { start() {} };
+    const audio = $("#bg-music");
     const button = $("#music");
-    let ac, master, playing = false, timer, nextTime = 0, step = 0;
-    const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
-    const ROOTS = [50, 45, 47, 42, 43, 38, 43, 45]; // D A Bm F#m G D G A
-    const MINOR = [false, false, true, true, false, false, false, false];
-    const MELODY = [
-      [78, 76, 74, 73, 71, 69, 71, 73],
-      [74, 73, 71, 69, 67, 66, 67, 64],
-      [78, 81, 79, 78, 76, 74, 76, 73],
-    ];
-    const EIGHTH = 60 / 66 / 2;
-
-    const bell = (midi, time, vel, dur = 1.6) => {
-      const f = mtof(midi);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, time);
-      g.gain.exponentialRampToValueAtTime(vel, time + 0.006);
-      g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
-      g.connect(master);
-      [[1, 1], [2.01, 0.25], [4.02, 0.08]].forEach(([mult, amp]) => {
-        const o = ac.createOscillator();
-        const og = ac.createGain();
-        o.type = "sine";
-        o.frequency.value = f * mult;
-        og.gain.value = amp;
-        o.connect(og).connect(g);
-        o.start(time);
-        o.stop(time + dur + 0.05);
-      });
-    };
-
-    const schedule = () => {
-      while (nextTime < ac.currentTime + 0.5) {
-        const chord = Math.floor(step / 4) % 8;
-        const loop = Math.floor(step / 32);
-        const pos = step % 4;
-        const base = ROOTS[chord] + 12;
-        const third = MINOR[chord] ? 3 : 4;
-        const arp = [base, base + 7, base + 12, base + 12 + third][pos];
-        bell(arp, nextTime, 0.09, 1.4);
-        if (pos === 0) {
-          bell(ROOTS[chord], nextTime, 0.07, 2.2);
-          if (loop > 0) bell(MELODY[(loop - 1) % MELODY.length][chord], nextTime, 0.16, 2.4);
-        }
-        nextTime += EIGHTH;
-        step++;
-      }
-    };
-
+    if (!W.music || !audio) return { start() {} };
+    let wanted = false;
+    let fade = 0;
     const setUI = () => {
-      button.setAttribute("aria-pressed", String(playing));
-      button.setAttribute("aria-label", playing ? "Pause music" : "Play music");
+      const on = !audio.paused;
+      button.setAttribute("aria-pressed", String(on));
+      button.setAttribute("aria-label", on ? "Pause music" : "Play music");
+    };
+    // Gentle fade in/out (iPhones ignore volume changes, so there it simply starts and stops)
+    const rampTo = (target, ms, done) => {
+      cancelAnimationFrame(fade);
+      const from = audio.volume, t0 = performance.now();
+      const step = (now) => {
+        const k = Math.max(0, Math.min(1, (now - t0) / ms));
+        audio.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+        if (k < 1) fade = requestAnimationFrame(step);
+        else done?.();
+      };
+      fade = requestAnimationFrame(step);
     };
     const play = () => {
-      if (!ac) {
-        ac = new AC();
-        master = ac.createGain();
-        master.gain.value = 0.0001;
-        // a little room reverb
-        const verb = ac.createConvolver();
-        const len = ac.sampleRate * 2.4;
-        const ir = ac.createBuffer(2, len, ac.sampleRate);
-        for (let c = 0; c < 2; c++) {
-          const d = ir.getChannelData(c);
-          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-        }
-        verb.buffer = ir;
-        const wet = ac.createGain();
-        wet.gain.value = 0.35;
-        master.connect(ac.destination);
-        master.connect(verb).connect(wet).connect(ac.destination);
-      }
-      ac.resume();
-      nextTime = Math.max(nextTime, ac.currentTime + 0.1);
-      master.gain.cancelScheduledValues(ac.currentTime);
-      master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), ac.currentTime);
-      master.gain.exponentialRampToValueAtTime(0.9, ac.currentTime + 1.5);
-      clearInterval(timer);
-      timer = setInterval(schedule, 120);
-      schedule();
-      playing = true;
-      setUI();
+      wanted = true;
+      audio.volume = 0;
+      const p = audio.play();
+      p?.catch(() => {
+        wanted = false;
+        setUI();
+      });
+      rampTo(0.85, 2500);
     };
-    const pause = () => {
-      if (!ac) return;
-      master.gain.cancelScheduledValues(ac.currentTime);
-      master.gain.setValueAtTime(master.gain.value, ac.currentTime);
-      master.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.4);
-      clearInterval(timer);
-      setTimeout(() => !playing && ac.suspend(), 500);
-      playing = false;
-      setUI();
+    const pause = (remember = true) => {
+      if (remember) wanted = false;
+      rampTo(0, 500, () => audio.pause());
     };
-    button.addEventListener("click", () => (playing ? pause() : play()));
-    let wasPlaying = false;
+    audio.addEventListener("play", setUI);
+    audio.addEventListener("pause", setUI);
+    button.addEventListener("click", () => (audio.paused || !wanted ? play() : pause()));
     document.addEventListener("visibilitychange", () => {
+      // background tabs don't run animation frames, so stop at once rather than fading
       if (document.hidden) {
-        wasPlaying = playing;
-        if (playing) pause();
-      } else if (wasPlaying) play();
+        cancelAnimationFrame(fade);
+        audio.pause();
+      } else if (wanted && audio.paused) play();
     });
     return {
       start() {
@@ -563,103 +506,6 @@
       aim(e.gamma / 25, (e.beta - 45) / 30);
     });
   }
-
-  // ── Scratch-off hearts ──
-  (() => {
-    const section = $("#save-the-date");
-    const hearts = $$(".scratch-heart", section);
-    let done = 0;
-    const finish = () => {
-      section.classList.add("done");
-      fx.show(3);
-    };
-    const clearHeart = (heart) => {
-      if (heart.classList.contains("cleared")) return;
-      heart.classList.add("cleared");
-      const r = heart.getBoundingClientRect();
-      fx.burst(r.left + r.width / 2, r.top + r.height / 2, 34, 5);
-      if (++done === hearts.length) setTimeout(finish, 500);
-    };
-
-    const paint = (canvas) => {
-      const dpr = Math.min(devicePixelRatio || 1, 2);
-      const w = canvas.offsetWidth, h = canvas.offsetHeight;
-      if (!w) return false;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      const c = canvas.getContext("2d");
-      c.scale(dpr, dpr);
-      const g = c.createLinearGradient(0, 0, w, h);
-      g.addColorStop(0, "#c9a46a");
-      g.addColorStop(0.35, "#f3e1b0");
-      g.addColorStop(0.55, "#b8955a");
-      g.addColorStop(0.8, "#ecd49c");
-      g.addColorStop(1, "#a9874f");
-      c.fillStyle = g;
-      c.fillRect(0, 0, w, h);
-      // foil grain
-      for (let i = 0; i < w * h * 0.06; i++) {
-        c.fillStyle = Math.random() < 0.5 ? "rgba(255,255,255,.35)" : "rgba(120,90,40,.18)";
-        c.fillRect(Math.random() * w, Math.random() * h, 1, 1);
-      }
-      c.fillStyle = "rgba(255,255,255,.9)";
-      c.font = `${Math.round(w * 0.2)}px "Great Vibes", cursive`;
-      c.textAlign = "center";
-      c.fillText("✦", w / 2, h * 0.5);
-      return true;
-    };
-
-    hearts.forEach((heart) => {
-      const canvas = $("canvas", heart);
-      let ready = false, drawing = false, moves = 0, last = null;
-      const ensure = () => (ready = ready || paint(canvas));
-      const pos = (e) => {
-        const r = canvas.getBoundingClientRect();
-        return [e.clientX - r.left, e.clientY - r.top];
-      };
-      const scratch = (x, y) => {
-        const c = canvas.getContext("2d");
-        c.globalCompositeOperation = "destination-out";
-        c.lineCap = c.lineJoin = "round";
-        c.lineWidth = canvas.offsetWidth * 0.22;
-        c.beginPath();
-        c.moveTo(...(last || [x, y]));
-        c.lineTo(x, y);
-        c.stroke();
-        last = [x, y];
-        if (++moves % 6 === 0) check();
-      };
-      const check = () => {
-        const { width, height } = canvas;
-        const data = canvas.getContext("2d").getImageData(0, 0, width, height).data;
-        let clear = 0, total = 0;
-        for (let i = 3; i < data.length; i += 4 * 24) {
-          total++;
-          if (data[i] < 40) clear++;
-        }
-        if (clear / total > 0.45) clearHeart(heart);
-      };
-      canvas.addEventListener("pointerdown", (e) => {
-        if (!ensure()) return;
-        drawing = true;
-        last = null;
-        canvas.setPointerCapture(e.pointerId);
-        scratch(...pos(e));
-      });
-      canvas.addEventListener("pointermove", (e) => drawing && scratch(...pos(e)));
-      ["pointerup", "pointercancel"].forEach((ev) => canvas.addEventListener(ev, () => (drawing = false)));
-      // paint once visible and once fonts have loaded
-      requestAnimationFrame(ensure);
-      document.fonts?.ready.then(() => !heart.classList.contains("cleared") && (ready = paint(canvas)));
-      addEventListener("resize", () => !heart.classList.contains("cleared") && (ready = paint(canvas)));
-    });
-
-    $("#reveal-all").addEventListener("click", () => hearts.forEach((h, i) => setTimeout(() => clearHeart(h), i * 250)));
-    if (reduceMotion) {
-      hearts.forEach((h) => h.classList.add("cleared"));
-      section.classList.add("done");
-    }
-  })();
 
   // ── Countdown with flipping digits ──
   const target = new Date(W.start).getTime();

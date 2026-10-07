@@ -553,7 +553,7 @@ textarea { resize: vertical; border: 1px solid var(--line); padding: 10px; }
 .footer-note { font-style: italic; color: var(--muted); margin: 6px 0 0; }
 
 
-/* ───────── Round 3: tilt, bokeh, scratch-off hearts, music ───────── */
+/* ───────── Tilt, floating lights, music button ───────── */
 
 /* the arch leans toward the finger / mouse */
 .tilt { position: relative; z-index: 2; width: min(100%, 560px); perspective: 1000px; }
@@ -576,49 +576,6 @@ textarea { resize: vertical; border: 1px solid var(--line); padding: 10px; }
   100% { transform: translate(var(--dx, 40px), -160px) scale(1.1); opacity: 0; }
 }
 .countdown > *:not(.bokeh) { position: relative; z-index: 1; }
-
-/* Scratch-to-reveal */
-.scratch { overflow: hidden; }
-.scratch-hint { margin: -10px 0 26px; font-style: italic; color: var(--muted); }
-.hearts-row { display: flex; justify-content: center; gap: clamp(10px, 4vw, 28px); flex-wrap: wrap; }
-.scratch-heart {
-  --size: clamp(96px, 27vw, 140px);
-  position: relative; width: var(--size); height: var(--size);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 92'%3E%3Cpath d='M50 90 C20 68 0 52 0 28 C0 12 12 0 27 0 C38 0 46 6 50 15 C54 6 62 0 73 0 C88 0 100 12 100 28 C100 52 80 68 50 90Z'/%3E%3C/svg%3E") center / contain no-repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 92'%3E%3Cpath d='M50 90 C20 68 0 52 0 28 C0 12 12 0 27 0 C38 0 46 6 50 15 C54 6 62 0 73 0 C88 0 100 12 100 28 C100 52 80 68 50 90Z'/%3E%3C/svg%3E") center / contain no-repeat;
-  filter: drop-shadow(0 8px 14px rgba(60,70,100,.15));
-  animation: heartbob 3s ease-in-out infinite;
-}
-.scratch-heart:nth-child(2) { animation-delay: -1s; }
-.scratch-heart:nth-child(3) { animation-delay: -2s; }
-@keyframes heartbob { 50% { transform: translateY(-6px); } }
-.scratch-heart .under {
-  position: absolute; inset: 0; display: grid; place-content: center; padding-bottom: 12%;
-  background: radial-gradient(circle at 50% 40%, #fff, #e8eef6);
-}
-.scratch-heart strong { font-family: var(--caps); font-weight: 500; font-size: calc(var(--size) * .26); color: var(--navy); line-height: 1; }
-.scratch-heart small { font-family: var(--caps); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-top: 6px; }
-.scratch-heart canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  touch-action: none; cursor: grab;
-  transition: opacity .8s ease;
-}
-.scratch-heart.cleared canvas { opacity: 0; pointer-events: none; }
-.scratch-heart.cleared { animation: heartPop .7s var(--ease-out), heartbob 3s ease-in-out infinite .7s; }
-@keyframes heartPop { 40% { transform: scale(1.12); } }
-.scratch-done {
-  margin: 28px auto 0; max-width: 30ch;
-  font-family: var(--caps); font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: var(--navy);
-  opacity: 0; transform: translateY(12px); transition: all 1s var(--ease-out);
-}
-.scratch-done span { white-space: nowrap; }
-.scratch-done em { font-family: var(--script); font-style: normal; text-transform: none; letter-spacing: 0; font-size: 30px; color: var(--gold); }
-.scratch.done .scratch-done { opacity: 1; transform: none; }
-.link-btn {
-  margin-top: 18px; background: none; border: 0; padding: 6px;
-  font: italic 15px var(--serif); color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
-}
-.scratch.done .link-btn { visibility: hidden; }
 
 /* Music toggle */
 .music {
@@ -664,5 +621,4 @@ textarea { resize: vertical; border: 1px solid var(--line); padding: 10px; }
   .flourish .fl-gem { transform: none !important; }
   .gallery button img, .signature .ink { clip-path: none !important; }
   .env-card { display: none; }
-  .scratch-done { opacity: 1 !important; transform: none !important; }
 }
