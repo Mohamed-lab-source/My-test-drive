@@ -2482,6 +2482,11 @@ async function boot() {
   await safely("scribe", initScribe);
   await safely("toolsmith", initToolsmith);
   await safely("cognition", initCognition);
+  await safely("calc2", initCalc2);
+  await safely("health2", initHealth2);
+  await safely("datetime2", initDatetime2);
+  await safely("text2", initText2);
+  await safely("life2", initLife2);
   await safely("offline", initOffline);
   renderHistoryOnLoad();
   renderReminders();

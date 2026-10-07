@@ -429,6 +429,50 @@ your world and reasons over it.
 | Reflect | "How am I doing this week?", "How's my month going?" |
 | Learn | "What do you know about me?", "Learn about me" |
 
+### 4.0 — 200 more tools (five new packs, almost all offline)
+
+A huge expansion of what Jarvis can work out on the spot — 200 new abilities,
+nearly all of them running fully offline. Just ask naturally; he routes to the
+right one.
+
+**Finance & money (23)** — compound & simple interest, savings goals, ROI,
+inflation, salary conversions, overtime, VAT, margins & markup, break-even,
+rule of 72, APR→APY, net worth, retirement projection, emergency fund, debt
+payoff, down payment, rough Egyptian income tax, profit splits, percentages.
+
+**Maths & geometry (30)** — averages, median, mode, standard deviation,
+GCD/LCM, primes, factorials, Fibonacci, quadratics, factors, combinations &
+permutations, roots, logs, circle/rectangle/triangle/sphere/cylinder, speed-
+distance-time, ratios, number-to-words.
+
+**Health & fitness (27)** — body fat, ideal weight, one-rep-max, heart-rate
+zones, BMR, macros, protein target, waist ratios, calories burned, steps,
+sleep-cycle bed/wake times, pregnancy due date, ovulation, quit-smoking
+savings, race-time prediction, and more.
+
+**Date, time & productivity (29)** — add/subtract dates, weekdays, week
+numbers, working days, countdowns, timestamps, durations, seasons, zodiac,
+moon phase, Pomodoro planner, meeting-cost calculator, reading/speech/typing
+time, time-zone differences.
+
+**Text & developer tools (47)** — counts, reverse, slug, lorem, find/replace,
+extract emails/links/numbers, Pig Latin, ROT13, Morse, binary, NATO spelling,
+palindrome/anagram, Base64/URL/hex/HTML encode-decode, UUID, random strings,
+JSON formatting, colour conversion, Caesar cipher, word frequency.
+
+**Home, kitchen, travel, units & Islamic (44)** — paint/tiles/wallpaper/
+concrete/bricks/flooring/pool/timber estimates, AC sizing, recipe scaling,
+oven & cooking conversions, coffee ratios, ingredient substitutes, distance
+between coordinates, trip budgets, jet lag, packing, fuel economy, tyre sizes,
+speed/shoe/ring conversions, data-transfer time, screen specs, wind chill/heat
+index/dew point, grades & GPA, **Zakat al-Fitr, Qibla direction, fasting
+hours, a Quran khatma plan, Hijri age, and a Ramadan countdown**.
+
+A few things to try: "What's 25% off 240 then plus 14% VAT?", "Best bedtime if
+I wake at 6:30", "Qibla from my coordinates", "Distance between Cairo and
+Alexandria", "Paint for a 4 by 3 metre wall", "Turn this into a slug",
+"Pomodoro plan for 4 sessions", "Finish the Quran in 60 days".
+
 ### Things to try
 
 - **Jarvis tab** — tap the core and talk, or type. Try:
