@@ -88,8 +88,8 @@ How the code enforces it (keep it this way):
 - Phone-only extras (`lib/app/local_prefs.dart`): your lists of places, plan
   "How was it?", things-to-bring lists, settings (pure black, data saver,
   start on Explore, welcome tour seen, last "What's new" version).
-- Map: `lib/widgets/khroga_map.dart` (flutter_map + free OSM raster tiles,
-  with OSM credit). Used in Explore (map toggle, max 300 pins), plan result
+- Map: `lib/widgets/khroga_map.dart` (flutter_map + CARTO raster tiles of
+  OSM data, with credits). Used in Explore (map toggle, max 300 pins), plan result
   (numbered route), place page, and the friends map.
 - Check-ins: `checkins/{uid}` holds your latest "I'm here" (place, coords,
   `visibleTo` = your accepted friends at that moment). Friends see it for 24 h
@@ -128,6 +128,21 @@ How the code enforces it (keep it this way):
 - Chat messages can be replies (`replyTo`/`replyName`) and deleted by their
   sender. Phone settings: 24-hour clock, vibration, reduce motion
   (`phoneSettingsProvider`). The GitHub build passes `BUILD_DATE`.
+- Publishing (see store/PUBLISHING.md): release builds are signed with the
+  private key from secrets `KHROGA_RELEASE_KEYSTORE` (base64 PKCS12, alias
+  `khroga-release`) + `KHROGA_RELEASE_PASSWORD`; made once by the workflow's
+  "make_release_key" run (artifact kept 1 day). Without them builds use the
+  test key and no `.aab` is made (never upload a test-key bundle). Optional
+  secrets `PLAY_APP_SIGNING_SHA1/SHA256` register Play's signing key with
+  Firebase and the AI key. Build numbers are 100 + run number. The `site/`
+  folder (privacy, terms, delete-account pages, AR+EN) deploys to Firebase
+  Hosting (free) at `<project>.web.app`. Store texts/graphics: `store/`
+  (`tool/make_store_graphic.py`).
+- Map tiles come from CARTO (free for non-commercial use with credit, has a
+  monthly allowance) instead of OpenStreetMap's server, which forbids heavy
+  app use; flutter_map caches tiles on the phone, and the place-page map only
+  loads when tapped. If the app ever outgrows the free allowance, switch
+  `urlTemplate` in `khroga_map.dart`.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

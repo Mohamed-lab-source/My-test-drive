@@ -163,24 +163,7 @@ class _Details extends ConsumerWidget {
         ],
         if (place.hasLocation) ...[
           const SizedBox(height: KSpace.sm),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(KRadius.card),
-            child: SizedBox(
-              height: 170,
-              child: KhrogaMap(
-                zoom: 16,
-                pins: [
-                  MapPin(
-                    lat: place.lat!,
-                    lng: place.lng!,
-                    label: place.name,
-                    emoji: Categories.emoji(place.category),
-                    onTap: () => openInMaps(name: place.name, lat: place.lat, lng: place.lng),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _PlaceMap(place: place),
         ],
         const SizedBox(height: KSpace.sm),
         _HowFar(place: place),
@@ -1154,6 +1137,51 @@ class _CheckInCard extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// The small map on a place page, loaded only when asked for (saves mobile
+/// data and the free map allowance).
+class _PlaceMap extends StatefulWidget {
+  const _PlaceMap({required this.place});
+
+  final Place place;
+
+  @override
+  State<_PlaceMap> createState() => _PlaceMapState();
+}
+
+class _PlaceMapState extends State<_PlaceMap> {
+  bool _show = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final place = widget.place;
+    if (!_show) {
+      return OutlinedButton.icon(
+        onPressed: () => setState(() => _show = true),
+        icon: const Icon(Icons.map_outlined),
+        label: Text(tr('Show on map')),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(KRadius.card),
+      child: SizedBox(
+        height: 170,
+        child: KhrogaMap(
+          zoom: 16,
+          pins: [
+            MapPin(
+              lat: place.lat!,
+              lng: place.lng!,
+              label: place.name,
+              emoji: Categories.emoji(place.category),
+              onTap: () => openInMaps(name: place.name, lat: place.lat, lng: place.lng),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -82,3 +82,11 @@ messages**. Messages show up live while the app is open.
 - **Places refresh** from OpenStreetMap once a week automatically.
 - **Something went wrong?** Open the run in **Actions**. The step with the red ✖
   says what failed. Copy that text to Claude.
+
+
+## Publishing on Google Play
+
+See [store/PUBLISHING.md](store/PUBLISHING.md): make your private signing key (one click in
+GitHub Actions), open a Play developer account, and use the ready-made listing, data-safety and
+content-rating answers in the `store/` folder. The privacy policy, terms and account-deletion pages
+are published automatically at `https://<your-project-id>.web.app/`.

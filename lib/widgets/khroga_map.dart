@@ -30,8 +30,14 @@ class MapPin {
   final VoidCallback? onTap;
 }
 
-/// A free OpenStreetMap map with pins, and an optional line joining them
-/// in order (a plan's route). Credits OpenStreetMap as its licence asks.
+/// A free map (OpenStreetMap data, CARTO map tiles) with pins, and an
+/// optional line joining them in order (a plan's route).
+///
+/// Why CARTO: OpenStreetMap's own tile server doesn't allow apps with many
+/// users. CARTO's basemaps are free for non-commercial apps (with credit) up
+/// to a monthly allowance, need no account, and have a dark style that
+/// matches the app. Tiles are cached on the phone (flutter_map's built-in
+/// cache), so places you've looked at don't download again.
 class KhrogaMap extends StatelessWidget {
   const KhrogaMap({
     super.key,
@@ -70,7 +76,11 @@ class KhrogaMap extends StatelessWidget {
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: Theme.of(context).brightness == Brightness.dark
+              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+              : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          retinaMode: RetinaMode.isHighDensity(context),
           userAgentPackageName: 'com.khroga.khroga',
           maxZoom: 19,
         ),
@@ -124,6 +134,10 @@ class KhrogaMap extends StatelessWidget {
             TextSourceAttribution(
               'OpenStreetMap contributors',
               onTap: () => openWebsite('https://www.openstreetmap.org/copyright'),
+            ),
+            TextSourceAttribution(
+              'CARTO',
+              onTap: () => openWebsite('https://carto.com/attributions'),
             ),
           ],
         ),

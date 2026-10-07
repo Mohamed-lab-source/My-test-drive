@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,20 +9,45 @@ import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/launchers.dart';
 import 'about_screen.dart' show appVersion;
 
 /// A simple page of headed paragraphs (privacy policy, terms).
+/// The same page on the free Firebase website (e.g. for the Play Store),
+/// or null in builds without Firebase.
+Uri? webPage(String name) {
+  try {
+    final id = Firebase.app().options.projectId;
+    return Uri.https('$id.web.app', '/$name');
+  } catch (_) {
+    return null;
+  }
+}
+
 class _TextPage extends StatelessWidget {
-  const _TextPage({required this.title, required this.sections});
+  const _TextPage({required this.title, required this.sections, this.web});
 
   final String title;
   final List<(String, String)> sections;
+
+  /// File name of the web version, e.g. 'privacy.html'.
+  final String? web;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: Text(tr(title))),
+      appBar: AppBar(
+        title: Text(tr(title)),
+        actions: [
+          if (web != null && webPage(web!) != null)
+            IconButton(
+              tooltip: tr('Open on the web'),
+              icon: const Icon(Icons.open_in_browser),
+              onPressed: () => openUri(webPage(web!)!),
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.lg, 0, KSpace.lg, KSpace.xl),
         children: [
@@ -41,11 +67,12 @@ class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => const _TextPage(title: 'Privacy policy', sections: [
+  Widget build(BuildContext context) => const _TextPage(title: 'Privacy policy', web: 'privacy.html', sections: [
         ('What we keep', 'Your display name, username and photo (if you sign in with Google), your plans, favorites, places you\'ve been, private notes, groups, messages, polls, friends and check-ins. They are stored in Google Firebase.'),
         ('Who can see it', 'Plans, favorites, notes and "been there" are private to you. Group members see the group\'s messages, polls and plan. Friends see your check-ins for 24 hours. Anyone signed in can see your display name, username and photo.'),
         ('Only on your phone', 'Recently viewed places, searches, your star ratings, lists, ticked stops, things-to-bring lists and settings never leave your phone.'),
         ('Location', 'Your location is used only when you tap "Near me", "How far?", "Send my location" or "Check in". We never track you in the background.'),
+        ('Camera', 'The camera is used only to scan Khroga QR codes, on your phone. No photos are taken or uploaded.'),
         ('AI', 'When you ask the AI to write a plan, the plan request and a list of real places are sent to Google Gemini. Your name and messages are never sent.'),
         ('Error reports', 'If the app hits an error, a short technical report (no messages or personal details) may be saved so we can fix it. You can turn this off in Profile.'),
         ('Deleting your data', 'Profile → Delete my account removes everything we keep about you, right away.'),
@@ -57,7 +84,7 @@ class TermsScreen extends StatelessWidget {
   const TermsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => const _TextPage(title: 'Terms of use', sections: [
+  Widget build(BuildContext context) => const _TextPage(title: 'Terms of use', web: 'terms.html', sections: [
         ('Be kind', 'No harassment, hate, threats, spam or illegal content in groups and chats. Reported content may be removed and accounts may be blocked.'),
         ('Facts can change', 'Places, opening hours and other facts come from OpenStreetMap and Overture Maps and may be out of date. Check before you go.'),
         ('Your outings', 'Khroga suggests places; you decide where to go. Stay safe and respect places\' rules.'),

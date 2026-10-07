@@ -850,7 +850,7 @@ class OsmCredit extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: KSpace.md),
       child: Text(
         tr('Places: © OpenStreetMap contributors (openstreetmap.org/copyright) '
-        'and Overture Maps Foundation.\nPhotos from Wikimedia Commons.'),
+        'and Overture Maps Foundation. Maps © CARTO.\nPhotos from Wikimedia Commons.'),
         textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodySmall,
       ),

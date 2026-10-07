@@ -10,5 +10,13 @@
     "ui": {
       "enabled": false
     }
+  },
+  "hosting": {
+    "public": "site",
+    "cleanUrls": true,
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ]
   }
 }

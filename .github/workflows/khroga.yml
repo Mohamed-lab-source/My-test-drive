@@ -15,6 +15,10 @@ on:
         description: "Download fresh places from OpenStreetMap"
         type: boolean
         default: false
+      make_release_key:
+        description: "Make my private Play Store signing key (once, see SETUP.md)"
+        type: boolean
+        default: false
 
 concurrency:
   group: khroga-${{ github.ref }}
@@ -28,8 +32,50 @@ env:
   FIRESTORE_LOCATION: europe-west1
 
 jobs:
+  # Run once from Actions > Khroga > Run workflow > tick "Make my private
+  # Play Store signing key". It makes a brand-new key and puts it in a
+  # private download (kept 1 day) so you can paste it into two GitHub
+  # secrets. The key is never saved in the project.
+  release-key:
+    name: Make the private release key
+    if: github.event_name == 'workflow_dispatch' && inputs.make_release_key
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Make the key
+        run: |
+          mkdir -p key
+          PW=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 28)
+          keytool -genkeypair -v -storetype PKCS12 -keystore key/release.keystore \
+            -alias khroga-release -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "$PW" -keypass "$PW" -dname "CN=Khroga, O=Khroga, C=EG"
+          base64 -w0 key/release.keystore > key/KHROGA_RELEASE_KEYSTORE.txt
+          printf '%s' "$PW" > key/KHROGA_RELEASE_PASSWORD.txt
+          keytool -list -v -keystore key/release.keystore -storepass "$PW" -alias khroga-release \
+            | grep -E 'SHA1:|SHA256:' > key/fingerprints.txt
+          rm key/release.keystore
+          cat > key/READ-ME-FIRST.txt <<'TXT'
+          Your private Khroga release key. Keep these two files secret.
+
+          1. On GitHub: Settings > Secrets and variables > Actions > New repository secret
+          2. Name: KHROGA_RELEASE_KEYSTORE   Value: everything inside KHROGA_RELEASE_KEYSTORE.txt
+          3. New secret again. Name: KHROGA_RELEASE_PASSWORD   Value: everything inside KHROGA_RELEASE_PASSWORD.txt
+          4. Also save both files somewhere private (e.g. your Google Drive).
+             Google Play lets you reset a lost upload key, but it's easier not to lose it.
+          5. Delete this download from GitHub when done (it also deletes itself after 1 day).
+          TXT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-key-KEEP-PRIVATE
+          path: key/
+          retention-days: 1
+
   firebase:
     name: Set up Firebase (free)
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.make_release_key) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -89,7 +135,8 @@ jobs:
             cloudresourcemanager.googleapis.com serviceusage.googleapis.com \
             firebase.googleapis.com firestore.googleapis.com identitytoolkit.googleapis.com \
             apikeys.googleapis.com generativelanguage.googleapis.com \
-            securetoken.googleapis.com firebaseinstallations.googleapis.com
+            securetoken.googleapis.com firebaseinstallations.googleapis.com \
+            firebasehosting.googleapis.com
 
       - name: Create the database (first run only)
         if: steps.check.outputs.connected == 'true'
@@ -114,10 +161,26 @@ jobs:
           done
           exit 1
 
+      - name: Read the release key's fingerprints (if the secret is set)
+        if: steps.check.outputs.connected == 'true'
+        id: relsha
+        env:
+          KS: ${{ secrets.KHROGA_RELEASE_KEYSTORE }}
+          PW: ${{ secrets.KHROGA_RELEASE_PASSWORD }}
+        run: |
+          if [ -z "$KS" ] || [ -z "$PW" ]; then echo "No release key yet (that's fine)."; exit 0; fi
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          INFO=$(keytool -list -v -keystore "$RUNNER_TEMP/release.keystore" -storepass "$PW" -alias khroga-release)
+          echo "sha1=$(echo "$INFO" | awk '/SHA1:/{print $2}')" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(echo "$INFO" | awk '/SHA256:/{print $2}')" >> "$GITHUB_OUTPUT"
+          rm "$RUNNER_TEMP/release.keystore"
+
       - name: Create the AI key, locked to this app (first run only)
         if: steps.check.outputs.connected == 'true'
         env:
           P: ${{ steps.auth.outputs.project_id }}
+          REL_SHA1: ${{ steps.relsha.outputs.sha1 }}
+          PLAY_SHA1: ${{ secrets.PLAY_APP_SIGNING_SHA1 }}
         run: |
           find_key() {
             gcloud services api-keys list --project "$P" \
@@ -131,6 +194,15 @@ jobs:
             for i in 1 2 3 4 5 6; do NAME=$(find_key); [ -n "$NAME" ] && break; sleep 10; done
           fi
           mkdir -p out
+          # Allow every key Khroga is signed with: the test key, the private
+          # release key, and Google Play's own signing key (once you add it).
+          if [ -n "$NAME" ]; then
+            APPS="--allowed-application=sha1_fingerprint=$SHA1,package_name=$ANDROID_PACKAGE"
+            for F in "$REL_SHA1" "$PLAY_SHA1"; do
+              [ -n "$F" ] && APPS="$APPS --allowed-application=sha1_fingerprint=$F,package_name=$ANDROID_PACKAGE"
+            done
+            gcloud services api-keys update "$NAME" $APPS >/dev/null || echo "::warning::Couldn't update the AI key's allowed apps."
+          fi
           if [ -n "$NAME" ]; then
             gcloud services api-keys get-key-string "$NAME" --format="value(keyString)" > out/gemini.key
           else
@@ -142,6 +214,10 @@ jobs:
         if: steps.check.outputs.connected == 'true'
         env:
           P: ${{ steps.auth.outputs.project_id }}
+          REL_SHA1: ${{ steps.relsha.outputs.sha1 }}
+          REL_SHA256: ${{ steps.relsha.outputs.sha256 }}
+          PLAY_SHA1: ${{ secrets.PLAY_APP_SIGNING_SHA1 }}
+          PLAY_SHA256: ${{ secrets.PLAY_APP_SIGNING_SHA256 }}
         run: |
           APP_ID=$(firebase apps:list ANDROID --project "$P" --json \
             | jq -r --arg pkg "$ANDROID_PACKAGE" '.result[]? | select(.packageName==$pkg) | .appId' | head -n1)
@@ -155,6 +231,10 @@ jobs:
           fi
           firebase apps:android:sha:create "$APP_ID" "$SHA1" --project "$P" || echo "SHA-1 already added."
           firebase apps:android:sha:create "$APP_ID" "$SHA256" --project "$P" || echo "SHA-256 already added."
+          # Google sign-in must also trust the release key and Play's signing key.
+          for F in "$REL_SHA1" "$REL_SHA256" "$PLAY_SHA1" "$PLAY_SHA256"; do
+            [ -n "$F" ] && { firebase apps:android:sha:create "$APP_ID" "$F" --project "$P" || echo "Fingerprint already added."; }
+          done
           mkdir -p out
           firebase apps:sdkconfig ANDROID "$APP_ID" --project "$P" --out out/google-services.json
 
@@ -184,6 +264,16 @@ jobs:
           gcloud services api-keys update "$NAME" $ARGS
           echo "Allowed services now:"
           gcloud services api-keys describe "$NAME" --format=json | jq -r '.restrictions.apiTargets[]?.service'
+
+      - name: Put the privacy policy, terms and account-deletion pages online
+        if: steps.check.outputs.connected == 'true'
+        continue-on-error: true
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+        run: |
+          firebase deploy --only hosting --project "$P" --non-interactive
+          echo "Privacy policy: https://$P.web.app/privacy.html"
+          echo "Delete account: https://$P.web.app/delete-account.html"
 
       - if: steps.check.outputs.connected == 'true'
         uses: actions/upload-artifact@v4
@@ -306,18 +396,62 @@ jobs:
         if: needs.firebase.outputs.connected == 'true'
         run: node tool/gen_firebase_options.mjs /tmp/app-config/google-services.json "$ANDROID_PACKAGE"
 
+      - name: Use the private release key (if the secret is set)
+        id: signing
+        env:
+          KS: ${{ secrets.KHROGA_RELEASE_KEYSTORE }}
+          PW: ${{ secrets.KHROGA_RELEASE_PASSWORD }}
+        run: |
+          if [ -z "$KS" ] || [ -z "$PW" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Signed with the TEST key. For the Play Store, make the release key first (SETUP.md, Publishing)."
+            exit 0
+          fi
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "KHROGA_RELEASE_STORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          echo "KHROGA_RELEASE_PASSWORD=$PW" >> "$GITHUB_ENV"
+          SHA=$(keytool -list -v -keystore "$RUNNER_TEMP/release.keystore" -storepass "$PW" -alias khroga-release \
+            | awk '/SHA1:/{print $2}' | tr -d ':')
+          echo "cert=$SHA" >> "$GITHUB_OUTPUT"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
       - name: Build APK
         run: |
           KEY=""
           if [ -f /tmp/app-config/gemini.key ]; then KEY=$(cat /tmp/app-config/gemini.key); fi
           echo "::add-mask::$KEY"
-          flutter build apk --release --dart-define=GEMINI_API_KEY="$KEY" \
+          CERT="${{ steps.signing.outputs.cert }}"
+          EXTRA=""
+          [ -n "$CERT" ] && EXTRA="--dart-define=ANDROID_CERT_SHA1=$CERT"
+          # Every build gets a higher version number (the Play Store needs that).
+          flutter build apk --release --dart-define=GEMINI_API_KEY="$KEY" $EXTRA \
+            --build-number=$((100 + ${{ github.run_number }})) \
             --dart-define=BUILD_DATE="$(date -u +%Y-%m-%d)"
 
       - uses: actions/upload-artifact@v4
         with:
           name: khroga-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # The app bundle is what you upload to the Play Store. It's only made
+      # with the private release key, never the shared test key.
+      - name: Build the Play Store bundle (.aab)
+        if: steps.signing.outputs.release == 'true'
+        run: |
+          KEY=""
+          if [ -f /tmp/app-config/gemini.key ]; then KEY=$(cat /tmp/app-config/gemini.key); fi
+          echo "::add-mask::$KEY"
+          flutter build appbundle --release --dart-define=GEMINI_API_KEY="$KEY" \
+            --dart-define=ANDROID_CERT_SHA1="${{ steps.signing.outputs.cert }}" \
+            --build-number=$((100 + ${{ github.run_number }})) \
+            --dart-define=BUILD_DATE="$(date -u +%Y-%m-%d)"
+
+      - if: steps.signing.outputs.release == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: khroga-play-store-bundle
+          path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
 
       - name: Publish to the fixed download link

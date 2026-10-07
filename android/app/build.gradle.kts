@@ -29,15 +29,32 @@ android {
         versionName = flutter.versionName
     }
 
-    // TEST signing key, committed so every build (on GitHub or your PC) has the
-    // same fingerprint for Google sign-in. Replace it before publishing on the
-    // Play Store.
+    // Two signing keys:
+    // - The TEST key (committed) signs everyday builds, so Google sign-in
+    //   works the same everywhere.
+    // - The private RELEASE key signs Play Store builds. It is never in the
+    //   project: the GitHub build writes it from the secret
+    //   KHROGA_RELEASE_KEYSTORE and passes its password in
+    //   KHROGA_RELEASE_PASSWORD (see SETUP.md, "Publishing").
+    val releaseStore = System.getenv("KHROGA_RELEASE_STORE_FILE")
+    val releasePassword = System.getenv("KHROGA_RELEASE_PASSWORD")
+    val hasReleaseKey = !releaseStore.isNullOrEmpty() && !releasePassword.isNullOrEmpty() &&
+        file(releaseStore).exists()
+
     signingConfigs {
         create("khrogaTest") {
             storeFile = file("khroga-test.keystore")
             storePassword = "khrogatest"
             keyAlias = "khroga"
             keyPassword = "khrogatest"
+        }
+        if (hasReleaseKey) {
+            create("khrogaRelease") {
+                storeFile = file(releaseStore!!)
+                storePassword = releasePassword
+                keyAlias = "khroga-release"
+                keyPassword = releasePassword
+            }
         }
     }
 
@@ -46,7 +63,7 @@ android {
             signingConfig = signingConfigs.getByName("khrogaTest")
         }
         release {
-            signingConfig = signingConfigs.getByName("khrogaTest")
+            signingConfig = signingConfigs.getByName(if (hasReleaseKey) "khrogaRelease" else "khrogaTest")
         }
     }
 }
