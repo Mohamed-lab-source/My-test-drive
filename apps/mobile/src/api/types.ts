@@ -25,6 +25,20 @@ export type User = {
   preference: Preference | null;
 };
 
+export type MyDataExport = {
+  exportedAt: string;
+  profile: { id: string; email: string; name: string; createdAt: string };
+  preference: Preference | null;
+  favorites: { recipeSlug: string; recipeTitle: string }[];
+  ratings: { recipeSlug: string; recipeTitle: string; score: number; comment: string | null; createdAt: string }[];
+  collections: { name: string; recipes: { recipeSlug: string; recipeTitle: string }[] }[];
+  shoppingLists: {
+    createdAt: string;
+    totalEstimatedCost: number;
+    items: { name: string; quantity: number; unit: string }[];
+  }[];
+};
+
 export type Cuisine = {
   id: string;
   slug: string;

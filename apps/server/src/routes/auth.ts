@@ -204,6 +204,82 @@ authRouter.put("/me/password", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+const changeEmailSchema = z.object({
+  currentPassword: z.string().min(1),
+  newEmail: z.string().email(),
+});
+
+authRouter.put("/me/email", requireAuth, async (req, res) => {
+  const parsed = changeEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  if (!user.passwordHash) {
+    res.status(400).json({ error: "This account signs in with Google and has no password to confirm the change" });
+    return;
+  }
+  if (!(await verifyPassword(parsed.data.currentPassword, user.passwordHash))) {
+    res.status(401).json({ error: "Current password is incorrect" });
+    return;
+  }
+  const existing = await prisma.user.findUnique({ where: { email: parsed.data.newEmail } });
+  if (existing && existing.id !== user.id) {
+    res.status(409).json({ error: "An account with this email already exists" });
+    return;
+  }
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { email: parsed.data.newEmail },
+    include: { preference: true },
+  });
+  res.json({ id: updated.id, email: updated.email, name: updated.name, preference: updated.preference });
+});
+
+authRouter.get("/me/export", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId! },
+    include: {
+      preference: true,
+      favorites: { include: { recipe: { select: { slug: true, title: true } } } },
+      ratings: { include: { recipe: { select: { slug: true, title: true } } } },
+      collections: { include: { recipes: { include: { recipe: { select: { slug: true, title: true } } } } } },
+      shoppingLists: { include: { items: true } },
+    },
+  });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json({
+    exportedAt: new Date().toISOString(),
+    profile: { id: user.id, email: user.email, name: user.name, createdAt: user.createdAt },
+    preference: user.preference,
+    favorites: user.favorites.map((f) => ({ recipeSlug: f.recipe.slug, recipeTitle: f.recipe.title })),
+    ratings: user.ratings.map((r) => ({
+      recipeSlug: r.recipe.slug,
+      recipeTitle: r.recipe.title,
+      score: r.score,
+      comment: r.comment,
+      createdAt: r.createdAt,
+    })),
+    collections: user.collections.map((c) => ({
+      name: c.name,
+      recipes: c.recipes.map((cr) => ({ recipeSlug: cr.recipe.slug, recipeTitle: cr.recipe.title })),
+    })),
+    shoppingLists: user.shoppingLists.map((sl) => ({
+      createdAt: sl.createdAt,
+      totalEstimatedCost: sl.totalEstimatedCost,
+      items: sl.items.map((it) => ({ name: it.ingredientName, quantity: it.quantity, unit: it.unit })),
+    })),
+  });
+});
+
 authRouter.delete("/me", requireAuth, async (req, res) => {
   await prisma.user.delete({ where: { id: req.userId! } });
   res.json({ ok: true });

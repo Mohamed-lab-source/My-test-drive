@@ -4,6 +4,7 @@ import type {
   Cuisine,
   DeliveryPartner,
   DietGoal,
+  MyDataExport,
   MyRating,
   NearbyStores,
   ShoppingListDetail,
@@ -51,6 +52,16 @@ export async function updatePreferences(patch: Partial<Preference> & { dietGoal?
 
 export async function changePassword(currentPassword: string, newPassword: string) {
   await api.put("/auth/me/password", { currentPassword, newPassword });
+}
+
+export async function changeEmail(currentPassword: string, newEmail: string) {
+  const { data } = await api.put<User>("/auth/me/email", { currentPassword, newEmail });
+  return data;
+}
+
+export async function fetchMyDataExport() {
+  const { data } = await api.get<MyDataExport>("/auth/me/export");
+  return data;
 }
 
 export async function deleteAccount() {

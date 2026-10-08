@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setAuthToken } from "../api/client";
 import {
+  changeEmail as apiChangeEmail,
   deleteAccount as apiDeleteAccount,
   fetchMe,
   googleSignIn,
@@ -22,6 +23,7 @@ type AuthContextValue = {
   loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  changeEmail: (currentPassword: string, newEmail: string) => Promise<void>;
   savePreferences: (patch: {
     dietGoal?: DietGoal;
     favoriteCuisineSlugs?: string[];
@@ -87,6 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const changeEmail = useCallback(async (currentPassword: string, newEmail: string) => {
+    const updated = await apiChangeEmail(currentPassword, newEmail);
+    setUser(updated);
+  }, []);
+
   const savePreferences = useCallback(
     async (patch: { dietGoal?: DietGoal; favoriteCuisineSlugs?: string[]; allergies?: Allergen[] }) => {
       const preference = await updatePreferences(patch);
@@ -106,9 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithGoogle,
       logout,
       deleteAccount,
+      changeEmail,
       savePreferences,
     }),
-    [user, isBootstrapping, login, signup, loginWithGoogle, logout, deleteAccount, savePreferences]
+    [user, isBootstrapping, login, signup, loginWithGoogle, logout, deleteAccount, changeEmail, savePreferences]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

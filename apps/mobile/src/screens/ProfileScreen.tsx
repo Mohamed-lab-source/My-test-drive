@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -12,7 +12,7 @@ import { useCollections } from "../context/CollectionsContext";
 import { useBadges } from "../context/BadgesContext";
 import { cookingLevelFor } from "../utils/cookingLevel";
 import { apiErrorMessage } from "../api/client";
-import { fetchCuisines } from "../api/endpoints";
+import { fetchCuisines, fetchMyDataExport } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -46,6 +46,7 @@ export function ProfileScreen({ navigation }: Props) {
   const cookingLevel = cookingLevelFor(totalCooked);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -229,6 +230,37 @@ export function ProfileScreen({ navigation }: Props) {
     ]);
   };
 
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const data = await fetchMyDataExport();
+      const lines = [
+        `${t("exportData.heading")} -- ${data.exportedAt}`,
+        "",
+        `${t("exportData.profileHeading")}: ${data.profile.name} <${data.profile.email}>`,
+        "",
+        `${t("exportData.favoritesHeading")} (${data.favorites.length}):`,
+        ...data.favorites.map((f) => `- ${f.recipeTitle}`),
+        "",
+        `${t("exportData.ratingsHeading")} (${data.ratings.length}):`,
+        ...data.ratings.map((r) => `- ${r.recipeTitle}: ${r.score}/5${r.comment ? ` -- "${r.comment}"` : ""}`),
+        "",
+        `${t("exportData.collectionsHeading")} (${data.collections.length}):`,
+        ...data.collections.map((c) => `- ${c.name} (${c.recipes.length})`),
+        "",
+        `${t("exportData.shoppingListsHeading")} (${data.shoppingLists.length}):`,
+        ...data.shoppingLists.map((sl) => `- ${sl.createdAt}: ${sl.items.length} items`),
+        "",
+        t("exportData.localDataNote"),
+      ];
+      await Share.share({ message: lines.join("\n") });
+    } catch (error) {
+      Alert.alert(t("exportData.error"), apiErrorMessage(error));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const toggleCuisine = async (slug: string) => {
     const next = favoriteCuisineSlugs.includes(slug)
       ? favoriteCuisineSlugs.filter((s) => s !== slug)
@@ -391,6 +423,21 @@ export function ProfileScreen({ navigation }: Props) {
             label={t("changePassword.title")}
             variant="outline"
             onPress={() => navigation.navigate("ChangePassword")}
+          />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("changeEmail.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("ChangeEmail")}
+          />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton
+            label={t("exportData.button")}
+            variant="outline"
+            loading={exporting}
+            onPress={handleExportData}
           />
         </View>
 

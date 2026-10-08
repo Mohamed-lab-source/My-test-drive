@@ -16,6 +16,7 @@ import { CookModeScreen } from "../screens/CookModeScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
 import { ChangePasswordScreen } from "../screens/ChangePasswordScreen";
+import { ChangeEmailScreen } from "../screens/ChangeEmailScreen";
 import { GlossaryScreen } from "../screens/GlossaryScreen";
 import { UnitConverterScreen } from "../screens/UnitConverterScreen";
 import { NotesListScreen } from "../screens/NotesListScreen";
@@ -116,6 +117,11 @@ export function RootNavigator() {
           name="ChangePassword"
           component={ChangePasswordScreen}
           options={{ title: t("changePassword.title") }}
+        />
+        <Stack.Screen
+          name="ChangeEmail"
+          component={ChangeEmailScreen}
+          options={{ title: t("changeEmail.title") }}
         />
         <Stack.Screen name="Glossary" component={GlossaryScreen} options={{ title: t("glossary.title") }} />
         <Stack.Screen
