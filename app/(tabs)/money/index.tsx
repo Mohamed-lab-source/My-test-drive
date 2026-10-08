@@ -16,6 +16,7 @@ import { convertToBase } from '../../../src/db/repositories/fx';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
+import { LastMonthCard } from '../../../src/features/money/LastMonthCard';
 import { useSmsStore } from '../../../src/sms/smsStore';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useBalanceFormatter } from '../../../src/ui/useMoney';
@@ -160,6 +161,10 @@ export default function MoneyScreen() {
             </Card>
           </Pressable>
         ) : null}
+
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <LastMonthCard />
+        </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <SafeToSpendCard />

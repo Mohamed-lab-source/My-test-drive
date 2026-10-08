@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Share, Alert, TextInput, Switch, Platform } from 'react-native';
+import { View, Text, ScrollView, Share, Alert, TextInput, Switch, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -9,6 +9,7 @@ import { useProductivityStore } from '../../../src/store/productivityStore';
 import { useLifeStore } from '../../../src/store/lifeStore';
 import { useHabitsStore } from '../../../src/store/habitsStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
+import { Icon } from '../../../src/ui/Icon';
 import { Card } from '../../../src/ui/Card';
 import { ListRow } from '../../../src/ui/ListRow';
 import { IconCircle } from '../../../src/ui/IconCircle';
@@ -19,6 +20,7 @@ import { Button } from '../../../src/ui/Button';
 import { TextField } from '../../../src/ui/TextField';
 import { exportAllData, importAllData, resetAllData } from '../../../src/db/backup';
 import { exportTransactionsCsv } from '../../../src/db/csvExport';
+import { DataStatsCard } from '../../../src/features/settings/DataStatsCard';
 import {
   requestNotificationPermission,
   reschedulePrayerAlerts,
@@ -26,6 +28,7 @@ import {
   rescheduleOccasionReminders,
 } from '../../../src/notifications/scheduler';
 import { rescheduleExtraReminders } from '../../../src/notifications/extras';
+import { setPrayerAdjustments } from '../../../src/utils/prayerTimes';
 import { PRAYER_CITIES } from '../../../src/utils/prayerTimes';
 import { formatHijri } from '../../../src/utils/hijri';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
@@ -98,7 +101,18 @@ export default function SettingsScreen() {
     setMonThuReminders,
     lowBalanceAlert,
     setLowBalanceAlert,
+    prayerAdjust,
+    setPrayerAdjust,
+    textScale,
+    setTextScale,
   } = useSettingsStore();
+
+  const adjustPrayer = async (prayer: string, delta: number) => {
+    const next = { ...prayerAdjust, [prayer]: Math.max(-30, Math.min(30, (prayerAdjust[prayer] ?? 0) + delta)) };
+    setPrayerAdjust(next);
+    setPrayerAdjustments(next);
+    await reschedulePrayerAlerts();
+  };
   const [lowBalanceInput, setLowBalanceInput] = useState(lowBalanceAlert > 0 ? String(lowBalanceAlert / 100) : '');
 
   // Shared by the opt-in reminder toggles: ask for permission first, then
@@ -235,6 +249,20 @@ export default function SettingsScreen() {
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Card padded={false}>
             <ListRow
+              title="Achievements"
+              subtitle="Milestones you've reached"
+              leading={<IconCircle name="star.fill" color={colors.yellow} size={32} />}
+              onPress={() => router.push('/achievements')}
+              showChevron
+            />
+            <ListRow
+              title="Today's recap"
+              subtitle="Your day at a glance — also tap the rings on Home"
+              leading={<IconCircle name="chart.bar.fill" color={colors.green} size={32} />}
+              onPress={() => router.push('/recap')}
+              showChevron
+            />
+            <ListRow
               title="What's in Anchor"
               subtitle="A quick tour of every feature and where to find it"
               isLast
@@ -268,6 +296,14 @@ export default function SettingsScreen() {
               options={['System', 'Light', 'Dark']}
               selectedIndex={appearanceIndex}
               onChange={(i) => setAppearance(APPEARANCE_OPTIONS[i])}
+            />
+            <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+              Text size
+            </Text>
+            <SegmentedControl
+              options={['Default', 'Large', 'Larger']}
+              selectedIndex={[1, 1.15, 1.3].indexOf(textScale) === -1 ? 0 : [1, 1.15, 1.3].indexOf(textScale)}
+              onChange={(i) => setTextScale([1, 1.15, 1.3][i])}
             />
           </Card>
         </View>
@@ -338,6 +374,28 @@ export default function SettingsScreen() {
               </View>
               <Switch value={occasionReminders} onValueChange={(v) => toggleWithPermission(v, setOccasionReminders)} />
             </View>
+            {prayerCityId ? (
+              <>
+                <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+                  Fine-tune times to match your mosque (minutes)
+                </Text>
+                {(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const).map((p) => (
+                  <View key={p} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 3 }}>
+                    <Text style={[typography.body, { color: colors.label, flex: 1, textTransform: 'capitalize' }]}>{p}</Text>
+                    <Pressable onPress={() => adjustPrayer(p, -1)} hitSlop={8}>
+                      <Icon name="minus.circle" size={24} color={colors.blue} />
+                    </Pressable>
+                    <Text style={[typography.body, { color: colors.label, width: 48, textAlign: 'center' }]}>
+                      {(prayerAdjust[p] ?? 0) > 0 ? '+' : ''}
+                      {prayerAdjust[p] ?? 0}
+                    </Text>
+                    <Pressable onPress={() => adjustPrayer(p, 1)} hitSlop={8}>
+                      <Icon name="plus.circle.fill" size={24} color={colors.blue} />
+                    </Pressable>
+                  </View>
+                ))}
+              </>
+            ) : null}
             <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>
               Hijri date adjustment · {formatHijri(new Date(), hijriOffset)}
             </Text>
@@ -482,6 +540,7 @@ export default function SettingsScreen() {
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs, textTransform: 'uppercase' }]}>
             Data
           </Text>
+          <DataStatsCard />
           <Card padded={false}>
             <ListRow
               title="Export backup"

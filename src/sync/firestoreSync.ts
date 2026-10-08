@@ -50,6 +50,9 @@ export const SYNCED_TABLES = [
   'countdowns',
   'notes',
   'medications',
+  'merchant_rules',
+  'weekly_goals',
+  'med_logs',
 ] as const;
 
 let currentUid: string | null = null;

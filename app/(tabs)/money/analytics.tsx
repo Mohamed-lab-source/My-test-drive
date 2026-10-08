@@ -433,6 +433,18 @@ export default function AnalyticsScreen() {
                           <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
                             6-month average {formatMoney(Math.round(categoryTrendAvg), currency)}/month
                           </Text>
+                          {monthTx
+                            .filter((t) => t.type === 'expense' && t.category_id === category.id)
+                            .sort((a, b) => b.amount - a.amount)
+                            .slice(0, 8)
+                            .map((t) => (
+                              <View key={t.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 }}>
+                                <Text style={[typography.footnote, { color: colors.label, flex: 1 }]} numberOfLines={1}>
+                                  {formatDateShort(t.date)} · {t.note || 'No note'}
+                                </Text>
+                                <Text style={[typography.footnote, { color: colors.label, fontWeight: '600' }]}>{formatMoney(t.amount, t.currency)}</Text>
+                              </View>
+                            ))}
                         </View>
                       ) : null}
                     </Pressable>

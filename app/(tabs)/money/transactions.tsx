@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Text, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -12,6 +12,8 @@ import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { TextField } from '../../../src/ui/TextField';
 import * as financeRepo from '../../../src/db/repositories/finance';
 import { allTags, extractTags } from '../../../src/utils/tags';
+import { findDuplicateIds } from '../../../src/utils/duplicates';
+import { useRouter } from 'expo-router';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { useUndoStore } from '../../../src/store/undoStore';
@@ -30,6 +32,10 @@ export default function TransactionsScreen() {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Transaction[] | null>(null);
   const [tagFilter, setTagFilter] = useState<string>(ALL);
+  const router = useRouter();
+  const [dupesOnly, setDupesOnly] = useState(false);
+  const duplicates = useMemo(() => findDuplicateIds(transactions), [transactions]);
+  const uncategorized = transactions.filter((t) => t.type !== 'transfer' && !t.category_id).length;
   const tags = useMemo(() => allTags(transactions.map((t) => t.note)), [transactions]);
 
   // Re-run when the list changes too, so edits/deletes show up in results.
@@ -58,9 +64,10 @@ export default function TransactionsScreen() {
         (typeFilter === 'all' || t.type === typeFilter) &&
         (accountFilter === ALL || t.account_id === accountFilter || t.transfer_to_account_id === accountFilter) &&
         (categoryFilter === ALL || t.category_id === categoryFilter) &&
-        (tagFilter === ALL || extractTags(t.note).includes(tagFilter))
+        (tagFilter === ALL || extractTags(t.note).includes(tagFilter)) &&
+        (!dupesOnly || duplicates.has(t.id))
     );
-  }, [transactions, searchResults, typeIndex, accountFilter, categoryFilter, tagFilter]);
+  }, [transactions, searchResults, typeIndex, accountFilter, categoryFilter, tagFilter, dupesOnly, duplicates]);
 
   const withoutIdentity = (tx: Transaction) => {
     const { id, created_at, ...rest } = tx;
@@ -84,6 +91,22 @@ export default function TransactionsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="All Transactions" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 60 }}>
+        {duplicates.size > 0 || uncategorized > 0 ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm }}>
+            {duplicates.size > 0 ? (
+              <Pressable onPress={() => setDupesOnly((v) => !v)} style={{ marginRight: spacing.md, marginBottom: 4 }}>
+                <Text style={{ color: colors.orange, fontWeight: '600' }}>
+                  {dupesOnly ? '✕ Show all' : `⚠ ${duplicates.size} possible duplicates`}
+                </Text>
+              </Pressable>
+            ) : null}
+            {uncategorized > 0 ? (
+              <Pressable onPress={() => router.push('/money/uncategorized')} style={{ marginBottom: 4 }}>
+                <Text style={{ color: colors.blue, fontWeight: '600' }}>🏷 {uncategorized} need a category</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
         <TextField placeholder="Search notes" value={query} onChangeText={setQuery} autoCorrect={false} clearButtonMode="while-editing" />
         <View style={{ marginBottom: spacing.sm }}>
           <SegmentedControl options={['All', 'Expense', 'Income', 'Transfer']} selectedIndex={typeIndex} onChange={setTypeIndex} />

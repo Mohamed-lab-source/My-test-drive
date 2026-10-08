@@ -267,8 +267,18 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().refreshSavings();
   },
   contributeToGoal: async (goalId, amount, note) => {
+    const before = get().savingsGoals.find((g) => g.id === goalId);
     await repo.contributeSavingsGoal(goalId, amount, note);
     await get().refreshSavings();
+    // Celebrate crossing 25 / 50 / 75 / 100%.
+    const after = get().savingsGoals.find((g) => g.id === goalId);
+    if (before && after && after.target_amount > 0) {
+      const pctBefore = before.current_amount / before.target_amount;
+      const pctAfter = after.current_amount / after.target_amount;
+      const crossed = [1, 0.75, 0.5, 0.25].find((m) => pctBefore < m && pctAfter >= m);
+      if (crossed === 1) notifyNow(`🎉 ${after.name} — goal reached!`, `You've saved ${formatMoney(after.target_amount, after.currency)}.`);
+      else if (crossed) notifyNow(`${after.name}: ${Math.round(crossed * 100)}% there`, `${formatMoney(after.target_amount - after.current_amount, after.currency)} to go.`);
+    }
   },
   removeSavingsGoal: async (id) => {
     await repo.deleteSavingsGoal(id);

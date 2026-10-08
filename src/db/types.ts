@@ -380,3 +380,24 @@ export interface Medication {
   is_active: number;
   created_at: string;
 }
+
+export interface MerchantRule {
+  id: string;
+  display: string;
+  category_id: string | null;
+}
+
+export interface WeeklyGoal {
+  id: string;
+  week: string;
+  title: string;
+  done: number;
+  created_at: string;
+}
+
+export interface MedLog {
+  id: string;
+  date: string;
+  medication_id: string;
+  time: string;
+}

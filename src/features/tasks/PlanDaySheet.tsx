@@ -10,21 +10,32 @@ import { todayKey } from '../../db/client';
 import { formatDateKey } from '../../utils/date';
 
 // Pick tasks from the backlog (and anything unscheduled) to work on today.
-export function PlanDaySheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function PlanDaySheet({
+  visible,
+  onClose,
+  target = 'today',
+}: {
+  visible: boolean;
+  onClose: () => void;
+  target?: 'today' | 'tomorrow';
+}) {
   const { colors, typography, spacing } = useTheme();
   const { tasks, projects, rescheduleTask } = useProductivityStore();
   const [picked, setPicked] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const today = todayKey();
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const dayKey = target === 'today' ? today : todayKey(tomorrowDate);
 
   const candidates = useMemo(
     () =>
       tasks
-        .filter((t) => t.status === 'backlog' || (t.status === 'todo' && t.scheduled_date !== today))
+        .filter((t) => t.status === 'backlog' || (t.status === 'todo' && t.scheduled_date !== dayKey))
         .sort((a, b) => ({ high: 0, medium: 1, low: 2 })[a.priority] - ({ high: 0, medium: 1, low: 2 })[b.priority]),
-    [tasks, today]
+    [tasks, dayKey]
   );
-  const plannedCount = tasks.filter((t) => t.status !== 'done' && t.scheduled_date === today).length;
+  const plannedCount = tasks.filter((t) => t.status !== 'done' && t.scheduled_date === dayKey).length;
 
   const toggle = (id: string) => {
     Haptics.selectionAsync();
@@ -34,7 +45,7 @@ export function PlanDaySheet({ visible, onClose }: { visible: boolean; onClose: 
   const handleDone = async () => {
     setSaving(true);
     try {
-      for (const id of picked) await rescheduleTask(id, 'today');
+      for (const id of picked) await rescheduleTask(id, target);
       setPicked([]);
       onClose();
     } finally {
@@ -45,9 +56,9 @@ export function PlanDaySheet({ visible, onClose }: { visible: boolean; onClose: 
   return (
     <Sheet visible={visible} onClose={onClose}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
-        <Text style={[typography.title2, { color: colors.label }]}>Plan my day</Text>
+        <Text style={[typography.title2, { color: colors.label }]}>{target === 'today' ? 'Plan my day' : 'Plan tomorrow'}</Text>
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.md }]}>
-          {plannedCount + picked.length} task{plannedCount + picked.length === 1 ? '' : 's'} for today. Pick a few — three to five
+          {plannedCount + picked.length} task{plannedCount + picked.length === 1 ? '' : 's'} for {target}. Pick a few — three to five
           is a good day.
         </Text>
         {candidates.length === 0 ? (
@@ -78,7 +89,7 @@ export function PlanDaySheet({ visible, onClose }: { visible: boolean; onClose: 
           })
         )}
         <Button
-          title={picked.length ? `Add ${picked.length} to today` : 'Done'}
+          title={picked.length ? `Add ${picked.length} to ${target}` : 'Done'}
           onPress={picked.length ? handleDone : onClose}
           loading={saving}
           style={{ marginTop: spacing.md, marginBottom: spacing.xl }}

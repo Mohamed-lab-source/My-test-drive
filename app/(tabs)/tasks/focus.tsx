@@ -9,6 +9,7 @@ import { todayKey } from '../../../src/db/client';
 import { localDateKey } from '../../../src/utils/date';
 import type { FocusSession } from '../../../src/db/types';
 import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
+import { ProgressBar } from '../../../src/ui/ProgressBar';
 
 const DAYS = 7;
 const CHART_HEIGHT = 100;
@@ -18,6 +19,7 @@ const fmt = (min: number) => (min >= 60 ? `${Math.floor(min / 60)}h ${min % 60}m
 export default function FocusStatsScreen() {
   const { colors, typography, spacing } = useTheme();
   const tasks = useProductivityStore((s) => s.tasks);
+  const projects = useProductivityStore((s) => s.projects);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
 
   useEffect(() => {
@@ -80,6 +82,22 @@ export default function FocusStatsScreen() {
       .slice(0, 5);
   }, [sessions, tasks]);
 
+  // Focus minutes per project over the same 90 days.
+  const byProject = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of sessions) {
+      const projectId = tasks.find((t) => t.id === s.task_id)?.project_id ?? 'none';
+      m.set(projectId, (m.get(projectId) ?? 0) + s.minutes);
+    }
+    const total = Array.from(m.values()).reduce((a, b) => a + b, 0);
+    return Array.from(m.entries())
+      .map(([id, minutes]) => {
+        const p = projects.find((x) => x.id === id);
+        return { id, name: p?.name ?? 'No project', color: p?.color ?? colors.gray, minutes, share: total ? minutes / total : 0 };
+      })
+      .sort((a, b) => b.minutes - a.minutes);
+  }, [sessions, tasks, projects, colors.gray]);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Focus" />
@@ -133,6 +151,23 @@ export default function FocusStatsScreen() {
           </Text>
           <MiniBars data={completed} color={colors.green} />
         </Card>
+
+        {byProject.length > 1 || (byProject.length === 1 && byProject[0].id !== 'none') ? (
+          <Card style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Time by project (90 days)</Text>
+            {byProject.map((p) => (
+              <View key={p.id} style={{ marginBottom: spacing.sm }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text style={[typography.subhead, { color: colors.label }]}>{p.name}</Text>
+                  <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
+                    {fmt(p.minutes)} · {Math.round(p.share * 100)}%
+                  </Text>
+                </View>
+                <ProgressBar progress={p.share} color={p.color} />
+              </View>
+            ))}
+          </Card>
+        ) : null}
 
         <Card>
           <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.xs }]}>Most focused tasks (90 days)</Text>

@@ -34,6 +34,7 @@ export function NextPrayerChip() {
         paddingHorizontal: spacing.sm,
         paddingVertical: 4,
         marginTop: 4,
+        marginRight: 6,
       }}
     >
       <Icon name="moon.stars.fill" size={13} color={colors.green} />

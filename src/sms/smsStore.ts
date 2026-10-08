@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { useSettingsStore } from '../store/settingsStore';
 import { useFinanceStore } from '../store/financeStore';
 import * as repo from '../db/repositories/smsImports';
+import * as rulesRepo from '../db/repositories/merchantRules';
+import type { MerchantRule } from '../db/types';
 import type { Account, SmsImport } from '../db/types';
 import { parseCreditSms, parseDebitSms, parseReportedBalance } from './parser';
 import { configureSmsAlerts, isSmsReadingAvailable, readBankSms } from './native';
@@ -10,6 +12,8 @@ const FIRST_SCAN_DAYS = 30;
 
 interface SmsState {
   pending: SmsImport[];
+  rules: Record<string, MerchantRule>;
+  loadRules: () => Promise<void>;
   scanning: boolean;
   refresh: () => Promise<void>;
   scan: () => Promise<number>;
@@ -37,9 +41,12 @@ export function syncSmsAlertConfig(): void {
   configureSmsAlerts(smsImportEnabled && smsInstantAlerts, smsSenders);
 }
 
-// A merchant you've already confirmed (and its category), from your history.
+// A merchant you've already confirmed (and its category): a saved merchant
+// rule first, then your history.
 function knownMerchantCategory(merchant: string | null): string | null {
   if (!merchant) return null;
+  const rule = useSmsStore.getState().rules[rulesRepo.ruleKey(merchant)];
+  if (rule?.category_id) return rule.category_id;
   const m = merchant.toLowerCase();
   const past = useFinanceStore
     .getState()
@@ -49,7 +56,13 @@ function knownMerchantCategory(merchant: string | null): string | null {
 
 export const useSmsStore = create<SmsState>((set, get) => ({
   pending: [],
+  rules: {},
   scanning: false,
+
+  loadRules: async () => {
+    const list = await rulesRepo.listMerchantRules();
+    set({ rules: Object.fromEntries(list.map((r) => [r.id, r])) });
+  },
 
   // Re-reads pending items with the current parser first, so a parser fix
   // also corrects debits that were imported (wrongly) before it.
@@ -83,6 +96,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
   scan: async () => {
     const { smsImportEnabled, smsSenders, smsLastScan, setSmsLastScan, smsReadCredits, smsAutoAddKnown } =
       useSettingsStore.getState();
+    await get().loadRules();
     if (!smsImportEnabled || !isSmsReadingAvailable() || get().scanning) return 0;
     set({ scanning: true });
     try {
@@ -157,10 +171,19 @@ export const useSmsStore = create<SmsState>((set, get) => ({
       transfer_to_account_id: asTransfer ? cash!.id : null,
       category_id: asTransfer ? null : categoryId,
       recurring_id: null,
-      note: item.merchant ?? (item.kind === 'withdrawal' ? 'ATM withdrawal' : 'Card payment'),
+      note:
+        (item.merchant ? get().rules[rulesRepo.ruleKey(item.merchant)]?.display : null) ??
+        item.merchant ??
+        (item.kind === 'withdrawal' ? 'ATM withdrawal' : 'Card payment'),
       date: item.sms_date,
     });
     await repo.setSmsImportStatus(item.id, 'added');
+    // Keep a merchant rule's category in step with what was just chosen.
+    const rule = item.merchant ? get().rules[rulesRepo.ruleKey(item.merchant)] : undefined;
+    if (rule && categoryId && rule.category_id !== categoryId && !asTransfer) {
+      await rulesRepo.setMerchantRule(item.merchant!, rule.display, categoryId);
+      await get().loadRules();
+    }
     await get().refresh();
   },
 

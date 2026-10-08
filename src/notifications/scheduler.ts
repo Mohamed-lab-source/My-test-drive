@@ -509,3 +509,21 @@ export async function rescheduleIslamicReminders(): Promise<void> {
     }
   }
 }
+
+// ---------- Daily Quran reminder ----------
+const QURAN_ID = 'quran-reminder';
+
+export async function scheduleQuranReminder(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(QURAN_ID).catch(() => {});
+  const { quranReminder, quranDailyGoal } = useSettingsStore.getState();
+  if (!quranReminder || !(await areNotificationsEnabled())) return;
+  const [hour, minute] = quranReminder.split(':').map(Number);
+  await Notifications.scheduleNotificationAsync({
+    identifier: QURAN_ID,
+    content: {
+      title: 'Time for Quran 📖',
+      body: quranDailyGoal > 0 ? `Your goal is ${quranDailyGoal} pages today — log them in Anchor.` : 'Read a little today, even a page.',
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
+  });
+}

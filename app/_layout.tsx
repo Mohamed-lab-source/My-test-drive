@@ -19,9 +19,11 @@ import {
   rescheduleOccasionReminders,
 } from '../src/notifications/scheduler';
 import { rescheduleExtraReminders } from '../src/notifications/extras';
-import { settingsHydrated } from '../src/store/settingsStore';
+
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
+import { setPrayerAdjustments } from '../src/utils/prayerTimes';
+import { settingsHydrated, useSettingsStore } from '../src/store/settingsStore';
 
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();
@@ -57,6 +59,7 @@ function AppShell() {
       .then(async () => {
         setDataReady(true);
         await settingsHydrated();
+        setPrayerAdjustments(useSettingsStore.getState().prayerAdjust);
         // Bank SMS: pick up any new debit alerts (no-op unless turned on).
         syncSmsAlertConfig();
         useSmsStore
@@ -114,6 +117,8 @@ function AppShell() {
         <Stack.Screen name="review" />
         <Stack.Screen name="reminders" />
         <Stack.Screen name="whats-new" />
+        <Stack.Screen name="recap" />
+        <Stack.Screen name="achievements" />
       </Stack>
       <UndoSnackbar />
     </>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePullToRefresh } from '../../src/ui/usePullToRefresh';
@@ -18,7 +18,9 @@ import { CountdownCard } from '../../src/features/home/CountdownCard';
 import { WaterCard } from '../../src/features/home/WaterCard';
 import { CustomizeHomeSheet } from '../../src/features/home/CustomizeHomeSheet';
 import { NextPrayerChip } from '../../src/features/home/NextPrayerChip';
+import { NextMeetingChip } from '../../src/features/home/NextMeetingChip';
 import { TodayRingsCard } from '../../src/features/home/TodayRingsCard';
+import { FridayCard } from '../../src/features/home/FridayCard';
 import { useBalanceFormatter } from '../../src/ui/useMoney';
 import { GettingStartedCard } from '../../src/features/home/GettingStartedCard';
 import { AddTransactionSheet } from '../../src/features/money/AddTransactionSheet';
@@ -63,7 +65,7 @@ export default function HomeScreen() {
   const hiddenHomeCards = useSettingsStore((s) => s.hiddenHomeCards);
   const show = (id: string) => !hiddenHomeCards.includes(id);
   const balance = useBalanceFormatter();
-  const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory } = useFinanceStore();
+  const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory, postRecurring } = useFinanceStore();
   const { tasks, meetings } = useProductivityStore();
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
 
@@ -140,7 +142,10 @@ export default function HomeScreen() {
               {greeting()} · {formatHijri(new Date(), hijriOffset)}
             </Text>
             <Text style={[typography.largeTitle, { color: colors.label }]}>Anchor</Text>
-            <NextPrayerChip />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              <NextPrayerChip />
+              <NextMeetingChip />
+            </View>
           </View>
           <Pressable onPress={() => router.push('/search')} hitSlop={10} style={{ paddingBottom: 8 }}>
             <Icon name="magnifyingglass" size={22} color={colors.secondaryLabel} />
@@ -158,6 +163,7 @@ export default function HomeScreen() {
           <GettingStartedCard />
           <RamadanCard />
           {show('rings') ? <TodayRingsCard /> : null}
+          {show('friday') ? <FridayCard /> : null}
           {show('countdown') ? <CountdownCard /> : null}
           {show('verse') ? <VerseCard /> : null}
           {show('water') ? <WaterCard /> : null}
@@ -323,6 +329,18 @@ export default function HomeScreen() {
                   <Text style={[typography.subhead, { color: colors.label, fontWeight: '600' }]}>
                     {formatMoney(rule.amount, rule.currency)}
                   </Text>
+                  <Pressable
+                    onPress={() =>
+                      Alert.alert(`Pay ${rule.name}?`, `Logs ${formatMoney(rule.amount, rule.currency)} now and moves it to the next due date.`, [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Pay', onPress: () => postRecurring(rule) },
+                      ])
+                    }
+                    hitSlop={8}
+                    style={{ marginLeft: spacing.sm, backgroundColor: colors.blue + '1F', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}
+                  >
+                    <Text style={[typography.footnote, { color: colors.blue, fontWeight: '700' }]}>Pay</Text>
+                  </Pressable>
                 </View>
               ))}
             </Card>

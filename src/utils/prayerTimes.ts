@@ -52,9 +52,20 @@ export const findPrayerCity = (id: string | null) => PRAYER_CITIES.find((c) => c
 
 export type PrayerSchedule = Record<Prayer, Date>;
 
+// Per-prayer minute offsets to match a local mosque's timetable. Set from the
+// settings store at launch (and by the widget task), kept here so this
+// module stays free of React/store imports.
+let adjustments: Partial<Record<Prayer, number>> = {};
+export function setPrayerAdjustments(adj: Partial<Record<Prayer, number>>): void {
+  adjustments = { ...adj };
+}
+
 function computeTimes(city: PrayerCity, date: Date): PrayerTimes {
   const params = CalculationMethod[city.method]();
   if (city.hanafi) params.madhab = Madhab.Hanafi;
+  for (const p of ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as Prayer[]) {
+    params.adjustments[p] = (params.adjustments[p] ?? 0) + (adjustments[p] ?? 0);
+  }
   return new PrayerTimes(new Coordinates(city.lat, city.lng), date, params);
 }
 

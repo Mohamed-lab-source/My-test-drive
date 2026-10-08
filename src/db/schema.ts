@@ -369,6 +369,30 @@ CREATE TABLE IF NOT EXISTS medications (
   created_at TEXT NOT NULL
 );
 
+-- id = the merchant as the bank writes it, lowercased.
+CREATE TABLE IF NOT EXISTS merchant_rules (
+  id TEXT PRIMARY KEY NOT NULL,
+  display TEXT NOT NULL,
+  category_id TEXT
+);
+
+-- week = the 'YYYY-MM-DD' key of that week's Monday.
+CREATE TABLE IF NOT EXISTS weekly_goals (
+  id TEXT PRIMARY KEY NOT NULL,
+  week TEXT NOT NULL,
+  title TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- id = '<date>-<medication id>-<HH:MM>'.
+CREATE TABLE IF NOT EXISTS med_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  medication_id TEXT NOT NULL,
+  time TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY NOT NULL,
   body TEXT NOT NULL,

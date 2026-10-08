@@ -21,6 +21,7 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
   const toggleTaskDone = useProductivityStore((s) => s.toggleTaskDone);
   const removeTask = useProductivityStore((s) => s.removeTask);
   const refreshTasks = useProductivityStore((s) => s.refreshTasks);
+  const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
   const project = useProductivityStore((s) => s.projects.find((p) => p.id === task.project_id));
   const subtasks = useProductivityStore((s) => s.subtaskCounts[task.id]);
 
@@ -34,7 +35,12 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
     task.priority === 'high' ? colors.red : task.priority === 'medium' ? colors.orange : colors.gray;
 
   return (
-    <SwipeableRow actions={[{ label: 'Delete', color: colors.red, onPress: handleDelete }]}>
+    <SwipeableRow
+      actions={[
+        ...(isDone ? [] : [{ label: 'Tomorrow', color: colors.orange, onPress: () => rescheduleTask(task.id, 'tomorrow') }]),
+        { label: 'Delete', color: colors.red, onPress: handleDelete },
+      ]}
+    >
       <View
         style={[
           styles.row,

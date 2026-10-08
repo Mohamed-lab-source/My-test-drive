@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Share } from 'react-native';
+import * as healthRepo from '../../../src/db/repositories/health';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useLifeStore } from '../../../src/store/lifeStore';
@@ -53,6 +54,7 @@ export default function JournalScreen() {
   const [view, setView] = useState(0);
   const [memories, setMemories] = useState<{ label: string; entry: JournalEntry }[]>([]);
   const [gratitudeWall, setGratitudeWall] = useState<JournalEntry[]>([]);
+  const [sleepInsight, setSleepInsight] = useState<{ good: number; short: number } | null>(null);
 
   useEffect(() => {
     const now = new Date();
@@ -69,7 +71,36 @@ export default function JournalScreen() {
       )
     );
     journalRepo.listGratitudeEntries().then(setGratitudeWall);
+    // Mood on days after 7h+ sleep vs. shorter nights (sleep is logged on the
+    // morning it ends, the same day as that day's mood).
+    healthRepo.listSleepSince(todayKey(new Date(Date.now() - 90 * 86400000))).then((sleep) => {
+      const hours = new Map(sleep.map((s) => [s.id, s.hours]));
+      const good: number[] = [];
+      const short: number[] = [];
+      for (const e of journalEntries) {
+        const h = hours.get(e.date);
+        if (h === undefined) continue;
+        (h >= 7 ? good : short).push(MOOD_SCORE[e.mood]);
+      }
+      const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+      setSleepInsight(good.length >= 3 && short.length >= 3 ? { good: avg(good), short: avg(short) } : null);
+    });
   }, [journalEntries]);
+
+
+  const exportJournal = async () => {
+    const all = await journalRepo.listJournalEntries(5000);
+    const text = all
+      .map((e) => {
+        const mood = MOODS.find((m) => m.id === e.mood);
+        const lines = [`${formatDateKey(e.date)} — ${mood?.emoji ?? ''} ${mood?.label ?? e.mood}`];
+        if (e.note) lines.push(e.note);
+        if (e.gratitude) lines.push(...e.gratitude.split('\n').map((g) => `🤲 ${g}`));
+        return lines.join('\n');
+      })
+      .join('\n\n');
+    Share.share({ message: text || 'No journal entries yet.' });
+  };
 
   const trend = useMemo(() => {
     const byDate = new Map(journalEntries.map((e) => [e.date, e.mood]));
@@ -150,6 +181,18 @@ export default function JournalScreen() {
           </Card>
         ) : null}
 
+        {sleepInsight ? (
+          <Card style={{ marginBottom: spacing.lg }}>
+            <Text style={[typography.headline, { color: colors.label }]}>Sleep & mood</Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+              {sleepInsight.good - sleepInsight.short >= 0.3
+                ? `Your mood is noticeably better after 7+ hours of sleep (${sleepInsight.good.toFixed(1)} vs ${sleepInsight.short.toFixed(1)} out of 5).`
+                : sleepInsight.short - sleepInsight.good >= 0.3
+                  ? `Interestingly, shorter nights haven't hurt your mood (${sleepInsight.short.toFixed(1)} vs ${sleepInsight.good.toFixed(1)} out of 5).`
+                  : `Your mood is about the same whether you sleep 7+ hours or less (${sleepInsight.good.toFixed(1)} vs ${sleepInsight.short.toFixed(1)} out of 5).`}
+            </Text>
+          </Card>
+        ) : null}
         {memories.length > 0 ? (
           <Card style={{ marginBottom: spacing.lg }}>
             <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.xs }]}>On this day</Text>
@@ -170,6 +213,9 @@ export default function JournalScreen() {
         <View style={{ marginBottom: spacing.sm }}>
           <SegmentedControl options={['Past entries', 'Gratitude wall']} selectedIndex={view} onChange={setView} />
         </View>
+        <Pressable onPress={exportJournal} style={{ alignSelf: 'flex-end', marginBottom: spacing.sm }}>
+          <Text style={[typography.subhead, { color: colors.blue }]}>Export journal</Text>
+        </Pressable>
         {view === 1 ? (
           gratitudeWall.length === 0 ? (
             <EmptyState icon="heart.fill" title="Nothing yet" message="Write three things you're grateful for each day and they'll gather here." />

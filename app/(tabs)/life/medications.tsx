@@ -13,7 +13,9 @@ import * as repo from '../../../src/db/repositories/health';
 import { rescheduleMedicationReminders, requestNotificationPermission } from '../../../src/notifications/scheduler';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { formatClock } from '../../../src/utils/date';
-import type { Medication } from '../../../src/db/types';
+import type { MedLog, Medication } from '../../../src/db/types';
+import { todayKey } from '../../../src/db/client';
+import * as Haptics from 'expo-haptics';
 
 const TIMES = ['07:00', '08:00', '12:00', '14:00', '18:00', '20:00', '22:00'];
 
@@ -24,6 +26,11 @@ export default function MedicationsScreen() {
   const [name, setName] = useState('');
   const [dose, setDose] = useState('');
   const [times, setTimes] = useState<string[]>(['08:00']);
+  const [taken, setTaken] = useState<MedLog[]>([]);
+  const loadTaken = useCallback(() => repo.listMedLogs(todayKey()).then(setTaken), []);
+  useEffect(() => {
+    loadTaken();
+  }, [loadTaken]);
 
   const load = useCallback(async () => {
     const list = await repo.listMedications();
@@ -78,6 +85,7 @@ export default function MedicationsScreen() {
                     {repo.medicationTimes(m).map(formatClock).join(', ')}
                   </Text>
                 </View>
+                <View style={{ alignItems: 'flex-end' }}>
                 <Switch
                   value={!!m.is_active}
                   onValueChange={async (v) => {
@@ -85,7 +93,38 @@ export default function MedicationsScreen() {
                     await load();
                   }}
                 />
+                </View>
               </Card>
+              {m.is_active ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: -spacing.xs, marginBottom: spacing.sm }}>
+                  {repo.medicationTimes(m).map((t) => {
+                    const on = taken.some((l) => l.medication_id === m.id && l.time === t);
+                    return (
+                      <Pressable
+                        key={t}
+                        onPress={async () => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          await repo.setMedTaken(todayKey(), m.id, t, !on);
+                          await loadTaken();
+                        }}
+                        style={{
+                          paddingHorizontal: spacing.md,
+                          paddingVertical: 6,
+                          borderRadius: radius.md,
+                          marginRight: 8,
+                          marginBottom: 6,
+                          backgroundColor: on ? colors.green : colors.tertiaryFill,
+                        }}
+                      >
+                        <Text style={[typography.subhead, { color: on ? '#fff' : colors.label }]}>
+                          {on ? '✓ ' : ''}
+                          {formatClock(t)} {on ? 'taken' : '— tap when taken'}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
             </SwipeableRow>
           ))
         )}

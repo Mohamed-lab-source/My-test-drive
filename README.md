@@ -60,6 +60,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Debt payoff planner (smallest-first or earliest-due-first), round-up savings into goals
 - Year in review; "left after fixed costs" from recurring income vs. bills
 - Bank SMS balance check against the bank's reported available balance, with one-tap reconcile
+- Merchant rules (rename bank merchants, remember category), bank sender presets, duplicate finder, bulk categorize
+- Pay bills from Home, people summary for debts, last-month recap card, savings milestones, cash counter
 - Shopping list with estimated prices; tick an item off and log it as an expense in one tap
 - Suggested budgets from your 3-month average spend
 - Money tools: instalment calculator and a currency converter using your saved rates
@@ -90,6 +92,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Project progress bars, search across all tasks, and a daily "top task" pinned on Tasks and Home
 - Priority matrix, stale-backlog clean-up, share today's plan, focus breaks (5/15 min), completion streak
 - Meeting notes: "- " lines become tasks in one tap
+- Weekly goals, plan tomorrow, swipe-to-snooze, end-of-day wrap-up, time per project, next-meeting chip on Home
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -125,6 +128,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Prayer stats (which prayer is missed most), Quran juz map, dhikr 7-day chart, habit best streak, water streak
 - Journal "On this day" and a gratitude wall
 - Reminders for Islamic occasions, Monday/Thursday fasts and your zakat hawl date
+- Quranic duas with favorites, Friday checklist, missed-prayer → qada prompt, Quran reminder, prayer-time fine-tuning
+- Habit reordering, mood vs. sleep insight, journal export, yearly reading goal, medication taken log
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
@@ -138,6 +143,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Biometric lock timeout (immediately / 1 / 5 / 15 minutes)
 - Today rings on Home (prayers · tasks · water), pull-to-refresh on Home and Money
 - Settings → Upcoming reminders (every scheduled notification) and What's in Anchor (feature tour)
+- Day recap, achievements, larger text option, and a "Your data" summary
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood

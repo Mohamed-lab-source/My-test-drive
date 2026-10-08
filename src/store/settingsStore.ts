@@ -76,6 +76,22 @@ interface SettingsState {
   setMonThuReminders: (v: boolean) => void;
   zakatHawl: { month: number; day: number } | null;
   setZakatHawl: (v: { month: number; day: number } | null) => void;
+  textScale: number;
+  setTextScale: (v: number) => void;
+  quranReminder: string | null;
+  setQuranReminder: (v: string | null) => void;
+  readingGoal: number;
+  setReadingGoal: (v: number) => void;
+  prayerAdjust: Record<string, number>;
+  setPrayerAdjust: (v: Record<string, number>) => void;
+  fridayChecklist: { date: string; done: string[] } | null;
+  setFridayChecklist: (v: { date: string; done: string[] } | null) => void;
+  recapDismissedMonth: string | null;
+  setRecapDismissedMonth: (v: string | null) => void;
+  favoriteDuas: string[];
+  toggleFavoriteDua: (id: string) => void;
+  missedPromptDate: string | null;
+  setMissedPromptDate: (v: string | null) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -160,6 +176,23 @@ export const useSettingsStore = create<SettingsState>()(
       setMonThuReminders: (v) => set({ monThuReminders: v }),
       zakatHawl: null,
       setZakatHawl: (v) => set({ zakatHawl: v }),
+      textScale: 1,
+      setTextScale: (v) => set({ textScale: v }),
+      quranReminder: null,
+      setQuranReminder: (v) => set({ quranReminder: v }),
+      readingGoal: 0,
+      setReadingGoal: (v) => set({ readingGoal: v }),
+      prayerAdjust: {},
+      setPrayerAdjust: (v) => set({ prayerAdjust: v }),
+      fridayChecklist: null,
+      setFridayChecklist: (v) => set({ fridayChecklist: v }),
+      recapDismissedMonth: null,
+      setRecapDismissedMonth: (v) => set({ recapDismissedMonth: v }),
+      favoriteDuas: [],
+      toggleFavoriteDua: (id) =>
+        set((s) => ({ favoriteDuas: s.favoriteDuas.includes(id) ? s.favoriteDuas.filter((d) => d !== id) : [...s.favoriteDuas, id] })),
+      missedPromptDate: null,
+      setMissedPromptDate: (v) => set({ missedPromptDate: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

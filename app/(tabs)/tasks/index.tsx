@@ -17,6 +17,7 @@ import { TaskDetailSheet } from '../../../src/features/tasks/TaskDetailSheet';
 import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
 import { PlanDaySheet } from '../../../src/features/tasks/PlanDaySheet';
 import { StaleBacklogSheet, staleBacklog } from '../../../src/features/tasks/StaleBacklogSheet';
+import { WeeklyGoalsCard } from '../../../src/features/tasks/WeeklyGoalsCard';
 import { Share } from 'react-native';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { Icon } from '../../../src/ui/Icon';
@@ -36,7 +37,7 @@ export default function TasksScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
-  const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask } = useProductivityStore();
+  const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask, rescheduleTask } = useProductivityStore();
   const [quickText, setQuickText] = useState('');
   const quick = useMemo(() => parseQuickTask(quickText, projects), [quickText, projects]);
 
@@ -70,6 +71,7 @@ export default function TasksScreen() {
   const [addVisible, setAddVisible] = useState(false);
   const [planVisible, setPlanVisible] = useState(false);
   const [staleVisible, setStaleVisible] = useState(false);
+  const [planTomorrowVisible, setPlanTomorrowVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [focusTask, setFocusTask] = useState<Task | null>(null);
 
@@ -252,6 +254,28 @@ export default function TasksScreen() {
               </Pressable>
             ) : null}
           </View>
+          {segment === 0 && !query ? <WeeklyGoalsCard /> : null}
+          {segment === 0 && !query && new Date().getHours() >= 17 && bySegment.some((t) => t.status === 'todo') ? (
+            <Card style={{ marginBottom: spacing.sm }}>
+              <Text style={[typography.headline, { color: colors.label }]}>Wrapping up?</Text>
+              <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
+                {bySegment.filter((t) => t.status === 'todo').length} unfinished for today. Move them to tomorrow instead of the backlog?
+              </Text>
+              <View style={{ flexDirection: 'row' }}>
+                <Pressable
+                  onPress={async () => {
+                    for (const t of bySegment.filter((x) => x.status === 'todo')) await rescheduleTask(t.id, 'tomorrow');
+                  }}
+                  style={{ marginRight: spacing.lg }}
+                >
+                  <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Move to tomorrow</Text>
+                </Pressable>
+                <Pressable onPress={() => setPlanTomorrowVisible(true)}>
+                  <Text style={[typography.subhead, { color: colors.blue }]}>Plan tomorrow</Text>
+                </Pressable>
+              </View>
+            </Card>
+          ) : null}
           {segment === 1 && staleCount > 0 ? (
             <Pressable onPress={() => setStaleVisible(true)}>
               <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
@@ -309,6 +333,7 @@ export default function TasksScreen() {
       <AddTaskSheet visible={addVisible} onClose={() => setAddVisible(false)} />
       <PlanDaySheet visible={planVisible} onClose={() => setPlanVisible(false)} />
       <StaleBacklogSheet visible={staleVisible} onClose={() => setStaleVisible(false)} />
+      <PlanDaySheet visible={planTomorrowVisible} onClose={() => setPlanTomorrowVisible(false)} target="tomorrow" />
       <TaskDetailSheet
         task={detailTask}
         visible={!!detailTask}

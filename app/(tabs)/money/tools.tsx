@@ -8,6 +8,7 @@ import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { monthlyInstallment } from '../../../src/utils/installment';
+import { CashCounter } from '../../../src/features/money/CashCounter';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 
 export default function ToolsScreen() {
@@ -34,6 +35,11 @@ export default function ToolsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Money tools" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+        <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Cash counter</Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          <CashCounter />
+        </View>
+
         <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Instalment calculator</Text>
         <Card style={{ marginBottom: spacing.lg }}>
           <TextField label={`Amount (${currency})`} placeholder="0.00" keyboardType="decimal-pad" value={principal} onChangeText={setPrincipal} />

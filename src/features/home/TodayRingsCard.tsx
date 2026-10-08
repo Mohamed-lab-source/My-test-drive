@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Text } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
 import { ProgressRing } from '../../ui/ProgressRing';
@@ -17,6 +18,7 @@ export function TodayRingsCard() {
   const prayerLogs = useLifeStore((s) => s.todayPrayerLogs);
   const tasks = useProductivityStore((s) => s.tasks);
   const waterGoal = useSettingsStore((s) => s.waterGoal);
+  const router = useRouter();
   const water = useWaterStore((s) => s.count);
   const loadWater = useWaterStore((s) => s.load);
 
@@ -40,13 +42,15 @@ export function TodayRingsCard() {
   ];
 
   return (
-    <Card style={{ marginBottom: spacing.md, flexDirection: 'row', justifyContent: 'space-around' }}>
-      {rings.map((r) => (
-        <View key={r.label} style={{ alignItems: 'center' }}>
-          <ProgressRing progress={r.progress} color={r.color} size={64} strokeWidth={7} label={r.value} />
-          <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>{r.label}</Text>
-        </View>
-      ))}
-    </Card>
+    <Pressable onPress={() => router.push('/recap')}>
+      <Card style={{ marginBottom: spacing.md, flexDirection: 'row', justifyContent: 'space-around' }}>
+        {rings.map((r) => (
+          <View key={r.label} style={{ alignItems: 'center' }}>
+            <ProgressRing progress={r.progress} color={r.color} size={64} strokeWidth={7} label={r.value} />
+            <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>{r.label}</Text>
+          </View>
+        ))}
+      </Card>
+    </Pressable>
   );
 }

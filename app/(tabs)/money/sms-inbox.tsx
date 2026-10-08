@@ -17,6 +17,7 @@ import { formatMoney } from '../../../src/utils/money';
 import { formatRelativeDay, formatTime, localDateKey } from '../../../src/utils/date';
 import type { SmsImport } from '../../../src/db/types';
 import { latestReportedBalance } from '../../../src/db/repositories/smsImports';
+import * as rulesRepo from '../../../src/db/repositories/merchantRules';
 
 export default function SmsInboxScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -35,7 +36,9 @@ export default function SmsInboxScreen() {
     smsReadCredits,
     setSmsReadCredits,
   } = useSettingsStore();
-  const { pending, scanning, scan, refresh, add, dismiss } = useSmsStore();
+  const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules } = useSmsStore();
+  const [renaming, setRenaming] = useState<{ id: string; merchant: string; text: string } | null>(null);
+  const ruleFor = (merchant: string | null) => (merchant ? rules[rulesRepo.ruleKey(merchant)] : undefined);
   const [sendersInput, setSendersInput] = useState(smsSenders.join(', '));
   const [picked, setPicked] = useState<Record<string, string | null>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -45,7 +48,8 @@ export default function SmsInboxScreen() {
   const [bankBalance, setBankBalance] = useState<{ amount: number; currency: string; date: string } | null>(null);
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    loadRules();
+  }, [refresh, loadRules]);
   useEffect(() => {
     latestReportedBalance().then(setBankBalance);
   }, [pending]);
@@ -60,7 +64,16 @@ export default function SmsInboxScreen() {
       ),
     [pending, categories, transactions]
   );
-  const categoryFor = (p: SmsImport) => (p.id in picked ? picked[p.id] : guesses[p.id]);
+  const categoryFor = (p: SmsImport) =>
+    p.id in picked ? picked[p.id] : ruleFor(p.merchant)?.category_id ?? guesses[p.id];
+
+  const saveRule = async () => {
+    if (!renaming || !renaming.text.trim()) return;
+    const item = pending.find((x) => x.id === renaming.id);
+    await rulesRepo.setMerchantRule(renaming.merchant, renaming.text.trim(), item ? categoryFor(item) ?? null : null);
+    await loadRules();
+    setRenaming(null);
+  };
 
   // Flags a debit that matches something already logged by hand that day.
   const looksLogged = (p: SmsImport) =>
@@ -148,6 +161,36 @@ export default function SmsInboxScreen() {
           <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: -spacing.sm, marginBottom: spacing.sm }]}>
             Comma-separated; matches any SMS sender containing the text (e.g. HSBC, HSBCEG).
           </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm }}>
+            {['CIB', 'NBE', 'BanqueMisr', 'QNB', 'AAIB', 'ADIB', 'Emirates NBD', 'InstaPay'].map((bank) => {
+              const has = sendersInput.toLowerCase().split(',').some((x) => x.trim() === bank.toLowerCase());
+              return (
+                <Pressable
+                  key={bank}
+                  disabled={has}
+                  onPress={() => {
+                    const next = [...sendersInput.split(',').map((x) => x.trim()).filter(Boolean), bank].join(', ');
+                    setSendersInput(next);
+                    setSmsSenders(next.split(',').map((x) => x.trim()).filter(Boolean));
+                    syncSmsAlertConfig();
+                  }}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                    marginRight: 6,
+                    marginBottom: 6,
+                    backgroundColor: has ? colors.green + '22' : colors.tertiaryFill,
+                  }}
+                >
+                  <Text style={[typography.caption1, { color: has ? colors.green : colors.label }]}>
+                    {has ? '✓ ' : '+ '}
+                    {bank}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Post to</Text>
           <ChipSelector
             options={accounts.filter((a) => !a.is_archived).map((a) => ({ id: a.id, label: a.name, color: a.color }))}
@@ -289,8 +332,18 @@ export default function SmsInboxScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                       <View style={{ flex: 1 }}>
                         <Text style={[typography.headline, { color: colors.label }]} numberOfLines={1}>
-                          {p.merchant ?? (p.kind === 'withdrawal' ? 'ATM withdrawal' : p.kind === 'credit' ? 'Money received' : 'Card payment')}
+                          {ruleFor(p.merchant)?.display ??
+                            p.merchant ??
+                            (p.kind === 'withdrawal' ? 'ATM withdrawal' : p.kind === 'credit' ? 'Money received' : 'Card payment')}
                         </Text>
+                        {p.merchant ? (
+                          <Text
+                            onPress={() => setRenaming({ id: p.id, merchant: p.merchant!, text: ruleFor(p.merchant)?.display ?? '' })}
+                            style={[typography.caption1, { color: colors.blue }]}
+                          >
+                            {ruleFor(p.merchant) ? 'Edit name & category rule' : 'Rename & remember category'}
+                          </Text>
+                        ) : null}
                         <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
                           {formatRelativeDay(p.sms_date)} · {formatTime(p.sms_date)}
                           {p.card_last4 ? ` · card •${p.card_last4}` : ''}
@@ -301,6 +354,23 @@ export default function SmsInboxScreen() {
                         {formatMoney(p.amount, p.currency)}
                       </Text>
                     </View>
+                    {renaming?.id === p.id ? (
+                      <View style={{ marginTop: spacing.sm }}>
+                        <TextField
+                          placeholder={`Name for "${p.merchant}"`}
+                          value={renaming.text}
+                          onChangeText={(text) => setRenaming({ ...renaming, text })}
+                          autoFocus
+                        />
+                        <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.sm, marginBottom: spacing.sm }]}>
+                          Saved with the category picked below; future debits from this merchant use both.
+                        </Text>
+                        <View style={{ flexDirection: 'row' }}>
+                          <Button title="Save rule" onPress={saveRule} disabled={!renaming.text.trim()} style={{ flex: 1, marginRight: spacing.sm }} />
+                          <Button title="Cancel" variant="secondary" onPress={() => setRenaming(null)} style={{ flex: 1 }} />
+                        </View>
+                      </View>
+                    ) : null}
                     <Pressable onPress={() => setExpanded(expanded === p.id ? null : p.id)}>
                       <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: spacing.xs }]} numberOfLines={expanded === p.id ? undefined : 2}>
                         {p.body}
@@ -362,6 +432,42 @@ export default function SmsInboxScreen() {
                 );
               })
             )}
+          </>
+        ) : null}
+        {active && Object.keys(rules).length > 0 ? (
+          <>
+            <Text style={[typography.title3, { color: colors.label, marginTop: spacing.lg, marginBottom: spacing.sm }]}>Merchant rules</Text>
+            <Card padded={false}>
+              {Object.values(rules).map((r, i, arr) => (
+                <View
+                  key={r.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    padding: spacing.md,
+                    borderBottomWidth: i === arr.length - 1 ? 0 : 0.5,
+                    borderBottomColor: colors.separator,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.body, { color: colors.label }]}>{r.display}</Text>
+                    <Text style={[typography.caption1, { color: colors.secondaryLabel }]} numberOfLines={1}>
+                      {r.id.toUpperCase()}
+                      {r.category_id ? ` → ${categories.find((c) => c.id === r.category_id)?.name ?? ''}` : ''}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={async () => {
+                      await rulesRepo.deleteMerchantRule(r.id);
+                      await loadRules();
+                    }}
+                    hitSlop={8}
+                  >
+                    <Text style={[typography.subhead, { color: colors.red }]}>Remove</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </Card>
           </>
         ) : null}
       </ScrollView>

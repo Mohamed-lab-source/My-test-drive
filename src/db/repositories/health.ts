@@ -1,6 +1,6 @@
 import { newId, nowIso } from '../client';
 import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
-import type { Medication, SleepLog, SunnahPrayerKind, SunnahPrayerLog, WaterLog, WeightLog } from '../types';
+import type { MedLog, Medication, SleepLog, SunnahPrayerKind, SunnahPrayerLog, WaterLog, WeightLog } from '../types';
 
 type DayTable = 'water_logs' | 'sleep_logs' | 'weight_logs';
 
@@ -53,4 +53,14 @@ export function medicationTimes(m: Medication): string[] {
   } catch {
     return [];
   }
+}
+
+// ---------- Medication doses taken ----------
+export const listMedLogs = (date: string) => whereRows<MedLog>('med_logs', 'date = ?', [date]);
+
+export async function setMedTaken(date: string, medicationId: string, time: string, taken: boolean): Promise<void> {
+  const id = `${date}-${medicationId}-${time}`;
+  const exists = !!(await getRow('med_logs', id));
+  if (taken && !exists) await insertRow('med_logs', { id, date, medication_id: medicationId, time });
+  if (!taken && exists) await deleteRow('med_logs', id);
 }

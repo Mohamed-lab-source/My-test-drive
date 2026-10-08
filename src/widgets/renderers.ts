@@ -9,7 +9,7 @@ import * as productivityRepo from '../db/repositories/productivity';
 import * as financeRepo from '../db/repositories/finance';
 import { listFxRates, convertToBase } from '../db/repositories/fx';
 import { formatRelativeDay, formatTime } from '../utils/date';
-import { findPrayerCity, getNextPrayer } from '../utils/prayerTimes';
+import { findPrayerCity, getNextPrayer, setPrayerAdjustments } from '../utils/prayerTimes';
 import { buildPrayerWidget } from './PrayerWidget';
 import { buildTasksWidget } from './TasksWidget';
 import { buildMoneyWidget } from './MoneyWidget';
@@ -17,7 +17,7 @@ import { buildMoneyWidget } from './MoneyWidget';
 export type WidgetName = 'PrayerWidget' | 'TasksWidget' | 'MoneyWidget';
 export const WIDGET_NAMES: WidgetName[] = ['PrayerWidget', 'TasksWidget', 'MoneyWidget'];
 
-async function readSettings(): Promise<{ currency?: string; prayerCityId?: string | null }> {
+async function readSettings(): Promise<{ currency?: string; prayerCityId?: string | null; prayerAdjust?: Record<string, number> }> {
   try {
     const raw = await AsyncStorage.getItem('anchor-settings');
     return (raw ? JSON.parse(raw) : null)?.state ?? {};
@@ -33,7 +33,9 @@ async function getCurrency(): Promise<string> {
 const PRAYER_NAMES: Record<string, string> = { fajr: 'Fajr', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' };
 
 async function getNextPrayerLabel(): Promise<string | null> {
-  const city = findPrayerCity((await readSettings()).prayerCityId ?? null);
+  const settings = await readSettings();
+  setPrayerAdjustments(settings.prayerAdjust ?? {});
+  const city = findPrayerCity(settings.prayerCityId ?? null);
   if (!city) return null;
   const next = getNextPrayer(city);
   return `${PRAYER_NAMES[next.prayer]} ${formatTime(next.time.toISOString())}`;

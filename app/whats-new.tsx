@@ -18,6 +18,8 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       '#tags in notes, receipts gallery, shopping list, instalment calculator and currency converter',
       'Zakat with gold-price nisab, hawl reminder and a Sadaqah tracker',
       'Tap the eye on the Money card to hide balances',
+      'Merchant rules rename bank merchants and remember their category; cash counter in Tools',
+      'Duplicate finder and "needs a category" fixer in All Transactions; pay bills from Home',
     ],
   },
   {
@@ -29,6 +31,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Focus timer with breaks, focus stats and completion streaks',
       'Meeting notes: lines starting with "- " become tasks in one tap',
       'Stale backlog clean-up and sharing today\'s plan',
+      'Weekly goals, plan tomorrow, swipe a task to snooze it, end-of-day wrap-up',
     ],
   },
   {
@@ -41,6 +44,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Journal with gratitude, "On this day" and a gratitude wall',
       'Habits with reminders and best streaks; Health (water, sleep, weight), medications',
       'Reading list, countdowns, notes, occasions and wishlist',
+      'Quranic duas, Friday checklist, prayer-time fine-tuning in Settings, medication taken log',
     ],
   },
   {
@@ -52,6 +56,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Settings → Upcoming reminders lists every scheduled notification',
       'Morning briefing, evening check-in, water and bedtime reminders',
       'Biometric lock with a timeout; everything syncs to your account',
+      'Larger text (Settings → Appearance), achievements and a daily recap (tap the rings on Home)',
     ],
   },
 ];

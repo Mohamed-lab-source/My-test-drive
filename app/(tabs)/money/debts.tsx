@@ -92,6 +92,19 @@ export default function DebtsScreen() {
   const owedToMe = debts.filter((d) => d.direction === 'owed_to_me' && d.status !== 'paid');
   const settled = debts.filter((d) => d.status === 'paid');
 
+  // Net position with each person across all their open debts.
+  const people = Object.values(
+    [...iOwe, ...owedToMe].reduce<Record<string, { name: string; net: number }>>((acc, d) => {
+      const key = d.person_name.trim().toLowerCase();
+      const cur = acc[key] ?? { name: d.person_name.trim(), net: 0 };
+      cur.net += d.direction === 'owed_to_me' ? d.remaining_amount : -d.remaining_amount;
+      acc[key] = cur;
+      return acc;
+    }, {})
+  )
+    .filter((p) => p.net !== 0)
+    .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
+
   const handleDelete = async (debt: Debt) => {
     await removeDebt(debt.id);
     showUndoDelete('debts', debt, 'Debt deleted', refreshDebts);
@@ -109,6 +122,19 @@ export default function DebtsScreen() {
           <EmptyState icon="exclamationmark.triangle.fill" title="No debts tracked" message="Add money you owe or that's owed to you." />
         ) : (
           <>
+            {people.length > 1 ? (
+              <Card style={{ marginBottom: spacing.md }}>
+                <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.xs }]}>By person</Text>
+                {people.map((p) => (
+                  <View key={p.name} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+                    <Text style={[typography.body, { color: colors.label }]}>{p.name}</Text>
+                    <Text style={[typography.body, { color: p.net >= 0 ? colors.green : colors.red, fontWeight: '600' }]}>
+                      {p.net >= 0 ? `owes you ${formatMoney(p.net, currency)}` : `you owe ${formatMoney(-p.net, currency)}`}
+                    </Text>
+                  </View>
+                ))}
+              </Card>
+            ) : null}
             {iOwe.length > 0 && (
               <>
                 <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>I owe</Text>

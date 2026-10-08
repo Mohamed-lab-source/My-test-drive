@@ -17,6 +17,8 @@ import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import * as lifeRepo from '../../../src/db/repositories/life';
 import { todayKey } from '../../../src/db/client';
+import { requestNotificationPermission, scheduleQuranReminder } from '../../../src/notifications/scheduler';
+import { formatClock } from '../../../src/utils/date';
 
 const GOALS = [0, 2, 4, 5, 10, 20];
 
@@ -26,7 +28,7 @@ export default function QuranScreen() {
   const { colors, typography, spacing, radius } = useTheme();
   const { quranKhatm, quranLogs, logQuranPages, startNewKhatm } = useLifeStore();
   const [custom, setCustom] = useState('');
-  const { quranDailyGoal, setQuranDailyGoal } = useSettingsStore();
+  const { quranDailyGoal, setQuranDailyGoal, quranReminder, setQuranReminder, notificationsEnabled } = useSettingsStore();
   const [byDate, setByDate] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -154,6 +156,16 @@ export default function QuranScreen() {
             options={GOALS.map((g) => ({ id: String(g), label: g === 0 ? 'Off' : `${g} pages` }))}
             selectedId={String(quranDailyGoal)}
             onSelect={(id) => setQuranDailyGoal(Number(id))}
+          />
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>Daily reminder</Text>
+          <ChipSelector
+            options={[{ id: 'off', label: 'Off' }, ...['06:00', '13:00', '17:00', '20:00', '22:00'].map((t) => ({ id: t, label: formatClock(t) }))]}
+            selectedId={quranReminder ?? 'off'}
+            onSelect={async (id) => {
+              if (id !== 'off' && !notificationsEnabled) await requestNotificationPermission();
+              setQuranReminder(id === 'off' ? null : id);
+              await scheduleQuranReminder();
+            }}
           />
         </Card>
 

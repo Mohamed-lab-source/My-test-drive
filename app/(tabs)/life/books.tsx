@@ -14,6 +14,8 @@ import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import * as repo from '../../../src/db/repositories/lists';
 import { nowIso } from '../../../src/db/client';
 import type { Book, BookStatus } from '../../../src/db/types';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
 
 const TABS: BookStatus[] = ['reading', 'want', 'finished'];
 
@@ -25,6 +27,7 @@ export default function BooksScreen() {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [pages, setPages] = useState('');
+  const { readingGoal, setReadingGoal } = useSettingsStore();
 
   const load = useCallback(() => repo.listBooks().then(setBooks), []);
   useEffect(() => {
@@ -58,9 +61,35 @@ export default function BooksScreen() {
         <View style={{ marginBottom: spacing.sm }}>
           <SegmentedControl options={['Reading', 'Want to read', 'Finished']} selectedIndex={tab} onChange={setTab} />
         </View>
-        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.md }]}>
-          {finishedThisYear} book{finishedThisYear === 1 ? '' : 's'} finished this year
-        </Text>
+        <Card style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.headline, { color: colors.label }]}>
+            {readingGoal > 0
+              ? `${finishedThisYear} of ${readingGoal} books this year`
+              : `${finishedThisYear} book${finishedThisYear === 1 ? '' : 's'} finished this year`}
+          </Text>
+          {readingGoal > 0 ? (
+            <View style={{ marginVertical: spacing.sm }}>
+              <ProgressBar progress={Math.min(1, finishedThisYear / readingGoal)} color={colors.orange} />
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                {(() => {
+                  const now = new Date();
+                  const dayOfYear = Math.ceil((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86400000);
+                  const expected = Math.floor((readingGoal * dayOfYear) / 365);
+                  return finishedThisYear >= readingGoal
+                    ? 'Goal reached 🎉'
+                    : finishedThisYear >= expected
+                      ? 'On track'
+                      : `${expected - finishedThisYear} behind pace`;
+                })()}
+              </Text>
+            </View>
+          ) : null}
+          <ChipSelector
+            options={[0, 6, 12, 24, 52].map((n) => ({ id: String(n), label: n === 0 ? 'No goal' : `${n} a year` }))}
+            selectedId={String(readingGoal)}
+            onSelect={(id) => setReadingGoal(Number(id))}
+          />
+        </Card>
         {shown.length === 0 ? (
           <EmptyState icon="book.fill" title="Nothing here" message="Tap + to add a book." />
         ) : (

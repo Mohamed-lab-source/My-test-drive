@@ -24,9 +24,19 @@ import type { Habit } from '../../../src/db/types';
 
 const WEEKS = 5;
 
-function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) {
+function HabitCard({
+  habit,
+  onDelete,
+  canUp,
+  canDown,
+}: {
+  habit: Habit;
+  onDelete: () => void;
+  canUp: boolean;
+  canDown: boolean;
+}) {
   const { colors, typography, spacing } = useTheme();
-  const { streaks, todayLogs, isHabitDoneToday, toggleHabit, setHabitReminder } = useHabitsStore();
+  const { streaks, todayLogs, isHabitDoneToday, toggleHabit, setHabitReminder, moveHabit } = useHabitsStore();
   const [expanded, setExpanded] = useState(false);
   const [history, setHistory] = useState<Record<string, number>>({});
 
@@ -90,6 +100,14 @@ function HabitCard({ habit, onDelete }: { habit: Habit; onDelete: () => void }) 
               {Math.round((monthDone / dayOfMonth) * 100)}%){best > 1 ? ` · best streak ${best} days` : ''}
             </Text>
             <Heatmap values={history} color={habit.color} weeks={WEEKS} />
+            <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
+              <Pressable onPress={() => moveHabit(habit.id, 'up')} disabled={!canUp} style={{ marginRight: spacing.lg }}>
+                <Text style={[typography.subhead, { color: canUp ? colors.blue : colors.tertiaryLabel }]}>↑ Move up</Text>
+              </Pressable>
+              <Pressable onPress={() => moveHabit(habit.id, 'down')} disabled={!canDown}>
+                <Text style={[typography.subhead, { color: canDown ? colors.blue : colors.tertiaryLabel }]}>↓ Move down</Text>
+              </Pressable>
+            </View>
             <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>
               Daily reminder
             </Text>
@@ -125,7 +143,9 @@ export default function HabitsScreen() {
         {habits.length === 0 ? (
           <EmptyState icon="flame.fill" title="No habits yet" message="Track anything you want to do daily and build a streak." />
         ) : (
-          habits.map((habit) => <HabitCard key={habit.id} habit={habit} onDelete={() => handleDelete(habit)} />)
+          habits.map((habit, i) => (
+            <HabitCard key={habit.id} habit={habit} onDelete={() => handleDelete(habit)} canUp={i > 0} canDown={i < habits.length - 1} />
+          ))
         )}
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />

@@ -12,6 +12,7 @@ import { Icon } from '../../../src/ui/Icon';
 import { PrayerTracker } from '../../../src/features/life/PrayerTracker';
 import { WishlistRow } from '../../../src/features/life/WishlistRow';
 import { QadaCard } from '../../../src/features/life/QadaCard';
+import { MissedPrayersCard } from '../../../src/features/life/MissedPrayersCard';
 import { PrayerHistory } from '../../../src/features/life/PrayerHistory';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { IconCircle } from '../../../src/ui/IconCircle';
@@ -44,6 +45,7 @@ function LifeLink({ icon, label, color, onPress }: { icon: string; label: string
 }
 
 export default function LifeScreen() {
+  const [qadaKey, setQadaKey] = React.useState(0);
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -84,7 +86,7 @@ export default function LifeScreen() {
           <LifeLink icon="hourglass" label="Countdowns" color={colors.indigo} onPress={() => router.push('/life/countdowns')} />
           <LifeLink icon="doc.text.fill" label="Notes" color={colors.gray} onPress={() => router.push('/life/notes')} />
           <LifeLink icon="heart.fill" label="Medications" color={colors.red} onPress={() => router.push('/life/medications')} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <LifeLink icon="hands.sparkles.fill" label="Duas" color={colors.teal} onPress={() => router.push('/life/duas')} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
@@ -92,7 +94,8 @@ export default function LifeScreen() {
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <QadaCard />
+          <MissedPrayersCard onChanged={() => setQadaKey((k) => k + 1)} />
+          <QadaCard key={qadaKey} />
         </View>
 
         {topGoal ? (

@@ -1,6 +1,6 @@
 import { newId, nowIso } from '../client';
-import { allRows, deleteRow, insertRow, updateRow } from '../helpers';
-import type { Book, BookStatus, Countdown, Note, Routine, ShoppingItem } from '../types';
+import { allRows, deleteRow, insertRow, updateRow, whereRows } from '../helpers';
+import type { Book, BookStatus, Countdown, Note, Routine, ShoppingItem, WeeklyGoal } from '../types';
 
 // ---------- Shopping list ----------
 export const listShoppingItems = () => allRows<ShoppingItem>('shopping_items', 'is_done ASC, created_at DESC');
@@ -50,3 +50,16 @@ export async function createNote(body: string): Promise<string> {
 export const updateNote = (id: string, patch: Partial<Pick<Note, 'body' | 'pinned'>>) =>
   updateRow('notes', id, { ...patch, updated_at: nowIso() });
 export const deleteNote = (id: string) => deleteRow('notes', id);
+
+// ---------- Weekly goals ----------
+// The 'YYYY-MM-DD' key of the Monday that starts the week containing `d`.
+export function weekKey(d: Date = new Date()): string {
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+}
+export const listWeeklyGoals = (week: string) => whereRows<WeeklyGoal>('weekly_goals', 'week = ?', [week], 'created_at ASC');
+export async function createWeeklyGoal(week: string, title: string): Promise<void> {
+  await insertRow('weekly_goals', { id: newId(), week, title, done: 0, created_at: nowIso() });
+}
+export const setWeeklyGoalDone = (id: string, done: boolean) => updateRow('weekly_goals', id, { done: done ? 1 : 0 });
+export const deleteWeeklyGoal = (id: string) => deleteRow('weekly_goals', id);

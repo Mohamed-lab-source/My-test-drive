@@ -13,6 +13,7 @@ import {
   rescheduleMedicationReminders,
   scheduleBedtimeReminder,
   rescheduleIslamicReminders,
+  scheduleQuranReminder,
 } from './scheduler';
 import { listMedications, medicationTimes } from '../db/repositories/health';
 
@@ -26,4 +27,5 @@ export async function rescheduleExtraReminders(): Promise<void> {
   await rescheduleMedicationReminders(await listMedications(), medicationTimes);
   await scheduleBedtimeReminder();
   await rescheduleIslamicReminders();
+  await scheduleQuranReminder();
 }
