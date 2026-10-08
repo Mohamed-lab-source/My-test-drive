@@ -7,6 +7,7 @@ import { Badge } from '../../ui/Badge';
 import { SwipeableRow } from '../../ui/SwipeableRow';
 import { showUndoDelete } from '../../ui/undo';
 import { useProductivityStore } from '../../store/productivityStore';
+import { formatEstimate } from '../../utils/estimate';
 import type { Task } from '../../db/types';
 
 interface TaskRowProps {
@@ -72,11 +73,16 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
             >
               {task.title}
             </Text>
-            {project || subtasks ? (
+            {project || subtasks || task.estimate_minutes ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 {project ? (
                   <Text style={[typography.caption1, { color: project.color, fontWeight: '600', marginRight: spacing.sm }]}>
                     {project.name}
+                  </Text>
+                ) : null}
+                {task.estimate_minutes ? (
+                  <Text style={[typography.caption1, { color: colors.secondaryLabel, marginRight: spacing.sm }]}>
+                    ⏱ {formatEstimate(task.estimate_minutes)}
                   </Text>
                 ) : null}
                 {subtasks ? (

@@ -26,3 +26,10 @@ export async function getJournalEntries(dates: string[]): Promise<JournalEntry[]
 
 export const listGratitudeEntries = (limit = 200) =>
   whereRows<JournalEntry>('journal_entries', "gratitude IS NOT NULL AND gratitude != ''", [], `date DESC LIMIT ${limit}`);
+
+// A quick mood tap: keeps whatever was already written for the day.
+export async function setJournalMood(date: string, mood: JournalMood): Promise<void> {
+  const existing = await whereRows<JournalEntry>('journal_entries', 'date = ?', [date]);
+  if (existing.length > 0) await updateRow('journal_entries', existing[0].id, { mood });
+  else await insertRow('journal_entries', { id: newId(), date, mood, note: null, gratitude: null, created_at: nowIso() });
+}

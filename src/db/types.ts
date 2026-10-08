@@ -21,6 +21,10 @@ export interface Account {
   is_archived: number;
   sort_order: number;
   created_at: string;
+  // Credit cards only.
+  credit_limit?: number | null;
+  statement_day?: number | null;
+  due_day?: number | null;
 }
 
 export type RecurringFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -130,6 +134,7 @@ export interface Project {
   color: string;
   is_archived: number;
   sort_order: number;
+  due_date?: string | null;
 }
 
 export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'done';
@@ -149,6 +154,7 @@ export interface Task {
   repeat_frequency: RecurringFrequency | null;
   repeat_interval: number | null;
   remind_at: string | null;
+  estimate_minutes?: number | null;
 }
 
 export interface Subtask {
@@ -364,7 +370,8 @@ export interface SmsImport {
   currency: string;
   merchant: string | null;
   card_last4: string | null;
-  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit' | 'credit';
+  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit' | 'credit' | 'card_payment';
+  card_type?: 'credit' | 'debit' | null;
   // Balance the bank reported in the same message, if any.
   balance?: number | null;
   balance_currency?: string | null;
@@ -400,4 +407,17 @@ export interface MedLog {
   date: string;
   medication_id: string;
   time: string;
+}
+
+export interface CardLink {
+  id: string;
+  account_id: string;
+  card_type: 'credit' | 'debit' | null;
+}
+
+export interface HifzEntry {
+  id: string;
+  surah: number;
+  status: 'learning' | 'memorised';
+  updated_at: string;
 }

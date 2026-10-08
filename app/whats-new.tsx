@@ -11,6 +11,9 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     emoji: '💰',
     items: [
       'Bank SMS: HSBC debits read automatically, with instant alerts, a review inbox and a balance check',
+      'Credit vs debit: SMS charges are tagged 💳 credit or 🏦 debit and land in the right account; card payments become transfers',
+      'Tap an account for its statement — credit cards by billing cycle with due date, others by month; share as CSV',
+      'Credit limit & utilisation, card due reminders, "Paid with" chart, instalment plans, month-end projection',
       'Safe-to-spend today, budget pace markers and suggested budgets',
       'Bills calendar, subscription detector and "left after fixed costs"',
       'Round-ups into savings goals, debt payoff planner',
@@ -32,6 +35,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Meeting notes: lines starting with "- " become tasks in one tap',
       'Stale backlog clean-up and sharing today\'s plan',
       'Weekly goals, plan tomorrow, swipe a task to snooze it, end-of-day wrap-up',
+      'Time estimates with today\'s load, project deadlines and archived projects',
     ],
   },
   {
@@ -45,6 +49,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Habits with reminders and best streaks; Health (water, sleep, weight), medications',
       'Reading list, countdowns, notes, occasions and wishlist',
       'Quranic duas, Friday checklist, prayer-time fine-tuning in Settings, medication taken log',
+      'Hifz tracker (Juz \'Amma), edit the last 7 days of prayers, weekly habit grid, journal prompts, Zakat al-Fitr',
     ],
   },
   {
@@ -57,6 +62,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Morning briefing, evening check-in, water and bedtime reminders',
       'Biometric lock with a timeout; everything syncs to your account',
       'Larger text (Settings → Appearance), achievements and a daily recap (tap the rings on Home)',
+      'Mood check-in and Ramadan/Eid countdown on Home; 24-hour clock, whole-number amounts, nightly spending digest',
     ],
   },
 ];

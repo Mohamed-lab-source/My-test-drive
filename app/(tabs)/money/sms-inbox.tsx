@@ -10,7 +10,8 @@ import { TextField } from '../../../src/ui/TextField';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
-import { useSmsStore, smsTargetAccount, syncSmsAlertConfig } from '../../../src/sms/smsStore';
+import { useSmsStore, smsTargetAccount, syncSmsAlertConfig, accountForImport, creditCardFor } from '../../../src/sms/smsStore';
+import * as linksRepo from '../../../src/db/repositories/cardLinks';
 import { guessCategory } from '../../../src/sms/categorize';
 import { hasReceivePermission, hasSmsPermission, isSmsReadingAvailable, requestSmsPermission } from '../../../src/sms/native';
 import { formatMoney } from '../../../src/utils/money';
@@ -36,7 +37,27 @@ export default function SmsInboxScreen() {
     smsReadCredits,
     setSmsReadCredits,
   } = useSettingsStore();
-  const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules } = useSmsStore();
+  const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules, links, loadLinks } = useSmsStore();
+  const addAccount = useFinanceStore((s) => s.addAccount);
+  const [pickedAccount, setPickedAccount] = useState<Record<string, string>>({});
+  const accountFor = (p: SmsImport) =>
+    accounts.find((a) => a.id === pickedAccount[p.id]) ?? accountForImport(p, accounts, links);
+
+  // One tap to set up a credit card account the first time a credit-card
+  // charge or payment shows up, linked to the card's digits.
+  const createCardAccount = async (p: SmsImport) => {
+    await addAccount({
+      name: `HSBC Credit Card${p.card_last4 ? ` ••${p.card_last4}` : ''}`,
+      type: 'credit',
+      currency: p.currency,
+      icon: 'creditcard.fill',
+      color: '#AF52DE',
+      sort_order: accounts.length,
+    });
+    const created = useFinanceStore.getState().accounts.find((a) => a.type === 'credit' && a.name.startsWith('HSBC Credit Card'));
+    if (created && p.card_last4) await linksRepo.setCardLink(p.card_last4, created.id, 'credit');
+    await loadLinks();
+  };
   const [renaming, setRenaming] = useState<{ id: string; merchant: string; text: string } | null>(null);
   const ruleFor = (merchant: string | null) => (merchant ? rules[rulesRepo.ruleKey(merchant)] : undefined);
   const [sendersInput, setSendersInput] = useState(smsSenders.join(', '));
@@ -49,7 +70,8 @@ export default function SmsInboxScreen() {
   useEffect(() => {
     refresh();
     loadRules();
-  }, [refresh, loadRules]);
+    loadLinks();
+  }, [refresh, loadRules, loadLinks]);
   useEffect(() => {
     latestReportedBalance().then(setBankBalance);
   }, [pending]);
@@ -107,8 +129,14 @@ export default function SmsInboxScreen() {
   };
 
   const handleAdd = async (p: SmsImport) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await add(p, categoryFor(p) ?? null, account?.id ?? null);
+    try {
+      await add(p, categoryFor(p) ?? null, accountFor(p)?.id ?? null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      if (e instanceof Error && e.message === 'NO_CREDIT_CARD') {
+        Alert.alert('No credit card account', 'Create a credit card account first (tap "Create credit card account" on this item).');
+      } else throw e;
+    }
   };
 
   const addAll = () =>
@@ -117,7 +145,10 @@ export default function SmsInboxScreen() {
       {
         text: 'Add all',
         onPress: async () => {
-          for (const p of [...pending]) await add(p, categoryFor(p) ?? null, account?.id ?? null);
+          for (const p of [...pending]) {
+            if (p.kind === 'card_payment' && !creditCardFor(p, accounts, links)) continue;
+            await add(p, categoryFor(p) ?? null, accountFor(p)?.id ?? null, { silent: true });
+          }
         },
       },
     ]);
@@ -326,7 +357,12 @@ export default function SmsInboxScreen() {
             ) : (
               pending.map((p) => {
                 const dup = looksLogged(p);
-                const foreign = account && p.currency !== account.currency;
+                const target = accountFor(p);
+                const foreign = target && p.currency !== target.currency;
+                const card = p.kind === 'card_payment' ? creditCardFor(p, accounts, links) : null;
+                const needsCardAccount =
+                  (p.kind === 'card_payment' && !card) ||
+                  (p.card_type === 'credit' && !accounts.some((a) => a.type === 'credit' && !a.is_archived));
                 return (
                   <Card key={p.id} style={{ marginBottom: spacing.sm }}>
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
@@ -346,8 +382,34 @@ export default function SmsInboxScreen() {
                         ) : null}
                         <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
                           {formatRelativeDay(p.sms_date)} · {formatTime(p.sms_date)}
-                          {p.card_last4 ? ` · card •${p.card_last4}` : ''}
                         </Text>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignSelf: 'flex-start',
+                            marginTop: 4,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 10,
+                            backgroundColor: (p.card_type === 'credit' ? colors.purple : p.card_type === 'debit' ? colors.blue : colors.gray) + '22',
+                          }}
+                        >
+                          <Text
+                            style={[
+                              typography.caption1,
+                              { color: p.card_type === 'credit' ? colors.purple : p.card_type === 'debit' ? colors.blue : colors.secondaryLabel, fontWeight: '600' },
+                            ]}
+                          >
+                            {p.kind === 'card_payment'
+                              ? '💳 Credit card payment'
+                              : p.card_type === 'credit'
+                                ? '💳 Credit card'
+                                : p.card_type === 'debit'
+                                  ? '🏦 Debit / account'
+                                  : '❔ Card type not stated'}
+                            {p.card_last4 ? ` ••${p.card_last4}` : ''}
+                          </Text>
+                        </View>
                       </View>
                       <Text style={[typography.title3, { color: p.kind === 'credit' ? colors.green : colors.red }]}>
                         {p.kind === 'credit' ? '+' : '−'}
@@ -383,16 +445,16 @@ export default function SmsInboxScreen() {
                     ) : null}
                     {foreign ? (
                       <Text style={[typography.caption1, { color: colors.orange, marginTop: 4 }]}>
-                        This bank alert is in {p.currency} but {account!.name} is set to {account!.currency}.{' '}
+                        This bank alert is in {p.currency} but {target!.name} is set to {target!.currency}.{' '}
                         <Text
                           style={{ color: colors.blue, fontWeight: '600' }}
                           onPress={() =>
                             Alert.alert(
-                              `Use ${p.currency} for ${account!.name}?`,
+                              `Use ${p.currency} for ${target!.name}?`,
                               `If this account is really in ${p.currency}, switch it so amounts and balances line up. (Your main currency can be changed in Settings.)`,
                               [
                                 { text: 'Cancel', style: 'cancel' },
-                                { text: `Switch to ${p.currency}`, onPress: () => updateAccount(account!.id, { currency: p.currency }) },
+                                { text: `Switch to ${p.currency}`, onPress: () => updateAccount(target!.id, { currency: p.currency }) },
                               ]
                             )
                           }
@@ -401,7 +463,31 @@ export default function SmsInboxScreen() {
                         </Text>
                       </Text>
                     ) : null}
-                    {p.kind === 'credit' ? (
+                    {needsCardAccount ? (
+                      <Button
+                        title="Create credit card account"
+                        variant="secondary"
+                        onPress={() => createCardAccount(p)}
+                        style={{ marginTop: spacing.sm }}
+                      />
+                    ) : null}
+                    {p.kind === 'card_payment' && card ? (
+                      <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.xs }]}>
+                        Will be added as a transfer from {target?.name ?? 'your bank account'} to {card.name}.
+                      </Text>
+                    ) : null}
+                    <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm, marginBottom: 4 }]}>
+                      {p.kind === 'card_payment' ? 'Paid from' : 'Post to'}
+                      {p.card_last4 && links[p.card_last4] ? ` · ••${p.card_last4} is linked` : p.card_last4 ? ` · Anchor will remember ••${p.card_last4}` : ''}
+                    </Text>
+                    <ChipSelector
+                      options={accounts
+                        .filter((a) => !a.is_archived && (p.kind !== 'card_payment' || a.type !== 'credit'))
+                        .map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.type === 'credit' ? 'creditcard.fill' : a.icon }))}
+                      selectedId={target?.id ?? null}
+                      onSelect={(id) => setPickedAccount((prev) => ({ ...prev, [p.id]: id }))}
+                    />
+                    {p.kind === 'card_payment' ? null : p.kind === 'credit' ? (
                       <View style={{ marginTop: spacing.sm }}>
                         <ChipSelector
                           options={categories

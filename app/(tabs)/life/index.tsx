@@ -88,6 +88,12 @@ export default function LifeScreen() {
           <LifeLink icon="heart.fill" label="Medications" color={colors.red} onPress={() => router.push('/life/medications')} />
           <LifeLink icon="hands.sparkles.fill" label="Duas" color={colors.teal} onPress={() => router.push('/life/duas')} />
         </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+          <LifeLink icon="book.closed.fill" label="Hifz" color={colors.green} onPress={() => router.push('/life/hifz')} />
+          <LifeLink icon="gift.fill" label="Zakat al-Fitr" color={colors.mint} onPress={() => router.push('/money/zakat')} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
+        </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <PrayerHistory />

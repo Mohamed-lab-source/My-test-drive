@@ -28,7 +28,9 @@ import { todayKey } from '../../../src/db/client';
 import { formatRelativeDay, formatTime } from '../../../src/utils/date';
 import type { Task } from '../../../src/db/types';
 import { insertRow } from '../../../src/db/helpers';
+import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useUndoStore } from '../../../src/store/undoStore';
+import { DAILY_CAPACITY_MINUTES, formatEstimate, plannedMinutes } from '../../../src/utils/estimate';
 
 const SEGMENTS = ['Today', 'Backlog', 'All', 'Done'];
 
@@ -86,6 +88,9 @@ export default function TasksScreen() {
     [meetings]
   );
 
+  const todaysMeetingMinutes = meetings
+    .filter((m) => new Date(m.start_at).toDateString() === new Date().toDateString())
+    .reduce((sum, m) => sum + (m.end_at ? Math.max(0, (new Date(m.end_at).getTime() - new Date(m.start_at).getTime()) / 60000) : 30), 0);
   const bySegment = useMemo(() => {
     if (segment === 0) {
       return tasks.filter(
@@ -213,7 +218,7 @@ export default function TasksScreen() {
               <ChipSelector
                 options={[
                   { id: 'all', label: 'All projects' },
-                  ...projects.map((p) => ({ id: p.id, label: p.name, color: p.color })),
+                  ...projects.filter((p) => !p.is_archived).map((p) => ({ id: p.id, label: p.name, color: p.color })),
                   { id: 'none', label: 'No project' },
                 ]}
                 selectedId={activeProject}
@@ -255,6 +260,35 @@ export default function TasksScreen() {
             ) : null}
           </View>
           {segment === 0 && !query ? <WeeklyGoalsCard /> : null}
+          {segment === 0 && !query && (plannedMinutes(bySegment) > 0 || todaysMeetingMinutes > 0) ? (
+            <Card style={{ marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={[typography.headline, { color: colors.label }]}>Today's load</Text>
+                <Text
+                  style={[
+                    typography.headline,
+                    { color: plannedMinutes(bySegment) + todaysMeetingMinutes > DAILY_CAPACITY_MINUTES ? colors.red : colors.green },
+                  ]}
+                >
+                  {formatEstimate(plannedMinutes(bySegment) + todaysMeetingMinutes)}
+                </Text>
+              </View>
+              <View style={{ marginTop: 6 }}>
+                <ProgressBar
+                  progress={(plannedMinutes(bySegment) + todaysMeetingMinutes) / DAILY_CAPACITY_MINUTES}
+                  color={plannedMinutes(bySegment) + todaysMeetingMinutes > DAILY_CAPACITY_MINUTES ? colors.red : colors.blue}
+                  height={6}
+                />
+              </View>
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                {formatEstimate(plannedMinutes(bySegment))} of tasks
+                {todaysMeetingMinutes > 0 ? ` + ${formatEstimate(todaysMeetingMinutes)} of meetings` : ''}
+                {plannedMinutes(bySegment) + todaysMeetingMinutes > DAILY_CAPACITY_MINUTES
+                  ? ' — more than 6h of focused work. Consider moving something to tomorrow.'
+                  : ` · ${bySegment.filter((t) => t.status !== 'done' && !t.estimate_minutes).length} without an estimate`}
+              </Text>
+            </Card>
+          ) : null}
           {segment === 0 && !query && new Date().getHours() >= 17 && bySegment.some((t) => t.status === 'todo') ? (
             <Card style={{ marginBottom: spacing.sm }}>
               <Text style={[typography.headline, { color: colors.label }]}>Wrapping up?</Text>

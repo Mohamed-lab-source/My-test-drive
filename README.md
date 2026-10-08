@@ -67,6 +67,12 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Money tools: instalment calculator and a currency converter using your saved rates
 - Gold price per gram → nisab (85 g) on the Zakat screen, plus a Sadaqah tracker with a monthly goal
 - Spending insights: categories running above or below your usual pace this month
+- **Credit vs debit** — each bank SMS is tagged 💳 credit card or 🏦 debit/account (from wording like "credit card", "available limit", "debit card", "account"), and the card digits are remembered so later charges go to the right account automatically. Credit card charges post to your credit card account; card payments ("payment received") become a transfer from your bank to the card. Create the card account straight from the SMS inbox
+- Credit card accounts: amount owed, credit limit with a utilisation bar, statement day and payment due day
+- Account statements: credit cards by billing cycle (statement balance and due date), other accounts by month, with opening/closing balance, money in/out and a running balance on every line; share as text or CSV
+- "Credit vs debit" card on Money home and a "Paid with" chart in Analytics (credit card / debit / cash per month)
+- Pay in instalments (3–24 months) from the add-expense sheet; the remaining instalments post themselves and the plan ends on its own
+- Month-end spending projection, spending by weekday, reorder accounts, foreign-currency SMS charges converted with your saved rate, undo after adding from the SMS inbox
 
 **Tasks**
 - Today / Backlog / All views, with unfinished "Today" tasks rolling into Backlog automatically
@@ -93,6 +99,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Priority matrix, stale-backlog clean-up, share today's plan, focus breaks (5/15 min), completion streak
 - Meeting notes: "- " lines become tasks in one tap
 - Weekly goals, plan tomorrow, swipe-to-snooze, end-of-day wrap-up, time per project, next-meeting chip on Home
+- Time estimates on tasks with a "Today's load" bar (tasks + meetings) and an overload warning over 6 hours
+- Project deadlines (due in N days / overdue) and archiving projects
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -130,6 +138,9 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Reminders for Islamic occasions, Monday/Thursday fasts and your zakat hawl date
 - Quranic duas with favorites, Friday checklist, missed-prayer → qada prompt, Quran reminder, prayer-time fine-tuning
 - Habit reordering, mood vs. sleep insight, journal export, yearly reading goal, medication taken log
+- Hifz tracker for Al-Fatiha and Juz 'Amma (not started → learning → memorised) with a "next up" suggestion
+- Edit prayers for the last 7 days from Prayer history; weekly habit grid you can tap to fix missed days
+- Journal prompts; Zakat al-Fitr calculator (people × rate) that can log the payment
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
@@ -152,6 +163,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Prayers — today's 5 prayers with streak and the next prayer time, tap a prayer to mark it done right from the widget
 - Today — your tasks scheduled for today; tap the circle to mark a task done, tap + to add one
 - Net worth — current net worth and next upcoming bill; tap + to log an expense, tap Pay to post the bill
+- Card payment due reminders (3 days before and on the due day) and an optional 9:30 PM spending digest
+- 24-hour clock and whole-number amounts (Settings → Appearance); recent searches
 
 **Settings**
 - Light/Dark/System appearance

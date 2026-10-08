@@ -10,6 +10,7 @@ import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { SadaqahCard } from '../../../src/features/money/SadaqahCard';
 import { HawlCard } from '../../../src/features/money/HawlCard';
+import { FitrCard } from '../../../src/features/money/FitrCard';
 
 const ZAKAT_RATE = 0.025;
 
@@ -131,6 +132,7 @@ export default function ZakatScreen() {
         </Card>
 
         <HawlCard />
+        <FitrCard />
         <SadaqahCard />
 
         <Text style={[typography.caption1, { color: colors.tertiaryLabel }]}>

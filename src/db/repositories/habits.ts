@@ -41,3 +41,6 @@ export async function computeHabitStreak(habitId: string): Promise<number> {
 
 export const listHabitLogsSince = (habitId: string, sinceKey: string) =>
   whereRows<HabitLog>('habit_logs', 'habit_id = ? AND date >= ? AND completed = 1', [habitId, sinceKey]);
+
+export const listAllHabitLogsSince = (sinceKey: string) =>
+  whereRows<HabitLog>('habit_logs', 'date >= ? AND completed = 1', [sinceKey]);

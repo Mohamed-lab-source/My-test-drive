@@ -105,6 +105,14 @@ export default function SettingsScreen() {
     setPrayerAdjust,
     textScale,
     setTextScale,
+    use24h,
+    setUse24h,
+    wholeMoney,
+    setWholeMoney,
+    cardDueReminders,
+    setCardDueReminders,
+    spendDigest,
+    setSpendDigest,
   } = useSettingsStore();
 
   const adjustPrayer = async (prayer: string, delta: number) => {
@@ -305,6 +313,20 @@ export default function SettingsScreen() {
               selectedIndex={[1, 1.15, 1.3].indexOf(textScale) === -1 ? 0 : [1, 1.15, 1.3].indexOf(textScale)}
               onChange={(i) => setTextScale([1, 1.15, 1.3][i])}
             />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>24-hour clock</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Show times like 17:30</Text>
+              </View>
+              <Switch value={use24h} onValueChange={setUse24h} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Whole-number amounts</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Show EGP 1,250 instead of EGP 1,249.50</Text>
+              </View>
+              <Switch value={wholeMoney} onValueChange={setWholeMoney} />
+            </View>
           </Card>
         </View>
 
@@ -472,6 +494,18 @@ export default function SettingsScreen() {
               subtitle="8 AM: today's tasks, meetings and bills"
               leading={<IconCircle name="sun.max.fill" color={colors.orange} size={32} />}
               trailing={<Switch value={morningBriefing} onValueChange={(v) => toggleWithPermission(v, setMorningBriefing)} />}
+            />
+            <ListRow
+              title="Card payment due"
+              subtitle="3 days before and on each credit card's due day"
+              leading={<IconCircle name="creditcard.fill" color={colors.purple} size={32} />}
+              trailing={<Switch value={cardDueReminders} onValueChange={(v) => toggleWithPermission(v, setCardDueReminders)} />}
+            />
+            <ListRow
+              title="Nightly spending digest"
+              subtitle="9:30 PM: what you spent today, and how much on credit"
+              leading={<IconCircle name="chart.bar.fill" color={colors.teal} size={32} />}
+              trailing={<Switch value={spendDigest} onValueChange={(v) => toggleWithPermission(v, setSpendDigest)} />}
             />
             <ListRow
               title="Water reminders"

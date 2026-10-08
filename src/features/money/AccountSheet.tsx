@@ -32,13 +32,22 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
   const [color, setColor] = useState<string>(accentColors[0]);
   const [archived, setArchived] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [limit, setLimit] = useState('');
+  const [statementDay, setStatementDay] = useState('');
+  const [dueDay, setDueDay] = useState('');
+  const isCredit = type === 'credit';
 
   useEffect(() => {
     if (!visible) return;
     setName(editing?.name ?? '');
     setType(editing?.type ?? 'bank');
     setCurrency(editing?.currency ?? baseCurrency);
-    setBalance(editing ? String(fromMinorUnits(editing.balance)) : '');
+    // Credit cards are edited as "amount owed" (a positive number); the
+    // stored balance is negative while you owe.
+    setBalance(editing ? String(fromMinorUnits(editing.type === 'credit' ? -editing.balance : editing.balance)) : '');
+    setLimit(editing?.credit_limit ? String(fromMinorUnits(editing.credit_limit)) : '');
+    setStatementDay(editing?.statement_day ? String(editing.statement_day) : '');
+    setDueDay(editing?.due_day ? String(editing.due_day) : '');
     setColor(editing?.color ?? accentColors[0]);
     setArchived(!!editing?.is_archived);
   }, [visible, editing?.id]);
@@ -50,7 +59,22 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
     setSaving(true);
     try {
       const icon = TYPES.find((t) => t.id === type)!.icon;
-      const fields = { name: name.trim(), type, currency, icon, color, balance: toMinorUnits(Number(balance || '0')) };
+      const entered = toMinorUnits(Number(balance || '0'));
+      const day = (v: string) => {
+        const n = Math.round(Number(v));
+        return n >= 1 && n <= 31 ? n : null;
+      };
+      const fields = {
+        name: name.trim(),
+        type,
+        currency,
+        icon,
+        color,
+        balance: isCredit ? -Math.abs(entered) : entered,
+        credit_limit: isCredit && Number(limit) > 0 ? toMinorUnits(Number(limit)) : null,
+        statement_day: isCredit ? day(statementDay) : null,
+        due_day: isCredit ? day(dueDay) : null,
+      };
       if (editing) {
         await updateAccount(editing.id, { ...fields, is_archived: archived ? 1 : 0 });
       } else {
@@ -72,7 +96,7 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
         </Text>
         <TextField label="Name" placeholder="e.g. CIB, Wallet, Visa" value={name} onChangeText={setName} />
         <TextField
-          label={editing ? 'Current balance' : 'Starting balance'}
+          label={isCredit ? 'Amount owed now' : editing ? 'Current balance' : 'Starting balance'}
           placeholder="0.00"
           keyboardType="numbers-and-punctuation"
           value={balance}
@@ -87,6 +111,22 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector options={TYPES} selectedId={type} onSelect={(id) => setType(id as AccountType)} />
         </View>
+        {isCredit ? (
+          <>
+            <TextField label="Credit limit" placeholder="Optional" keyboardType="decimal-pad" value={limit} onChangeText={setLimit} />
+            <View style={{ flexDirection: 'row' }}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
+                <TextField label="Statement day" placeholder="e.g. 25" keyboardType="number-pad" value={statementDay} onChangeText={setStatementDay} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <TextField label="Payment due day" placeholder="e.g. 15" keyboardType="number-pad" value={dueDay} onChangeText={setDueDay} />
+              </View>
+            </View>
+            <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.sm, marginBottom: spacing.md }]}>
+              Day of the month your statement closes and your payment is due. Used for statements and a payment reminder.
+            </Text>
+          </>
+        ) : null}
         <Text style={labelStyle}>Currency</Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector options={CURRENCIES.map((c) => ({ id: c, label: c }))} selectedId={currency} onSelect={setCurrency} />

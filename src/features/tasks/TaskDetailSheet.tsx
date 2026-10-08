@@ -5,6 +5,7 @@ import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChipSelector } from '../../ui/ChipSelector';
+import { ESTIMATE_OPTIONS } from '../../utils/estimate';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -80,6 +81,7 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [newSubtask, setNewSubtask] = useState('');
   const [saving, setSaving] = useState(false);
+  const [estimate, setEstimate] = useState(0);
 
   useEffect(() => {
     if (!task) return;
@@ -87,6 +89,7 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
     setNotes(task.notes ?? '');
     setPriorityIndex(PRIORITIES.indexOf(task.priority));
     setRepeat(task.repeat_frequency ?? 'none');
+    setEstimate(task.estimate_minutes ?? 0);
     repo.listSubtasks(task.id).then(setSubtasks);
   }, [task?.id]);
 
@@ -114,6 +117,7 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
         priority: PRIORITIES[priorityIndex],
         repeat_frequency: repeat === 'none' ? null : repeat,
         repeat_interval: repeat === 'none' ? null : 1,
+        estimate_minutes: estimate || null,
       });
       onClose();
     } finally {
@@ -168,6 +172,12 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
           />
         </View>
 
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+          Time estimate
+        </Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector options={ESTIMATE_OPTIONS} selectedId={String(estimate)} onSelect={(id) => setEstimate(Number(id))} />
+        </View>
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Priority
         </Text>

@@ -393,6 +393,21 @@ CREATE TABLE IF NOT EXISTS med_logs (
   time TEXT NOT NULL
 );
 
+-- id = the visible card/account digits from bank SMS (e.g. '1234', '013').
+CREATE TABLE IF NOT EXISTS card_links (
+  id TEXT PRIMARY KEY NOT NULL,
+  account_id TEXT NOT NULL,
+  card_type TEXT
+);
+
+-- id = 's<surah>'; Al-Fatiha and Juz Amma (78..114). No row = not started.
+CREATE TABLE IF NOT EXISTS hifz (
+  id TEXT PRIMARY KEY NOT NULL,
+  surah INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('learning', 'memorised')),
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY NOT NULL,
   body TEXT NOT NULL,
@@ -426,4 +441,10 @@ export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: stri
   { table: 'journal_entries', column: 'gratitude', ddl: 'ALTER TABLE journal_entries ADD COLUMN gratitude TEXT' },
   { table: 'sms_imports', column: 'balance', ddl: 'ALTER TABLE sms_imports ADD COLUMN balance INTEGER' },
   { table: 'sms_imports', column: 'balance_currency', ddl: 'ALTER TABLE sms_imports ADD COLUMN balance_currency TEXT' },
+  { table: 'sms_imports', column: 'card_type', ddl: 'ALTER TABLE sms_imports ADD COLUMN card_type TEXT' },
+  { table: 'accounts', column: 'credit_limit', ddl: 'ALTER TABLE accounts ADD COLUMN credit_limit INTEGER' },
+  { table: 'accounts', column: 'statement_day', ddl: 'ALTER TABLE accounts ADD COLUMN statement_day INTEGER' },
+  { table: 'accounts', column: 'due_day', ddl: 'ALTER TABLE accounts ADD COLUMN due_day INTEGER' },
+  { table: 'tasks', column: 'estimate_minutes', ddl: 'ALTER TABLE tasks ADD COLUMN estimate_minutes INTEGER' },
+  { table: 'projects', column: 'due_date', ddl: 'ALTER TABLE projects ADD COLUMN due_date TEXT' },
 ];

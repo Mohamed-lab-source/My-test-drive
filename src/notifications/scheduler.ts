@@ -3,7 +3,8 @@ import * as Notifications from 'expo-notifications';
 import { useSettingsStore } from '../store/settingsStore';
 import { findPrayerCity, getPrayerSchedule, type PrayerCity } from '../utils/prayerTimes';
 import { todayKey } from '../db/client';
-import type { Debt, Habit, Medication, Meeting, Occasion, RecurringRule, Task } from '../db/types';
+import type { Account, Debt, Habit, Medication, Meeting, Occasion, RecurringRule, Task, Transaction } from '../db/types';
+import { formatMoney } from '../utils/money';
 import { islamicDay, toHijri, HIJRI_MONTHS } from '../utils/hijri';
 import { localDateKey } from '../utils/date';
 import { listOccasions } from '../db/repositories/occasions';
@@ -525,5 +526,67 @@ export async function scheduleQuranReminder(): Promise<void> {
       body: quranDailyGoal > 0 ? `Your goal is ${quranDailyGoal} pages today — log them in Anchor.` : 'Read a little today, even a page.',
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
+  });
+}
+
+// ---------- Credit card payment due ----------
+const CARD_DUE_PREFIX = 'carddue-';
+
+// 9 AM three days before and on the payment due day, for every credit card
+// with a due day set and something owed.
+export async function rescheduleCardDueReminders(accounts: Account[]): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => n.identifier.startsWith(CARD_DUE_PREFIX))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {}))
+  );
+  if (!useSettingsStore.getState().cardDueReminders || !(await areNotificationsEnabled())) return;
+  const now = new Date();
+  for (const a of accounts) {
+    if (a.type !== 'credit' || a.is_archived || !a.due_day || a.balance >= 0) continue;
+    const owed = formatMoney(-a.balance, a.currency);
+    for (let m = 0; m < 2; m++) {
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + m + 1, 0).getDate();
+      const due = new Date(now.getFullYear(), now.getMonth() + m, Math.min(a.due_day, lastDay), 9);
+      const before = new Date(due.getFullYear(), due.getMonth(), due.getDate() - 3, 9);
+      await scheduleAt(`${CARD_DUE_PREFIX}${a.id}-${m}-early`, before, `${a.name} payment due in 3 days`, `You owe ${owed}. Pay in full to avoid interest.`);
+      await scheduleAt(`${CARD_DUE_PREFIX}${a.id}-${m}`, due, `${a.name} payment due today`, `You owe ${owed}.`);
+    }
+  }
+}
+
+// ---------- Nightly spending digest ----------
+const DIGEST_ID = 'spend-digest';
+const DIGEST_HOUR = 21;
+
+// 9 PM: what you spent today. The text is computed now, so this is re-run
+// whenever transactions change; after 9 PM it arms tomorrow's with a
+// generic line.
+export async function scheduleSpendDigest(transactions: Transaction[], accounts: Account[]): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(DIGEST_ID).catch(() => {});
+  if (!useSettingsStore.getState().spendDigest || !(await areNotificationsEnabled())) return;
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), DIGEST_HOUR, 30);
+  let body = 'Tap to review what you spent today.';
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  } else {
+    const key = todayKey();
+    const base = useSettingsStore.getState().currency;
+    const today = transactions.filter((t) => t.type === 'expense' && localDateKey(t.date) === key && t.currency === base);
+    const total = today.reduce((s, t) => s + t.amount, 0);
+    const onCredit = today
+      .filter((t) => accounts.find((a) => a.id === t.account_id)?.type === 'credit')
+      .reduce((s, t) => s + t.amount, 0);
+    body = today.length
+      ? `${formatMoney(total, base)} across ${plural(today.length, 'purchase')}` +
+        (onCredit > 0 ? ` — ${formatMoney(onCredit, base)} on credit card.` : '.')
+      : 'No spending logged today 🎉';
+  }
+  await Notifications.scheduleNotificationAsync({
+    identifier: DIGEST_ID,
+    content: { title: "Today's spending", body },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: target, channelId: CHANNEL_ID },
   });
 }

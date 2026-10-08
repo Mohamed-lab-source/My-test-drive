@@ -20,6 +20,8 @@ import {
   notifyNow,
   scheduleBillReminder,
   scheduleDebtReminder,
+  rescheduleCardDueReminders,
+  scheduleSpendDigest,
 } from '../notifications/scheduler';
 import { settingsHydrated, useSettingsStore } from './settingsStore';
 import { todayKey } from '../db/client';
@@ -48,7 +50,7 @@ interface FinanceState {
   refreshFxRates: () => Promise<void>;
   recordNetWorthSnapshot: () => Promise<void>;
 
-  addTransaction: (input: Parameters<typeof repo.createTransaction>[0]) => Promise<void>;
+  addTransaction: (input: Parameters<typeof repo.createTransaction>[0]) => Promise<string>;
   updateTransaction: (id: string, patch: Parameters<typeof repo.updateTransaction>[1]) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
 
@@ -119,10 +121,14 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().recordNetWorthSnapshot();
   },
 
-  refreshTransactions: async () => set({ transactions: await repo.listTransactions(200) }),
+  refreshTransactions: async () => {
+    set({ transactions: await repo.listTransactions(200) });
+    scheduleSpendDigest(get().transactions, get().accounts).catch(() => {});
+  },
   refreshAccounts: async () => {
     set({ accounts: await repo.listAccounts() });
     refreshMoneyWidget();
+    rescheduleCardDueReminders(get().accounts).catch(() => {});
     await get().recordNetWorthSnapshot();
   },
   // One snapshot per local day, overwritten as balances change during it.
@@ -157,7 +163,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     const before = budget ? await repo.getCategorySpendSince(budget.category_id, monthStart) : 0;
 
     const accountBefore = get().accounts.find((a) => a.id === input.account_id);
-    await repo.createTransaction(input);
+    const id = await repo.createTransaction(input);
     await Promise.all([get().refreshTransactions(), get().refreshAccounts()]);
 
     // Low-balance alert: only when this transaction takes the account from
@@ -183,6 +189,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
         notifyNow(`${name} budget at ${Math.round((after / limit) * 100)}%`, `${formatMoney(limit - after, budget.currency)} left this month`);
       }
     }
+    return id;
   },
   updateTransaction: async (id, patch) => {
     await repo.updateTransaction(id, patch);

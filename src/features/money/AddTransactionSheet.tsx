@@ -24,7 +24,7 @@ const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
 export function AddTransactionSheet({ visible, onClose, editing }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt } = useFinanceStore();
+  const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt, addRecurringRule } = useFinanceStore();
   const currency = useSettingsStore((s) => s.currency);
   const defaultAccountId = useSettingsStore((s) => s.defaultAccountId);
 
@@ -37,6 +37,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
   const [note, setNote] = useState('');
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [splitWith, setSplitWith] = useState('');
+  const [instalments, setInstalments] = useState(1);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const frequent = useMemo(() => (editing ? [] : frequentTransactions(transactions)), [transactions, editing]);
@@ -75,6 +76,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
       setReceiptUri(null);
     }
     setSplitWith('');
+    setInstalments(1);
   }, [visible, editing?.id]);
 
   const splitNames = splitWith
@@ -113,6 +115,39 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
       if (editing) {
         await updateTransaction(editing.id, fields);
       } else {
+        if (type === 'expense' && instalments > 1) {
+          // Pay in instalments: the first one now, the rest posted
+          // automatically each month by a recurring rule that ends itself.
+          const total = fields.amount;
+          const each = Math.round(total / instalments);
+          const label = note || categories.find((c) => c.id === categoryId)?.name || 'Purchase';
+          const now = new Date();
+          const first = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate(), 9);
+          const last = new Date(now.getFullYear(), now.getMonth() + instalments - 1, now.getDate(), 23, 59);
+          await addTransaction({ ...fields, amount: each, note: `${label} (1/${instalments})`, currency, recurring_id: null, date: now.toISOString() });
+          const cat = categories.find((c) => c.id === categoryId);
+          await addRecurringRule({
+            name: `${label} — instalment of ${formatMoney(total, currency)}`,
+            type: 'expense',
+            amount: each,
+            currency,
+            category_id: categoryId,
+            account_id: accountId,
+            frequency: 'monthly',
+            interval_count: 1,
+            start_date: first.toISOString(),
+            next_due_date: first.toISOString(),
+            end_date: last.toISOString(),
+            is_subscription: 0,
+            icon: cat?.icon ?? 'creditcard.fill',
+            color: cat?.color ?? colors.purple,
+            reminder_days_before: 1,
+            notes: `${instalments} monthly instalments`,
+            auto_post: 1,
+          });
+          onClose();
+          return;
+        }
         await addTransaction({ ...fields, currency, recurring_id: null, date: new Date().toISOString() });
         // You paid the whole bill; each person now owes you an equal share.
         if (type === 'expense') {
@@ -216,6 +251,20 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
 
         {!editing && type === 'expense' ? (
           <>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Pay in</Text>
+            <View style={{ marginBottom: instalments > 1 ? 4 : spacing.md }}>
+              <ChipSelector
+                options={[1, 3, 6, 12, 24].map((n) => ({ id: String(n), label: n === 1 ? 'Full' : `${n} months` }))}
+                selectedId={String(instalments)}
+                onSelect={(id) => setInstalments(Number(id))}
+              />
+            </View>
+            {instalments > 1 && Number(amount) > 0 ? (
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginBottom: spacing.md }]}>
+                {formatMoney(Math.round(toMinorUnits(Number(amount)) / instalments), currency)} now and each month for {instalments - 1} more month
+                {instalments - 1 === 1 ? '' : 's'} — posted automatically (see Subscriptions & bills).
+              </Text>
+            ) : null}
             <TextField
               label="Split with"
               placeholder="Names, comma-separated (optional)"

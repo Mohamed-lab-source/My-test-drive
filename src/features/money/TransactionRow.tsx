@@ -9,7 +9,17 @@ import { formatMoneySigned } from '../../utils/money';
 import { formatRelativeDay } from '../../utils/date';
 import type { Transaction } from '../../db/types';
 
-export function TransactionRow({ tx, isLast, onPress }: { tx: Transaction; isLast?: boolean; onPress?: () => void }) {
+export function TransactionRow({
+  tx,
+  isLast,
+  onPress,
+  footnote,
+}: {
+  tx: Transaction;
+  isLast?: boolean;
+  onPress?: () => void;
+  footnote?: string;
+}) {
   const { colors, typography } = useTheme();
   const category = useFinanceStore((s) => s.categories.find((c) => c.id === tx.category_id));
   const account = useFinanceStore((s) => s.accounts.find((a) => a.id === tx.account_id));
@@ -38,6 +48,7 @@ export function TransactionRow({ tx, isLast, onPress }: { tx: Transaction; isLas
           <Text style={[typography.headline, { color: amountColor }]}>
             {formatMoneySigned(tx.amount, tx.currency, tx.type)}
           </Text>
+          {footnote ? <Text style={[typography.caption2, { color: colors.tertiaryLabel }]}>{footnote}</Text> : null}
           {tx.receipt_uri ? <Icon name="camera.fill" size={12} color={colors.tertiaryLabel} /> : null}
         </View>
       }

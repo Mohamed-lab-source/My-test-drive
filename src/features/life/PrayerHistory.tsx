@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
 import { Heatmap } from '../../ui/Heatmap';
 import { useLifeStore } from '../../store/lifeStore';
 import * as repo from '../../db/repositories/life';
 import { todayKey } from '../../db/client';
-import { PRAYERS } from '../../db/types';
+import { PRAYERS, type Prayer } from '../../db/types';
 
 const WEEKS = 5;
 
@@ -15,11 +15,30 @@ export function PrayerHistory() {
   const todayPrayerLogs = useLifeStore((s) => s.todayPrayerLogs);
   const [values, setValues] = useState<Record<string, number>>({});
   const [perPrayer, setPerPrayer] = useState<{ prayer: string; rate: number }[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [done, setDone] = useState<Set<string>>(new Set());
+  const [reload, setReload] = useState(0);
+  const refreshToday = useLifeStore((s) => s.refreshToday);
+
+  // The last 7 days, oldest first, for catching up on days you forgot to log.
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return { key: todayKey(d), label: i === 6 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }) };
+  });
+
+  const toggle = async (date: string, prayer: Prayer) => {
+    const id = `${date}|${prayer}`;
+    await repo.setPrayerLog(date, prayer, !done.has(id));
+    if (date === todayKey()) await refreshToday();
+    setReload((r) => r + 1);
+  };
 
   useEffect(() => {
     const since = new Date();
     since.setDate(since.getDate() - WEEKS * 7);
     repo.listPrayerLogsSince(todayKey(since)).then((logs) => {
+      setDone(new Set(logs.filter((l) => l.completed).map((l) => `${l.date}|${l.prayer}`)));
       const counts: Record<string, number> = {};
       for (const log of logs) if (log.completed) counts[log.date] = (counts[log.date] ?? 0) + 1;
       setValues(Object.fromEntries(Object.entries(counts).map(([k, n]) => [k, n / PRAYERS.length])));
@@ -34,7 +53,7 @@ export function PrayerHistory() {
         PRAYERS.map((p) => ({ prayer: p, rate: recent.filter((l) => l.prayer === p && l.completed).length / span }))
       );
     });
-  }, [todayPrayerLogs]);
+  }, [todayPrayerLogs, reload]);
 
   const fullDays = Object.values(values).filter((v) => v >= 1).length;
 
@@ -45,6 +64,45 @@ export function PrayerHistory() {
         {fullDays} of {WEEKS * 7} days with all 5 prayers
       </Text>
       <Heatmap values={values} color={colors.green} weeks={WEEKS} />
+      <Pressable onPress={() => setEditing(!editing)} style={{ marginTop: spacing.sm }}>
+        <Text style={[typography.subhead, { color: colors.blue }]}>{editing ? 'Done editing' : 'Edit the last 7 days'}</Text>
+      </Pressable>
+      {editing ? (
+        <View style={{ marginTop: spacing.sm }}>
+          <View style={{ flexDirection: 'row' }}>
+            <View style={{ width: 52 }} />
+            {PRAYERS.map((p) => (
+              <Text key={p} style={[typography.caption2, { color: colors.secondaryLabel, flex: 1, textAlign: 'center', textTransform: 'capitalize' }]}>
+                {p}
+              </Text>
+            ))}
+          </View>
+          {week.map((day) => (
+            <View key={day.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}>
+              <Text style={[typography.footnote, { color: colors.label, width: 52 }]}>{day.label}</Text>
+              {PRAYERS.map((p) => {
+                const on = done.has(`${day.key}|${p}`);
+                return (
+                  <Pressable key={p} onPress={() => toggle(day.key, p)} style={{ flex: 1, alignItems: 'center' }} hitSlop={4}>
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: 13,
+                        backgroundColor: on ? colors.green : colors.tertiaryFill,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{on ? '✓' : ''}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      ) : null}
       {perPrayer.length > 0 ? (
         <View style={{ marginTop: spacing.md }}>
           <View style={{ flexDirection: 'row' }}>

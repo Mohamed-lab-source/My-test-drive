@@ -12,11 +12,27 @@ import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { showUndoDelete } from '../../../src/ui/undo';
 import { AddProjectSheet } from '../../../src/features/tasks/AddProjectSheet';
+import { todayKey } from '../../../src/db/client';
+import type { Project } from '../../../src/db/types';
+
+function deadlineText(dueDate: string): { text: string; overdue: boolean } {
+  const [y, m, d] = dueDate.split('-').map(Number);
+  const due = new Date(y, m - 1, d).getTime();
+  const [ty, tm, td] = todayKey().split('-').map(Number);
+  const days = Math.round((due - new Date(ty, tm - 1, td).getTime()) / 86400000);
+  if (days < 0) return { text: `${-days} day${days === -1 ? '' : 's'} overdue`, overdue: true };
+  if (days === 0) return { text: 'Due today', overdue: true };
+  return { text: `Due in ${days} day${days === 1 ? '' : 's'}`, overdue: false };
+}
 
 export default function ProjectsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { projects, tasks, removeProject, moveProject, refreshProjects } = useProductivityStore();
+  const { projects: allProjects, tasks, removeProject, moveProject, refreshProjects, updateProject } = useProductivityStore();
   const [addVisible, setAddVisible] = useState(false);
+  const [editing, setEditing] = useState<Project | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const projects = allProjects.filter((p) => !p.is_archived);
+  const archived = allProjects.filter((p) => p.is_archived);
 
   const handleDelete = async (project: (typeof projects)[number]) => {
     await removeProject(project.id);
@@ -35,7 +51,14 @@ export default function ProjectsScreen() {
             const taskCount = projectTasks.filter((t) => t.status !== 'done').length;
             const doneCount = projectTasks.length - taskCount;
             return (
-              <SwipeableRow key={project.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(project) }]}>
+              <SwipeableRow
+                key={project.id}
+                actions={[
+                  { label: 'Archive', color: colors.orange, onPress: () => updateProject(project.id, { is_archived: 1 }) },
+                  { label: 'Delete', color: colors.red, onPress: () => handleDelete(project) },
+                ]}
+              >
+                <Pressable onPress={() => { setEditing(project); setAddVisible(true); }}>
                 <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
                   <IconCircle name={project.icon} color={project.color} />
                   <View style={{ flex: 1, marginLeft: spacing.sm }}>
@@ -44,6 +67,16 @@ export default function ProjectsScreen() {
                       {taskCount} open task{taskCount === 1 ? '' : 's'}
                       {projectTasks.length > 0 ? ` · ${Math.round((doneCount / projectTasks.length) * 100)}% done` : ''}
                     </Text>
+                    {project.due_date ? (
+                      <Text
+                        style={[
+                          typography.caption1,
+                          { color: deadlineText(project.due_date).overdue && taskCount > 0 ? colors.red : colors.secondaryLabel, marginTop: 2 },
+                        ]}
+                      >
+                        📅 {taskCount === 0 ? 'Deadline ' + project.due_date : deadlineText(project.due_date).text}
+                      </Text>
+                    ) : null}
                     {projectTasks.length > 0 ? (
                       <View style={{ marginTop: 6 }}>
                         <ProgressBar progress={doneCount / projectTasks.length} color={project.color} />
@@ -63,13 +96,45 @@ export default function ProjectsScreen() {
                     </Pressable>
                   </View>
                 </Card>
+                </Pressable>
               </SwipeableRow>
             );
           })
         )}
+        {archived.length > 0 ? (
+          <>
+            <Pressable onPress={() => setShowArchived(!showArchived)} style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
+              <Text style={[typography.subhead, { color: colors.blue }]}>
+                {showArchived ? 'Hide' : 'Show'} archived ({archived.length})
+              </Text>
+            </Pressable>
+            {showArchived
+              ? archived.map((project) => {
+                  const done = tasks.filter((t) => t.project_id === project.id && t.status === 'done').length;
+                  return (
+                    <Card key={project.id} style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', opacity: 0.75 }}>
+                      <IconCircle name={project.icon} color={project.color} />
+                      <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                        <Text style={[typography.headline, { color: colors.label }]}>{project.name}</Text>
+                        <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>{done} tasks done</Text>
+                      </View>
+                      <Pressable onPress={() => updateProject(project.id, { is_archived: 0 })} hitSlop={8}>
+                        <Text style={[typography.subhead, { color: colors.blue }]}>Restore</Text>
+                      </Pressable>
+                    </Card>
+                  );
+                })
+              : null}
+          </>
+        ) : null}
       </ScrollView>
-      <FAB onPress={() => setAddVisible(true)} />
-      <AddProjectSheet visible={addVisible} onClose={() => setAddVisible(false)} />
+      <FAB
+        onPress={() => {
+          setEditing(null);
+          setAddVisible(true);
+        }}
+      />
+      <AddProjectSheet visible={addVisible} editing={editing} onClose={() => setAddVisible(false)} />
     </View>
   );
 }

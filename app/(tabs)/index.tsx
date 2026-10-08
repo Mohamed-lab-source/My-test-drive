@@ -12,6 +12,8 @@ import { Card } from '../../src/ui/Card';
 import { IconCircle } from '../../src/ui/IconCircle';
 import { Icon } from '../../src/ui/Icon';
 import { PrayerTracker } from '../../src/features/life/PrayerTracker';
+import { SeasonCountdownCard } from '../../src/features/home/SeasonCountdownCard';
+import { MoodCheckinCard } from '../../src/features/home/MoodCheckinCard';
 import { RamadanCard } from '../../src/features/home/RamadanCard';
 import { VerseCard } from '../../src/features/home/VerseCard';
 import { CountdownCard } from '../../src/features/home/CountdownCard';
@@ -162,9 +164,11 @@ export default function HomeScreen() {
         <View style={{ paddingHorizontal: spacing.lg }}>
           <GettingStartedCard />
           <RamadanCard />
+          {show('seasons') ? <SeasonCountdownCard /> : null}
           {show('rings') ? <TodayRingsCard /> : null}
           {show('friday') ? <FridayCard /> : null}
           {show('countdown') ? <CountdownCard /> : null}
+          {show('mood') ? <MoodCheckinCard /> : null}
           {show('verse') ? <VerseCard /> : null}
           {show('water') ? <WaterCard /> : null}
         </View>

@@ -3,9 +3,11 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useFinanceStore } from '../store/financeStore';
 import * as repo from '../db/repositories/smsImports';
 import * as rulesRepo from '../db/repositories/merchantRules';
-import type { MerchantRule } from '../db/types';
-import type { Account, SmsImport } from '../db/types';
-import { parseCreditSms, parseDebitSms, parseReportedBalance } from './parser';
+import * as linksRepo from '../db/repositories/cardLinks';
+import type { Account, CardLink, MerchantRule, SmsImport } from '../db/types';
+import { parseCardPaymentSms, parseCreditSms, parseDebitSms, parseReportedBalance } from './parser';
+import { convertToBase } from '../db/repositories/fx';
+import { useUndoStore } from '../store/undoStore';
 import { configureSmsAlerts, isSmsReadingAvailable, readBankSms } from './native';
 
 const FIRST_SCAN_DAYS = 30;
@@ -14,10 +16,12 @@ interface SmsState {
   pending: SmsImport[];
   rules: Record<string, MerchantRule>;
   loadRules: () => Promise<void>;
+  links: Record<string, CardLink>;
+  loadLinks: () => Promise<void>;
   scanning: boolean;
   refresh: () => Promise<void>;
   scan: () => Promise<number>;
-  add: (item: SmsImport, categoryId: string | null, accountId: string | null) => Promise<void>;
+  add: (item: SmsImport, categoryId: string | null, accountId: string | null, opts?: { silent?: boolean }) => Promise<void>;
   dismiss: (id: string) => Promise<void>;
 }
 
@@ -33,6 +37,49 @@ export function smsTargetAccount(accounts: Account[]): Account | null {
     open[0] ??
     null
   );
+}
+
+// Where an imported SMS should be posted: the account its card number is
+// linked to, else (for a credit-card charge) your credit card account, else
+// the default bank account. Card payments come *from* the bank account.
+export function accountForImport(item: SmsImport, accounts: Account[], links: Record<string, CardLink>): Account | null {
+  const open = accounts.filter((a) => !a.is_archived);
+  if (item.kind !== 'card_payment' && item.card_last4) {
+    const linked = open.find((a) => a.id === links[item.card_last4!]?.account_id);
+    if (linked) return linked;
+  }
+  if (item.kind !== 'card_payment' && item.card_type === 'credit') {
+    const card = open.find((a) => a.type === 'credit');
+    if (card) return card;
+  }
+  if (item.card_type === 'debit' || item.kind === 'card_payment') {
+    const bank = smsTargetAccount(accounts);
+    if (bank && bank.type !== 'credit') return bank;
+    return open.find((a) => a.type === 'bank') ?? bank;
+  }
+  return smsTargetAccount(accounts);
+}
+
+// The credit card a payment SMS is paying off.
+export function creditCardFor(item: SmsImport, accounts: Account[], links: Record<string, CardLink>): Account | null {
+  const open = accounts.filter((a) => !a.is_archived && a.type === 'credit');
+  if (item.card_last4) {
+    const linked = open.find((a) => a.id === links[item.card_last4!]?.account_id);
+    if (linked) return linked;
+  }
+  return open[0] ?? null;
+}
+
+// A foreign-currency charge converted into the account's currency with your
+// saved rate, when the account uses your main currency and a rate exists.
+function convertForAccount(amount: number, from: string, account: Account | undefined): { amount: number; currency: string; converted: boolean } {
+  if (!account || from === account.currency) return { amount, currency: from, converted: false };
+  const { currency: base } = useSettingsStore.getState();
+  const rates = useFinanceStore.getState().fxRates;
+  if (account.currency === base && rates.some((r) => r.currency === from)) {
+    return { amount: convertToBase(amount, from, base, rates), currency: base, converted: true };
+  }
+  return { amount, currency: from, converted: false };
 }
 
 // Pushes the current settings to the native SMS receiver.
@@ -57,7 +104,13 @@ function knownMerchantCategory(merchant: string | null): string | null {
 export const useSmsStore = create<SmsState>((set, get) => ({
   pending: [],
   rules: {},
+  links: {},
   scanning: false,
+
+  loadLinks: async () => {
+    const list = await linksRepo.listCardLinks();
+    set({ links: Object.fromEntries(list.map((l) => [l.id, l])) });
+  },
 
   loadRules: async () => {
     const list = await rulesRepo.listMerchantRules();
@@ -67,11 +120,18 @@ export const useSmsStore = create<SmsState>((set, get) => ({
   // Re-reads pending items with the current parser first, so a parser fix
   // also corrects debits that were imported (wrongly) before it.
   refresh: async () => {
+    await get().loadLinks();
     for (const item of await repo.listSmsImports('pending')) {
-      const parsed = item.kind === 'credit' ? parseCreditSms(item.body) : parseDebitSms(item.body);
+      const parsed =
+        item.kind === 'credit'
+          ? parseCreditSms(item.body)
+          : item.kind === 'card_payment'
+            ? parseCardPaymentSms(item.body)
+            : parseDebitSms(item.body);
       if (!parsed) continue;
       const balance = parseReportedBalance(item.body);
       if (
+        parsed.cardType !== (item.card_type ?? null) ||
         parsed.amount !== item.amount ||
         parsed.currency !== item.currency ||
         parsed.merchant !== item.merchant ||
@@ -84,6 +144,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
           merchant: parsed.merchant,
           card_last4: parsed.cardLast4,
           kind: parsed.kind,
+          card_type: parsed.cardType,
           balance: balance?.amount ?? null,
           balance_currency: balance?.currency ?? null,
         });
@@ -106,7 +167,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
       let newest = since;
       for (const m of messages) {
         newest = Math.max(newest, m.date);
-        const parsed = parseDebitSms(m.body) ?? (smsReadCredits ? parseCreditSms(m.body) : null);
+        const parsed = parseCardPaymentSms(m.body) ?? parseDebitSms(m.body) ?? (smsReadCredits ? parseCreditSms(m.body) : null);
         if (!parsed) continue;
         const row = {
           id: `sms-${m.id}-${m.date}`,
@@ -118,6 +179,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
           merchant: parsed.merchant,
           card_last4: parsed.cardLast4,
           kind: parsed.kind,
+          card_type: parsed.cardType,
           balance: parseReportedBalance(m.body)?.amount ?? null,
           balance_currency: parseReportedBalance(m.body)?.currency ?? null,
         };
@@ -125,10 +187,12 @@ export const useSmsStore = create<SmsState>((set, get) => ({
         if (!isNew) continue;
         added++;
         // Merchants you've confirmed before skip the inbox entirely.
-        const known = parsed.kind !== 'credit' && parsed.kind !== 'withdrawal' ? knownMerchantCategory(parsed.merchant) : null;
+        const known =
+          parsed.kind === 'purchase' || parsed.kind === 'debit' ? knownMerchantCategory(parsed.merchant) : null;
         if (smsAutoAddKnown && known) {
-          const account = smsTargetAccount(useFinanceStore.getState().accounts);
-          await get().add({ ...row, status: 'pending', created_at: '' }, known, account?.id ?? null);
+          const item: SmsImport = { ...row, status: 'pending', created_at: '' };
+          const account = accountForImport(item, useFinanceStore.getState().accounts, get().links);
+          await get().add(item, known, account?.id ?? null, { silent: true });
         }
       }
       setSmsLastScan(newest);
@@ -139,8 +203,44 @@ export const useSmsStore = create<SmsState>((set, get) => ({
     }
   },
 
-  add: async (item, categoryId, accountId) => {
+  add: async (item, categoryId, accountId, opts) => {
     const finance = useFinanceStore.getState();
+    const account = finance.accounts.find((a) => a.id === accountId);
+    // Remember which account this card/account number belongs to.
+    if (item.card_last4 && account && item.kind !== 'card_payment' && get().links[item.card_last4]?.account_id !== account.id) {
+      await linksRepo.setCardLink(item.card_last4, account.id, account.type === 'credit' ? 'credit' : 'debit');
+      await get().loadLinks();
+    }
+    const offerUndo = (transactionId: string, label: string) => {
+      if (opts?.silent) return;
+      useUndoStore.getState().show(label, async () => {
+        await useFinanceStore.getState().removeTransaction(transactionId);
+        await repo.setSmsImportStatus(item.id, 'pending');
+        await get().refresh();
+      });
+    };
+
+    if (item.kind === 'card_payment') {
+      const card = creditCardFor(item, finance.accounts, get().links);
+      if (!card) throw new Error('NO_CREDIT_CARD');
+      const id = await finance.addTransaction({
+        type: 'transfer',
+        amount: item.amount,
+        currency: item.currency,
+        account_id: accountId,
+        transfer_to_account_id: card.id,
+        category_id: null,
+        recurring_id: null,
+        note: `${card.name} payment`,
+        date: item.sms_date,
+      });
+      await repo.setSmsImportStatus(item.id, 'added');
+      await get().refresh();
+      offerUndo(id, 'Card payment added');
+      return;
+    }
+    const money = convertForAccount(item.amount, item.currency, account);
+    const fxNote = money.converted ? ` (${item.currency} ${(item.amount / 100).toFixed(2)})` : '';
     const cash = finance.accounts.find((a) => a.type === 'cash' && !a.is_archived && a.id !== accountId);
     // An ATM withdrawal moves money into your wallet rather than spending it.
     const asTransfer = item.kind === 'withdrawal' && !!cash;
@@ -148,25 +248,26 @@ export const useSmsStore = create<SmsState>((set, get) => ({
     if (isCredit) {
       const income = finance.categories.filter((c) => c.kind !== 'expense');
       const salary = income.find((c) => /salary|راتب/i.test(c.name));
-      await finance.addTransaction({
+      const id = await finance.addTransaction({
         type: 'income',
-        amount: item.amount,
-        currency: item.currency,
+        amount: money.amount,
+        currency: money.currency,
         account_id: accountId,
         transfer_to_account_id: null,
         category_id: categoryId ?? (item.merchant === 'Salary' ? salary?.id : income.find((c) => /other/i.test(c.name))?.id) ?? null,
         recurring_id: null,
-        note: item.merchant ?? 'Money received',
+        note: (item.merchant ?? 'Money received') + fxNote,
         date: item.sms_date,
       });
       await repo.setSmsImportStatus(item.id, 'added');
       await get().refresh();
+      offerUndo(id, 'Income added');
       return;
     }
-    await finance.addTransaction({
+    const id = await finance.addTransaction({
       type: asTransfer ? 'transfer' : 'expense',
-      amount: item.amount,
-      currency: item.currency,
+      amount: money.amount,
+      currency: money.currency,
       account_id: accountId,
       transfer_to_account_id: asTransfer ? cash!.id : null,
       category_id: asTransfer ? null : categoryId,
@@ -174,7 +275,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
       note:
         (item.merchant ? get().rules[rulesRepo.ruleKey(item.merchant)]?.display : null) ??
         item.merchant ??
-        (item.kind === 'withdrawal' ? 'ATM withdrawal' : 'Card payment'),
+        (item.kind === 'withdrawal' ? 'ATM withdrawal' : 'Card payment') + fxNote,
       date: item.sms_date,
     });
     await repo.setSmsImportStatus(item.id, 'added');
@@ -185,6 +286,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
       await get().loadRules();
     }
     await get().refresh();
+    offerUndo(id, asTransfer ? 'Withdrawal added' : 'Expense added');
   },
 
   dismiss: async (id) => {

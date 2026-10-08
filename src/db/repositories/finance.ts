@@ -162,7 +162,7 @@ export async function postDueAutoRules(now: Date = new Date()): Promise<number> 
   );
   let posted = 0;
   for (let rule of rules) {
-    for (let i = 0; i < MAX_CATCH_UP && new Date(rule.next_due_date) <= now; i++) {
+    for (let i = 0; i < MAX_CATCH_UP && rule.is_active && new Date(rule.next_due_date) <= now; i++) {
       await postRecurringRule(rule);
       posted++;
       const refreshed = await getRow<RecurringRule>('recurring_rules', rule.id);
@@ -177,7 +177,7 @@ export async function postDueAutoRules(now: Date = new Date()): Promise<number> 
 // bill you're intentionally not paying this time (e.g. a skipped month).
 export async function skipRecurringCycle(rule: RecurringRule): Promise<void> {
   const next = advanceDueDate(rule.next_due_date, rule.frequency, rule.interval_count);
-  await updateRecurringRule(rule.id, { next_due_date: next });
+  await updateRecurringRule(rule.id, { next_due_date: next, ...endIfFinished(rule, next) });
 }
 
 export function advanceDueDate(dateIso: string, frequency: RecurringRule['frequency'], interval: number): string {
@@ -214,7 +214,13 @@ export async function postRecurringRule(rule: RecurringRule): Promise<void> {
     date: rule.next_due_date,
   });
   const next = advanceDueDate(rule.next_due_date, rule.frequency, rule.interval_count);
-  await updateRecurringRule(rule.id, { next_due_date: next });
+  await updateRecurringRule(rule.id, { next_due_date: next, ...endIfFinished(rule, next) });
+}
+
+// A rule with an end date (e.g. an instalment plan) stops once its next
+// cycle would fall after that date.
+function endIfFinished(rule: RecurringRule, next: string): Partial<RecurringRule> {
+  return rule.end_date && next > rule.end_date ? { is_active: 0 } : {};
 }
 
 // ---------- Debts ----------

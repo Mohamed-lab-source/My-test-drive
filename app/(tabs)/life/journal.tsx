@@ -6,6 +6,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useLifeStore } from '../../../src/store/lifeStore';
 import { Card } from '../../../src/ui/Card';
 import { TextField } from '../../../src/ui/TextField';
+import { Icon } from '../../../src/ui/Icon';
 import { Button } from '../../../src/ui/Button';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { formatDateKey } from '../../../src/utils/date';
@@ -24,6 +25,28 @@ const MOODS: { id: JournalMood; emoji: string; label: string }[] = [
 
 const MOOD_SCORE: Record<JournalMood, number> = { great: 5, good: 4, okay: 3, low: 2, rough: 1 };
 const TREND_DAYS = 30;
+const PROMPTS = [
+  'What made you smile today?',
+  'What is one thing you learnt today?',
+  'Which du\'a was answered for you recently?',
+  'What would make tomorrow great?',
+  'Who helped you today, and how can you thank them?',
+  'What drained your energy today?',
+  'What are you proud of this week?',
+  'What is worrying you, and what part of it is in your control?',
+  'Which prayer felt most present today?',
+  'What blessing did you take for granted today?',
+  'What is one habit you want to strengthen?',
+  'How did you treat your family today?',
+  'What did you spend money on that was worth it?',
+  'What is one thing you want to let go of?',
+  'Where did you see Allah\'s mercy today?',
+  'What did you do today just for yourself?',
+  'What conversation stayed with you today?',
+  'What are you looking forward to?',
+  'What would you tell yourself a year ago?',
+  'What small win can you celebrate today?',
+];
 const TREND_HEIGHT = 56;
 
 export default function JournalScreen() {
@@ -38,6 +61,10 @@ export default function JournalScreen() {
     return [lines[0] ?? '', lines[1] ?? '', lines[2] ?? ''];
   });
   const [saving, setSaving] = useState(false);
+  const [promptIndex, setPromptIndex] = useState(() => {
+    const now = new Date();
+    return Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000) % PROMPTS.length;
+  });
 
   const handleSave = async () => {
     if (!mood) return;
@@ -138,6 +165,15 @@ export default function JournalScreen() {
                 <Text style={[typography.caption2, { color: colors.secondaryLabel, marginTop: 4 }]}>{m.label}</Text>
               </Pressable>
             ))}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+            <Text style={[typography.subhead, { color: colors.label, flex: 1, fontStyle: 'italic' }]}>💭 {PROMPTS[promptIndex]}</Text>
+            <Pressable onPress={() => setNote((n) => (n ? n + '\n\n' : '') + PROMPTS[promptIndex] + '\n')} hitSlop={8} style={{ marginLeft: spacing.sm }}>
+              <Text style={[typography.subhead, { color: colors.blue }]}>Use</Text>
+            </Pressable>
+            <Pressable onPress={() => setPromptIndex((i) => (i + 1) % PROMPTS.length)} hitSlop={8} style={{ marginLeft: spacing.md }}>
+              <Icon name="arrow.clockwise" size={16} color={colors.blue} />
+            </Pressable>
           </View>
           <TextField placeholder="Anything on your mind? (optional)" value={note} onChangeText={setNote} multiline />
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>

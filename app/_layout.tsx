@@ -23,7 +23,18 @@ import { rescheduleExtraReminders } from '../src/notifications/extras';
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
 import { setPrayerAdjustments } from '../src/utils/prayerTimes';
+import { setUse24hClock } from '../src/utils/date';
+import { setWholeMoney } from '../src/utils/money';
 import { settingsHydrated, useSettingsStore } from '../src/store/settingsStore';
+
+// Display preferences live in plain module flags so the formatters stay pure;
+// keep them in step with Settings (including after storage rehydrates).
+const applyDisplayPrefs = (s: { use24h: boolean; wholeMoney: boolean }) => {
+  setUse24hClock(s.use24h);
+  setWholeMoney(s.wholeMoney);
+};
+applyDisplayPrefs(useSettingsStore.getState());
+useSettingsStore.subscribe(applyDisplayPrefs);
 
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();

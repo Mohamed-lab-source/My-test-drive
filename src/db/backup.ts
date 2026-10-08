@@ -41,6 +41,8 @@ const TABLES = [
   'merchant_rules',
   'weekly_goals',
   'med_logs',
+  'card_links',
+  'hifz',
 ];
 
 export async function exportAllData(): Promise<string> {

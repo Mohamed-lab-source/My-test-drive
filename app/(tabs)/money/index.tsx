@@ -17,6 +17,7 @@ import { AddTransactionSheet } from '../../../src/features/money/AddTransactionS
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
 import { LastMonthCard } from '../../../src/features/money/LastMonthCard';
+import { CardsSummaryCard } from '../../../src/features/money/CardsSummaryCard';
 import { useSmsStore } from '../../../src/sms/smsStore';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useBalanceFormatter } from '../../../src/ui/useMoney';
@@ -168,6 +169,10 @@ export default function MoneyScreen() {
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <SafeToSpendCard />
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <CardsSummaryCard />
         </View>
 
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>

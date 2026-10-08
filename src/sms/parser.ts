@@ -7,7 +7,22 @@ export interface ParsedDebit {
   currency: string;
   merchant: string | null;
   cardLast4: string | null;
-  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit' | 'credit';
+  kind: 'purchase' | 'withdrawal' | 'transfer' | 'debit' | 'credit' | 'card_payment';
+  // Which kind of card/account the bank says was used, when it says.
+  cardType: CardType | null;
+}
+
+export type CardType = 'credit' | 'debit';
+
+// "Credit Card ending 1234" / "available limit" → credit; "Debit card",
+// "account", "available balance" or an HSBC-style masked account number
+// (005-375***-013) → debit. Credit is checked first because a credit-card
+// alert can also say "account".
+export function detectCardType(raw: string): CardType | null {
+  const text = normalizeDigits(raw);
+  if (/credit\s*card|\bcc\b|card\s*credit|بطاقة\s*(?:ال)?ائتمان|الائتمانية|available\s+(?:credit\s+)?limit|الحد\s+المتاح/i.test(text)) return 'credit';
+  if (/debit\s*card|prepaid|meeza|ميزة|\baccount\b|\bacct\b|a\/c\b|حساب|available\s+balance|الرصيد|\d{3}-\d{3}\*+-\d{3}/i.test(text)) return 'debit';
+  return null;
 }
 
 const CURRENCY_ALIASES: Record<string, string> = {
@@ -121,7 +136,22 @@ export function parseDebitSms(raw: string): ParsedDebit | null {
         ? 'purchase'
         : 'debit';
 
-  return { ...money, merchant: findMerchant(text), cardLast4: findCard(text), kind };
+  return { ...money, merchant: findMerchant(text), cardLast4: findCard(text), kind, cardType: detectCardType(text) };
+}
+
+// Paying off a credit card: "Your HSBC credit card payment of EGP 3,000.00
+// has been received". Imported as a transfer from a bank account to the card.
+export function parseCardPaymentSms(raw: string): ParsedDebit | null {
+  const text = normalizeDigits(raw).replace(/\s+/g, ' ').trim();
+  if (/\b(otp|password|declined|failed|due|minimum)\b/i.test(text)) return null;
+  const isPayment =
+    /(credit\s*card|card)\s+payment/i.test(text) ||
+    /payment\s+(?:of\s+)?\S+\s*[\d,.]+\s+(?:to|towards|for)\s+your\s+(?:\w+\s+)?credit\s*card/i.test(text) ||
+    /سداد.*بطاقة/.test(text);
+  if (!isPayment || !/receiv|credited|thank|successful|تم/i.test(text)) return null;
+  const money = findAmount(text);
+  if (!money) return null;
+  return { ...money, merchant: 'Credit card payment', cardLast4: findCard(text), kind: 'card_payment', cardType: 'credit' };
 }
 
 // Money coming in: salary, transfers received, deposits and refunds.
@@ -136,7 +166,7 @@ export function parseCreditSms(raw: string): ParsedDebit | null {
   const from = text.match(/\bfrom\s+(.{2,40}?)(?=\s+(?:on|dated|to|ref|reference|into)\b|\s*[.,;]\s|\s*[.,;]?$)/i);
   const source = from && !/your|account|card|\d{4,}/i.test(from[1]) ? from[1].trim() : null;
   const label = /salary|payroll|راتب/i.test(text) ? 'Salary' : /refund|مرتجع|استرداد/i.test(text) ? 'Refund' : source;
-  return { ...money, merchant: label, cardLast4: findCard(text), kind: 'credit' };
+  return { ...money, merchant: label, cardLast4: findCard(text), kind: 'credit', cardType: detectCardType(text) };
 }
 
 // "Available balance EGP 20,000.00" → the balance the bank reports after

@@ -15,8 +15,8 @@ export async function insertSmsImport(row: Omit<SmsImport, 'status' | 'created_a
   const db = await getDb();
   const result = await db.runAsync(
     `INSERT OR IGNORE INTO sms_imports
-      (id, sms_date, sender, body, amount, currency, merchant, card_last4, kind, balance, balance_currency, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      (id, sms_date, sender, body, amount, currency, merchant, card_last4, kind, card_type, balance, balance_currency, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
     [
       row.id,
       row.sms_date,
@@ -27,6 +27,7 @@ export async function insertSmsImport(row: Omit<SmsImport, 'status' | 'created_a
       row.merchant,
       row.card_last4,
       row.kind,
+      row.card_type ?? null,
       row.balance ?? null,
       row.balance_currency ?? null,
       nowIso(),
@@ -52,11 +53,15 @@ export async function latestReportedBalance(): Promise<{ amount: number; currenc
 // Rewrites the parsed fields of an import (used when the parser improves).
 export async function updateSmsImportParsed(
   id: string,
-  fields: Pick<SmsImport, 'amount' | 'currency' | 'merchant' | 'card_last4' | 'kind'> & { balance: number | null; balance_currency: string | null }
+  fields: Pick<SmsImport, 'amount' | 'currency' | 'merchant' | 'card_last4' | 'kind'> & {
+    balance: number | null;
+    balance_currency: string | null;
+    card_type: 'credit' | 'debit' | null;
+  }
 ): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'UPDATE sms_imports SET amount = ?, currency = ?, merchant = ?, card_last4 = ?, kind = ?, balance = ?, balance_currency = ? WHERE id = ?',
-    [fields.amount, fields.currency, fields.merchant, fields.card_last4, fields.kind, fields.balance, fields.balance_currency, id]
+    'UPDATE sms_imports SET amount = ?, currency = ?, merchant = ?, card_last4 = ?, kind = ?, card_type = ?, balance = ?, balance_currency = ? WHERE id = ?',
+    [fields.amount, fields.currency, fields.merchant, fields.card_last4, fields.kind, fields.card_type, fields.balance, fields.balance_currency, id]
   );
 }

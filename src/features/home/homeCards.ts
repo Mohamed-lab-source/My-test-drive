@@ -2,6 +2,8 @@
 export const HOME_CARDS: { id: string; label: string }[] = [
   { id: 'rings', label: 'Today rings (prayers · tasks · water)' },
   { id: 'friday', label: "Friday checklist (Jumu'ah)" },
+  { id: 'seasons', label: 'Ramadan & Eid countdown' },
+  { id: 'mood', label: 'Mood check-in' },
   { id: 'verse', label: 'Verse of the day' },
   { id: 'countdown', label: 'Next countdown' },
   { id: 'water', label: 'Water' },

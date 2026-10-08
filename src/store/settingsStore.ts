@@ -92,6 +92,19 @@ interface SettingsState {
   toggleFavoriteDua: (id: string) => void;
   missedPromptDate: string | null;
   setMissedPromptDate: (v: string | null) => void;
+  cardDueReminders: boolean;
+  setCardDueReminders: (v: boolean) => void;
+  spendDigest: boolean;
+  setSpendDigest: (v: boolean) => void;
+  use24h: boolean;
+  setUse24h: (v: boolean) => void;
+  wholeMoney: boolean;
+  setWholeMoney: (v: boolean) => void;
+  recentSearches: string[];
+  addRecentSearch: (q: string) => void;
+  clearRecentSearches: () => void;
+  fitr: { people: number; perPerson: number };
+  setFitr: (v: { people: number; perPerson: number }) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -193,6 +206,24 @@ export const useSettingsStore = create<SettingsState>()(
         set((s) => ({ favoriteDuas: s.favoriteDuas.includes(id) ? s.favoriteDuas.filter((d) => d !== id) : [...s.favoriteDuas, id] })),
       missedPromptDate: null,
       setMissedPromptDate: (v) => set({ missedPromptDate: v }),
+      cardDueReminders: true,
+      setCardDueReminders: (v) => set({ cardDueReminders: v }),
+      spendDigest: false,
+      setSpendDigest: (v) => set({ spendDigest: v }),
+      use24h: false,
+      setUse24h: (v) => set({ use24h: v }),
+      wholeMoney: false,
+      setWholeMoney: (v) => set({ wholeMoney: v }),
+      recentSearches: [],
+      addRecentSearch: (q) =>
+        set((s) => {
+          const t = q.trim();
+          if (t.length < 2) return {};
+          return { recentSearches: [t, ...s.recentSearches.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(0, 8) };
+        }),
+      clearRecentSearches: () => set({ recentSearches: [] }),
+      fitr: { people: 1, perPerson: 0 },
+      setFitr: (v) => set({ fitr: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

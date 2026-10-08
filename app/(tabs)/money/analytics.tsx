@@ -15,6 +15,7 @@ import { forecastCashFlow } from '../../../src/utils/forecast';
 import { spendingInsights } from '../../../src/utils/insights';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import * as repo from '../../../src/db/repositories/finance';
+import { METHOD_LABELS, methodOf, type PaymentMethod } from '../../../src/utils/paymentMethods';
 import type { Transaction } from '../../../src/db/types';
 
 const BAR_MAX_HEIGHT = 100;
@@ -152,6 +153,51 @@ export default function AnalyticsScreen() {
     .reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
   const runwayMonths = avgMonthlyExpense > 0 ? liquid / avgMonthlyExpense : null;
 
+  // How each month's spending was paid: credit card, debit/bank or cash.
+  const byMethod = useMemo(() => {
+    const months = monthlyTrend.map((m) => ({ key: m.key, credit: 0, debit: 0, cash: 0 }));
+    for (const t of sixMonthTx) {
+      if (t.type !== 'expense') continue;
+      const row = months.find((m) => m.key === localDateKey(t.date).slice(0, 7));
+      if (!row) continue;
+      row[methodOf(accounts.find((a) => a.id === t.account_id))] += convertToBase(t.amount, t.currency, currency, fxRates);
+    }
+    return months;
+  }, [sixMonthTx, accounts, monthlyTrend, currency, fxRates]);
+  const methodMax = Math.max(1, ...byMethod.map((m) => m.credit + m.debit + m.cash));
+
+  // Average spend per weekday over the last six months.
+  const byWeekday = useMemo(() => {
+    const totals = Array(7).fill(0);
+    for (const t of sixMonthTx) {
+      if (t.type !== 'expense') continue;
+      totals[new Date(t.date).getDay()] += convertToBase(t.amount, t.currency, currency, fxRates);
+    }
+    const first = sixMonthTx.reduce((min, t) => (t.date < min ? t.date : min), new Date().toISOString());
+    const weeks = Math.max(1, (Date.now() - new Date(first).getTime()) / (7 * 86400000));
+    return totals.map((v) => v / weeks);
+  }, [sixMonthTx, currency, fxRates]);
+  const weekdayMax = Math.max(1, ...byWeekday);
+  const weekdayTop = byWeekday.indexOf(Math.max(...byWeekday));
+
+  // Month-end projection: spending so far, plus the daily pace for the rest
+  // of the month, plus recurring bills still due before it ends.
+  const projection = useMemo(() => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const day = now.getDate();
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+    const billsLeft = recurringRules
+      .filter((r) => r.is_active && !r.is_paused && r.type === 'expense' && r.next_due_date >= now.toISOString() && r.next_due_date < end)
+      .reduce((sum, r) => sum + convertToBase(r.amount, r.currency, currency, fxRates), 0);
+    const recurringPosted = monthTx
+      .filter((t) => t.type === 'expense' && t.recurring_id)
+      .reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0);
+    const spent = thisMonth.expense;
+    const pace = (spent - recurringPosted) / day;
+    return { total: spent + pace * (daysInMonth - day) + billsLeft, daysLeft: daysInMonth - day, billsLeft };
+  }, [monthTx, recurringRules, thisMonth.expense, currency, fxRates]);
+
   const biggestExpense = useMemo(
     () => monthTx.filter((t) => t.type === 'expense').sort((a, b) => b.amount - a.amount)[0],
     [monthTx]
@@ -265,6 +311,91 @@ export default function AnalyticsScreen() {
                 <Icon name="square.and.arrow.up" size={16} color={colors.blue} />
                 <Text style={[typography.subhead, { color: colors.blue, marginLeft: 6 }]}>Share summary</Text>
               </Pressable>
+            </Card>
+
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Month-end projection</Text>
+            <Card style={{ marginBottom: spacing.lg }}>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>At this pace you'll spend</Text>
+              <Text style={[typography.title1, { color: colors.label, marginTop: 2 }]}>{formatMoney(Math.round(projection.total), currency)}</Text>
+              <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                {formatMoney(thisMonth.expense, currency)} so far · {projection.daysLeft} day{projection.daysLeft === 1 ? '' : 's'} left
+                {projection.billsLeft > 0 ? ` · ${formatMoney(Math.round(projection.billsLeft), currency)} in bills still due` : ''}
+              </Text>
+              {lastMonth.expense > 0 ? (
+                <Text style={[typography.footnote, { color: projection.total > lastMonth.expense ? colors.red : colors.green, marginTop: 2 }]}>
+                  {projection.total > lastMonth.expense ? 'Above' : 'Below'} last month's {formatMoney(lastMonth.expense, currency)}
+                </Text>
+              ) : null}
+            </Card>
+
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Paid with</Text>
+            <Card style={{ marginBottom: spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: BAR_MAX_HEIGHT }}>
+                {byMethod.map((m) => (
+                  <View key={m.key} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                    {(['cash', 'debit', 'credit'] as PaymentMethod[]).map((k) =>
+                      m[k] > 0 ? (
+                        <View
+                          key={k}
+                          style={{
+                            width: 18,
+                            height: Math.max(2, (m[k] / methodMax) * BAR_MAX_HEIGHT),
+                            backgroundColor: k === 'credit' ? colors.purple : k === 'debit' ? colors.blue : colors.green,
+                          }}
+                        />
+                      ) : null
+                    )}
+                  </View>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                {byMethod.map((m) => (
+                  <Text key={m.key} style={[typography.caption2, { color: colors.tertiaryLabel, flex: 1, textAlign: 'center' }]}>
+                    {monthLabel(m.key)}
+                  </Text>
+                ))}
+              </View>
+              {(['credit', 'debit', 'cash'] as PaymentMethod[]).map((k) => {
+                const cur = byMethod[byMethod.length - 1]?.[k] ?? 0;
+                return (
+                  <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                    <Text style={[typography.subhead, { color: k === 'credit' ? colors.purple : k === 'debit' ? colors.blue : colors.green }]}>
+                      {METHOD_LABELS[k]}
+                    </Text>
+                    <Text style={[typography.subhead, { color: colors.label }]}>{formatMoney(Math.round(cur), currency)} this month</Text>
+                  </View>
+                );
+              })}
+            </Card>
+
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Spending by weekday</Text>
+            <Card style={{ marginBottom: spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 80 }}>
+                {byWeekday.map((v, i) => (
+                  <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                    <View
+                      style={{
+                        width: 20,
+                        borderRadius: 4,
+                        height: Math.max(3, (v / weekdayMax) * 80),
+                        backgroundColor: i === weekdayTop && v > 0 ? colors.red : colors.orange + '88',
+                      }}
+                    />
+                  </View>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                  <Text key={d} style={[typography.caption2, { color: colors.tertiaryLabel, flex: 1, textAlign: 'center' }]}>
+                    {d}
+                  </Text>
+                ))}
+              </View>
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>
+                {byWeekday[weekdayTop] > 0
+                  ? `You spend most on ${['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'][weekdayTop]} — about ${formatMoney(Math.round(byWeekday[weekdayTop]), currency)} on average.`
+                  : 'No spending logged yet.'}
+              </Text>
             </Card>
 
             {topMerchants.length > 0 ? (

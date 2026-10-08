@@ -35,6 +35,7 @@ interface ProductivityState {
 
   addProject: (input: Parameters<typeof repo.createProject>[0]) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
+  updateProject: (id: string, patch: Partial<Project>) => Promise<void>;
   moveProject: (id: string, direction: 'up' | 'down') => Promise<void>;
   moveTask: (id: string, direction: 'up' | 'down') => Promise<void>;
 
@@ -111,6 +112,10 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
 
   addProject: async (input) => {
     await repo.createProject(input);
+    await get().refreshProjects();
+  },
+  updateProject: async (id, patch) => {
+    await repo.updateProject(id, patch);
     await get().refreshProjects();
   },
   removeProject: async (id) => {

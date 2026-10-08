@@ -9,6 +9,7 @@ import { IconCircle } from '../src/ui/IconCircle';
 import { Icon } from '../src/ui/Icon';
 import { EmptyState } from '../src/ui/EmptyState';
 import { searchAll, type SearchResult, type SearchResultType } from '../src/db/search';
+import { useSettingsStore } from '../src/store/settingsStore';
 
 const TYPE_META: Record<SearchResultType, { icon: string; color: string; route: string }> = {
   transaction: { icon: 'banknote.fill', color: '#34C759', route: '/money/transactions' },
@@ -27,6 +28,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const { recentSearches, addRecentSearch, clearRecentSearches } = useSettingsStore();
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -44,6 +46,8 @@ export default function SearchScreen() {
             value={query}
             onChangeText={setQuery}
             autoFocus
+            returnKeyType="search"
+            onSubmitEditing={() => addRecentSearch(query)}
             style={{ marginBottom: 0 }}
           />
         </View>
@@ -53,7 +57,39 @@ export default function SearchScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
-        {query.trim().length === 0 ? null : results.length === 0 ? (
+        {query.trim().length === 0 ? (
+          recentSearches.length > 0 ? (
+            <View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel, textTransform: 'uppercase' }]}>Recent</Text>
+                <Pressable onPress={clearRecentSearches} hitSlop={8}>
+                  <Text style={[typography.footnote, { color: colors.blue }]}>Clear</Text>
+                </Pressable>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                {recentSearches.map((q) => (
+                  <Pressable
+                    key={q}
+                    onPress={() => setQuery(q)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: colors.secondarySystemGroupedBackground,
+                      borderRadius: 16,
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: 6,
+                      marginRight: spacing.sm,
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <Icon name="clock.fill" size={12} color={colors.secondaryLabel} />
+                    <Text style={[typography.subhead, { color: colors.label, marginLeft: 6 }]}>{q}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null
+        ) : results.length === 0 ? (
           <EmptyState icon="magnifyingglass" title="No results" message="Try a different search term." />
         ) : (
           <Card padded={false}>
@@ -62,7 +98,10 @@ export default function SearchScreen() {
               return (
                 <Pressable
                   key={`${r.type}-${r.id}`}
-                  onPress={() => router.push(meta.route as any)}
+                  onPress={() => {
+                    addRecentSearch(query);
+                    router.push(meta.route as any);
+                  }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',

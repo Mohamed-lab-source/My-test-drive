@@ -4,6 +4,7 @@ import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChipSelector } from '../../ui/ChipSelector';
+import { ESTIMATE_OPTIONS } from '../../utils/estimate';
 import { Button } from '../../ui/Button';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
@@ -34,6 +35,7 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
   const [repeat, setRepeat] = useState<RecurringFrequency | 'none'>('none');
   const [projectId, setProjectId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [estimate, setEstimate] = useState(0);
 
   const canSave = title.trim().length > 0;
 
@@ -53,12 +55,14 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
         sort_order: Date.now(),
         repeat_frequency: repeat === 'none' ? null : repeat,
         repeat_interval: repeat === 'none' ? null : 1,
+        estimate_minutes: estimate || null,
       });
       setTitle('');
       setNotes('');
       setPriorityIndex(1);
       setWhen('today');
       setRepeat('none');
+      setEstimate(0);
       onClose();
     } finally {
       setSaving(false);
@@ -82,6 +86,12 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
           <ChipSelector options={REPEAT_OPTIONS} selectedId={repeat} onSelect={(id) => setRepeat(id as RecurringFrequency | 'none')} />
         </View>
 
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+          Time estimate
+        </Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector options={ESTIMATE_OPTIONS} selectedId={String(estimate)} onSelect={(id) => setEstimate(Number(id))} />
+        </View>
         <View style={{ marginBottom: spacing.md }}>
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
             Priority
@@ -96,7 +106,7 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
             </Text>
             <View style={{ marginBottom: spacing.md }}>
               <ChipSelector
-                options={projects.map((p) => ({ id: p.id, label: p.name, color: p.color, icon: p.icon }))}
+                options={projects.filter((p) => !p.is_archived).map((p) => ({ id: p.id, label: p.name, color: p.color, icon: p.icon }))}
                 selectedId={projectId}
                 onSelect={(id) => setProjectId(id === projectId ? null : id)}
               />

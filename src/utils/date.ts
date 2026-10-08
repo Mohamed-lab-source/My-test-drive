@@ -22,9 +22,19 @@ export function formatDateLong(iso: string): string {
   return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-export function formatTime(iso: string): string {
-  const d = new Date(iso);
+// Set from settings at launch; when on, times show as "17:05" everywhere.
+let use24h = false;
+export function setUse24hClock(on: boolean): void {
+  use24h = on;
+}
+
+function clockText(d: Date): string {
+  if (use24h) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+export function formatTime(iso: string): string {
+  return clockText(new Date(iso));
 }
 
 export function formatRelativeDay(iso: string): string {
@@ -64,5 +74,5 @@ export function daysUntilAnnual(month: number, day: number, now: Date = new Date
 // 'HH:MM' (24h) → a locale time like "7:00 AM".
 export function formatClock(hhmm: string): string {
   const [h, m] = hhmm.split(':').map(Number);
-  return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return clockText(new Date(2000, 0, 1, h, m));
 }

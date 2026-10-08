@@ -13,6 +13,7 @@ import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { showUndoDelete } from '../../../src/ui/undo';
 import { AddHabitSheet } from '../../../src/features/life/AddHabitSheet';
+import { HabitWeekGrid } from '../../../src/features/life/HabitWeekGrid';
 import * as habitsRepo from '../../../src/db/repositories/habits';
 import { todayKey } from '../../../src/db/client';
 import { longestStreak } from '../../../src/utils/streaks';
@@ -143,9 +144,12 @@ export default function HabitsScreen() {
         {habits.length === 0 ? (
           <EmptyState icon="flame.fill" title="No habits yet" message="Track anything you want to do daily and build a streak." />
         ) : (
-          habits.map((habit, i) => (
+          <>
+          <HabitWeekGrid />
+          {habits.map((habit, i) => (
             <HabitCard key={habit.id} habit={habit} onDelete={() => handleDelete(habit)} canUp={i > 0} canDown={i < habits.length - 1} />
-          ))
+          ))}
+          </>
         )}
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />
