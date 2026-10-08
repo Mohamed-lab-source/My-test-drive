@@ -19,6 +19,7 @@ const SECTION_LABEL_KEYS: Record<HomeSectionKey, TranslationKey> = {
   leftovers: "customizeHome.leftovers",
   recentlyViewed: "customizeHome.recentlyViewed",
   recentlyCooked: "customizeHome.recentlyCooked",
+  recentlyRated: "customizeHome.recentlyRated",
   trending: "customizeHome.trending",
 };
 

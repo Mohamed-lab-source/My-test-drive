@@ -11,6 +11,7 @@ export type HomeSectionKey =
   | "leftovers"
   | "recentlyViewed"
   | "recentlyCooked"
+  | "recentlyRated"
   | "trending";
 
 export const HOME_SECTION_KEYS: HomeSectionKey[] = [
@@ -21,6 +22,7 @@ export const HOME_SECTION_KEYS: HomeSectionKey[] = [
   "leftovers",
   "recentlyViewed",
   "recentlyCooked",
+  "recentlyRated",
   "trending",
 ];
 

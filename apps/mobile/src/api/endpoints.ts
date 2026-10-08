@@ -67,6 +67,7 @@ export async function fetchRecipes(params: {
   tag?: string;
   dishType?: string;
   occasion?: string;
+  ingredients?: string;
   q?: string;
 }) {
   const { data } = await api.get<RecipeSummary[]>("/recipes", { params });

@@ -20,6 +20,7 @@ export type RootStackParamList = {
     sortByCost?: boolean;
     sortByRating?: boolean;
     lightOnly?: boolean;
+    maxTotalMinutes?: number;
   };
   RecipeDetail: { slug: string; focusRating?: boolean };
   ShoppingListDetail: { id: string };

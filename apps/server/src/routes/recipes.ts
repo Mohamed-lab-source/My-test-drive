@@ -141,6 +141,8 @@ const listQuerySchema = z.object({
   tag: z.string().optional(),
   dishType: z.string().optional(),
   occasion: z.string().optional(),
+  // Comma-separated Ingredient ids -- matches recipes using at least one.
+  ingredients: z.string().optional(),
   q: z.string().optional(),
   lang: z.string().optional(),
 });
@@ -151,8 +153,9 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { cuisine, tag, dishType, occasion, q } = parsed.data;
+  const { cuisine, tag, dishType, occasion, ingredients, q } = parsed.data;
   const lang = parseLang(parsed.data.lang);
+  const ingredientIds = ingredients ? ingredients.split(",").filter(Boolean) : [];
 
   const recipes = await prisma.recipe.findMany({
     where: {
@@ -160,6 +163,7 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
       dishType: dishType ? { equals: dishType, mode: "insensitive" } : undefined,
       tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
       occasions: occasion ? { has: occasion.toUpperCase() as Occasion } : undefined,
+      ingredients: ingredientIds.length > 0 ? { some: { ingredientId: { in: ingredientIds } } } : undefined,
       OR: q
         ? [
             { title: { contains: q, mode: "insensitive" } },

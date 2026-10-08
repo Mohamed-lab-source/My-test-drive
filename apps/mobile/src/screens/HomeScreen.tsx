@@ -19,6 +19,7 @@ import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
+import { useRecentlyRated } from "../context/RecentlyRatedContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useHomeLayout } from "../context/HomeLayoutContext";
 import { daysUntil, useLeftovers } from "../context/LeftoversContext";
@@ -80,6 +81,7 @@ type Props = CompositeScreenProps<
 export function HomeScreen({ navigation }: Props) {
   const { user, isAuthenticated } = useAuth();
   const { displayStreak, cookCounts, recentlyCooked } = useCookStreak();
+  const { recentlyRated } = useRecentlyRated();
   const { favoriteRecipes } = useFavorites();
   const { isVisible: isSectionVisible } = useHomeLayout();
   const { leftovers, removeLeftover, restoreLeftover } = useLeftovers();
@@ -416,6 +418,42 @@ export function HomeScreen({ navigation }: Props) {
               ))}
             </View>
 
+            <Text style={styles.sectionTitle}>{t("home.cookTimeTitle")}</Text>
+            <View style={styles.moodRow}>
+              {[
+                {
+                  key: "under15",
+                  label: t("home.cookTimeUnder15"),
+                  onPress: () =>
+                    navigation.navigate("RecipeList", { title: t("home.cookTimeUnder15Title"), maxTotalMinutes: 15 }),
+                },
+                {
+                  key: "15to30",
+                  label: t("home.cookTime15to30"),
+                  onPress: () =>
+                    navigation.navigate("RecipeList", { title: t("home.cookTime15to30Title"), maxTotalMinutes: 30 }),
+                },
+                {
+                  key: "30to60",
+                  label: t("home.cookTime30to60"),
+                  onPress: () =>
+                    navigation.navigate("RecipeList", { title: t("home.cookTime30to60Title"), maxTotalMinutes: 60 }),
+                },
+                {
+                  key: "over60",
+                  label: t("home.cookTimeOver60"),
+                  onPress: () =>
+                    navigation.navigate("RecipeList", { title: t("home.cookTimeOver60Title"), maxTotalMinutes: 999 }),
+                },
+              ].map((bucket, i) => (
+                <FadeSlideIn key={bucket.key} index={i}>
+                  <AnimatedPressable style={styles.moodTile} pressScale={0.92} onPress={bucket.onPress}>
+                    <Text style={styles.moodTileText}>{bucket.label}</Text>
+                  </AnimatedPressable>
+                </FadeSlideIn>
+              ))}
+            </View>
+
             {trending.length > 0 && isSectionVisible("trending") ? (
               <>
                 <Text style={styles.sectionTitle}>{t("home.trendingTitle")}</Text>
@@ -453,6 +491,29 @@ export function HomeScreen({ navigation }: Props) {
                         <Text style={styles.recentTitle} numberOfLines={2}>
                           {r.title}
                         </Text>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
+
+            {recentlyRated.length > 0 && isSectionVisible("recentlyRated") ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.recentlyRatedTitle")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentScroll}>
+                  {recentlyRated.map((r, i) => (
+                    <FadeSlideIn key={r.slug} index={i}>
+                      <AnimatedPressable
+                        style={styles.recentCard}
+                        pressScale={0.96}
+                        onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
+                      >
+                        <Text style={styles.recentEmoji}>{CUISINE_EMOJI[r.cuisineSlug] ?? "🍽️"}</Text>
+                        <Text style={styles.recentTitle} numberOfLines={2}>
+                          {r.title}
+                        </Text>
+                        <Text style={styles.recentRatingStars}>{"★".repeat(r.score)}{"☆".repeat(5 - r.score)}</Text>
                       </AnimatedPressable>
                     </FadeSlideIn>
                   ))}
@@ -939,6 +1000,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     recentEmoji: { fontSize: 28 },
     recentTitle: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: spacing(1), textAlign: "center" },
+    recentRatingStars: { fontSize: 11, color: colors.primary, marginTop: spacing(0.5), textAlign: "center" },
     cookAgainButton: {
       position: "absolute",
       top: spacing(0.75),

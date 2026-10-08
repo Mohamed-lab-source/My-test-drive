@@ -37,6 +37,7 @@ import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
 import { useRecentlyViewed } from "../context/RecentlyViewedContext";
+import { useRecentlyRated } from "../context/RecentlyRatedContext";
 import { useNotes } from "../context/NotesContext";
 import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
@@ -77,6 +78,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { preference: localPreference } = useLocalPreference();
   const myAllergies = useMyAllergies();
   const { addRecent } = useRecentlyViewed();
+  const { addRated } = useRecentlyRated();
   const { plan, setPlan } = useMealPlan();
   const { cookCountFor } = useCookStreak();
   const { getNote, setNote } = useNotes();
@@ -329,6 +331,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           : others;
         return { ...prev, avgRating: result.average, ratingCount: result.count, reviews };
       });
+      addRated({ slug: recipe.slug, title: recipe.title, cuisineSlug: recipe.cuisine.slug, score });
     } catch {
       setMyRating(previous);
       Alert.alert(t("recipeDetail.rateError"));

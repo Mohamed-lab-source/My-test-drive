@@ -6,6 +6,7 @@ import { LocalPreferenceProvider } from "./src/context/LocalPreferenceContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
 import { UnitsProvider } from "./src/context/UnitsContext";
 import { RecentlyViewedProvider } from "./src/context/RecentlyViewedContext";
+import { RecentlyRatedProvider } from "./src/context/RecentlyRatedContext";
 import { NotesProvider } from "./src/context/NotesContext";
 import { MealPlanProvider } from "./src/context/MealPlanContext";
 import { CookStreakProvider } from "./src/context/CookStreakContext";
@@ -41,29 +42,31 @@ export default function App() {
               <AuthProvider>
                 <FavoritesProvider>
                   <RecentlyViewedProvider>
-                    <NotesProvider>
-                      <MealPlanProvider>
-                        <CookStreakProvider>
-                          <LeftoversProvider>
-                            <HomeLayoutProvider>
-                              <TextSizeProvider>
-                                <ToastProvider>
-                                  <PantryCheckProvider>
-                                    <WhatsNewProvider>
-                                      <CollectionsProvider>
-                                        <BadgesProvider>
-                                          <AppShell />
-                                        </BadgesProvider>
-                                      </CollectionsProvider>
-                                    </WhatsNewProvider>
-                                  </PantryCheckProvider>
-                                </ToastProvider>
-                              </TextSizeProvider>
-                            </HomeLayoutProvider>
-                          </LeftoversProvider>
-                        </CookStreakProvider>
-                      </MealPlanProvider>
-                    </NotesProvider>
+                    <RecentlyRatedProvider>
+                      <NotesProvider>
+                        <MealPlanProvider>
+                          <CookStreakProvider>
+                            <LeftoversProvider>
+                              <HomeLayoutProvider>
+                                <TextSizeProvider>
+                                  <ToastProvider>
+                                    <PantryCheckProvider>
+                                      <WhatsNewProvider>
+                                        <CollectionsProvider>
+                                          <BadgesProvider>
+                                            <AppShell />
+                                          </BadgesProvider>
+                                        </CollectionsProvider>
+                                      </WhatsNewProvider>
+                                    </PantryCheckProvider>
+                                  </ToastProvider>
+                                </TextSizeProvider>
+                              </HomeLayoutProvider>
+                            </LeftoversProvider>
+                          </CookStreakProvider>
+                        </MealPlanProvider>
+                      </NotesProvider>
+                    </RecentlyRatedProvider>
                   </RecentlyViewedProvider>
                 </FavoritesProvider>
               </AuthProvider>
