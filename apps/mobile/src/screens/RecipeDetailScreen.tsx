@@ -622,6 +622,23 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
         />
         <View style={styles.shareButton}>
           <PrimaryButton
+            label={t("recipeDetail.miseEnPlace")}
+            variant="outline"
+            onPress={() =>
+              navigation.navigate("MiseEnPlace", {
+                slug: recipe.slug,
+                title: recipe.title,
+                cuisineSlug: recipe.cuisine.slug,
+                steps: recipe.steps,
+                ingredients: scaledIngredients,
+                servings,
+                myRating,
+              })
+            }
+          />
+        </View>
+        <View style={styles.shareButton}>
+          <PrimaryButton
             label={t("recipeDetail.planShoppingList")}
             variant="outline"
             onPress={() =>

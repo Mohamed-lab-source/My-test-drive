@@ -9,7 +9,7 @@ import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { StepTimer } from "../components/StepTimer";
 import { StreakCelebration } from "../components/StreakCelebration";
-import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
+import { classifyStepType, STEP_TYPE_EMOJI } from "../utils/stepType";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
@@ -18,6 +18,7 @@ import { useLeftovers } from "../context/LeftoversContext";
 import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
 import { intersectAllergens, useMyAllergies } from "../utils/allergens";
+import { clearActiveCookSession, saveActiveCookSession } from "../utils/activeCookSession";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
 
@@ -27,7 +28,7 @@ const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 200, 365];
 
 export function CookModeScreen({ route, navigation }: Props) {
   useKeepAwake();
-  const { slug, title, cuisineSlug, steps, ingredients, servings, myRating } = route.params;
+  const { slug, title, cuisineSlug, steps, ingredients, servings, myRating, initialStepIndex } = route.params;
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
@@ -36,7 +37,7 @@ export function CookModeScreen({ route, navigation }: Props) {
   const { addLeftover } = useLeftovers();
   const { scale: textScale } = useTextSize();
   const styles = useMemo(() => createStyles(colors, textScale), [colors, textScale]);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(initialStepIndex ?? 0);
   const [ingredientsVisible, setIngredientsVisible] = useState(false);
   const [allStepsVisible, setAllStepsVisible] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -52,6 +53,11 @@ export function CookModeScreen({ route, navigation }: Props) {
       return next;
     });
   };
+
+  useEffect(() => {
+    saveActiveCookSession({ slug, title, cuisineSlug, stepIndex: index, totalSteps: steps.length, servings });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
 
   const step = steps[index];
   const isLast = index === steps.length - 1;
@@ -117,6 +123,7 @@ export function CookModeScreen({ route, navigation }: Props) {
 
   const goNext = () => {
     if (isLast) {
+      clearActiveCookSession();
       const streak = recordCooked({ slug, title, cuisineSlug });
       if (STREAK_MILESTONES.includes(streak)) {
         setCelebrationStreak(streak);
@@ -184,7 +191,7 @@ export function CookModeScreen({ route, navigation }: Props) {
 
       <ScrollView contentContainerStyle={styles.content}>
         <FadeSlideIn key={step.order} style={styles.stepContent}>
-          <Text style={styles.emoji}>{CUISINE_EMOJI[cuisineSlug] ?? "🍽️"}</Text>
+          <Text style={styles.emoji}>{STEP_TYPE_EMOJI[classifyStepType(step.instruction)]}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{step.order}</Text>
           </View>

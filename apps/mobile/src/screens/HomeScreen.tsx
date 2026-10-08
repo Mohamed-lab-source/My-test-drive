@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { CompositeScreenProps } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList, RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
@@ -42,6 +43,7 @@ import { FadeSlideIn } from "../components/FadeSlideIn";
 import { Pulse } from "../components/Pulse";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { getRamadanStatus } from "../utils/islamicCalendar";
+import { clearActiveCookSession, getActiveCookSession, type ActiveCookSession } from "../utils/activeCookSession";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
@@ -103,6 +105,7 @@ export function HomeScreen({ navigation }: Props) {
   const [cookingSlug, setCookingSlug] = useState<string | null>(null);
   const [dailyRecipe, setDailyRecipe] = useState<RecipeSummary | null>(null);
   const [trending, setTrending] = useState<RecipeSummary[]>([]);
+  const [activeCookSession, setActiveCookSession] = useState<ActiveCookSession | null>(null);
 
   useEffect(() => {
     const todayKey = new Date().toISOString().slice(0, 10);
@@ -115,6 +118,36 @@ export function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     fetchTrending().then(setTrending).catch(() => {});
   }, [locale]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getActiveCookSession().then(setActiveCookSession);
+    }, [])
+  );
+
+  const resumeCooking = async () => {
+    if (!activeCookSession) return;
+    try {
+      const detail = await fetchRecipeDetail(activeCookSession.slug);
+      navigation.navigate("CookMode", {
+        slug: detail.slug,
+        title: detail.title,
+        cuisineSlug: detail.cuisine.slug,
+        steps: detail.steps,
+        ingredients: detail.ingredients,
+        servings: activeCookSession.servings,
+        myRating: detail.myRating,
+        initialStepIndex: Math.min(activeCookSession.stepIndex, detail.steps.length - 1),
+      });
+    } catch {
+      // Recipe may have changed or be unavailable; nothing to recover into.
+    }
+  };
+
+  const dismissCookingSession = () => {
+    clearActiveCookSession();
+    setActiveCookSession(null);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -254,6 +287,34 @@ export function HomeScreen({ navigation }: Props) {
                       : t("home.ramadanUpcomingBanner", { days: ramadanStatus.daysUntilRamadan })}
                 </Text>
               </View>
+            ) : null}
+
+            {activeCookSession ? (
+              <AnimatedPressable style={styles.continueCookingCard} pressScale={0.98} onPress={resumeCooking}>
+                <View style={styles.continueCookingRow}>
+                  <Text style={styles.continueCookingEmoji}>{CUISINE_EMOJI[activeCookSession.cuisineSlug] ?? "🍽️"}</Text>
+                  <View style={styles.continueCookingTextCol}>
+                    <Text style={styles.continueCookingLabel}>{t("home.continueCookingLabel")}</Text>
+                    <Text style={styles.continueCookingTitle} numberOfLines={1}>
+                      {activeCookSession.title}
+                    </Text>
+                    <Text style={styles.continueCookingMeta}>
+                      {t("home.continueCookingStep", {
+                        current: activeCookSession.stepIndex + 1,
+                        total: activeCookSession.totalSteps,
+                      })}
+                    </Text>
+                  </View>
+                  <AnimatedPressable
+                    style={styles.continueCookingDismiss}
+                    pressScale={0.85}
+                    onPress={dismissCookingSession}
+                    accessibilityLabel={t("home.continueCookingDismiss")}
+                  >
+                    <Text style={styles.continueCookingDismissText}>✕</Text>
+                  </AnimatedPressable>
+                </View>
+              </AnimatedPressable>
             ) : null}
 
             {showingOfflineCache ? (
@@ -708,6 +769,29 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: spacing(1.5),
     },
     seasonalBannerText: { color: "#fff", fontSize: 13, fontWeight: "700", textAlign: "center" },
+    continueCookingCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      padding: spacing(1.5),
+      marginTop: spacing(1.5),
+    },
+    continueCookingRow: { flexDirection: "row", alignItems: "center" },
+    continueCookingEmoji: { fontSize: 32, marginEnd: spacing(1.5) },
+    continueCookingTextCol: { flex: 1 },
+    continueCookingLabel: { fontSize: 11, fontWeight: "800", color: colors.primaryDark },
+    continueCookingTitle: { fontSize: 14, fontWeight: "700", color: colors.text, marginTop: 2 },
+    continueCookingMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    continueCookingDismiss: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginStart: spacing(1),
+    },
+    continueCookingDismissText: { color: colors.textMuted, fontSize: 12, fontWeight: "800" },
     cookTonightCard: {
       backgroundColor: colors.surface,
       borderRadius: radius.md,

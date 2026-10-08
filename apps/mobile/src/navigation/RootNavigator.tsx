@@ -28,6 +28,7 @@ import { SubstitutionFinderScreen } from "../screens/SubstitutionFinderScreen";
 import { CustomizeHomeScreen } from "../screens/CustomizeHomeScreen";
 import { CookingStatsScreen } from "../screens/CookingStatsScreen";
 import { BadgesScreen } from "../screens/BadgesScreen";
+import { MiseEnPlaceScreen } from "../screens/MiseEnPlaceScreen";
 import { WeeklyRecapScreen } from "../screens/WeeklyRecapScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
@@ -95,6 +96,11 @@ export function RootNavigator() {
           name="CookMode"
           component={CookModeScreen}
           options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="MiseEnPlace"
+          component={MiseEnPlaceScreen}
+          options={{ title: t("miseEnPlace.title") }}
         />
         <Stack.Screen
           name="Login"

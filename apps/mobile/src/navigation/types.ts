@@ -33,6 +33,16 @@ export type RootStackParamList = {
     ingredients: RecipeIngredient[];
     servings: number;
     myRating?: number | null;
+    initialStepIndex?: number;
+  };
+  MiseEnPlace: {
+    slug: string;
+    title: string;
+    cuisineSlug: string;
+    steps: RecipeStep[];
+    ingredients: RecipeIngredient[];
+    servings: number;
+    myRating?: number | null;
   };
   Login: undefined;
   Signup: undefined;
