@@ -274,8 +274,12 @@ class _FriendLists extends ConsumerWidget {
       }
     }
 
+    final groups = ref.watch(myGroupsProvider).value ?? const <Group>[];
+    int together(String other) => groups.where((g) => g.memberUids.contains(other)).length;
+
     Widget tile(Friendship f, {Widget? trailing}) {
       final p = profiles[f.otherUid(uid)];
+      final shared = f.status == FriendshipStatus.accepted ? together(f.otherUid(uid)) : 0;
       return ListTile(
         contentPadding: EdgeInsets.zero,
         onTap: f.status == FriendshipStatus.accepted && p != null
@@ -283,7 +287,12 @@ class _FriendLists extends ConsumerWidget {
             : null,
         leading: Avatar(profile: p),
         title: Text(p?.displayName ?? '…'),
-        subtitle: p?.username == null ? null : Text('@${p!.username}'),
+        subtitle: p?.username == null && shared == 0
+            ? null
+            : Text([
+                if (p?.username != null) '@${p!.username}',
+                if (shared > 0) trf('{n} groups together', {'n': shared}),
+              ].join(' · ')),
         trailing: trailing,
       );
     }
@@ -325,7 +334,20 @@ class _FriendLists extends ConsumerWidget {
               .compareTo((profiles[b.otherUid(uid)]?.displayName ?? '').toLowerCase())))
           tile(f,
               trailing: PopupMenuButton<String>(
-                onSelected: (_) => guard(context, () => repo.remove(f.id)),
+                onSelected: (_) async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (c) => AlertDialog(
+                      title: Text(tr('Remove this friend?')),
+                      content: Text(tr('They won\'t be told. You can add each other again later.')),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(c, false), child: Text(tr('Cancel'))),
+                        FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(tr('Remove'))),
+                      ],
+                    ),
+                  );
+                  if (ok == true && context.mounted) await guard(context, () => repo.remove(f.id));
+                },
                 itemBuilder: (_) => [
                   PopupMenuItem(value: 'remove', child: Text(tr('Remove friend'))),
                 ],

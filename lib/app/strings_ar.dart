@@ -1106,4 +1106,12 @@ const arabic = <String, String>{
   'e.g. Our usual Friday': 'مثلاً: جمعتنا المعتادة',
   '{t}° · {r}% rain': '{t}° · مطر {r}%',
   '⭐ = the most comfortable day (least rain, mildest heat).': '⭐ = أريح يوم (أقل مطر وأخف حر).',
+  'Delete "{name}"?': 'تمسح "{name}"؟',
+  'Pick one for us': 'اختار لنا واحد',
+  'Remove this friend?': 'تشيل الصاحب ده؟',
+  'Share list': 'شارك القايمة',
+  'The places stay in Khroga; only this list goes.': 'الأماكن هتفضل في خروجة؛ القايمة بس هي اللي هتتمسح.',
+  'They won\'t be told. You can add each other again later.': 'مش هيتقاله. تقدروا تضيفوا بعض تاني بعدين.',
+  '{n} groups together': '{n} جروبات مع بعض',
+  '🕌 During your outing: {list}': '🕌 أثناء خروجتك: {list}',
 };

@@ -1,6 +1,10 @@
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../../app/helpers.dart' show placeChatText;
 
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -53,6 +57,27 @@ class ListsScreen extends ConsumerWidget {
                               padding: const EdgeInsets.fromLTRB(KSpace.sm, 0, KSpace.sm, KSpace.sm),
                               child: PlaceTile(place: byId[id]!),
                             ),
+                        if (e.value.any((id) => byId[id] != null))
+                          Wrap(spacing: KSpace.xs, children: [
+                            TextButton.icon(
+                              icon: const Icon(Icons.share_outlined),
+                              label: Text(tr('Share list')),
+                              onPressed: () => SharePlus.instance.share(ShareParams(
+                                  text: [
+                                    '📋 ${e.key}',
+                                    for (final id in e.value)
+                                      if (byId[id] != null) placeChatText(byId[id]!),
+                                  ].join('\n\n'))),
+                            ),
+                            TextButton.icon(
+                              icon: const Icon(Icons.casino_outlined),
+                              label: Text(tr('Pick one for us')),
+                              onPressed: () {
+                                final ids = e.value.where((id) => byId[id] != null).toList()..shuffle();
+                                context.push('/place/${ids.first}');
+                              },
+                            ),
+                          ]),
                         TextButton.icon(
                           onPressed: () async {
                             final controller = TextEditingController(text: e.key);
@@ -78,7 +103,20 @@ class ListsScreen extends ConsumerWidget {
                         TextButton.icon(
                           style: TextButton.styleFrom(
                               foregroundColor: Theme.of(context).colorScheme.error),
-                          onPressed: () => ref.read(placeListsProvider.notifier).delete(e.key),
+                          onPressed: () async {
+                            final ok = await showDialog<bool>(
+                              context: context,
+                              builder: (d) => AlertDialog(
+                                title: Text(trf('Delete "{name}"?', {'name': e.key})),
+                                content: Text(tr('The places stay in Khroga; only this list goes.')),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(d, false), child: Text(tr('Cancel'))),
+                                  FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(tr('Delete'))),
+                                ],
+                              ),
+                            );
+                            if (ok == true) ref.read(placeListsProvider.notifier).delete(e.key);
+                          },
                           icon: const Icon(Icons.delete_outline),
                           label: Text(tr('Delete this list')),
                         ),

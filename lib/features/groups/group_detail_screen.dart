@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/extras.dart';
 import '../../app/helpers.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -370,6 +371,7 @@ class _Header extends ConsumerWidget {
                     ),
                 ],
               ),
+              if (group.scheduledAt != null) _OutingDay(group: group),
               if (group.planTitle != null) ...[
                 const SizedBox(height: KSpace.xs),
                 InkWell(
@@ -383,7 +385,7 @@ class _Header extends ConsumerWidget {
                         const SizedBox(width: KSpace.sm),
                         Expanded(
                           child: Text(
-                            '${group.planTitle} · ${group.planStops.length} stops',
+                            '${group.planTitle} · ${trf('{n} stops', {'n': group.planStops.length})}',
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -1857,3 +1859,39 @@ Future<String?> askReportReason(BuildContext context) => showDialog<String>(
         ],
       ),
     );
+
+/// Under the outing date: how long until it, the real forecast (when it's
+/// within the next week), sunset, and a fixed public holiday.
+class _OutingDay extends ConsumerWidget {
+  const _OutingDay({required this.group});
+
+  final Group group;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final when = group.scheduledAt!;
+    final now = DateTime.now();
+    final city = ref.watch(cityProvider);
+    final day = DateTime(when.year, when.month, when.day);
+    final forecast = (ref.watch(weekForecastProvider(city)).value ?? const <DayForecast>[])
+        .where((d) => sameDay(d.day, day))
+        .firstOrNull;
+    final first = group.planStops.firstOrNull;
+    final lat = (first?['lat'] as num?)?.toDouble() ?? cityCenters[city]?.$1;
+    final lng = (first?['lng'] as num?)?.toDouble() ?? cityCenters[city]?.$2;
+    final sun = lat == null || lng == null ? null : sunTimes(day, lat, lng);
+    final holiday = egyptHoliday(day);
+    final parts = [
+      ?daysUntilText(day, now),
+      if (forecast != null) trf('{t}° · {r}% rain', {'t': forecast.maxC.round(), 'r': forecast.rainPct}),
+      if (sun != null) trf('🌇 Sunset at {time}', {'time': hhmmLocal(sun.sunset)}),
+      ?holiday,
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 28, top: 2),
+      child: Text(parts.join(' · '),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
+    );
+  }
+}

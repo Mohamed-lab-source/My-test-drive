@@ -93,6 +93,31 @@ double? _minutesFromNoon(double altitude, double lat, double decl) {
   );
 }
 
+/// Prayers that fall between [start] and [end] ("HH:mm", phone time) on
+/// [day], e.g. [('Maghrib', '17:32')]. Handy for planning a break.
+List<(String, String)> prayersDuring(DateTime day, String start, String end, double lat, double lng) {
+  final t = prayerTimes(day, lat, lng);
+  int? mins(String hhmm) {
+    final p = hhmm.split(':');
+    return p.length == 2 ? (int.tryParse(p[0]) ?? 0) * 60 + (int.tryParse(p[1]) ?? 0) : null;
+  }
+
+  final a = mins(start), b = mins(end);
+  if (t == null || a == null || b == null) return const [];
+  final out = <(String, String)>[];
+  for (final (name, time) in [
+    ('Dhuhr', t.dhuhr),
+    ('Asr', t.asr),
+    ('Maghrib', t.maghrib),
+    ('Isha', t.isha),
+  ]) {
+    final local = hhmmLocal(time);
+    final m = mins(local)!;
+    if (m >= a && m <= (b < a ? b + 24 * 60 : b)) out.add((tr(name), local));
+  }
+  return out;
+}
+
 /// One day's forecast from Open-Meteo.
 typedef DayForecast = ({DateTime day, double maxC, int rainPct});
 

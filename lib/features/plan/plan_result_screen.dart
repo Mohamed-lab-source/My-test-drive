@@ -1235,7 +1235,16 @@ String? _dayFacts(OutingPlan plan) {
   final c = at != null ? (at.lat!, at.lng!) : cityCenters[plan.request.city];
   final sun = outdoor.isEmpty || c == null ? null : sunTimes(day, c.$1, c.$2);
   final holiday = egyptHoliday(day);
+  final start = plan.stops.firstOrNull?.startTime;
+  final end = planEndTime(plan.stops);
+  final spot = plan.stops.where((s) => s.hasLocation).firstOrNull;
+  final city = cityCenters[plan.request.city];
+  final pray = start == null || end == null
+      ? const <(String, String)>[]
+      : prayersDuring(day, start, end, spot?.lat ?? city?.$1 ?? 30.0444, spot?.lng ?? city?.$2 ?? 31.2357);
   final lines = [
+    if (pray.isNotEmpty)
+      trf('🕌 During your outing: {list}', {'list': readableList([for (final (n, t) in pray) '$n $t'])}),
     if (sun != null) trf('Sunset at {time}. Outdoor stops are nicest before then.', {'time': hhmmLocal(sun.sunset)}),
     if (holiday != null) trf('{name} is a public holiday: places may be busier and hours may differ.', {'name': holiday}),
   ];

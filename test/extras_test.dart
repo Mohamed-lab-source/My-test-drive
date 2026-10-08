@@ -119,4 +119,14 @@ void main() {
     expect(bestDay(const []), isNull);
     expect(parseWeek(const {}), isEmpty);
   });
+
+  test('prayers during a plan', () {
+    // In the test, the phone's clock is UTC: Cairo 21 June Maghrib ≈ 17:00.
+    final local = DateTime(2026, 6, 21).timeZoneOffset == Duration.zero;
+    if (!local) return;
+    final during = prayersDuring(DateTime(2026, 6, 21), '16:00', '19:00', 30.0444, 31.2357);
+    expect(during.map((e) => e.$1), contains('Maghrib'));
+    expect(prayersDuring(DateTime(2026, 6, 21), '03:00', '04:00', 30.0444, 31.2357), isEmpty);
+    expect(prayersDuring(DateTime(2026, 6, 21), 'bad', '04:00', 30.0444, 31.2357), isEmpty);
+  });
 }
