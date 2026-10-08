@@ -49,6 +49,7 @@ export function ListsScreen({ navigation }: Props) {
   const [segment, setSegment] = useState<Segment>("favorites");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [historyLoadError, setHistoryLoadError] = useState(false);
   const [favSort, setFavSort] = useState<"recent" | "az">("recent");
 
   const sortedFavorites = useMemo(() => {
@@ -90,7 +91,11 @@ export function ListsScreen({ navigation }: Props) {
       if (!isAuthenticated) return;
       setLoading(true);
       fetchShoppingListHistory()
-        .then(setHistory)
+        .then((data) => {
+          setHistory(data);
+          setHistoryLoadError(false);
+        })
+        .catch(() => setHistoryLoadError(true))
         .finally(() => setLoading(false));
     }, [isAuthenticated])
   );
@@ -103,7 +108,11 @@ export function ListsScreen({ navigation }: Props) {
   const onRefreshHistory = () => {
     setLoading(true);
     fetchShoppingListHistory()
-      .then(setHistory)
+      .then((data) => {
+        setHistory(data);
+        setHistoryLoadError(false);
+      })
+      .catch(() => setHistoryLoadError(true))
       .finally(() => setLoading(false));
   };
 
@@ -349,7 +358,11 @@ export function ListsScreen({ navigation }: Props) {
             <Text style={styles.sectionTitle}>{t("lists.headline")}</Text>
           </View>
         }
-        ListEmptyComponent={!loading ? <Text style={styles.emptySubtitle}>{t("lists.empty")}</Text> : null}
+        ListEmptyComponent={
+          !loading ? (
+            <Text style={styles.emptySubtitle}>{t(historyLoadError ? "lists.loadError" : "lists.empty")}</Text>
+          ) : null
+        }
         refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefreshHistory} />}
         renderItem={({ item, index }) => (
           <FadeSlideIn index={index}>

@@ -189,6 +189,7 @@ const en = {
   "substitutionFinder.searchPlaceholder": "Search an ingredient…",
   "substitutionFinder.noneFound": "No common substitute",
   "substitutionFinder.empty": "No ingredients found.",
+  "substitutionFinder.loadError": "Couldn't load ingredients. Tap to retry.",
 
   "whatsNew.title": "What's New",
 
@@ -255,6 +256,8 @@ const en = {
   "pantryFinder.missing": "Missing: {list}",
   "pantryFinder.haveEverything": "✓ You have everything for this",
   "pantryFinder.noMatches": "No recipes use these ingredients yet — try adding a few more.",
+  "pantryFinder.matchError": "Couldn't match recipes. Check your connection and try again.",
+  "pantryFinder.ingredientsLoadError": "Couldn't load ingredients. Tap to retry.",
 
   "recipeCard.costPerServing": "~{cost} EGP/serving",
   "recipeCard.nutritionSummary": "{calories} kcal · {protein}g protein",
@@ -275,6 +278,7 @@ const en = {
   "recipeList.filter.comfort": "Comfort",
   "recipeList.empty": "No recipes match these filters yet.",
   "recipeList.loadError": "Couldn't load recipes. Check your connection.",
+  "recipeList.offlineBanner": "Showing a saved copy -- you're offline",
 
   "recipeDetail.nutrition": "Nutrition (per serving)",
   "recipeDetail.calories": "Calories",
@@ -352,6 +356,7 @@ const en = {
   "lists.goToProfile": "Go to profile",
   "lists.headline": "Your shopping lists",
   "lists.empty": "No shopping lists yet — generate one from any recipe's page.",
+  "lists.loadError": "Couldn't load your shopping lists. Pull to retry.",
   "lists.rowMeta": "{servings} servings · {cost} EGP",
 
   "profile.saveTitle": "Save your preferences and lists",
@@ -676,6 +681,7 @@ const ar: Record<keyof typeof en, string> = {
   "substitutionFinder.searchPlaceholder": "ابحث عن مكوّن…",
   "substitutionFinder.noneFound": "لا يوجد بديل شائع",
   "substitutionFinder.empty": "لم يتم العثور على مكونات.",
+  "substitutionFinder.loadError": "تعذّر تحميل المكونات. اضغطي لإعادة المحاولة.",
 
   "whatsNew.title": "ما الجديد",
 
@@ -742,6 +748,8 @@ const ar: Record<keyof typeof en, string> = {
   "pantryFinder.missing": "ناقص: {list}",
   "pantryFinder.haveEverything": "✓ لديك كل ما تحتاجه لهذه الوصفة",
   "pantryFinder.noMatches": "لا توجد وصفات تستخدم هذه المكونات بعد — جرّب إضافة المزيد.",
+  "pantryFinder.matchError": "تعذّر مطابقة الوصفات. تحقّقي من الاتصال وحاولي مرة أخرى.",
+  "pantryFinder.ingredientsLoadError": "تعذّر تحميل المكونات. اضغطي لإعادة المحاولة.",
 
   "recipeCard.costPerServing": "~{cost} جنيه/للحصة",
   "recipeCard.nutritionSummary": "{calories} سعرة · {protein}غ بروتين",
@@ -762,6 +770,7 @@ const ar: Record<keyof typeof en, string> = {
   "recipeList.filter.comfort": "مريح",
   "recipeList.empty": "لا توجد وصفات تطابق هذه الفلاتر بعد.",
   "recipeList.loadError": "تعذّر تحميل الوصفات. تحقّقي من الاتصال بالإنترنت.",
+  "recipeList.offlineBanner": "تُعرض نسخة محفوظة -- أنتِ غير متصلة بالإنترنت",
 
   "recipeDetail.nutrition": "القيمة الغذائية (لكل حصة)",
   "recipeDetail.calories": "سعرات حرارية",
@@ -839,6 +848,7 @@ const ar: Record<keyof typeof en, string> = {
   "lists.goToProfile": "الذهاب للملف الشخصي",
   "lists.headline": "قوائم التسوق الخاصة بك",
   "lists.empty": "لا توجد قوائم تسوق بعد - أنشئي واحدة من صفحة أي وصفة.",
+  "lists.loadError": "تعذّر تحميل قوائم التسوق. اسحبي للمحاولة مرة أخرى.",
   "lists.rowMeta": "{servings} حصص · {cost} جنيه",
 
   "profile.saveTitle": "احفظي تفضيلاتك وقوائمك",

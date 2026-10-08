@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchIngredients } from "../api/endpoints";
+import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -18,12 +19,19 @@ export function SubstitutionFinderScreen({}: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState("");
   const [ingredients, setIngredients] = useState<PantryIngredient[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const textAlign = isRTL ? "right" : "left";
 
-  useEffect(() => {
+  const loadIngredients = () => {
+    setLoadError(false);
     fetchIngredients()
       .then(setIngredients)
-      .catch(() => setIngredients([]));
+      .catch(() => setLoadError(true));
+  };
+
+  useEffect(() => {
+    loadIngredients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale]);
 
   const filtered = useMemo(() => {
@@ -45,9 +53,14 @@ export function SubstitutionFinderScreen({}: Props) {
           autoCorrect={false}
         />
       </View>
-      {ingredients === null ? (
+      {loadError ? (
+        <AnimatedPressable style={styles.errorBanner} pressScale={0.98} onPress={loadIngredients}>
+          <Text style={styles.errorBannerText}>{t("substitutionFinder.loadError")}</Text>
+        </AnimatedPressable>
+      ) : null}
+      {ingredients === null && !loadError ? (
         <ActivityIndicator color={colors.primary} style={styles.spinner} />
-      ) : (
+      ) : ingredients !== null ? (
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
@@ -64,7 +77,7 @@ export function SubstitutionFinderScreen({}: Props) {
           )}
           ListEmptyComponent={<Text style={styles.empty}>{t("substitutionFinder.empty")}</Text>}
         />
-      )}
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -84,6 +97,15 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 15,
     },
     spinner: { marginTop: spacing(4) },
+    errorBanner: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.sm,
+      marginHorizontal: spacing(3),
+      paddingHorizontal: spacing(1.5),
+      paddingVertical: spacing(1),
+      marginBottom: spacing(1),
+    },
+    errorBannerText: { color: colors.danger, fontSize: 12, fontWeight: "600", textAlign: "center" },
     listContent: { padding: spacing(3), paddingTop: spacing(1) },
     card: {
       backgroundColor: colors.surface,

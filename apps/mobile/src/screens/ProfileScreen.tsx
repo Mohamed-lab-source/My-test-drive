@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -37,11 +37,12 @@ export function ProfileScreen({ navigation }: Props) {
   const { textSize, setTextSize } = useTextSize();
   const { hasUnseen: hasUnseenWhatsNew } = useWhatsNew();
   const { displayStreak, longestStreak, totalCooked } = useCookStreak();
-  const { favoriteRecipes } = useFavorites();
-  const { collections } = useCollections();
+  const { favoriteRecipes, refresh: refreshFavorites } = useFavorites();
+  const { collections, refresh: refreshCollections } = useCollections();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const GOALS: { value: DietGoal; label: string }[] = [
     { value: "NONE", label: t("onboarding.goal.none") },
@@ -53,6 +54,15 @@ export function ProfileScreen({ navigation }: Props) {
   useEffect(() => {
     fetchCuisines().then(setCuisines).catch(() => {});
   }, [locale]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    Promise.all([
+      fetchCuisines().then(setCuisines).catch(() => {}),
+      refreshFavorites().catch(() => {}),
+      refreshCollections().catch(() => {}),
+    ]).finally(() => setRefreshing(false));
+  };
 
   const languageSwitcher = (
     <View style={styles.chipRow}>
@@ -244,7 +254,10 @@ export function ProfileScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <Text style={styles.headline}>{user.name}</Text>
         <Text style={styles.subtitle}>{user.email}</Text>
 

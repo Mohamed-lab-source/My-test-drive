@@ -29,9 +29,18 @@ export function PantryFinderScreen({ navigation }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [results, setResults] = useState<PantryMatch[]>([]);
   const [matching, setMatching] = useState(false);
+  const [ingredientsError, setIngredientsError] = useState(false);
+  const [matchError, setMatchError] = useState(false);
+
+  const loadIngredients = () => {
+    setIngredientsError(false);
+    fetchIngredients()
+      .then(setAllIngredients)
+      .catch(() => setIngredientsError(true));
+  };
 
   useEffect(() => {
-    fetchIngredients().then(setAllIngredients).catch(() => {});
+    loadIngredients();
     AsyncStorage.getItem(PANTRY_STORAGE_KEY)
       .then((stored) => {
         if (stored) setSelectedIds(JSON.parse(stored));
@@ -51,7 +60,14 @@ export function PantryFinderScreen({ navigation }: Props) {
     setMatching(true);
     const handle = setTimeout(() => {
       matchPantryRecipes(selectedIds)
-        .then(setResults)
+        .then((data) => {
+          setResults(data);
+          setMatchError(false);
+        })
+        .catch(() => {
+          setResults([]);
+          setMatchError(true);
+        })
         .finally(() => setMatching(false));
     }, DEBOUNCE_MS);
     return () => clearTimeout(handle);
@@ -86,6 +102,12 @@ export function PantryFinderScreen({ navigation }: Props) {
               onChangeText={setQuery}
               autoCorrect={false}
             />
+
+            {ingredientsError ? (
+              <AnimatedPressable style={styles.errorBanner} pressScale={0.98} onPress={loadIngredients}>
+                <Text style={styles.errorBannerText}>{t("pantryFinder.ingredientsLoadError")}</Text>
+              </AnimatedPressable>
+            ) : null}
 
             {query.trim() ? (
               <View style={styles.suggestionList}>
@@ -153,7 +175,7 @@ export function PantryFinderScreen({ navigation }: Props) {
         )}
         ListEmptyComponent={
           !matching && selectedIds.length > 0 ? (
-            <Text style={styles.emptyHint}>{t("pantryFinder.noMatches")}</Text>
+            <Text style={styles.emptyHint}>{t(matchError ? "pantryFinder.matchError" : "pantryFinder.noMatches")}</Text>
           ) : null
         }
       />
@@ -211,6 +233,14 @@ const createStyles = (colors: ThemeColors) =>
     },
     selectedChipText: { color: colors.primaryDark, fontWeight: "700", fontSize: 12 },
     emptyHint: { color: colors.textMuted, marginTop: spacing(2), textAlign: "center" },
+    errorBanner: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing(1.5),
+      paddingVertical: spacing(1),
+      marginTop: spacing(1),
+    },
+    errorBannerText: { color: colors.danger, fontSize: 12, fontWeight: "600", textAlign: "center" },
     spinner: { marginTop: spacing(3) },
     resultsTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
     missingText: { color: colors.textMuted, fontSize: 12, marginBottom: spacing(2) },

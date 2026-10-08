@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipes } from "../api/endpoints";
@@ -17,6 +18,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
 const LIGHT_CALORIE_THRESHOLD = 400;
 const FEW_INGREDIENTS_THRESHOLD = 6;
+const CACHE_PREFIX = "cookmate.recipeListCache.";
 
 export function RecipeListScreen({ route, navigation }: Props) {
   const { cuisineSlug, tag: initialTag, dishType, title, sortByCost, sortByRating, lightOnly: initialLightOnly } =
@@ -83,14 +85,27 @@ export function RecipeListScreen({ route, navigation }: Props) {
     navigation.setOptions({ title });
   }, [navigation, title]);
 
+  const cacheKey = `${CACHE_PREFIX}${locale}.${cuisineSlug ?? ""}.${activeTag ?? ""}.${dishType ?? ""}`;
+  const [showingOfflineCache, setShowingOfflineCache] = useState(false);
+
   const loadRecipes = () => {
     setLoading(true);
     fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType })
       .then((data) => {
         setRecipes(data);
         setLoadError(false);
+        setShowingOfflineCache(false);
+        AsyncStorage.setItem(cacheKey, JSON.stringify(data)).catch(() => {});
       })
-      .catch(() => setLoadError(true))
+      .catch(async () => {
+        const cached = await AsyncStorage.getItem(cacheKey).catch(() => null);
+        if (cached) {
+          setRecipes(JSON.parse(cached) as RecipeSummary[]);
+          setShowingOfflineCache(true);
+        } else {
+          setLoadError(true);
+        }
+      })
       .finally(() => setLoading(false));
   };
 
@@ -172,6 +187,13 @@ export function RecipeListScreen({ route, navigation }: Props) {
           data={displayRecipes}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            showingOfflineCache ? (
+              <View style={styles.offlineBanner}>
+                <Text style={styles.offlineBannerText}>{t("recipeList.offlineBanner")}</Text>
+              </View>
+            ) : null
+          }
           renderItem={({ item, index }) => (
             <RecipeCard
               recipe={item}
@@ -204,4 +226,12 @@ const createStyles = (colors: ThemeColors) =>
     listContent: { padding: spacing(3), paddingTop: spacing(1) },
     empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
     errorState: { alignItems: "center", gap: spacing(1.5) },
+    offlineBanner: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: 10,
+      paddingHorizontal: spacing(1.5),
+      paddingVertical: spacing(1),
+      marginBottom: spacing(1.5),
+    },
+    offlineBannerText: { color: colors.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
   });
