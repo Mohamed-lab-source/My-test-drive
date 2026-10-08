@@ -19,7 +19,12 @@ class PlanRequest {
     this.nearLng,
     this.nearLabel,
     this.radiusKm = defaultRadiusKm,
+    this.needs = const [],
   });
+
+  /// Must-haves from the map ('wheelchair', 'vegetarian', 'noSmoking',
+  /// 'wifi', 'cards'). Only places whose map entry says so are used.
+  final List<String> needs;
 
   /// Plan around a spot (a place or where you are): only places within
   /// [radiusKm] of it. Null = anywhere in the city (stops are still kept
@@ -76,6 +81,7 @@ class PlanRequest {
         'nearLng': nearLng,
         'nearLabel': nearLabel,
         'radiusKm': radiusKm,
+        'needs': needs,
       };
 
   factory PlanRequest.fromMap(Map<String, dynamic> m) => PlanRequest(
@@ -99,6 +105,7 @@ class PlanRequest {
         nearLng: (m['nearLng'] as num?)?.toDouble(),
         nearLabel: m['nearLabel'] as String?,
         radiusKm: (m['radiusKm'] as num?)?.toDouble() ?? defaultRadiusKm,
+        needs: ((m['needs'] as List?) ?? const []).whereType<String>().toList(),
       );
 
   PlanRequest copyWith({List<String>? excludePlaceIds}) => PlanRequest(
@@ -118,6 +125,7 @@ class PlanRequest {
         nearLng: nearLng,
         nearLabel: nearLabel,
         radiusKm: radiusKm,
+        needs: needs,
       );
 }
 

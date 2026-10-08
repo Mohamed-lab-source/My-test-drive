@@ -1,3 +1,4 @@
+import '../../app/extras.dart' show daysUntilText;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -222,7 +223,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
                       Text(tr('Swipe a plan sideways to delete it.'),
                           textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
                     ])
-                  : Dismissible(
+                  : _withMonth(context, list, i, Dismissible(
                       key: ValueKey(list[i].id),
                       background: Container(
                         alignment: Alignment.centerRight,
@@ -257,7 +258,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
                         }
                       },
                       child: _SavedPlanTile(plan: list[i]),
-                    ),
+                    )),
             );
   }
 }
@@ -365,6 +366,8 @@ class _SavedPlanTile extends StatelessWidget {
           '$emojis   ${trf('{n} stops', {'n': plan.stops.length})}',
           ?plan.stops.map((s) => s.area).whereType<String>().firstOrNull,
           if (date.isNotEmpty) date,
+          if (plan.request.date != null)
+            ?daysUntilText(plan.request.day, DateTime.now()),
         ].join(' · ')),
         trailing: Consumer(
           builder: (context, ref, _) => PopupMenuButton<String>(
@@ -383,4 +386,21 @@ class _SavedPlanTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A "October 2026" header above the first plan of each month, when the
+/// list is newest first.
+Widget _withMonth(BuildContext context, List<OutingPlan> list, int i, Widget child) {
+  final d = list[i].createdAt;
+  final prev = i == 0 ? null : list[i - 1].createdAt;
+  final newestFirst = prev == null || d == null || !d.isAfter(prev);
+  final show = d != null && newestFirst && (prev == null || prev.month != d.month || prev.year != d.year);
+  if (!show) return child;
+  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Padding(
+      padding: const EdgeInsets.only(bottom: KSpace.xs, top: KSpace.xs),
+      child: Text(DateFormat.yMMMM().format(d), style: Theme.of(context).textTheme.titleSmall),
+    ),
+    child,
+  ]);
 }

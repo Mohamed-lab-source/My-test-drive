@@ -90,4 +90,33 @@ void main() {
     expect(randomOf(<int>[], math.Random(1)), isNull);
     expect(randomOf([7], math.Random(1)), 7);
   });
+
+  test('prayer times in Cairo are in the right order and about right', () {
+    final t = prayerTimes(DateTime(2026, 6, 21), 30.0444, 31.2357)!;
+    int m(DateTime d) => d.hour * 60 + d.minute;
+    // Cairo, 21 June (UTC): Fajr ≈ 01:10, Dhuhr ≈ 09:57, Maghrib ≈ 17:00, Isha ≈ 18:35.
+    expect(m(t.fajr) - (1 * 60 + 10), inInclusiveRange(-15, 15));
+    expect(m(t.dhuhr) - (9 * 60 + 57), inInclusiveRange(-10, 10));
+    expect(m(t.maghrib) - (17 * 60), inInclusiveRange(-15, 15));
+    expect(m(t.isha) - (18 * 60 + 35), inInclusiveRange(-15, 15));
+    final order = [t.fajr, t.sunrise, t.dhuhr, t.asr, t.maghrib, t.isha];
+    for (var i = 1; i < order.length; i++) {
+      expect(order[i].isAfter(order[i - 1]), isTrue);
+    }
+  });
+
+  test('week forecast parsing and the best day', () {
+    final week = parseWeek({
+      'daily': {
+        'time': ['2026-10-08', '2026-10-09', '2026-10-10', 'bad'],
+        'temperature_2m_max': [34.0, 27.5, 26, 20],
+        'precipitation_probability_max': [0, 60, 5, null],
+      }
+    });
+    expect(week.length, 3);
+    expect(week[1].rainPct, 60);
+    expect(bestDay(week)!.day, DateTime(2026, 10, 10));
+    expect(bestDay(const []), isNull);
+    expect(parseWeek(const {}), isEmpty);
+  });
 }

@@ -1,4 +1,6 @@
 import '../../app/i18n.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +14,7 @@ import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/plan.dart';
 import '../../planner/services.dart' show aiResting;
-import '../../planner/planner.dart' show compactRadiusKm;
+import '../../planner/planner.dart' show compactRadiusKm, planNeeds;
 import '../../widgets/common.dart';
 import '../profile/about_screen.dart' show appVersion;
 import '../profile/theme_sheet.dart';
@@ -44,6 +46,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   bool _skipVisited = false;
   bool _preferFavorites = true;
   bool _onlyOpen = true;
+  final Set<String> _needs = {};
   bool _useAi = false;
   (double, double, String)? _anchor;
   double _radius = PlanRequest.defaultRadiusKm;
@@ -141,6 +144,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
       _mallId = null;
       _anchor = null;
       _radius = PlanRequest.defaultRadiusKm;
+      _needs.clear();
     });
   }
 
@@ -153,6 +157,74 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         ..addAll(keys.take(2));
     });
     await _generate();
+  }
+
+  /// Saves the form as your own preset (on this phone).
+  Future<void> _saveMine() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(tr('Name these choices')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 24,
+          decoration: InputDecoration(hintText: tr('e.g. Our usual Friday')),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: Text(tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(c, controller.text.trim()), child: Text(tr('Save'))),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
+    if (ref.read(planPresetsProvider).length >= 8 && !ref.read(planPresetsProvider).containsKey(name)) {
+      showMessage(context, tr('You can keep up to 8. Remove one first.'));
+      return;
+    }
+    ref.read(planPresetsProvider.notifier).set(name, jsonEncode({
+      'people': _people,
+      'vibes': _vibes.toList(),
+      'time': _time,
+      'stops': _stops,
+      'onlyOpen': _onlyOpen,
+      'skipVisited': _skipVisited,
+      'preferFavorites': _preferFavorites,
+      'radius': _radius,
+      'needs': _needs.toList(),
+    }));
+    showMessage(context, trf('Saved "{name}". Tap it any time.', {'name': name}));
+  }
+
+  void _applyMine(String name) {
+    final raw = ref.read(planPresetsProvider)[name];
+    if (raw == null) return;
+    try {
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      setState(() {
+        _people = (m['people'] as num?)?.toInt() ?? _people;
+        final v = ((m['vibes'] as List?) ?? const []).whereType<String>().where(Vibes.all.containsKey);
+        if (v.isNotEmpty) {
+          _vibes
+            ..clear()
+            ..addAll(v);
+        }
+        if (TimesOfDay.all.containsKey(m['time'])) _time = m['time'] as String;
+        _stops = (m['stops'] as num?)?.toInt() ?? _stops;
+        _onlyOpen = (m['onlyOpen'] as bool?) ?? _onlyOpen;
+        _skipVisited = (m['skipVisited'] as bool?) ?? _skipVisited;
+        _preferFavorites = (m['preferFavorites'] as bool?) ?? _preferFavorites;
+        _radius = (m['radius'] as num?)?.toDouble() ?? _radius;
+        _needs
+          ..clear()
+          ..addAll(((m['needs'] as List?) ?? const []).whereType<String>().where(planNeeds.containsKey));
+      });
+      showMessage(context, trf('{preset} picked. Change anything, then tap Plan.', {'preset': name}));
+    } catch (_) {
+      ref.read(planPresetsProvider.notifier).set(name, null);
+    }
   }
 
   Future<void> _generate() async {
@@ -178,6 +250,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           ? (ref.read(favoriteIdsProvider).value ?? const <String>[]).take(50).toList()
           : const [],
       onlyOpen: _onlyOpen,
+      needs: _needs.toList(),
       nearLat: _mallId == null ? _anchor?.$1 : null,
       nearLng: _mallId == null ? _anchor?.$2 : null,
       nearLabel: _mallId == null ? _anchor?.$3 : null,
@@ -242,6 +315,19 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 avatar: const Text('💡'),
                 label: Text(tr('More ideas')),
                 onPressed: () => context.push('/ideas'),
+              ),
+              for (final name in ref.watch(planPresetsProvider).keys)
+                InputChip(
+                  avatar: const Text('⭐'),
+                  label: Text(name),
+                  onPressed: () => _applyMine(name),
+                  deleteButtonTooltipMessage: tr('Remove'),
+                  onDeleted: () => ref.read(planPresetsProvider.notifier).set(name, null),
+                ),
+              ActionChip(
+                avatar: const Icon(Icons.bookmark_add_outlined, size: 18),
+                label: Text(tr('Save my choices')),
+                onPressed: _saveMine,
               ),
               for (final preset in _presets)
                 ActionChip(
@@ -317,6 +403,10 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             ],
           ),
           _DayFacts(day: _date ?? DateTime.now(), city: ref.watch(cityProvider)),
+          _BestDay(
+            city: ref.watch(cityProvider),
+            onPick: (d) => setState(() => _date = sameDay(d, DateTime.now()) ? null : d),
+          ),
           SectionTitle(tr('City')),
           SegmentedButton<String>(
             showSelectedIcon: false,
@@ -495,6 +585,22 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             value: _useAi,
             onChanged: (v) => setState(() => _useAi = v),
           ),
+          SectionTitle(tr('Must have')),
+          Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+            for (final e in planNeeds.entries)
+              FilterChip(
+                label: Text(tr(e.value)),
+                selected: _needs.contains(e.key),
+                onSelected: (on) => setState(() => on ? _needs.add(e.key) : _needs.remove(e.key)),
+              ),
+          ]),
+          if (_needs.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: KSpace.xs),
+              child: Text(
+                  tr('Only places whose map entry says so, so there are fewer to choose from.'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
+            ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(tr('Only places open at that time')),
@@ -870,6 +976,34 @@ class _DayFacts extends StatelessWidget {
       padding: const EdgeInsets.only(top: KSpace.sm),
       child: Text(parts.join('\n'),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
+    );
+  }
+}
+
+/// "Best day this week: Saturday (27°, 5% rain)", from the real forecast.
+/// Tap it to pick that day. Hidden when offline.
+class _BestDay extends ConsumerWidget {
+  const _BestDay({required this.city, required this.onPick});
+
+  final String city;
+  final ValueChanged<DateTime> onPick;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final week = ref.watch(weekForecastProvider(city)).value ?? const [];
+    final best = bestDay(week);
+    if (best == null) return const SizedBox.shrink();
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: TextButton.icon(
+        icon: const Icon(Icons.wb_sunny_outlined, size: 18),
+        label: Text(trf('Best weather this week: {day} ({t}°, {r}% rain)', {
+          'day': DateFormat('EEEE').format(best.day),
+          't': best.maxC.round(),
+          'r': best.rainPct,
+        })),
+        onPressed: () => onPick(best.day),
+      ),
     );
   }
 }

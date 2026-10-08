@@ -30,7 +30,9 @@ class ToolsScreen extends StatelessWidget {
           _CoinCard(),
           _WhoCard(),
           _WalkCard(),
+          _WeekCard(),
           _SunCard(),
+          _PrayerCard(),
           _HolidaysCard(),
         ],
       ),
@@ -346,6 +348,89 @@ class _HolidaysCard extends StatelessWidget {
         Text(
             tr('Fixed-date holidays only. Islamic holidays follow the moon and are announced each '
                 'year, and some holidays are moved to a Thursday.'),
+            style: Theme.of(context).textTheme.bodySmall),
+      ]),
+    );
+  }
+}
+
+/// The week's weather for your city, with the most comfortable day marked.
+class _WeekCard extends ConsumerWidget {
+  const _WeekCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final city = ref.watch(cityProvider);
+    final week = ref.watch(weekForecastProvider(city));
+    return _ToolCard(
+      emoji: '🌤️',
+      title: trf('Weather this week in {city}', {'city': tr(Cities.all[city] ?? city)}),
+      child: week.when(
+        loading: () => const LinearProgressIndicator(),
+        error: (_, _) => Text(tr("Couldn't get the forecast. Check your internet.")),
+        data: (days) {
+          if (days.isEmpty) return Text(tr("Couldn't get the forecast. Check your internet."));
+          final best = bestDay(days);
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            for (final d in days)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Text(d.rainPct >= 40 ? '🌧️' : d.maxC >= 35 ? '🥵' : '☀️',
+                    style: const TextStyle(fontSize: 20)),
+                title: Text(DateFormat('EEEE d MMM').format(d.day) +
+                    (identical(d, best) ? '  ⭐' : '')),
+                trailing: Text(trf('{t}° · {r}% rain', {'t': d.maxC.round(), 'r': d.rainPct})),
+              ),
+            Text(tr('⭐ = the most comfortable day (least rain, mildest heat).'),
+                style: Theme.of(context).textTheme.bodySmall),
+            Text(tr('Forecast: Open-Meteo'), style: Theme.of(context).textTheme.bodySmall),
+          ]);
+        },
+      ),
+    );
+  }
+}
+
+/// Prayer times today, worked out for your city (Egyptian method).
+class _PrayerCard extends ConsumerWidget {
+  const _PrayerCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final city = ref.watch(cityProvider);
+    final c = cityCenters[city] ?? cityCenters['cairo']!;
+    final now = DateTime.now();
+    final t = prayerTimes(now, c.$1, c.$2);
+    if (t == null) return const SizedBox.shrink();
+    final rows = [
+      (tr('Fajr'), t.fajr),
+      (tr('Sunrise'), t.sunrise),
+      (tr('Dhuhr'), t.dhuhr),
+      (tr('Asr'), t.asr),
+      (tr('Maghrib'), t.maghrib),
+      (tr('Isha'), t.isha),
+    ];
+    final next = rows.where((r) => r.$2.isAfter(now.toUtc())).firstOrNull;
+    return _ToolCard(
+      emoji: '🕌',
+      title: trf('Prayer times today in {city}', {'city': tr(Cities.all[city] ?? city)}),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final (name, time) in rows)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(children: [
+              Expanded(
+                child: Text(name,
+                    style: identical(next?.$2, time)
+                        ? TextStyle(color: context.k.accent, fontWeight: FontWeight.w700)
+                        : null),
+              ),
+              Text(hhmmLocal(time)),
+            ]),
+          ),
+        const SizedBox(height: KSpace.xs),
+        Text(tr('Worked out with the Egyptian method. Your mosque may differ by a minute or two.'),
             style: Theme.of(context).textTheme.bodySmall),
       ]),
     );

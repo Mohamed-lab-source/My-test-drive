@@ -214,7 +214,14 @@ final blockedUsersProvider =
 
 /// Small phone settings: 24-hour clock, haptics, reduce motion, error reports.
 class PhoneSettings {
-  const PhoneSettings({this.clock24 = true, this.haptics = true, this.reduceMotion = false, this.sendErrors = true});
+  const PhoneSettings({
+    this.clock24 = true,
+    this.haptics = true,
+    this.reduceMotion = false,
+    this.sendErrors = true,
+    this.boldText = false,
+  });
+  final bool boldText;
   final bool clock24;
   final bool haptics;
   final bool reduceMotion;
@@ -230,6 +237,7 @@ class PhoneSettingsNotifier extends Notifier<PhoneSettings> {
       haptics: p?.getBool('set.haptics') ?? true,
       reduceMotion: p?.getBool('set.reduceMotion') ?? false,
       sendErrors: p?.getBool('set.sendErrors') ?? true,
+      boldText: p?.getBool('set.boldText') ?? false,
     );
   }
 
@@ -242,6 +250,7 @@ class PhoneSettingsNotifier extends Notifier<PhoneSettings> {
   void setHaptics(bool v) => _set('set.haptics', v);
   void setReduceMotion(bool v) => _set('set.reduceMotion', v);
   void setSendErrors(bool v) => _set('set.sendErrors', v);
+  void setBoldText(bool v) => _set('set.boldText', v);
 }
 
 final phoneSettingsProvider =
@@ -250,3 +259,7 @@ final phoneSettingsProvider =
 /// Remembered Explore choices (category, sort).
 final exploreMemoryProvider =
     NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('explore.memory'));
+
+/// Your own saved plan-form choices ("Our usual Friday"): name → JSON.
+final planPresetsProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('plan.presets'));

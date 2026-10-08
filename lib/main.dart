@@ -74,11 +74,13 @@ class KhrogaApp extends ConsumerWidget {
       builder: (context, child) {
         final media = MediaQuery.of(context);
         final reduceMotion = ref.watch(phoneSettingsProvider.select((s) => s.reduceMotion));
+        final bold = ref.watch(phoneSettingsProvider.select((s) => s.boldText));
         return MediaQuery(
           data: media.copyWith(
             textScaler: TextScaler.linear(
                 (media.textScaler.scale(14) / 14 * look.textScale).clamp(0.8, 2.2)),
             disableAnimations: reduceMotion || media.disableAnimations,
+            boldText: bold || media.boldText,
           ),
           child: child!,
         );

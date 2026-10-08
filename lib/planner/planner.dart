@@ -101,6 +101,7 @@ double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random rand
 
 /// Hard filters: things a plan must never include.
 bool passesFilters(Place p, PlanRequest input) {
+  if (input.needs.isNotEmpty && !meetsNeeds(p, input.needs)) return false;
   final mallId = input.mallId;
   if (mallId != null && mallId.isNotEmpty) {
     return p.parentMallId == mallId; // only venues inside that mall
@@ -112,6 +113,34 @@ bool passesFilters(Place p, PlanRequest input) {
   }
   return true;
 }
+
+/// Must-haves, judged only from what the map says. Unknown counts as "no"
+/// (we never assume). Vegetarian only applies to food places.
+bool meetsNeeds(Place p, List<String> needs) {
+  final f = p.details;
+  final food = p.category == 'restaurant' || p.category == 'cafe';
+  for (final n in needs) {
+    final ok = switch (n) {
+      'wheelchair' => f.wheelchair == 'yes' || f.wheelchair == 'limited',
+      'vegetarian' => !food || const ['yes', 'only', 'limited'].contains(f.vegetarian),
+      'noSmoking' => f.smoking == 'no' || f.smoking == 'outside',
+      'wifi' => f.wifi == true,
+      'cards' => f.cards == true,
+      _ => true,
+    };
+    if (!ok) return false;
+  }
+  return true;
+}
+
+/// The must-haves the plan form offers.
+const planNeeds = <String, String>{
+  'wheelchair': '♿ Wheelchair access',
+  'vegetarian': '🥗 Vegetarian options',
+  'noSmoking': '🚭 No smoking',
+  'wifi': '📶 Wi-Fi',
+  'cards': '💳 Cards accepted',
+};
 
 List<Place> pickCandidates(
   List<Place> places,

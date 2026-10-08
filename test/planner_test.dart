@@ -58,6 +58,24 @@ List<Place> pick(PlanRequest r, [Weather? w]) =>
     pickCandidates(places, r, w, random: Random(1));
 
 void main() {
+  test('must-haves only use what the map says (unknown = no)', () {
+    const yes = Place(id: 'y', name: 'Test Yes', category: 'cafe', city: 'cairo',
+        details: PlaceFacts(wheelchair: 'yes', vegetarian: 'yes', wifi: true, smoking: 'no', cards: true));
+    const unknown = Place(id: 'u', name: 'Test Unknown', category: 'cafe', city: 'cairo');
+    const park = Place(id: 'p', name: 'Test Park', category: 'park', city: 'cairo');
+    for (final n in planNeeds.keys) {
+      expect(meetsNeeds(yes, [n]), isTrue, reason: n);
+      expect(meetsNeeds(unknown, [n]), isFalse, reason: n);
+    }
+    expect(meetsNeeds(park, ['vegetarian']), isTrue); // not a food place
+    expect(meetsNeeds(park, ['wheelchair']), isFalse);
+    const req = PlanRequest(city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening',
+        needs: ['wifi']);
+    expect(passesFilters(yes, req), isTrue);
+    expect(passesFilters(unknown, req), isFalse);
+    expect(PlanRequest.fromMap(req.toMap()).needs, ['wifi']);
+  });
+
   _hoursAndSwapTests();
   test('favorites get a boost but must still fit the vibe', () {
     const base = PlanRequest(city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'afternoon');

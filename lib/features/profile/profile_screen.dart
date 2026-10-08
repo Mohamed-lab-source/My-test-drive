@@ -552,6 +552,14 @@ class _AppSettingsCard extends ConsumerWidget {
               ),
               const Divider(),
               SwitchListTile(
+                secondary: const Icon(Icons.format_bold),
+                title: Text(tr('Bold text')),
+                subtitle: Text(tr('Easier to read')),
+                value: p.boldText,
+                onChanged: pn.setBoldText,
+              ),
+              const Divider(),
+              SwitchListTile(
                 secondary: const Icon(Icons.bug_report_outlined),
                 title: Text(tr('Send error reports')),
                 subtitle: Text(tr('Short technical notes, no personal details')),

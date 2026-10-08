@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/theme_settings.dart' show sharedPrefsProvider;
 import '../models/place.dart';
+import '../app/extras.dart' show DayForecast;
 import '../planner/planner.dart' show areaCenters;
+import '../planner/services.dart' show fetchWeek;
 import '../models/plan.dart';
 import '../models/social.dart';
 import 'auth_repository.dart';
@@ -259,3 +261,8 @@ final friendUidsProvider = Provider<List<String>>((ref) {
 // ---- Safety: reports, feedback, account deletion ----
 final safetyRepositoryProvider = Provider((ref) =>
     SafetyRepository(ref.watch(firestoreProvider), ref.watch(groupsRepositoryProvider)));
+
+// ---- Weather this week (Open-Meteo, free) ----
+/// Kept while the app runs, so it's fetched once per city per session.
+final weekForecastProvider =
+    FutureProvider.family<List<DayForecast>, String>((ref, city) => fetchWeek(city));

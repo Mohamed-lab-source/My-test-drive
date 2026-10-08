@@ -43,6 +43,83 @@ import 'i18n.dart';
   );
 }
 
+/// The sun's declination (radians) and the equation of time (minutes) for a
+/// day: the two numbers every sun-time formula below needs (NOAA).
+(double, double) _sunPosition(DateTime day) {
+  final n = DateTime.utc(day.year, day.month, day.day).difference(DateTime.utc(day.year)).inDays + 1;
+  final g = 2 * math.pi / 365 * (n - 1);
+  final eqTime = 229.18 *
+      (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g) -
+          0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g));
+  final decl = 0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) -
+      0.006758 * math.cos(2 * g) + 0.000907 * math.sin(2 * g) -
+      0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g);
+  return (decl, eqTime);
+}
+
+/// Minutes from solar noon until the sun is at [altitude] degrees (negative
+/// = below the horizon). Null if it never gets there that day.
+double? _minutesFromNoon(double altitude, double lat, double decl) {
+  double rad(double d) => d * math.pi / 180;
+  final cosH = (math.sin(rad(altitude)) - math.sin(rad(lat)) * math.sin(decl)) /
+      (math.cos(rad(lat)) * math.cos(decl));
+  if (cosH.abs() > 1) return null;
+  return 4 * math.acos(cosH) * 180 / math.pi;
+}
+
+/// Prayer times (UTC) by the Egyptian General Authority of Survey method
+/// (Fajr at 19.5°, Isha at 17.5°, Asr with shadow factor 1). Worked out from
+/// the date and place, so a mosque's own timetable may differ by a minute
+/// or two.
+({DateTime fajr, DateTime sunrise, DateTime dhuhr, DateTime asr, DateTime maghrib, DateTime isha})?
+    prayerTimes(DateTime day, double lat, double lng) {
+  final (decl, eqTime) = _sunPosition(day);
+  final noon = 720 - 4 * lng - eqTime;
+  final fajr = _minutesFromNoon(-19.5, lat, decl);
+  final rise = _minutesFromNoon(-0.833, lat, decl);
+  final isha = _minutesFromNoon(-17.5, lat, decl);
+  final asrAlt = math.atan(1 / (1 + math.tan((lat * math.pi / 180 - decl).abs()))) * 180 / math.pi;
+  final asr = _minutesFromNoon(asrAlt, lat, decl);
+  if (fajr == null || rise == null || isha == null || asr == null) return null;
+  final base = DateTime.utc(day.year, day.month, day.day);
+  DateTime at(double m) => base.add(Duration(seconds: (m * 60).round()));
+  return (
+    fajr: at(noon - fajr),
+    sunrise: at(noon - rise),
+    dhuhr: at(noon + 1),
+    asr: at(noon + asr),
+    maghrib: at(noon + rise),
+    isha: at(noon + isha),
+  );
+}
+
+/// One day's forecast from Open-Meteo.
+typedef DayForecast = ({DateTime day, double maxC, int rainPct});
+
+/// Reads Open-Meteo's daily answer (dates, max temperature, rain chance).
+List<DayForecast> parseWeek(Map<String, dynamic> json) {
+  final daily = json['daily'] as Map?;
+  final days = (daily?['time'] as List?) ?? const [];
+  final temps = (daily?['temperature_2m_max'] as List?) ?? const [];
+  final rain = (daily?['precipitation_probability_max'] as List?) ?? const [];
+  return [
+    for (var i = 0; i < days.length && i < temps.length; i++)
+      if (DateTime.tryParse('${days[i]}') case final d? when temps[i] is num)
+        (
+          day: d,
+          maxC: (temps[i] as num).toDouble(),
+          rainPct: i < rain.length && rain[i] is num ? (rain[i] as num).round() : 0,
+        ),
+  ];
+}
+
+/// The most comfortable day for going out: least rain, then closest to 26°C.
+DayForecast? bestDay(List<DayForecast> week) {
+  if (week.isEmpty) return null;
+  double cost(DayForecast d) => d.rainPct * 0.5 + (d.maxC - 26).abs();
+  return week.reduce((a, b) => cost(b) < cost(a) ? b : a);
+}
+
 /// The middle of each city, for sunset times when we have no exact spot.
 const cityCenters = <String, (double, double)>{
   'cairo': (30.0444, 31.2357),

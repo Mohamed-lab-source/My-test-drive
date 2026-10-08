@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../app/extras.dart' show DayForecast, parseWeek;
 import 'planner.dart';
 
 /// Gemini key, added at build time by the GitHub workflow (free tier, no
@@ -26,6 +27,27 @@ const _cityCoords = {
   'giza': (30.0131, 31.2089),
   'alexandria': (31.2001, 29.9187),
 };
+
+/// The next 7 days' real forecast from Open-Meteo (free, no key). Empty if
+/// unavailable (offline, slow).
+Future<List<DayForecast>> fetchWeek(String city, {http.Client? client}) async {
+  final coords = _cityCoords[city];
+  if (coords == null) return const [];
+  final uri = Uri.https('api.open-meteo.com', '/v1/forecast', {
+    'latitude': '${coords.$1}',
+    'longitude': '${coords.$2}',
+    'daily': 'temperature_2m_max,precipitation_probability_max',
+    'timezone': 'Africa/Cairo',
+    'forecast_days': '7',
+  });
+  try {
+    final res = await (client ?? http.Client()).get(uri).timeout(const Duration(seconds: 6));
+    if (res.statusCode != 200) return const [];
+    return parseWeek(Map<String, dynamic>.from(jsonDecode(res.body) as Map));
+  } catch (_) {
+    return const [];
+  }
+}
 
 /// Today's real forecast from Open-Meteo (free, no key). Null if unavailable.
 Future<Weather?> fetchWeather(String city, {DateTime? day, http.Client? client}) async {
