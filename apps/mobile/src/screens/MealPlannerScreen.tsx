@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -16,9 +17,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+import * as Sharing from "expo-sharing";
+import { captureRef } from "react-native-view-shot";
+import { ShareablePlanCard } from "../components/ShareablePlanCard";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import {
+  fetchCuisines,
   fetchDeliveryPartners,
   fetchNearbyStores,
   fetchRecipeDetail,
@@ -27,11 +32,13 @@ import {
 } from "../api/endpoints";
 import { apiErrorMessage } from "../api/client";
 import { AnimatedPressable } from "../components/AnimatedPressable";
+import { Chip } from "../components/Chip";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { useAuth } from "../context/AuthContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
+import { useLeftovers } from "../context/LeftoversContext";
 import { useToast } from "../context/ToastContext";
 import { usePantryCheck } from "../context/PantryCheckContext";
 import { useUnits } from "../context/UnitsContext";
@@ -43,13 +50,14 @@ import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { radius, spacing, type ThemeColors } from "../theme";
-import type { DeliveryPartner, RecipeSummary } from "../api/types";
+import type { Cuisine, DeliveryPartner, RecipeSummary } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "MealPlanner">;
 
 const DAYS_AHEAD = 7;
 const DEBOUNCE_MS = 350;
 const BUDGET_CAP_KEY = "cookmate.weeklyBudgetCap";
+const LOCKED_DAYS_KEY = "cookmate.mealPlanLockedDays";
 
 function dateKeyFor(offset: number): string {
   const d = new Date();
@@ -65,6 +73,7 @@ export function MealPlannerScreen({ navigation }: Props) {
   const { unitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { plan, setPlan } = useMealPlan();
+  const { leftovers } = useLeftovers();
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
   const { preference } = useLocalPreference();
@@ -84,10 +93,37 @@ export function MealPlannerScreen({ navigation }: Props) {
   const [locating, setLocating] = useState(false);
   const [budgetCap, setBudgetCapState] = useState<number | null>(null);
   const [budgetCapInput, setBudgetCapInput] = useState("");
+  const [lockedDays, setLockedDays] = useState<Set<string>>(new Set());
+  const [cuisines, setCuisines] = useState<Cuisine[]>([]);
+  const [themedFillingSlug, setThemedFillingSlug] = useState<string | null>(null);
+  const planCardRef = useRef<View>(null);
+  const [sharingPlanImage, setSharingPlanImage] = useState(false);
 
   useEffect(() => {
     fetchDeliveryPartners().then(setDeliveryPartners).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetchCuisines().then(setCuisines).catch(() => {});
+  }, [locale]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(LOCKED_DAYS_KEY)
+      .then((stored) => {
+        if (stored) setLockedDays(new Set(JSON.parse(stored) as string[]));
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleDayLock = (dateKey: string) => {
+    setLockedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      AsyncStorage.setItem(LOCKED_DAYS_KEY, JSON.stringify(Array.from(next))).catch(() => {});
+      return next;
+    });
+  };
 
   useEffect(() => {
     AsyncStorage.getItem(BUDGET_CAP_KEY)
@@ -147,6 +183,23 @@ export function MealPlannerScreen({ navigation }: Props) {
     }
   };
 
+  const handleSharePlanImage = async () => {
+    setSharingPlanImage(true);
+    try {
+      const uri = await captureRef(planCardRef, { format: "png", quality: 0.92 });
+      const canShareFile = Platform.OS !== "web" && (await Sharing.isAvailableAsync());
+      if (canShareFile) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: t("share.dialogTitle") });
+      } else {
+        await shareWeek();
+      }
+    } catch {
+      Alert.alert(t("share.error"));
+    } finally {
+      setSharingPlanImage(false);
+    }
+  };
+
   const repeatLastWeek = () => {
     let applied = 0;
     visibleDateKeys.forEach((dateKey) => {
@@ -160,6 +213,26 @@ export function MealPlannerScreen({ navigation }: Props) {
       }
     });
     if (applied === 0) Alert.alert(t("mealPlanner.repeatLastWeekError"));
+  };
+
+  const copyWeekForward = () => {
+    let applied = 0;
+    visibleDateKeys.forEach((dateKey) => {
+      const recipe = plan[dateKey];
+      if (!recipe) return;
+      const d = new Date(dateKey + "T00:00:00");
+      d.setDate(d.getDate() + 7);
+      const nextWeekKey = d.toISOString().slice(0, 10);
+      if (!plan[nextWeekKey] && !lockedDays.has(nextWeekKey)) {
+        setPlan(nextWeekKey, recipe);
+        applied += 1;
+      }
+    });
+    if (applied === 0) {
+      Alert.alert(t("mealPlanner.copyForwardError"));
+    } else {
+      showToast(t("mealPlanner.copyForwardSuccess", { count: applied }));
+    }
   };
 
   const findNearbyStores = async () => {
@@ -237,14 +310,32 @@ export function MealPlannerScreen({ navigation }: Props) {
       : null;
 
   const autoFillWeek = async () => {
-    const emptyDateKeys = visibleDateKeys.filter((dateKey) => !plan[dateKey]);
+    let emptyDateKeys = visibleDateKeys.filter((dateKey) => !plan[dateKey] && !lockedDays.has(dateKey));
     if (emptyDateKeys.length === 0) return;
     setAutoFilling(true);
     try {
+      const alreadyPlannedSlugs = new Set(plannedEntries.map(([, r]) => r.slug));
+
+      // Leftovers are time-sensitive (they spoil), so place the soonest-expiring
+      // ones into the earliest open days before filling the rest generically.
+      for (const leftover of leftovers) {
+        if (emptyDateKeys.length === 0) break;
+        if (alreadyPlannedSlugs.has(leftover.slug)) continue;
+        try {
+          const detail = await fetchRecipeDetail(leftover.slug);
+          const [dateKey, ...rest] = emptyDateKeys;
+          setPlan(dateKey, detail);
+          alreadyPlannedSlugs.add(leftover.slug);
+          emptyDateKeys = rest;
+        } catch {
+          // Recipe may no longer exist; skip this leftover.
+        }
+      }
+      if (emptyDateKeys.length === 0) return;
+
       const candidates = isAuthenticated
         ? await fetchRecommended()
         : rankRecipes(await fetchRecipes({}), preference.dietGoal, preference.favoriteCuisineSlugs);
-      const alreadyPlannedSlugs = new Set(plannedEntries.map(([, r]) => r.slug));
       const pool = candidates.filter((r) => !alreadyPlannedSlugs.has(r.slug));
       emptyDateKeys.forEach((dateKey, i) => {
         if (pool.length === 0) return;
@@ -254,6 +345,28 @@ export function MealPlannerScreen({ navigation }: Props) {
       Alert.alert(t("mealPlanner.autoFillError"), apiErrorMessage(error));
     } finally {
       setAutoFilling(false);
+    }
+  };
+
+  const autoFillWeekThemed = async (cuisineSlug: string) => {
+    const emptyDateKeys = visibleDateKeys.filter((dateKey) => !plan[dateKey] && !lockedDays.has(dateKey));
+    if (emptyDateKeys.length === 0) return;
+    setThemedFillingSlug(cuisineSlug);
+    try {
+      const candidates = await fetchRecipes({ cuisine: cuisineSlug });
+      const alreadyPlannedSlugs = new Set(plannedEntries.map(([, r]) => r.slug));
+      const pool = candidates.filter((r) => !alreadyPlannedSlugs.has(r.slug));
+      if (pool.length === 0) {
+        Alert.alert(t("mealPlanner.autoFillError"));
+        return;
+      }
+      emptyDateKeys.forEach((dateKey, i) => {
+        setPlan(dateKey, pool[i % pool.length]);
+      });
+    } catch (error) {
+      Alert.alert(t("mealPlanner.autoFillError"), apiErrorMessage(error));
+    } finally {
+      setThemedFillingSlug(null);
     }
   };
 
@@ -308,6 +421,11 @@ export function MealPlannerScreen({ navigation }: Props) {
             <PrimaryButton label={t("mealPlanner.repeatLastWeek")} variant="outline" onPress={repeatLastWeek} />
           </View>
         ) : null}
+        {plannedEntries.length > 0 ? (
+          <View style={styles.autoFillButton}>
+            <PrimaryButton label={t("mealPlanner.copyForward")} variant="outline" onPress={copyWeekForward} />
+          </View>
+        ) : null}
         <View style={styles.autoFillButton}>
           <PrimaryButton
             label={t("leanMuscle.title")}
@@ -325,6 +443,30 @@ export function MealPlannerScreen({ navigation }: Props) {
         <View style={styles.autoFillButton}>
           <PrimaryButton label={t("mealPlanner.shareWeek")} variant="outline" onPress={shareWeek} />
         </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
+            label={t("mealPlanner.sharePlanImage")}
+            variant="outline"
+            onPress={handleSharePlanImage}
+            loading={sharingPlanImage}
+          />
+        </View>
+
+        {visibleDateKeys.some((dateKey) => !plan[dateKey]) && cuisines.length > 0 ? (
+          <>
+            <Text style={[styles.label, { textAlign }]}>{t("mealPlanner.themedWeekLabel")}</Text>
+            <View style={styles.themeRow}>
+              {cuisines.slice(0, 8).map((c) => (
+                <Chip
+                  key={c.slug}
+                  label={c.name}
+                  selected={themedFillingSlug === c.slug}
+                  onPress={() => autoFillWeekThemed(c.slug)}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
 
         <Text style={[styles.label, { textAlign }]}>{t("mealPlanner.budgetCapLabel")}</Text>
         <TextInput
@@ -391,7 +533,16 @@ export function MealPlannerScreen({ navigation }: Props) {
           return (
             <FadeSlideIn key={dateKey} index={offset}>
               <View style={styles.dayRow}>
-                <Text style={[styles.dayLabel, { textAlign }]}>{weekdayLabel(offset, dateKey)}</Text>
+                <View style={styles.dayLabelRow}>
+                  <Text style={[styles.dayLabel, { textAlign }]}>{weekdayLabel(offset, dateKey)}</Text>
+                  <AnimatedPressable
+                    pressScale={0.85}
+                    onPress={() => toggleDayLock(dateKey)}
+                    accessibilityLabel={t(lockedDays.has(dateKey) ? "mealPlanner.unlockDay" : "mealPlanner.lockDay")}
+                  >
+                    <Text style={styles.lockIcon}>{lockedDays.has(dateKey) ? "🔒" : "🔓"}</Text>
+                  </AnimatedPressable>
+                </View>
                 {recipe ? (
                   <View style={styles.plannedCard}>
                     <AnimatedPressable
@@ -513,6 +664,21 @@ export function MealPlannerScreen({ navigation }: Props) {
             </View>
           </FadeSlideIn>
         ) : null}
+
+        <View style={styles.offScreen} pointerEvents="none">
+          <ShareablePlanCard
+            ref={planCardRef}
+            titleLabel={t("mealPlanner.shareWeekTitle")}
+            brandingLabel={t("share.branding")}
+            emptyDayLabel={t("mealPlanner.shareWeekEmptyDay")}
+            isRTL={isRTL}
+            days={visibleDateKeys.map((dateKey, offset) => ({
+              label: weekdayLabel(offset, dateKey),
+              title: plan[dateKey]?.title ?? null,
+              cuisineSlug: plan[dateKey]?.cuisine.slug ?? null,
+            }))}
+          />
+        </View>
       </ScrollView>
 
       <Modal visible={pickerDate !== null} animationType="slide" transparent onRequestClose={() => setPickerDate(null)}>
@@ -594,7 +760,16 @@ const createStyles = (colors: ThemeColors) =>
     nutritionValue: { fontSize: 18, fontWeight: "800", color: colors.primaryDark },
     nutritionLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2, textAlign: "center" },
     dayRow: { marginBottom: spacing(1.5) },
-    dayLabel: { fontSize: 13, fontWeight: "700", color: colors.textMuted, marginBottom: spacing(0.5) },
+    dayLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing(0.5),
+    },
+    dayLabel: { fontSize: 13, fontWeight: "700", color: colors.textMuted },
+    lockIcon: { fontSize: 14 },
+    themeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing(1), marginBottom: spacing(2) },
+    offScreen: { position: "absolute", top: -9999, left: 0, opacity: 0 },
     plannedCard: {
       flexDirection: "row",
       alignItems: "center",
