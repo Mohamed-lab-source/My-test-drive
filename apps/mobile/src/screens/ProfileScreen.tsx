@@ -21,6 +21,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { useTextSize } from "../context/TextSizeContext";
 import { useWhatsNew } from "../context/WhatsNewContext";
+import { useAccessibilityPrefs } from "../context/AccessibilityPrefsContext";
 import { ACCENT_PRESETS, radius, spacing, type AccentKey, type ThemeColors } from "../theme";
 import { ALL_ALLERGENS } from "../utils/allergens";
 import type { TranslationKey } from "../i18n/translations";
@@ -38,6 +39,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { unitSystem, setUnitSystem } = useUnits();
   const { textSize, setTextSize } = useTextSize();
   const { hasUnseen: hasUnseenWhatsNew } = useWhatsNew();
+  const { reduceMotion, hapticsEnabled, setReduceMotion, setHapticsEnabled } = useAccessibilityPrefs();
   const { displayStreak, longestStreak, totalCooked } = useCookStreak();
   const { favoriteRecipes, refresh: refreshFavorites } = useFavorites();
   const { collections, refresh: refreshCollections } = useCollections();
@@ -121,6 +123,20 @@ export function ProfileScreen({ navigation }: Props) {
     </View>
   );
 
+  const reduceMotionSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.toggleOn")} selected={reduceMotion} onPress={() => setReduceMotion(true)} />
+      <Chip label={t("profile.toggleOff")} selected={!reduceMotion} onPress={() => setReduceMotion(false)} />
+    </View>
+  );
+
+  const hapticsSwitcher = (
+    <View style={styles.chipRow}>
+      <Chip label={t("profile.toggleOn")} selected={hapticsEnabled} onPress={() => setHapticsEnabled(true)} />
+      <Chip label={t("profile.toggleOff")} selected={!hapticsEnabled} onPress={() => setHapticsEnabled(false)} />
+    </View>
+  );
+
   if (!isAuthenticated || !user) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -154,6 +170,10 @@ export function ProfileScreen({ navigation }: Props) {
           {unitsSwitcher}
           <Text style={styles.section}>{t("profile.textSize")}</Text>
           {textSizeSwitcher}
+          <Text style={styles.section}>{t("profile.reduceMotion")}</Text>
+          {reduceMotionSwitcher}
+          <Text style={styles.section}>{t("profile.haptics")}</Text>
+          {hapticsSwitcher}
           <View style={styles.buttonSpacing}>
             <PrimaryButton
               label={t("glossary.title")}
@@ -378,6 +398,12 @@ export function ProfileScreen({ navigation }: Props) {
 
         <Text style={styles.section}>{t("profile.textSize")}</Text>
         {textSizeSwitcher}
+
+        <Text style={styles.section}>{t("profile.reduceMotion")}</Text>
+        {reduceMotionSwitcher}
+
+        <Text style={styles.section}>{t("profile.haptics")}</Text>
+        {hapticsSwitcher}
 
         <View style={styles.buttonSpacing}>
           <PrimaryButton

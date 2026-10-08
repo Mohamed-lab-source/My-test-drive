@@ -7,6 +7,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { fetchCuisines, fetchRecipes } from "../api/endpoints";
 import { RecipeCard } from "../components/RecipeCard";
 import { Chip } from "../components/Chip";
+import { EmptyState } from "../components/EmptyState";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -153,7 +154,7 @@ export function SearchScreen({ navigation }: Props) {
           )}
           ListEmptyComponent={
             searched ? (
-              <Text style={styles.empty}>{t(searchError ? "search.error" : "search.empty")}</Text>
+              <EmptyState icon={searchError ? "⚠️" : "🔍"} message={t(searchError ? "search.error" : "search.empty")} />
             ) : null
           }
         />
@@ -195,5 +196,4 @@ const createStyles = (colors: ThemeColors) =>
     recentSearchesRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
     listContent: { padding: spacing(3), paddingTop: spacing(1) },
     spinner: { marginTop: spacing(4) },
-    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
   });

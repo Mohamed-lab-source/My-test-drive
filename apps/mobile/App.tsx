@@ -13,6 +13,7 @@ import { CookStreakProvider } from "./src/context/CookStreakContext";
 import { LeftoversProvider } from "./src/context/LeftoversContext";
 import { HomeLayoutProvider } from "./src/context/HomeLayoutContext";
 import { TextSizeProvider } from "./src/context/TextSizeContext";
+import { AccessibilityPrefsProvider } from "./src/context/AccessibilityPrefsContext";
 import { ToastProvider } from "./src/context/ToastContext";
 import { PantryCheckProvider } from "./src/context/PantryCheckContext";
 import { WhatsNewProvider } from "./src/context/WhatsNewContext";
@@ -49,17 +50,19 @@ export default function App() {
                             <LeftoversProvider>
                               <HomeLayoutProvider>
                                 <TextSizeProvider>
-                                  <ToastProvider>
-                                    <PantryCheckProvider>
-                                      <WhatsNewProvider>
-                                        <CollectionsProvider>
-                                          <BadgesProvider>
-                                            <AppShell />
-                                          </BadgesProvider>
-                                        </CollectionsProvider>
-                                      </WhatsNewProvider>
-                                    </PantryCheckProvider>
-                                  </ToastProvider>
+                                  <AccessibilityPrefsProvider>
+                                    <ToastProvider>
+                                      <PantryCheckProvider>
+                                        <WhatsNewProvider>
+                                          <CollectionsProvider>
+                                            <BadgesProvider>
+                                              <AppShell />
+                                            </BadgesProvider>
+                                          </CollectionsProvider>
+                                        </WhatsNewProvider>
+                                      </PantryCheckProvider>
+                                    </ToastProvider>
+                                  </AccessibilityPrefsProvider>
                                 </TextSizeProvider>
                               </HomeLayoutProvider>
                             </LeftoversProvider>

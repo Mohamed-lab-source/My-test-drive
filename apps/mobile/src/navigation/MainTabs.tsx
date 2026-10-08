@@ -8,6 +8,7 @@ import { ListsScreen } from "../screens/ListsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
+import { useAccessibilityPrefs } from "../context/AccessibilityPrefsContext";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -18,16 +19,21 @@ const ICONS: Record<keyof MainTabParamList, string> = {
 };
 
 function TabIcon({ name, focused }: { name: keyof MainTabParamList; focused: boolean }) {
+  const { reduceMotion } = useAccessibilityPrefs();
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      scale.setValue(focused ? 1.15 : 1);
+      return;
+    }
     Animated.spring(scale, {
       toValue: focused ? 1.15 : 1,
       useNativeDriver: true,
       speed: 20,
       bounciness: 14,
     }).start();
-  }, [focused]);
+  }, [focused, reduceMotion]);
 
   return (
     <Animated.Text style={{ fontSize: 18, transform: [{ scale }] }}>{ICONS[name]}</Animated.Text>
@@ -37,6 +43,7 @@ function TabIcon({ name, focused }: { name: keyof MainTabParamList; focused: boo
 export function MainTabs() {
   const { t } = useLocale();
   const { colors } = useTheme();
+  const { hapticsEnabled } = useAccessibilityPrefs();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -47,7 +54,7 @@ export function MainTabs() {
       })}
       screenListeners={{
         tabPress: () => {
-          Haptics.selectionAsync().catch(() => {});
+          if (hapticsEnabled) Haptics.selectionAsync().catch(() => {});
         },
       }}
     >

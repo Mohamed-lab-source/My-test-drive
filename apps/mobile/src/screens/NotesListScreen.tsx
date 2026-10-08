@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipes } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
+import { EmptyState } from "../components/EmptyState";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { useNotes } from "../context/NotesContext";
 import { useLocale } from "../i18n/LocaleContext";
@@ -90,7 +91,7 @@ export function NotesListScreen({ navigation }: Props) {
             </AnimatedPressable>
           </FadeSlideIn>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{t("notes.empty")}</Text>}
+        ListEmptyComponent={<EmptyState icon="📝" message={t("notes.empty")} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </SafeAreaView>
@@ -116,5 +117,4 @@ const createStyles = (colors: ThemeColors) =>
     textCol: { flex: 1 },
     title: { fontSize: 15, fontWeight: "700", color: colors.text },
     note: { fontSize: 13, color: colors.textMuted, marginTop: 4, lineHeight: 18 },
-    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(6) },
   });

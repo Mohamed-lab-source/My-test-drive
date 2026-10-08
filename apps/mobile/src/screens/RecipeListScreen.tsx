@@ -8,6 +8,7 @@ import { fetchIngredients, fetchRecipes } from "../api/endpoints";
 import { RecipeCard } from "../components/RecipeCard";
 import { RecipeCardSkeleton } from "../components/Skeleton";
 import { Chip } from "../components/Chip";
+import { EmptyState } from "../components/EmptyState";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -282,6 +283,8 @@ export function RecipeListScreen({ route, navigation }: Props) {
                     key={ing.id}
                     style={styles.selectedChip}
                     pressScale={0.95}
+                    accessibilityLabel={t("recipeList.filter.removeIngredient", { name: ing.name })}
+                    accessibilityRole="button"
                     onPress={() =>
                       setSelectedIngredientIds((prev) => prev.filter((id) => id !== ing.id))
                     }
@@ -321,11 +324,11 @@ export function RecipeListScreen({ route, navigation }: Props) {
           ListEmptyComponent={
             loadError ? (
               <View style={styles.errorState}>
-                <Text style={styles.empty}>{t("recipeList.loadError")}</Text>
+                <EmptyState icon="⚠️" message={t("recipeList.loadError")} />
                 <Chip label={t("recipeDetail.retry")} onPress={loadRecipes} />
               </View>
             ) : (
-              <Text style={styles.empty}>{t("recipeList.empty")}</Text>
+              <EmptyState icon="🔍" message={t("recipeList.empty")} />
             )
           }
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -341,7 +344,6 @@ const createStyles = (colors: ThemeColors) =>
     filterRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: spacing(3), paddingTop: spacing(2) },
     filterRowSecondary: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", paddingHorizontal: spacing(3) },
     listContent: { padding: spacing(3), paddingTop: spacing(1) },
-    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
     errorState: { alignItems: "center", gap: spacing(1.5) },
     offlineBanner: {
       backgroundColor: colors.chipBackground,

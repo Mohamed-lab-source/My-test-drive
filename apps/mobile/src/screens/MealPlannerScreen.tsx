@@ -558,6 +558,8 @@ export function MealPlannerScreen({ navigation }: Props) {
                     <AnimatedPressable
                       style={styles.removeButton}
                       pressScale={0.85}
+                      accessibilityLabel={t("mealPlanner.removeDay")}
+                      accessibilityRole="button"
                       onPress={() => {
                         setPlan(dateKey, null);
                         showToast(t("mealPlanner.dayRemovedToast", { title: recipe.title }), {

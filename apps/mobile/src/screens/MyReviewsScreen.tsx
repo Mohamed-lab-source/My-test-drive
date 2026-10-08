@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { deleteMyRating, fetchMyRatings } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
+import { EmptyState } from "../components/EmptyState";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -95,7 +96,7 @@ export function MyReviewsScreen({ navigation }: Props) {
             </AnimatedPressable>
           </FadeSlideIn>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{t("myReviews.empty")}</Text>}
+        ListEmptyComponent={<EmptyState icon="⭐" message={t("myReviews.empty")} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
     </SafeAreaView>
@@ -122,7 +123,6 @@ const createStyles = (colors: ThemeColors) =>
     title: { fontSize: 15, fontWeight: "700", color: colors.text },
     stars: { fontSize: 13, color: colors.primary, marginTop: 4 },
     comment: { fontSize: 13, color: colors.textMuted, marginTop: 4, lineHeight: 18 },
-    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(6) },
     deleteButton: {
       width: 26,
       height: 26,

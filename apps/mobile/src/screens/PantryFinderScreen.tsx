@@ -135,6 +135,8 @@ export function PantryFinderScreen({ navigation }: Props) {
                     key={ing.id}
                     style={styles.selectedChip}
                     pressScale={0.95}
+                    accessibilityLabel={t("recipeList.filter.removeIngredient", { name: ing.name })}
+                    accessibilityRole="button"
                     onPress={() => toggleIngredient(ing.id)}
                   >
                     <Text style={styles.selectedChipText}>{ing.name} ✕</Text>

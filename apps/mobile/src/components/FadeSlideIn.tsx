@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, type StyleProp, type ViewStyle } from "react-native";
+import { useAccessibilityPrefs } from "../context/AccessibilityPrefsContext";
 
 type Props = {
   children: React.ReactNode;
@@ -17,9 +18,14 @@ const MAX_DELAY_MS = 320;
  * cascade across list items.
  */
 export function FadeSlideIn({ children, index = 0, style }: Props) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const { reduceMotion } = useAccessibilityPrefs();
+  const progress = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      progress.setValue(1);
+      return;
+    }
     const delay = Math.min(index * STAGGER_MS, MAX_DELAY_MS);
     Animated.timing(progress, {
       toValue: 1,
@@ -27,7 +33,8 @@ export function FadeSlideIn({ children, index = 0, style }: Props) {
       delay,
       useNativeDriver: true,
     }).start();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduceMotion]);
 
   return (
     <Animated.View

@@ -5,6 +5,7 @@ import { AnimatedPressable } from "./AnimatedPressable";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import { useLocale } from "../i18n/LocaleContext";
+import { useAccessibilityPrefs } from "../context/AccessibilityPrefsContext";
 
 type Props = {
   minutes: number;
@@ -20,6 +21,7 @@ function formatTime(totalSeconds: number): string {
 export function StepTimer({ minutes, onFinish }: Props) {
   const { colors } = useTheme();
   const { t } = useLocale();
+  const { hapticsEnabled } = useAccessibilityPrefs();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const totalSeconds = Math.round(minutes * 60);
   const [remaining, setRemaining] = useState(totalSeconds);
@@ -28,6 +30,8 @@ export function StepTimer({ minutes, onFinish }: Props) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onFinishRef = useRef(onFinish);
   onFinishRef.current = onFinish;
+  const hapticsRef = useRef(hapticsEnabled);
+  hapticsRef.current = hapticsEnabled;
 
   useEffect(() => {
     // Reset whenever the underlying step (and thus `minutes`) changes.
@@ -44,8 +48,10 @@ export function StepTimer({ minutes, onFinish }: Props) {
           if (intervalRef.current) clearInterval(intervalRef.current);
           setIsRunning(false);
           setIsDone(true);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-          setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}), 400);
+          if (hapticsRef.current) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+            setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}), 400);
+          }
           onFinishRef.current?.();
           return 0;
         }

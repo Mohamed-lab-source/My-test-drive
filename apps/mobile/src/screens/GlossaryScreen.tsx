@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
+import { EmptyState } from "../components/EmptyState";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { GLOSSARY_TERMS } from "../data/glossary";
 import { useLocale } from "../i18n/LocaleContext";
@@ -55,7 +56,7 @@ export function GlossaryScreen({}: Props) {
             </View>
           </FadeSlideIn>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{t("glossary.empty")}</Text>}
+        ListEmptyComponent={<EmptyState icon="📖" message={t("glossary.empty")} />}
       />
     </SafeAreaView>
   );
@@ -88,5 +89,4 @@ const createStyles = (colors: ThemeColors) =>
     emoji: { fontSize: 22, marginEnd: spacing(1.5) },
     term: { fontSize: 17, fontWeight: "800", color: colors.text, flex: 1 },
     description: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
-    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
   });

@@ -44,7 +44,7 @@ const en = {
   "featureTour.streaks.title": "Build a cooking habit",
   "featureTour.streaks.body": "Track your cooking streak with a full history chart in Cooking Stats, see how many times you've made a favorite, revisit what you've recently cooked right from Home, celebrate streak milestones, and get reminded to use up leftovers before they spoil. Earn badges for milestones like your first cook, long streaks, or trying 5 cuisines (from Profile), level up as you cook more, and check your Weekly Recap for a quick summary of your week in the kitchen.",
   "featureTour.personalize.title": "Make it yours",
-  "featureTour.personalize.body": "Switch between English and Arabic, light and dark mode, metric or imperial units, an accent color, and a comfortable text size -- your favorite cuisines always show first, and recommendations get smarter the more you cook. Choose which sections show on Home from your profile, change your password or email, download a copy of your data, or delete your account any time, and check What's New to see recent updates.",
+  "featureTour.personalize.body": "Switch between English and Arabic, light and dark mode, metric or imperial units, an accent color, and a comfortable text size -- your favorite cuisines always show first, and recommendations get smarter the more you cook. Turn off animations or haptic feedback if you'd rather the app stay still and quiet. Choose which sections show on Home from your profile, change your password or email, download a copy of your data, or delete your account any time, and check What's New to see recent updates.",
   "featureTour.glossary.title": "Cooking glossary",
   "featureTour.glossary.body": "Not sure what \"julienne\" means? Look up cooking terms and techniques any time from your profile.",
 
@@ -320,6 +320,7 @@ const en = {
   "mealPlanner.budgetCapProgress": "{spent} / {cap} EGP",
   "mealPlanner.budgetCapOver": "Over budget by {amount} EGP",
   "mealPlanner.dayRemovedToast": "{title} removed from plan",
+  "mealPlanner.removeDay": "Remove from plan",
 
   "pantryFinder.title": "What can I cook?",
   "pantryFinder.subtitle": "Add the ingredients you have on hand, and we'll find recipes that use them.",
@@ -351,6 +352,7 @@ const en = {
   "recipeList.filter.comfort": "Comfort",
   "recipeList.filter.ingredientsIHave": "🥕 Ingredients I have",
   "recipeList.filter.ingredientsSearchPlaceholder": "Search an ingredient to add...",
+  "recipeList.filter.removeIngredient": "Remove {name}",
   "recipeList.empty": "No recipes match these filters yet.",
   "recipeList.loadError": "Couldn't load recipes. Check your connection.",
   "recipeList.offlineBanner": "Showing a saved copy -- you're offline",
@@ -494,6 +496,10 @@ const en = {
   "profile.textSizeSmall": "Small",
   "profile.textSizeMedium": "Medium",
   "profile.textSizeLarge": "Large",
+  "profile.reduceMotion": "Reduce motion",
+  "profile.haptics": "Haptic feedback",
+  "profile.toggleOn": "On",
+  "profile.toggleOff": "Off",
 
   "glossary.title": "Cooking glossary",
   "converter.title": "Unit converter",
@@ -656,7 +662,7 @@ const ar: Record<keyof typeof en, string> = {
   "featureTour.streaks.title": "ابنِ عادة الطبخ",
   "featureTour.streaks.body": "تابعي سلسلة أيام طبخك برسم بياني كامل في إحصائيات الطبخ، شاهدي كم مرة طبختِ طبقاً مفضلاً، راجعي ما طبختِه مؤخراً مباشرة من الرئيسية، احتفلي بمحطات سلسلتك، واحصلي على تذكير لاستخدام البواقي قبل أن تفسد. اكسبي شارات لمحطات مثل أول طبخة، سلاسل طويلة، أو تجربة 5 مطابخ (من الملف الشخصي)، ارتقي بمستواك مع كل طبخة، وتابعي ملخص الأسبوع لمعرفة أسبوعك في المطبخ بسرعة.",
   "featureTour.personalize.title": "اجعليها خاصة بك",
-  "featureTour.personalize.body": "بدّلي بين العربية والإنجليزية، الوضع الفاتح والداكن، الوحدات المترية أو الإمبراطورية، لون مميز، وحجم نص مريح -- مطابخك المفضلة تظهر دائماً أولاً، والتوصيات تصبح أذكى كلما طبختِ أكثر. اختاري الأقسام التي تظهر في صفحتك الرئيسية من ملفك الشخصي، غيّري كلمة مرورك أو بريدك الإلكتروني، نزّلي نسخة من بياناتك، أو احذفي حسابك في أي وقت، وتحققي من \"ما الجديد\" لمشاهدة آخر التحديثات.",
+  "featureTour.personalize.body": "بدّلي بين العربية والإنجليزية، الوضع الفاتح والداكن، الوحدات المترية أو الإمبراطورية، لون مميز، وحجم نص مريح -- مطابخك المفضلة تظهر دائماً أولاً، والتوصيات تصبح أذكى كلما طبختِ أكثر. أوقفي الحركات أو الاستجابة اللمسية إن فضّلتِ تجربة أكثر هدوءاً. اختاري الأقسام التي تظهر في صفحتك الرئيسية من ملفك الشخصي، غيّري كلمة مرورك أو بريدك الإلكتروني، نزّلي نسخة من بياناتك، أو احذفي حسابك في أي وقت، وتحققي من \"ما الجديد\" لمشاهدة آخر التحديثات.",
   "featureTour.glossary.title": "قاموس مصطلحات الطبخ",
   "featureTour.glossary.body": "لستِ متأكدة ما معنى \"جوليان\"؟ ابحثي عن مصطلحات وتقنيات الطبخ في أي وقت من ملفك الشخصي.",
 
@@ -932,6 +938,7 @@ const ar: Record<keyof typeof en, string> = {
   "mealPlanner.budgetCapProgress": "{spent} / {cap} جنيه",
   "mealPlanner.budgetCapOver": "تجاوزت الميزانية بمقدار {amount} جنيه",
   "mealPlanner.dayRemovedToast": "تمت إزالة {title} من الخطة",
+  "mealPlanner.removeDay": "إزالة من الخطة",
 
   "pantryFinder.title": "ماذا أطبخ؟",
   "pantryFinder.subtitle": "أضف المكونات المتوفرة لديك، وسنجد لك وصفات تستخدمها.",
@@ -963,6 +970,7 @@ const ar: Record<keyof typeof en, string> = {
   "recipeList.filter.comfort": "مريح",
   "recipeList.filter.ingredientsIHave": "🥕 المكونات المتوفرة لدي",
   "recipeList.filter.ingredientsSearchPlaceholder": "ابحثي عن مكون لإضافته...",
+  "recipeList.filter.removeIngredient": "إزالة {name}",
   "recipeList.empty": "لا توجد وصفات تطابق هذه الفلاتر بعد.",
   "recipeList.loadError": "تعذّر تحميل الوصفات. تحقّقي من الاتصال بالإنترنت.",
   "recipeList.offlineBanner": "تُعرض نسخة محفوظة -- أنتِ غير متصلة بالإنترنت",
@@ -1106,6 +1114,10 @@ const ar: Record<keyof typeof en, string> = {
   "profile.textSizeSmall": "صغير",
   "profile.textSizeMedium": "متوسط",
   "profile.textSizeLarge": "كبير",
+  "profile.reduceMotion": "تقليل الحركة",
+  "profile.haptics": "الاستجابة اللمسية",
+  "profile.toggleOn": "تفعيل",
+  "profile.toggleOff": "إيقاف",
 
   "glossary.title": "معجم تقنيات الطبخ",
   "converter.title": "تحويل الوحدات",

@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { AnimatedPressable } from "../components/AnimatedPressable";
+import { EmptyState } from "../components/EmptyState";
 import { RecipeCard } from "../components/RecipeCard";
 import { useCollections } from "../context/CollectionsContext";
 import { useLocale } from "../i18n/LocaleContext";
@@ -30,7 +31,7 @@ export function CollectionDetailScreen({ route, navigation }: Props) {
   if (!collection) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={styles.empty}>{t("collections.emptyDetail")}</Text>
+        <EmptyState icon="📁" message={t("collections.emptyDetail")} />
       </SafeAreaView>
     );
   }
@@ -118,7 +119,7 @@ export function CollectionDetailScreen({ route, navigation }: Props) {
             onLongPress={() => removeRecipe(collection.id, item.slug).catch(() => {})}
           />
         )}
-        ListEmptyComponent={<Text style={styles.empty}>{t("collections.emptyDetail")}</Text>}
+        ListEmptyComponent={<EmptyState icon="📁" message={t("collections.emptyDetail")} />}
       />
     </SafeAreaView>
   );
@@ -152,5 +153,4 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: spacing(1),
     },
     renameSaveText: { color: "#fff", fontWeight: "700", fontSize: 13 },
-    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(6) },
   });

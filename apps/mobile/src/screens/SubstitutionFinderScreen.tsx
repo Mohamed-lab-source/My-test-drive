@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchIngredients } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
+import { EmptyState } from "../components/EmptyState";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -75,7 +76,7 @@ export function SubstitutionFinderScreen({}: Props) {
               </View>
             </FadeSlideIn>
           )}
-          ListEmptyComponent={<Text style={styles.empty}>{t("substitutionFinder.empty")}</Text>}
+          ListEmptyComponent={<EmptyState icon="🔄" message={t("substitutionFinder.empty")} />}
         />
       ) : null}
     </SafeAreaView>
@@ -117,5 +118,4 @@ const createStyles = (colors: ThemeColors) =>
     },
     name: { fontSize: 15, fontWeight: "700", color: colors.text },
     substitute: { fontSize: 13, color: colors.primaryDark, marginTop: 4, fontWeight: "600" },
-    empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(4) },
   });

@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { Animated, Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import * as Haptics from "expo-haptics";
+import { useAccessibilityPrefs } from "../context/AccessibilityPrefsContext";
 
 type Props = Omit<PressableProps, "style" | "children"> & {
   style?: StyleProp<ViewStyle>;
@@ -26,9 +27,14 @@ export function AnimatedPressable({
   children,
   ...rest
 }: Props) {
+  const { reduceMotion, hapticsEnabled } = useAccessibilityPrefs();
   const scale = useRef(new Animated.Value(1)).current;
 
   const animateTo = (toValue: number) => {
+    if (reduceMotion) {
+      scale.setValue(toValue);
+      return;
+    }
     Animated.spring(scale, {
       toValue,
       useNativeDriver: true,
@@ -43,7 +49,7 @@ export function AnimatedPressable({
       onPressIn={(e) => {
         if (!disabled) {
           animateTo(pressScale);
-          if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          if (haptic && hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         }
         onPressIn?.(e);
       }}
