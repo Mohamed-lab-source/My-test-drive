@@ -34,4 +34,18 @@ class PersonalRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
+
+  /// Your newest private notes (one read, not a listener), for the Notes page.
+  Future<List<({String placeId, String text, DateTime? updatedAt})>> allNotes(String uid,
+      {int limit = 100}) async {
+    final snap = await _notes(uid).orderBy('updatedAt', descending: true).limit(limit).get();
+    return [
+      for (final d in snap.docs)
+        (
+          placeId: d.id,
+          text: (d.data()['text'] as String?) ?? '',
+          updatedAt: (d.data()['updatedAt'] as Timestamp?)?.toDate(),
+        ),
+    ];
+  }
 }

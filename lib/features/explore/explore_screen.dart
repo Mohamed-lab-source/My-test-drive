@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/extras.dart' show fuzzyContains, latinDigits;
 import '../../app/helpers.dart' show normalizeSearch;
 import '../../app/local_history.dart';
 import '../../app/local_prefs.dart';
@@ -51,6 +52,7 @@ enum _Extra {
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   final _search = TextEditingController();
+  bool _closeMatches = false;
   String _query = '';
   String? _category;
   String? _area;
@@ -143,9 +145,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   List<Place> _filter(List<Place> all, (double, double)? me) {
     final raw = _query.trim();
-    final q = normalizeSearch(raw);
+    final q = normalizeSearch(latinDigits(raw));
     final now = DateTime.now();
-    final list = all.where((p) {
+    bool passes(Place p) {
       // Shops live inside malls; show them only when asked for.
       if (_category == null && p.category == 'shop' && q.isEmpty) return false;
       if (_category != null && p.category != _category) return false;
@@ -153,7 +155,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       if (_kind != null && !kindsOf(p).contains(_kind)) return false;
       if (_openNow && p.isOpenAt(now) != true) return false;
       if (_extras.isNotEmpty && !_passesExtras(p, me, now)) return false;
-      if (q.isEmpty) return true;
+      return true;
+    }
+
+    bool matches(Place p) {
       bool has(String? s) => s != null && normalizeSearch(s).contains(q);
       return has(p.name) ||
           has(p.nameAr) ||
@@ -164,7 +169,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           has(p.kindLabel) ||
           has(p.details.brand) ||
           has(Categories.label(p.category));
-    }).toList();
+    }
+
+    final list = all.where((p) => passes(p) && (q.isEmpty || matches(p))).toList();
+    // Nothing found? Allow one typo per longer word ("zamalk" → Zamalek).
+    _closeMatches = false;
+    if (list.isEmpty && q.length >= 4) {
+      list.addAll(all
+          .where((p) =>
+              passes(p) &&
+              fuzzyContains(normalizeSearch('${p.name} ${p.nameAr ?? ''} ${p.area ?? ''}'), q))
+          .take(200));
+      _closeMatches = list.isNotEmpty;
+    }
     switch (_sort) {
       case _Sort.nearest when me != null:
         list.removeWhere((p) => !p.hasLocation);
@@ -384,6 +401,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     label: Text(tr('My lists')),
                     onPressed: () => context.push('/lists'),
                   ),
+                  ActionChip(
+                    avatar: const Text('🏘️'),
+                    label: Text(tr('Areas')),
+                    onPressed: () => context.push('/areas'),
+                  ),
+                  ActionChip(
+                    avatar: const Text('💡'),
+                    label: Text(tr('Ideas')),
+                    onPressed: () => context.push('/ideas'),
+                  ),
                   PopupMenuButton<_Sort>(
                     tooltip: tr('Sort'),
                     onSelected: _setSort,
@@ -398,9 +425,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                               width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.sort, size: 18),
                       label: Text(switch (_sort) {
-                        _Sort.best => 'Best match',
-                        _Sort.nearest => 'Nearest',
-                        _Sort.az => 'A–Z',
+                        _Sort.best => tr('Best match'),
+                        _Sort.nearest => tr('Nearest'),
+                        _Sort.az => tr('A–Z'),
                       }),
                     ),
                   ),
@@ -413,7 +440,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   ),
                   FilterChip(
                     avatar: const Icon(Icons.location_city, size: 18),
-                    label: Text(_area ?? 'Any area'),
+                    label: Text(_area ?? tr('Any area')),
                     selected: _area != null,
                     showCheckmark: false,
                     onSelected: (_) => _pickArea(all),
@@ -517,8 +544,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.sm, KSpace.md, KSpace.sm),
                   child: Text(
-                      '${list.length} places'
-                      '${_openCount(list) > 0 ? ' · ${_openCount(list)} open now' : ''}',
+                      [
+                        if (_closeMatches) tr('No exact matches. Showing close ones.'),
+                        trf('{n} places', {'n': list.length}),
+                        if (_openCount(list) > 0) trf('{n} open now', {'n': _openCount(list)}),
+                      ].join(' · '),
                       style: Theme.of(context).textTheme.bodySmall),
                 ),
               ),

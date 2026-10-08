@@ -23,6 +23,11 @@ import '../features/plan/plan_form_screen.dart';
 import '../features/plan/plan_result_screen.dart';
 import '../features/plan/saved_plans_screen.dart';
 import '../features/profile/about_screen.dart';
+import '../features/tools/areas_screen.dart';
+import '../features/tools/ideas_screen.dart';
+import '../features/tools/my_stats_screen.dart';
+import '../features/tools/notes_screen.dart';
+import '../features/tools/tools_screen.dart';
 import '../features/profile/safety_screens.dart';
 import '../features/profile/welcome_screen.dart';
 import '../features/profile/whats_new_screen.dart';
@@ -74,6 +79,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final lng = double.tryParse(q['lng'] ?? '');
           return PlanFormScreen(
             initialMallId: q['mall'],
+            idea: int.tryParse(q['idea'] ?? ''),
             anchor: lat == null || lng == null ? null : (lat, lng, q['label'] ?? 'this place'),
           );
         },
@@ -102,6 +108,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/blocked', builder: (_, _) => const BlockedScreen()),
       GoRoute(path: '/whats-new', builder: (_, _) => const WhatsNewScreen()),
       GoRoute(path: '/lists', builder: (_, _) => const ListsScreen()),
+      GoRoute(path: '/ideas', builder: (_, _) => const IdeasScreen()),
+      GoRoute(path: '/areas', builder: (_, _) => const AreasScreen()),
+      GoRoute(
+        path: '/area/:city/:name',
+        builder: (_, s) =>
+            AreaScreen(city: s.pathParameters['city']!, name: s.pathParameters['name']!),
+      ),
+      GoRoute(path: '/tools', builder: (_, _) => const ToolsScreen()),
+      GoRoute(path: '/stats', builder: (_, _) => const MyStatsScreen()),
+      GoRoute(path: '/my-map', builder: (_, _) => const MyMapScreen()),
+      GoRoute(path: '/notes', builder: (_, _) => const NotesScreen()),
       GoRoute(
         path: '/compare',
         builder: (_, s) => CompareScreen(

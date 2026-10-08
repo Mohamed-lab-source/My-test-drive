@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/extras.dart';
 import '../../app/helpers.dart';
 import '../../app/local_history.dart';
 import '../../app/local_prefs.dart';
@@ -167,6 +168,17 @@ class _Details extends ConsumerWidget {
         ],
         const SizedBox(height: KSpace.sm),
         _HowFar(place: place),
+        _DayNote(place: place),
+        if (place.area != null)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              icon: const Icon(Icons.holiday_village_outlined, size: 18),
+              label: Text(trf('More in {area}', {'area': place.area!})),
+              onPressed: () =>
+                  context.push('/area/${place.city}/${Uri.encodeComponent(place.area!)}'),
+            ),
+          ),
         if (place.hasLocation && place.category != 'shop') ...[
           const SizedBox(height: KSpace.sm),
           FilledButton.tonalIcon(
@@ -650,13 +662,13 @@ class _HowFarState extends ConsumerState<_HowFar> {
       );
     }
     final km = haversineKm(me.$1, me.$2, p.lat!, p.lng!);
-    final text = km < 1 ? '${(km * 1000).round()} m' : '${km.toStringAsFixed(1)} km';
+    final text = '${distanceText(km)} ${compassDirection(me.$1, me.$2, p.lat!, p.lng!)}';
     return Row(
       children: [
         Icon(Icons.near_me_outlined, size: 20, color: context.k.inkMuted),
         const SizedBox(width: KSpace.sm),
         Expanded(
-          child: Text(trf('{d} from you (straight line)', {'d': text}) +
+          child: Text(trf('{d} of you (straight line)', {'d': text}) +
               (km <= 3 ? trf(' · about {n} min walk', {'n': walkingMinutes(km)}) : '')),
         ),
       ],
@@ -1183,6 +1195,33 @@ class _PlaceMapState extends State<_PlaceMap> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Today's sunset (for outdoor places) and a fixed public holiday, if any.
+/// Both are worked out from the date and the place's real coordinates.
+class _DayNote extends StatelessWidget {
+  const _DayNote({required this.place});
+
+  final Place place;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final holiday = egyptHoliday(now);
+    final outdoor = place.category == 'park' || place.category == 'sight' || place.details.outdoorSeating == true;
+    final sun = outdoor && place.hasLocation ? sunTimes(now, place.lat!, place.lng!) : null;
+    final lines = [
+      if (sun != null && sun.sunset.isAfter(now))
+        trf('🌇 Sunset here today at {time}', {'time': hhmmLocal(sun.sunset)}),
+      if (holiday != null) trf('🇪🇬 Today is {name}: hours may differ.', {'name': holiday}),
+    ];
+    if (lines.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.xs),
+      child: Text(lines.join('\n'),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
     );
   }
 }

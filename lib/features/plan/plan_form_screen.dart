@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/extras.dart';
 import '../../app/helpers.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -18,7 +19,10 @@ import '../profile/theme_sheet.dart';
 
 /// The home tab: describe your outing, get a real plan.
 class PlanFormScreen extends ConsumerStatefulWidget {
-  const PlanFormScreen({super.key, this.initialMallId, this.anchor});
+  const PlanFormScreen({super.key, this.initialMallId, this.anchor, this.idea});
+
+  /// Index into [outingIdeas], when opened from an idea card.
+  final int? idea;
 
   /// Set when opened from a place's "Plan an outing around here".
   final (double, double, String)? anchor;
@@ -96,6 +100,18 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         ..addAll(vibes);
     }
     final hour = DateTime.now().hour;
+    final idea = widget.idea == null || widget.idea! < 0 || widget.idea! >= outingIdeas.length
+        ? null
+        : outingIdeas[widget.idea!];
+    if (idea != null) {
+      _people = idea.people;
+      _stops = idea.stops;
+      _vibes
+        ..clear()
+        ..addAll(idea.vibes);
+      _time = idea.time;
+      return;
+    }
     _time = hour < 11
         ? 'morning'
         : hour < 16
@@ -222,6 +238,11 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 label: Text(tr('Surprise plan')),
                 onPressed: _surprisePlan,
               ),
+              ActionChip(
+                avatar: const Text('💡'),
+                label: Text(tr('More ideas')),
+                onPressed: () => context.push('/ideas'),
+              ),
               for (final preset in _presets)
                 ActionChip(
                   label: Text(tr(preset.label)),
@@ -295,6 +316,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               ),
             ],
           ),
+          _DayFacts(day: _date ?? DateTime.now(), city: ref.watch(cityProvider)),
           SectionTitle(tr('City')),
           SegmentedButton<String>(
             showSelectedIcon: false,
@@ -821,6 +843,33 @@ class _ChoicesSummary extends StatelessWidget {
           Expanded(child: Text(text)),
         ],
       ),
+    );
+  }
+}
+
+/// Facts about the outing day: a fixed public holiday, the weekend, and
+/// when the sun sets (worked out from the date, not looked up).
+class _DayFacts extends StatelessWidget {
+  const _DayFacts({required this.day, required this.city});
+
+  final DateTime day;
+  final String city;
+
+  @override
+  Widget build(BuildContext context) {
+    final holiday = egyptHoliday(day);
+    final c = cityCenters[city] ?? cityCenters['cairo']!;
+    final sun = sunTimes(day, c.$1, c.$2);
+    final parts = [
+      if (holiday != null) trf('🇪🇬 {name}: a public holiday, places may be busier.', {'name': holiday}),
+      if (holiday == null && isEgyptWeekend(day)) tr('🗓️ Weekend: popular places get busy.'),
+      if (sun != null) trf('🌇 Sunset at {time}', {'time': hhmmLocal(sun.sunset)}),
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.sm),
+      child: Text(parts.join('\n'),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
     );
   }
 }

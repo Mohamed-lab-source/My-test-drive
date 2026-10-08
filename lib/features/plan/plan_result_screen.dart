@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/extras.dart';
 import '../../app/helpers.dart' show sameDay, totalStopMinutes, showTime, walkingMinutes, weatherIcon;
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -217,6 +218,10 @@ class _PlanBody extends ConsumerWidget {
         if (plan.weatherNote != null) ...[
           const SizedBox(height: KSpace.md),
           _InfoBanner(icon: weatherIcon(plan.weatherNote!), text: plan.weatherNote!),
+        ],
+        if (_dayFacts(plan) case final facts?) ...[
+          const SizedBox(height: KSpace.md),
+          _InfoBanner(icon: Icons.wb_twilight, text: facts),
         ],
         if (plan.source == 'fallback') ...[
           const SizedBox(height: KSpace.md),
@@ -1219,4 +1224,20 @@ void _showBigMap(BuildContext context, OutingPlan plan) {
       ),
     ),
   );
+}
+
+/// Sunset time when the plan has outdoor stops, and a fixed public holiday
+/// on the outing day. Worked out from the date and real coordinates.
+String? _dayFacts(OutingPlan plan) {
+  final day = plan.request.day;
+  final outdoor = plan.stops.where((s) => s.hasLocation && (s.category == 'park' || s.category == 'sight'));
+  final at = outdoor.firstOrNull;
+  final c = at != null ? (at.lat!, at.lng!) : cityCenters[plan.request.city];
+  final sun = outdoor.isEmpty || c == null ? null : sunTimes(day, c.$1, c.$2);
+  final holiday = egyptHoliday(day);
+  final lines = [
+    if (sun != null) trf('Sunset at {time}. Outdoor stops are nicest before then.', {'time': hhmmLocal(sun.sunset)}),
+    if (holiday != null) trf('{name} is a public holiday: places may be busier and hours may differ.', {'name': holiday}),
+  ];
+  return lines.isEmpty ? null : lines.join('\n');
 }

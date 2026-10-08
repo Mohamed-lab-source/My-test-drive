@@ -52,6 +52,30 @@ class ProfileScreen extends ConsumerWidget {
           Card(
             child: Column(
               children: [
+                for (final (icon, title, sub, path) in [
+                  (Icons.insights_outlined, tr('My outings in numbers'), tr('Streaks, top areas, kinds of places'), '/stats'),
+                  (Icons.map_outlined, tr('My map'), tr('Favorites and places you\'ve been'), '/my-map'),
+                  (Icons.sticky_note_2_outlined, tr('My notes'), tr('All your private notes'), '/notes'),
+                  (Icons.handyman_outlined, tr('Outing tools'), tr('Decide for us, who pays, sunset, holidays'), '/tools'),
+                  (Icons.lightbulb_outline, tr('Outing ideas'), tr('Ready-made plans to start from'), '/ideas'),
+                  (Icons.holiday_village_outlined, tr('Areas'), tr('Every neighbourhood we have places in'), '/areas'),
+                ]) ...[
+                  ListTile(
+                    leading: Icon(icon),
+                    title: Text(title),
+                    subtitle: Text(sub),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(path),
+                  ),
+                  if (path != '/areas') const Divider(),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: KSpace.md),
+          Card(
+            child: Column(
+              children: [
                 ListTile(
                   leading: const Icon(Icons.palette_outlined),
                   title: Text(tr('Look & colors')),

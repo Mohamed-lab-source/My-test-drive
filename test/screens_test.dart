@@ -9,6 +9,8 @@ import 'package:khroga/features/explore/explore_screen.dart';
 import 'package:khroga/features/profile/about_screen.dart';
 import 'package:khroga/features/profile/welcome_screen.dart';
 import 'package:khroga/features/profile/whats_new_screen.dart';
+import 'package:khroga/features/tools/ideas_screen.dart';
+import 'package:khroga/features/tools/tools_screen.dart';
 import 'package:khroga/models/place.dart';
 
 Widget _app(Widget child) => ProviderScope(child: _router(child));
@@ -55,6 +57,24 @@ void main() {
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
     expect(find.text('Safety'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('outing ideas and tools fit a small phone', (tester) async {
+    await tester.pumpWidget(_app(const IdeasScreen()));
+    await tester.pump();
+    expect(find.text('Date night'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(_app(const ToolsScreen()));
+    await tester.pump();
+    expect(find.text('Decide for us'), findsOneWidget);
+    await tester.tap(find.text('Flip'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.textContaining(RegExp('Heads|Tails')), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
+    await tester.pump();
+    expect(find.text('Coming public holidays'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
