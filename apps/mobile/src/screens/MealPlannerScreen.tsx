@@ -38,6 +38,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { useAuth } from "../context/AuthContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
+import { useMealReminder } from "../context/MealReminderContext";
 import { useLeftovers } from "../context/LeftoversContext";
 import { useToast } from "../context/ToastContext";
 import { usePantryCheck } from "../context/PantryCheckContext";
@@ -58,6 +59,13 @@ const DAYS_AHEAD = 7;
 const DEBOUNCE_MS = 350;
 const BUDGET_CAP_KEY = "cookmate.weeklyBudgetCap";
 const LOCKED_DAYS_KEY = "cookmate.mealPlanLockedDays";
+const REMINDER_TIME_PRESETS: { hour: number; minute: number; label: string }[] = [
+  { hour: 15, minute: 0, label: "15:00" },
+  { hour: 16, minute: 0, label: "16:00" },
+  { hour: 17, minute: 0, label: "17:00" },
+  { hour: 18, minute: 0, label: "18:00" },
+  { hour: 19, minute: 0, label: "19:00" },
+];
 
 function dateKeyFor(offset: number): string {
   const d = new Date();
@@ -73,6 +81,8 @@ export function MealPlannerScreen({ navigation }: Props) {
   const { unitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { plan, setPlan } = useMealPlan();
+  const { enabled: reminderEnabled, time: reminderTime, setEnabled: setReminderEnabled, setTime: setReminderTime } =
+    useMealReminder();
   const { leftovers } = useLeftovers();
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
@@ -501,6 +511,30 @@ export function MealPlannerScreen({ navigation }: Props) {
             ) : null}
           </View>
         ) : null}
+
+        <Text style={[styles.label, { textAlign }]}>{t("mealPlanner.remindersLabel")}</Text>
+        <View style={styles.themeRow}>
+          <Chip
+            label={t(reminderEnabled ? "mealPlanner.remindersOn" : "mealPlanner.remindersOff")}
+            selected={reminderEnabled}
+            onPress={async () => {
+              const result = await setReminderEnabled(!reminderEnabled);
+              if (!reminderEnabled && !result) {
+                Alert.alert(t("mealPlanner.remindersPermissionDeniedTitle"), t("mealPlanner.remindersPermissionDeniedMessage"));
+              }
+            }}
+          />
+          {reminderEnabled
+            ? REMINDER_TIME_PRESETS.map((preset) => (
+                <Chip
+                  key={preset.hour}
+                  label={preset.label}
+                  selected={reminderTime.hour === preset.hour && reminderTime.minute === preset.minute}
+                  onPress={() => setReminderTime({ hour: preset.hour, minute: preset.minute })}
+                />
+              ))
+            : null}
+        </View>
 
         {weeklyNutrition ? (
           <View style={styles.nutritionRow}>

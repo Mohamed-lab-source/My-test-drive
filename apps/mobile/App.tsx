@@ -9,6 +9,7 @@ import { RecentlyViewedProvider } from "./src/context/RecentlyViewedContext";
 import { RecentlyRatedProvider } from "./src/context/RecentlyRatedContext";
 import { NotesProvider } from "./src/context/NotesContext";
 import { MealPlanProvider } from "./src/context/MealPlanContext";
+import { MealReminderProvider } from "./src/context/MealReminderContext";
 import { CookStreakProvider } from "./src/context/CookStreakContext";
 import { LeftoversProvider } from "./src/context/LeftoversContext";
 import { HomeLayoutProvider } from "./src/context/HomeLayoutContext";
@@ -46,27 +47,29 @@ export default function App() {
                     <RecentlyRatedProvider>
                       <NotesProvider>
                         <MealPlanProvider>
-                          <CookStreakProvider>
-                            <LeftoversProvider>
-                              <HomeLayoutProvider>
-                                <TextSizeProvider>
-                                  <AccessibilityPrefsProvider>
-                                    <ToastProvider>
-                                      <PantryCheckProvider>
-                                        <WhatsNewProvider>
-                                          <CollectionsProvider>
-                                            <BadgesProvider>
-                                              <AppShell />
-                                            </BadgesProvider>
-                                          </CollectionsProvider>
-                                        </WhatsNewProvider>
-                                      </PantryCheckProvider>
-                                    </ToastProvider>
-                                  </AccessibilityPrefsProvider>
-                                </TextSizeProvider>
-                              </HomeLayoutProvider>
-                            </LeftoversProvider>
-                          </CookStreakProvider>
+                          <MealReminderProvider>
+                            <CookStreakProvider>
+                              <LeftoversProvider>
+                                <HomeLayoutProvider>
+                                  <TextSizeProvider>
+                                    <AccessibilityPrefsProvider>
+                                      <ToastProvider>
+                                        <PantryCheckProvider>
+                                          <WhatsNewProvider>
+                                            <CollectionsProvider>
+                                              <BadgesProvider>
+                                                <AppShell />
+                                              </BadgesProvider>
+                                            </CollectionsProvider>
+                                          </WhatsNewProvider>
+                                        </PantryCheckProvider>
+                                      </ToastProvider>
+                                    </AccessibilityPrefsProvider>
+                                  </TextSizeProvider>
+                                </HomeLayoutProvider>
+                              </LeftoversProvider>
+                            </CookStreakProvider>
+                          </MealReminderProvider>
                         </MealPlanProvider>
                       </NotesProvider>
                     </RecentlyRatedProvider>
