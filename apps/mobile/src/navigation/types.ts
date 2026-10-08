@@ -38,6 +38,7 @@ export type RootStackParamList = {
   Signup: undefined;
   ChangePassword: undefined;
   Glossary: undefined;
+  UnitConverter: undefined;
   Notes: undefined;
   MyReviews: undefined;
   Search: undefined;

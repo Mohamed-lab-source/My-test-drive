@@ -167,6 +167,14 @@ export function CookModeScreen({ route, navigation }: Props) {
           >
             <Text style={styles.iconButtonText}>📖</Text>
           </AnimatedPressable>
+          <AnimatedPressable
+            style={[styles.iconButton, styles.voiceButtonSpacing]}
+            pressScale={0.9}
+            onPress={() => navigation.navigate("UnitConverter")}
+            accessibilityLabel={t("converter.title")}
+          >
+            <Text style={styles.iconButtonText}>⚖️</Text>
+          </AnimatedPressable>
         </View>
       </View>
 

@@ -63,6 +63,7 @@ export type RecipeIngredient = {
   note: string | null;
   substitute: string | null;
   allergens: Allergen[];
+  category: string;
   /** Original ingredient name this was swapped from for a goal, e.g. "Flour" when name is "Oatmeal Flour". Null when not substituted. */
   substitutedFrom: string | null;
 };
@@ -117,6 +118,7 @@ export type ShoppingListItem = {
   quantity: number;
   unit: string;
   estimatedCost: number;
+  category: string | null;
 };
 
 export type DeliveryPartner = {
@@ -154,7 +156,14 @@ export type ShoppingListDetail = {
   withinBudget: boolean;
   createdAt: string;
   recipe: { slug: string; title: string; heroImageUrl: string };
-  items: { id: string; ingredientName: string; quantity: number; unit: string; estimatedCost: number }[];
+  items: {
+    id: string;
+    ingredientName: string;
+    quantity: number;
+    unit: string;
+    estimatedCost: number;
+    category: string | null;
+  }[];
 };
 
 export type NearbyStores = {

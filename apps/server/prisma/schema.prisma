@@ -184,6 +184,10 @@ model ShoppingListItem {
   quantity       Float
   unit           String
   estimatedCost  Float
+  // Store-aisle category (produce/dairy/meat/seafood/pantry), copied from the
+  // source Ingredient at creation time. Nullable because lists saved before
+  // this field existed have no value to backfill.
+  category       String?
 }
 
 model Favorite {

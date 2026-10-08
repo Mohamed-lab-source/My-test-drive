@@ -455,6 +455,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
       note: ri.note,
       substitute: lang === "ar" ? ri.ingredient.substituteAr ?? ri.ingredient.substituteEn : ri.ingredient.substituteEn,
       allergens: ri.ingredient.allergens,
+      category: ri.ingredient.category,
       substitutedFrom,
     })),
     steps: recipe.steps.map((s) => ({

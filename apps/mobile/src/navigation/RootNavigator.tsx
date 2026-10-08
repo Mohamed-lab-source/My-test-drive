@@ -17,6 +17,7 @@ import { LoginScreen } from "../screens/LoginScreen";
 import { SignupScreen } from "../screens/SignupScreen";
 import { ChangePasswordScreen } from "../screens/ChangePasswordScreen";
 import { GlossaryScreen } from "../screens/GlossaryScreen";
+import { UnitConverterScreen } from "../screens/UnitConverterScreen";
 import { NotesListScreen } from "../screens/NotesListScreen";
 import { MyReviewsScreen } from "../screens/MyReviewsScreen";
 import { SearchScreen } from "../screens/SearchScreen";
@@ -109,6 +110,11 @@ export function RootNavigator() {
           options={{ title: t("changePassword.title") }}
         />
         <Stack.Screen name="Glossary" component={GlossaryScreen} options={{ title: t("glossary.title") }} />
+        <Stack.Screen
+          name="UnitConverter"
+          component={UnitConverterScreen}
+          options={{ title: t("converter.title") }}
+        />
         <Stack.Screen name="Notes" component={NotesListScreen} options={{ title: t("notes.title") }} />
         <Stack.Screen name="MyReviews" component={MyReviewsScreen} options={{ title: t("myReviews.title") }} />
         <Stack.Screen

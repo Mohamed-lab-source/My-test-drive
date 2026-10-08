@@ -524,6 +524,11 @@ export function HomeScreen({ navigation }: Props) {
                   disabled: surprising,
                 },
                 {
+                  key: "unitConverter",
+                  label: t("home.unitConverter"),
+                  onPress: () => navigation.navigate("UnitConverter"),
+                },
+                {
                   key: "quickIftar",
                   label: t("home.quickIftar"),
                   onPress: () =>

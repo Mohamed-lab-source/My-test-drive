@@ -26,6 +26,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { usePantryCheck } from "../context/PantryCheckContext";
 import { formatQuantity } from "../utils/units";
+import { categoryEmoji, categoryLabelKey, groupByCategory } from "../utils/ingredientCategory";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { ShoppingListResult } from "../api/types";
 
@@ -188,35 +189,42 @@ export function ShoppingListScreen({ route, navigation }: Props) {
               ) : null}
             </View>
             <Text style={[styles.pantryHint, { textAlign }]}>{t("shoppingList.pantryHint")}</Text>
-            {result.items.map((item, i) => {
-              const have = isChecked(item.ingredientName);
-              return (
-                <FadeSlideIn key={item.ingredientName} index={i}>
-                  <AnimatedPressable
-                    style={styles.itemRow}
-                    pressScale={0.99}
-                    onPress={() => toggleHaveAlready(item.ingredientName)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: have }}
-                  >
-                    <View style={styles.itemLeft}>
-                      <View style={[styles.checkbox, have && styles.checkboxChecked]}>
-                        {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                      </View>
-                      <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.ingredientName}</Text>
-                    </View>
-                    <View style={styles.itemRight}>
-                      <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
-                        {formatQuantity(item.quantity, item.unit, unitSystem)}
-                      </Text>
-                      <Text style={[styles.itemCost, have && styles.itemNameChecked]}>
-                        {item.estimatedCost.toFixed(2)} EGP
-                      </Text>
-                    </View>
-                  </AnimatedPressable>
-                </FadeSlideIn>
-              );
-            })}
+            {groupByCategory(result.items).map((group) => (
+              <View key={group.category}>
+                <Text style={[styles.aisleHeader, { textAlign }]}>
+                  {categoryEmoji(group.category)} {t(categoryLabelKey(group.category))}
+                </Text>
+                {group.items.map((item, i) => {
+                  const have = isChecked(item.ingredientName);
+                  return (
+                    <FadeSlideIn key={item.ingredientName} index={i}>
+                      <AnimatedPressable
+                        style={styles.itemRow}
+                        pressScale={0.99}
+                        onPress={() => toggleHaveAlready(item.ingredientName)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: have }}
+                      >
+                        <View style={styles.itemLeft}>
+                          <View style={[styles.checkbox, have && styles.checkboxChecked]}>
+                            {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                          </View>
+                          <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.ingredientName}</Text>
+                        </View>
+                        <View style={styles.itemRight}>
+                          <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
+                            {formatQuantity(item.quantity, item.unit, unitSystem)}
+                          </Text>
+                          <Text style={[styles.itemCost, have && styles.itemNameChecked]}>
+                            {item.estimatedCost.toFixed(2)} EGP
+                          </Text>
+                        </View>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  );
+                })}
+              </View>
+            ))}
 
             <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
             <View style={styles.partnerRow}>
@@ -292,6 +300,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   listTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   stillNeedText: { fontSize: 12, fontWeight: "700", color: colors.secondary },
   pantryHint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing(1) },
+  aisleHeader: { fontSize: 12, fontWeight: "800", color: colors.textMuted, marginTop: spacing(1.5), marginBottom: 2 },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -35,6 +35,7 @@ shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (re
       quantity: ri.quantity,
       displayUnit: ri.displayUnit,
       pricePerUnit: ri.ingredient.pricePerUnit,
+      category: ri.ingredient.category,
     })),
     servings,
     recipe.baseServings,
@@ -69,6 +70,7 @@ shoppingListsRouter.post("/recipes/:slug/shopping-list", optionalAuth, async (re
       quantity: i.quantity,
       unit: i.unit,
       estimatedCost: i.estimatedCost,
+      category: i.category,
     })),
     deliveryPartners,
   });

@@ -11,6 +11,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { formatQuantity } from "../utils/units";
+import { categoryEmoji, categoryLabelKey, groupByCategory } from "../utils/ingredientCategory";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { ShoppingListDetail } from "../api/types";
 
@@ -62,30 +63,37 @@ export function ShoppingListDetailScreen({ route, navigation }: Props) {
         <Text style={[styles.sectionTitle, { textAlign }]}>
           {t("shoppingList.listTitle", { count: list.servings })}
         </Text>
-        {list.items.map((item, i) => {
-          const have = isChecked(item.ingredientName);
-          return (
-            <FadeSlideIn key={item.id} index={i}>
-              <AnimatedPressable
-                style={styles.itemRow}
-                pressScale={0.99}
-                onPress={() => toggleHaveAlready(item.ingredientName)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: have }}
-              >
-                <View style={styles.itemLeft}>
-                  <View style={[styles.checkbox, have && styles.checkboxChecked]}>
-                    {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                  </View>
-                  <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.ingredientName}</Text>
-                </View>
-                <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
-                  {formatQuantity(item.quantity, item.unit, unitSystem)}
-                </Text>
-              </AnimatedPressable>
-            </FadeSlideIn>
-          );
-        })}
+        {groupByCategory(list.items).map((group) => (
+          <View key={group.category}>
+            <Text style={[styles.aisleHeader, { textAlign }]}>
+              {categoryEmoji(group.category)} {t(categoryLabelKey(group.category))}
+            </Text>
+            {group.items.map((item, i) => {
+              const have = isChecked(item.ingredientName);
+              return (
+                <FadeSlideIn key={item.id} index={i}>
+                  <AnimatedPressable
+                    style={styles.itemRow}
+                    pressScale={0.99}
+                    onPress={() => toggleHaveAlready(item.ingredientName)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: have }}
+                  >
+                    <View style={styles.itemLeft}>
+                      <View style={[styles.checkbox, have && styles.checkboxChecked]}>
+                        {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                      </View>
+                      <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.ingredientName}</Text>
+                    </View>
+                    <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
+                      {formatQuantity(item.quantity, item.unit, unitSystem)}
+                    </Text>
+                  </AnimatedPressable>
+                </FadeSlideIn>
+              );
+            })}
+          </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -125,4 +133,5 @@ const createStyles = (colors: ThemeColors) =>
     itemName: { color: colors.text, fontSize: 14, flex: 1 },
     itemNameChecked: { color: colors.textMuted, textDecorationLine: "line-through" },
     itemQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    aisleHeader: { fontSize: 12, fontWeight: "800", color: colors.textMuted, marginTop: spacing(1.5), marginBottom: 2 },
   });

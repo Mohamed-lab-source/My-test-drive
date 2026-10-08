@@ -3,6 +3,7 @@ export type PricedIngredient = {
   quantity: number;
   displayUnit: string;
   pricePerUnit: number;
+  category: string;
 };
 
 export type ShoppingListItemResult = {
@@ -10,6 +11,7 @@ export type ShoppingListItemResult = {
   quantity: number;
   unit: string;
   estimatedCost: number;
+  category: string;
 };
 
 export type ShoppingListComputation = {
@@ -43,6 +45,7 @@ export function computeShoppingList(
       quantity,
       unit: ing.displayUnit,
       estimatedCost,
+      category: ing.category,
     };
   });
 
