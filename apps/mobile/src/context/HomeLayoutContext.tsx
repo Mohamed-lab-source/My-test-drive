@@ -7,6 +7,7 @@ export type HomeSectionKey =
   | "cookTonight"
   | "recipeOfDay"
   | "browseByMealType"
+  | "browseByOccasion"
   | "leftovers"
   | "recentlyViewed"
   | "recentlyCooked"
@@ -16,6 +17,7 @@ export const HOME_SECTION_KEYS: HomeSectionKey[] = [
   "cookTonight",
   "recipeOfDay",
   "browseByMealType",
+  "browseByOccasion",
   "leftovers",
   "recentlyViewed",
   "recentlyCooked",

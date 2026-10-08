@@ -41,6 +41,7 @@ import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { Pulse } from "../components/Pulse";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
+import { getRamadanStatus } from "../utils/islamicCalendar";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
@@ -61,6 +62,12 @@ const MEAL_TYPES: { dishType: string; emoji: string; labelKey: TranslationKey }[
   { dishType: "Soup", emoji: "🍲", labelKey: "home.mealType.soup" },
   { dishType: "Side Dish", emoji: "🥔", labelKey: "home.mealType.sideDish" },
   { dishType: "Dessert", emoji: "🍰", labelKey: "home.mealType.dessert" },
+];
+
+const OCCASIONS: { occasion: string; emoji: string; labelKey: TranslationKey }[] = [
+  { occasion: "RAMADAN_SUHOOR", emoji: "🌙", labelKey: "home.occasion.suhoor" },
+  { occasion: "RAMADAN_IFTAR", emoji: "🥣", labelKey: "home.occasion.iftar" },
+  { occasion: "EID", emoji: "🎉", labelKey: "home.occasion.eid" },
 ];
 
 type Props = CompositeScreenProps<
@@ -198,6 +205,7 @@ export function HomeScreen({ navigation }: Props) {
   const greetingKey: TranslationKey = greetingName
     ? (`home.greeting.${timeOfDay}` as TranslationKey)
     : (`home.greeting.${timeOfDay}Generic` as TranslationKey);
+  const ramadanStatus = useMemo(() => getRamadanStatus(), []);
   const dietGoal = isAuthenticated ? user?.preference?.dietGoal ?? "NONE" : preference.dietGoal;
   const todaysPlanRecipe = plan[new Date().toISOString().slice(0, 10)];
   const recommendedTitle = t(RECOMMENDED_TITLE_KEY[dietGoal] ?? "home.recommended");
@@ -235,6 +243,18 @@ export function HomeScreen({ navigation }: Props) {
               </View>
               <Text style={styles.headline}>{t("home.headline")}</Text>
             </View>
+
+            {ramadanStatus.kind !== "none" ? (
+              <View style={styles.seasonalBanner}>
+                <Text style={styles.seasonalBannerText}>
+                  {ramadanStatus.kind === "ramadan"
+                    ? t("home.ramadanDayBanner", { day: ramadanStatus.dayOfRamadan, days: ramadanStatus.daysUntilEid })
+                    : ramadanStatus.kind === "eid"
+                      ? t("home.eidBanner")
+                      : t("home.ramadanUpcomingBanner", { days: ramadanStatus.daysUntilRamadan })}
+                </Text>
+              </View>
+            ) : null}
 
             {showingOfflineCache ? (
               <View style={styles.offlineBanner}>
@@ -430,6 +450,28 @@ export function HomeScreen({ navigation }: Props) {
               </>
             ) : null}
 
+            {isSectionVisible("browseByOccasion") ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.browseByOccasion")}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeScroll}>
+                  {OCCASIONS.map((o, i) => (
+                    <FadeSlideIn key={o.occasion} index={i}>
+                      <AnimatedPressable
+                        style={styles.mealTypeChip}
+                        pressScale={0.94}
+                        onPress={() =>
+                          navigation.navigate("RecipeList", { occasion: o.occasion, title: t(o.labelKey) })
+                        }
+                      >
+                        <Text style={styles.mealTypeEmoji}>{o.emoji}</Text>
+                        <Text style={styles.mealTypeLabel}>{t(o.labelKey)}</Text>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
+
             <Text style={styles.sectionTitle}>{t("home.quickActionsTitle")}</Text>
             <View style={styles.actionsGrid}>
               {[
@@ -480,6 +522,16 @@ export function HomeScreen({ navigation }: Props) {
                   label: surprising ? t("home.surprisingLoading") : t("home.surpriseMe"),
                   onPress: handleSurpriseMe,
                   disabled: surprising,
+                },
+                {
+                  key: "quickIftar",
+                  label: t("home.quickIftar"),
+                  onPress: () =>
+                    navigation.navigate("RecipeList", {
+                      occasion: "RAMADAN_IFTAR",
+                      lightOnly: true,
+                      title: t("home.quickIftarTitle"),
+                    }),
                 },
               ].map((action, i) => (
                 <FadeSlideIn key={action.key} index={i}>
@@ -643,6 +695,14 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: spacing(1.5),
     },
     offlineBannerText: { color: colors.textMuted, fontSize: 12, fontWeight: "600", textAlign: "center" },
+    seasonalBanner: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      paddingHorizontal: spacing(2),
+      paddingVertical: spacing(1.25),
+      marginTop: spacing(1.5),
+    },
+    seasonalBannerText: { color: "#fff", fontSize: 13, fontWeight: "700", textAlign: "center" },
     cookTonightCard: {
       backgroundColor: colors.surface,
       borderRadius: radius.md,

@@ -15,6 +15,7 @@ export type RootStackParamList = {
     cuisineSlug?: string;
     tag?: string;
     dishType?: string;
+    occasion?: string;
     title: string;
     sortByCost?: boolean;
     sortByRating?: boolean;

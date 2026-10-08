@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, DishTag, Difficulty, Allergen } from "@prisma/client";
+import { PrismaClient, Prisma, DishTag, Difficulty, Allergen, Occasion } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -271,6 +271,7 @@ type RecipeSeed = {
   cookMinutes: number;
   difficulty: Difficulty;
   tags: DishTag[];
+  occasions?: Occasion[];
   ingredients: { name: string; quantity: number; displayUnit: string; note?: string }[];
   steps: { instruction: string; instructionAr: string; timerMinutes?: number }[];
 };
@@ -491,6 +492,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.VEGETARIAN, DishTag.FIT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Rice", quantity: 300, displayUnit: "g" },
       { name: "Brown Lentils", quantity: 200, displayUnit: "g" },
@@ -528,6 +530,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 35,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.COMFORT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Molokhia (chopped, frozen)", quantity: 500, displayUnit: "g" },
       { name: "Chicken Breast", quantity: 500, displayUnit: "g" },
@@ -562,6 +565,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 30,
     difficulty: Difficulty.EASY,
     tags: [DishTag.DESSERT],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Semolina", quantity: 400, displayUnit: "g" },
       { name: "Sugar", quantity: 300, displayUnit: "g", note: "half for batter, half for syrup" },
@@ -799,6 +803,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 20,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.FIT, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_SUHOOR],
     ingredients: [
       { name: "Fava Beans", quantity: 400, displayUnit: "g", note: "canned or pre-cooked" },
       { name: "Tahini", quantity: 40, displayUnit: "g" },
@@ -832,6 +837,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.HARD,
     tags: [DishTag.COMFORT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Grape Leaves", quantity: 300, displayUnit: "g" },
       { name: "Rice", quantity: 250, displayUnit: "g" },
@@ -868,6 +874,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 20,
     difficulty: Difficulty.HARD,
     tags: [DishTag.DESSERT],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Flour", quantity: 500, displayUnit: "g" },
       { name: "Ghee", quantity: 150, displayUnit: "g" },
@@ -1147,6 +1154,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 0,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.QUICK, DishTag.FIT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Chickpeas", quantity: 400, displayUnit: "g" },
       { name: "Tahini", quantity: 80, displayUnit: "g" },
@@ -1179,6 +1187,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 0,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.FIT, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Parsley", quantity: 200, displayUnit: "g" },
       { name: "Bulgur", quantity: 60, displayUnit: "g" },
@@ -1563,6 +1572,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.DESSERT],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Filo Pastry", quantity: 400, displayUnit: "g" },
       { name: "Walnuts", quantity: 200, displayUnit: "g" },
@@ -3185,6 +3195,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.COMFORT, DishTag.VEGETARIAN],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Brown Lentils", quantity: 150, displayUnit: "g" },
       { name: "Chickpeas", quantity: 200, displayUnit: "g" },
@@ -3221,6 +3232,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 90,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.COMFORT],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Ground Lamb", quantity: 800, displayUnit: "g", note: "or lamb chunks" },
       { name: "Onion", quantity: 200, displayUnit: "g" },
@@ -3414,6 +3426,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.HARD,
     tags: [],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Chicken Thigh", quantity: 600, displayUnit: "g" },
       { name: "Onion", quantity: 150, displayUnit: "g" },
@@ -3790,6 +3803,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 25,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.FIT, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Red Lentils", quantity: 250, displayUnit: "g" },
       { name: "Onion", quantity: 100, displayUnit: "g" },
@@ -3993,6 +4007,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 45,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.DESSERT, DishTag.VEGETARIAN],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Sugar", quantity: 400, displayUnit: "g" },
       { name: "Cornstarch", quantity: 120, displayUnit: "g" },
@@ -4241,6 +4256,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 45,
     difficulty: Difficulty.EASY,
     tags: [DishTag.DESSERT, DishTag.VEGETARIAN],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Rice", quantity: 100, displayUnit: "g" },
       { name: "Milk", quantity: 1000, displayUnit: "ml" },
@@ -5338,6 +5354,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 90,
     difficulty: Difficulty.HARD,
     tags: [DishTag.COMFORT],
+    occasions: [Occasion.RAMADAN_IFTAR, Occasion.EID],
     ingredients: [
       { name: "Beef Brisket", quantity: 800, displayUnit: "g" },
       { name: "Rice", quantity: 400, displayUnit: "g" },
@@ -5373,6 +5390,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 25,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.SPICY],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Ground Beef", quantity: 500, displayUnit: "g" },
       { name: "Pita Bread", quantity: 4, displayUnit: "pcs" },
@@ -5408,6 +5426,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 45,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.FIT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "White Fish Fillet", quantity: 600, displayUnit: "g" },
       { name: "Rice", quantity: 400, displayUnit: "g" },
@@ -5441,6 +5460,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 15,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.VEGETARIAN],
+    occasions: [Occasion.RAMADAN_SUHOOR],
     ingredients: [
       { name: "Fava Beans", quantity: 400, displayUnit: "g", note: "dried, soaked overnight" },
       { name: "Onion", quantity: 100, displayUnit: "g" },
@@ -5478,6 +5498,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 15,
     difficulty: Difficulty.EASY,
     tags: [DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR, Occasion.EID],
     ingredients: [
       { name: "Ground Beef", quantity: 600, displayUnit: "g" },
       { name: "Onion", quantity: 100, displayUnit: "g" },
@@ -5509,6 +5530,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.EASY,
     tags: [DishTag.DESSERT],
+    occasions: [Occasion.RAMADAN_SUHOOR],
     ingredients: [
       { name: "Rice", quantity: 150, displayUnit: "g" },
       { name: "Milk", quantity: 1200, displayUnit: "ml" },
@@ -5539,6 +5561,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 30,
     difficulty: Difficulty.EASY,
     tags: [DishTag.DESSERT],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Filo Pastry", quantity: 200, displayUnit: "g", note: "baked until crisp, or use croissants/puff pastry" },
       { name: "Milk", quantity: 1000, displayUnit: "ml" },
@@ -5573,6 +5596,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 45,
     difficulty: Difficulty.HARD,
     tags: [DishTag.VEGETARIAN],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Cabbage", quantity: 1, displayUnit: "pcs", note: "about 1.2kg, leaves separated" },
       { name: "Rice", quantity: 300, displayUnit: "g" },
@@ -5608,6 +5632,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.EASY,
     tags: [DishTag.COMFORT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Okra", quantity: 600, displayUnit: "g" },
       { name: "Beef Brisket", quantity: 300, displayUnit: "g", note: "cut into small cubes" },
@@ -5675,6 +5700,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 60,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.COMFORT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Beef Brisket", quantity: 700, displayUnit: "g", note: "cut into chunks" },
       { name: "Onion", quantity: 400, displayUnit: "g" },
@@ -5708,6 +5734,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 35,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.DESSERT],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Filo Pastry", quantity: 400, displayUnit: "g", note: "shredded, stands in for kataifi" },
       { name: "Butter", quantity: 150, displayUnit: "g", note: "melted" },
@@ -5773,6 +5800,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 45,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.FIT],
+    occasions: [Occasion.RAMADAN_IFTAR, Occasion.EID],
     ingredients: [
       { name: "Chicken Thigh", quantity: 900, displayUnit: "g", note: "or a whole cut-up chicken" },
       { name: "Garlic", quantity: 25, displayUnit: "g" },
@@ -6943,6 +6971,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 5,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.FIT, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Pita Bread", quantity: 2, displayUnit: "pcs" },
       { name: "Cucumber", quantity: 200, displayUnit: "g" },
@@ -6976,6 +7005,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 30,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.FIT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Eggplant", quantity: 600, displayUnit: "g" },
       { name: "Tahini", quantity: 60, displayUnit: "g" },
@@ -7006,6 +7036,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 15,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.VEGETARIAN],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Chickpeas", quantity: 400, displayUnit: "g" },
       { name: "Onion", quantity: 80, displayUnit: "g" },
@@ -7040,6 +7071,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 20,
     difficulty: Difficulty.HARD,
     tags: [],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Bulgur", quantity: 200, displayUnit: "g" },
       { name: "Ground Beef", quantity: 400, displayUnit: "g" },
@@ -7072,6 +7104,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 15,
     difficulty: Difficulty.EASY,
     tags: [DishTag.FIT, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Chicken Breast", quantity: 700, displayUnit: "g" },
       { name: "Yogurt", quantity: 120, displayUnit: "g" },
@@ -7103,6 +7136,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 40,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.COMFORT],
+    occasions: [Occasion.RAMADAN_SUHOOR],
     ingredients: [
       { name: "Brown Lentils", quantity: 250, displayUnit: "g" },
       { name: "Rice", quantity: 200, displayUnit: "g" },
@@ -7134,6 +7168,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 45,
     difficulty: Difficulty.HARD,
     tags: [DishTag.VEGETARIAN],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Grape Leaves", quantity: 300, displayUnit: "g" },
       { name: "Rice", quantity: 200, displayUnit: "g" },
@@ -7167,6 +7202,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 15,
     difficulty: Difficulty.EASY,
     tags: [DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Ground Beef", quantity: 400, displayUnit: "g" },
       { name: "Ground Lamb", quantity: 200, displayUnit: "g" },
@@ -7197,6 +7233,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 0,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Red Pepper Paste", quantity: 100, displayUnit: "g" },
       { name: "Walnuts", quantity: 100, displayUnit: "g" },
@@ -7228,6 +7265,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 10,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.VEGETARIAN],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Flour", quantity: 400, displayUnit: "g" },
       { name: "Yeast", quantity: 7, displayUnit: "g" },
@@ -7258,6 +7296,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 55,
     difficulty: Difficulty.HARD,
     tags: [],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Chicken Thigh", quantity: 600, displayUnit: "g" },
       { name: "Eggplant", quantity: 400, displayUnit: "g" },
@@ -7293,6 +7332,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 30,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.FIT],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Red Lentils", quantity: 250, displayUnit: "g" },
       { name: "Onion", quantity: 100, displayUnit: "g" },
@@ -7325,6 +7365,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 20,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Potato", quantity: 700, displayUnit: "g" },
       { name: "Garlic", quantity: 20, displayUnit: "g" },
@@ -7355,6 +7396,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 15,
     difficulty: Difficulty.MEDIUM,
     tags: [],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Flour", quantity: 400, displayUnit: "g" },
       { name: "Yeast", quantity: 7, displayUnit: "g" },
@@ -7389,6 +7431,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 25,
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.DESSERT],
+    occasions: [Occasion.EID],
     ingredients: [
       { name: "Filo Pastry", quantity: 300, displayUnit: "g" },
       { name: "Mozzarella Cheese", quantity: 300, displayUnit: "g" },
@@ -7420,6 +7463,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 0,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_SUHOOR],
     ingredients: [
       { name: "Labneh", quantity: 250, displayUnit: "g" },
       { name: "Za'atar", quantity: 10, displayUnit: "g" },
@@ -7449,6 +7493,7 @@ const recipes: RecipeSeed[] = [
     cookMinutes: 15,
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.QUICK],
+    occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
       { name: "Chickpeas", quantity: 400, displayUnit: "g" },
       { name: "Pita Bread", quantity: 3, displayUnit: "pcs" },
@@ -7564,6 +7609,7 @@ async function main() {
         cookMinutes: r.cookMinutes,
         difficulty: r.difficulty,
         tags: r.tags,
+        occasions: r.occasions ?? [],
       },
       create: {
         slug: r.slug,
@@ -7579,6 +7625,7 @@ async function main() {
         cookMinutes: r.cookMinutes,
         difficulty: r.difficulty,
         tags: r.tags,
+        occasions: r.occasions ?? [],
       },
     });
 

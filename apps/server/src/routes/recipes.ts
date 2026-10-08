@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { optionalAuth } from "../middleware/auth";
-import type { DietGoal, DishTag } from "@prisma/client";
+import type { DietGoal, DishTag, Occasion } from "@prisma/client";
 
 export const recipesRouter = Router();
 
@@ -43,6 +43,7 @@ export function recipeSummarySelect() {
     cookMinutes: true,
     difficulty: true,
     tags: true,
+    occasions: true,
     cuisine: { select: { slug: true, name: true, nameAr: true } },
     ratings: { select: { score: true } },
     ingredients: {
@@ -121,6 +122,7 @@ export function localizeSummary(r: any, lang: Lang) {
     cookMinutes: r.cookMinutes,
     difficulty: r.difficulty,
     tags: r.tags,
+    occasions: r.occasions,
     avgRating,
     ratingCount,
     costPerServing: estimateCostPerServing(r.ingredients, r.baseServings),
@@ -138,6 +140,7 @@ const listQuerySchema = z.object({
   cuisine: z.string().optional(),
   tag: z.string().optional(),
   dishType: z.string().optional(),
+  occasion: z.string().optional(),
   q: z.string().optional(),
   lang: z.string().optional(),
 });
@@ -148,7 +151,7 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { cuisine, tag, dishType, q } = parsed.data;
+  const { cuisine, tag, dishType, occasion, q } = parsed.data;
   const lang = parseLang(parsed.data.lang);
 
   const recipes = await prisma.recipe.findMany({
@@ -156,6 +159,7 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
       cuisine: cuisine ? { slug: cuisine } : undefined,
       dishType: dishType ? { equals: dishType, mode: "insensitive" } : undefined,
       tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
+      occasions: occasion ? { has: occasion.toUpperCase() as Occasion } : undefined,
       OR: q
         ? [
             { title: { contains: q, mode: "insensitive" } },
@@ -290,6 +294,7 @@ const randomQuerySchema = z.object({
   cuisine: z.string().optional(),
   tag: z.string().optional(),
   dishType: z.string().optional(),
+  occasion: z.string().optional(),
   // When present, picks deterministically instead of randomly -- the same
   // seed (e.g. today's date) always yields the same recipe, for a stable
   // "recipe of the day" pick rather than a fresh one on every call.
@@ -312,13 +317,14 @@ recipesRouter.get("/recipes/random", async (req, res) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { cuisine, tag, dishType, seed } = parsed.data;
+  const { cuisine, tag, dishType, occasion, seed } = parsed.data;
 
   const candidates = await prisma.recipe.findMany({
     where: {
       cuisine: cuisine ? { slug: cuisine } : undefined,
       dishType: dishType ? { equals: dishType, mode: "insensitive" } : undefined,
       tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
+      occasions: occasion ? { has: occasion.toUpperCase() as Occasion } : undefined,
     },
     select: { slug: true },
     orderBy: { slug: "asc" },
@@ -430,6 +436,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     cookMinutes: recipe.cookMinutes,
     difficulty: recipe.difficulty,
     tags: recipe.tags,
+    occasions: recipe.occasions,
     avgRating,
     ratingCount,
     ratingBreakdown,

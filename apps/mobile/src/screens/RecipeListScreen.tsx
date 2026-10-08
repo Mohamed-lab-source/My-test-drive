@@ -21,7 +21,7 @@ const FEW_INGREDIENTS_THRESHOLD = 6;
 const CACHE_PREFIX = "cookmate.recipeListCache.";
 
 export function RecipeListScreen({ route, navigation }: Props) {
-  const { cuisineSlug, tag: initialTag, dishType, title, sortByCost, sortByRating, lightOnly: initialLightOnly } =
+  const { cuisineSlug, tag: initialTag, dishType, occasion, title, sortByCost, sortByRating, lightOnly: initialLightOnly } =
     route.params;
   const { t, locale } = useLocale();
   const { colors } = useTheme();
@@ -85,12 +85,12 @@ export function RecipeListScreen({ route, navigation }: Props) {
     navigation.setOptions({ title });
   }, [navigation, title]);
 
-  const cacheKey = `${CACHE_PREFIX}${locale}.${cuisineSlug ?? ""}.${activeTag ?? ""}.${dishType ?? ""}`;
+  const cacheKey = `${CACHE_PREFIX}${locale}.${cuisineSlug ?? ""}.${activeTag ?? ""}.${dishType ?? ""}.${occasion ?? ""}`;
   const [showingOfflineCache, setShowingOfflineCache] = useState(false);
 
   const loadRecipes = () => {
     setLoading(true);
-    fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType })
+    fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType, occasion })
       .then((data) => {
         setRecipes(data);
         setLoadError(false);
@@ -112,11 +112,11 @@ export function RecipeListScreen({ route, navigation }: Props) {
   useEffect(() => {
     loadRecipes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cuisineSlug, activeTag, dishType, locale]);
+  }, [cuisineSlug, activeTag, dishType, occasion, locale]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType })
+    fetchRecipes({ cuisine: cuisineSlug, tag: activeTag, dishType, occasion })
       .then((data) => {
         setRecipes(data);
         setLoadError(false);

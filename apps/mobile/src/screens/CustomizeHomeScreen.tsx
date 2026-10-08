@@ -15,6 +15,7 @@ const SECTION_LABEL_KEYS: Record<HomeSectionKey, TranslationKey> = {
   cookTonight: "customizeHome.cookTonight",
   recipeOfDay: "customizeHome.recipeOfDay",
   browseByMealType: "customizeHome.browseByMealType",
+  browseByOccasion: "customizeHome.browseByOccasion",
   leftovers: "customizeHome.leftovers",
   recentlyViewed: "customizeHome.recentlyViewed",
   recentlyCooked: "customizeHome.recentlyCooked",

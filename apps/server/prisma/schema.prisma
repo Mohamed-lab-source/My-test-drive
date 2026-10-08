@@ -32,6 +32,12 @@ enum DishTag {
   SPICY
 }
 
+enum Occasion {
+  RAMADAN_SUHOOR
+  RAMADAN_IFTAR
+  EID
+}
+
 enum Allergen {
   GLUTEN
   DAIRY
@@ -92,6 +98,7 @@ model Recipe {
   cookMinutes   Int
   difficulty    Difficulty         @default(EASY)
   tags          DishTag[]          @default([])
+  occasions     Occasion[]         @default([])
   ingredients   RecipeIngredient[]
   steps         RecipeStep[]
   shoppingLists ShoppingList[]

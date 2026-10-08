@@ -8,6 +8,7 @@ export type DietGoal =
   | "GAIN_WEIGHT";
 export type Difficulty = "EASY" | "MEDIUM" | "HARD";
 export type DishTag = "FIT" | "DESSERT" | "VEGETARIAN" | "QUICK" | "COMFORT" | "SPICY";
+export type Occasion = "RAMADAN_SUHOOR" | "RAMADAN_IFTAR" | "EID";
 export type Allergen = "GLUTEN" | "DAIRY" | "EGGS" | "NUTS" | "PEANUTS" | "SHELLFISH" | "FISH" | "SOY" | "SESAME";
 
 export type Preference = {
@@ -43,6 +44,7 @@ export type RecipeSummary = {
   cookMinutes: number;
   difficulty: Difficulty;
   tags: DishTag[];
+  occasions: Occasion[];
   avgRating: number | null;
   ratingCount: number;
   costPerServing: number;
