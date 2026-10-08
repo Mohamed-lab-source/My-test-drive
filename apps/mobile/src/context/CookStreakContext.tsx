@@ -19,6 +19,8 @@ type StreakState = {
   cookLog: string[];
   /** Most-recently-cooked recipes, most recent first, deduped by slug, capped to RECENTLY_COOKED_MAX. */
   recentlyCooked: RecentlyCookedEntry[];
+  /** Unique cuisine slugs ever cooked, unordered -- used for the "tried N cuisines" badge. */
+  cuisinesCooked: string[];
 };
 
 const DEFAULT_STATE: StreakState = {
@@ -29,6 +31,7 @@ const DEFAULT_STATE: StreakState = {
   cookCounts: {},
   cookLog: [],
   recentlyCooked: [],
+  cuisinesCooked: [],
 };
 
 function todayKey(): string {
@@ -57,6 +60,7 @@ type CookStreakContextValue = {
   cookCounts: Record<string, number>;
   cookLog: string[];
   recentlyCooked: RecentlyCookedEntry[];
+  cuisinesCooked: string[];
 };
 
 const CookStreakContext = createContext<CookStreakContextValue | undefined>(undefined);
@@ -88,6 +92,9 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
         { ...recipe, date: today },
         ...prev.recentlyCooked.filter((r) => r.slug !== recipe.slug),
       ].slice(0, RECENTLY_COOKED_MAX);
+      const nextCuisinesCooked = prev.cuisinesCooked.includes(recipe.cuisineSlug)
+        ? prev.cuisinesCooked
+        : [...prev.cuisinesCooked, recipe.cuisineSlug];
       if (prev.lastCookedDate === today) {
         resultStreak = prev.currentStreak;
         const next: StreakState = {
@@ -95,6 +102,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
           cookCounts: nextCookCounts,
           cookLog: nextCookLog,
           recentlyCooked: nextRecentlyCooked,
+          cuisinesCooked: nextCuisinesCooked,
         };
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
         return next;
@@ -109,6 +117,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
         cookCounts: nextCookCounts,
         cookLog: nextCookLog,
         recentlyCooked: nextRecentlyCooked,
+        cuisinesCooked: nextCuisinesCooked,
       };
       resultStreak = nextStreak;
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
@@ -136,6 +145,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       cookCounts: state.cookCounts,
       cookLog: state.cookLog,
       recentlyCooked: state.recentlyCooked,
+      cuisinesCooked: state.cuisinesCooked,
     }),
     [
       isLoading,
@@ -145,6 +155,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       state.cookCounts,
       state.cookLog,
       state.recentlyCooked,
+      state.cuisinesCooked,
       cookedToday,
       recordCooked,
       cookCountFor,

@@ -27,6 +27,8 @@ import { PantryFinderScreen } from "../screens/PantryFinderScreen";
 import { SubstitutionFinderScreen } from "../screens/SubstitutionFinderScreen";
 import { CustomizeHomeScreen } from "../screens/CustomizeHomeScreen";
 import { CookingStatsScreen } from "../screens/CookingStatsScreen";
+import { BadgesScreen } from "../screens/BadgesScreen";
+import { WeeklyRecapScreen } from "../screens/WeeklyRecapScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -152,6 +154,8 @@ export function RootNavigator() {
           component={CookingStatsScreen}
           options={{ title: t("cookingStats.title") }}
         />
+        <Stack.Screen name="Badges" component={BadgesScreen} options={{ title: t("badges.title") }} />
+        <Stack.Screen name="WeeklyRecap" component={WeeklyRecapScreen} options={{ title: t("recap.title") }} />
         <Stack.Screen
           name="LeanMuscleMode"
           component={LeanMuscleModeScreen}

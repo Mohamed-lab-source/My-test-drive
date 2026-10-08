@@ -16,6 +16,7 @@ import { ToastProvider } from "./src/context/ToastContext";
 import { PantryCheckProvider } from "./src/context/PantryCheckContext";
 import { WhatsNewProvider } from "./src/context/WhatsNewContext";
 import { CollectionsProvider } from "./src/context/CollectionsContext";
+import { BadgesProvider } from "./src/context/BadgesContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -50,7 +51,9 @@ export default function App() {
                                   <PantryCheckProvider>
                                     <WhatsNewProvider>
                                       <CollectionsProvider>
-                                        <AppShell />
+                                        <BadgesProvider>
+                                          <AppShell />
+                                        </BadgesProvider>
                                       </CollectionsProvider>
                                     </WhatsNewProvider>
                                   </PantryCheckProvider>

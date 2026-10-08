@@ -9,6 +9,8 @@ import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCollections } from "../context/CollectionsContext";
+import { useBadges } from "../context/BadgesContext";
+import { cookingLevelFor } from "../utils/cookingLevel";
 import { apiErrorMessage } from "../api/client";
 import { fetchCuisines } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
@@ -19,7 +21,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { useTextSize } from "../context/TextSizeContext";
 import { useWhatsNew } from "../context/WhatsNewContext";
-import { ACCENT_PRESETS, spacing, type AccentKey, type ThemeColors } from "../theme";
+import { ACCENT_PRESETS, radius, spacing, type AccentKey, type ThemeColors } from "../theme";
 import { ALL_ALLERGENS } from "../utils/allergens";
 import type { TranslationKey } from "../i18n/translations";
 import type { Allergen, Cuisine, DietGoal } from "../api/types";
@@ -39,6 +41,9 @@ export function ProfileScreen({ navigation }: Props) {
   const { displayStreak, longestStreak, totalCooked } = useCookStreak();
   const { favoriteRecipes, refresh: refreshFavorites } = useFavorites();
   const { collections, refresh: refreshCollections } = useCollections();
+  const { unlockedCount: unlockedBadgeCount, badges } = useBadges();
+  const totalBadgeCount = badges.length;
+  const cookingLevel = cookingLevelFor(totalCooked);
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [saving, setSaving] = useState(false);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
@@ -258,7 +263,12 @@ export function ProfileScreen({ navigation }: Props) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text style={styles.headline}>{user.name}</Text>
+        <View style={styles.headlineRow}>
+          <Text style={styles.headline}>{user.name}</Text>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelBadgeText}>{t("profile.level", { level: cookingLevel })}</Text>
+          </View>
+        </View>
         <Text style={styles.subtitle}>{user.email}</Text>
 
         <AnimatedPressable pressScale={0.98} onPress={() => navigation.navigate("CookingStats")}>
@@ -272,6 +282,25 @@ export function ProfileScreen({ navigation }: Props) {
             styles={styles}
           />
         </AnimatedPressable>
+
+        <View style={styles.gamificationRow}>
+          <AnimatedPressable
+            style={styles.gamificationButton}
+            pressScale={0.96}
+            onPress={() => navigation.navigate("Badges")}
+          >
+            <Text style={styles.gamificationButtonText}>
+              {t("profile.badgesButton", { unlocked: unlockedBadgeCount, total: totalBadgeCount })}
+            </Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            style={styles.gamificationButton}
+            pressScale={0.96}
+            onPress={() => navigation.navigate("WeeklyRecap")}
+          >
+            <Text style={styles.gamificationButtonText}>{t("profile.recapButton")}</Text>
+          </AnimatedPressable>
+        </View>
 
         <Text style={styles.section}>{t("profile.dietGoal")}</Text>
         <View style={styles.chipRow}>
@@ -428,7 +457,24 @@ const createStyles = (colors: ThemeColors) =>
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing(3) },
     headline: { fontSize: 22, fontWeight: "800", color: colors.text },
+    headlineRow: { flexDirection: "row", alignItems: "center", gap: spacing(1) },
+    levelBadge: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing(1.25),
+      paddingVertical: 3,
+    },
+    levelBadgeText: { fontSize: 11, fontWeight: "800", color: colors.primaryDark },
     subtitle: { color: colors.textMuted, marginTop: 4 },
+    gamificationRow: { flexDirection: "row", gap: spacing(1.5), marginTop: spacing(2) },
+    gamificationButton: {
+      flex: 1,
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.md,
+      paddingVertical: spacing(1.5),
+      alignItems: "center",
+    },
+    gamificationButtonText: { fontSize: 13, fontWeight: "700", color: colors.text },
     section: { fontSize: 15, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1) },
     languageSection: { marginTop: spacing(4) },
     chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },

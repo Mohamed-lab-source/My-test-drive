@@ -48,6 +48,8 @@ export type RootStackParamList = {
   SubstitutionFinder: undefined;
   CustomizeHome: undefined;
   CookingStats: undefined;
+  Badges: undefined;
+  WeeklyRecap: undefined;
   LeanMuscleMode: undefined;
   WhatsNew: undefined;
 };
