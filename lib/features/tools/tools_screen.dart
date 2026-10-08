@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/extras.dart';
-import '../../app/helpers.dart' show walkingMinutes, tapFeedback;
+import '../../app/helpers.dart' show billTotal, walkingMinutes, tapFeedback;
 import '../../app/i18n.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -26,9 +26,11 @@ class ToolsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: const [
+          _CountdownCard(),
           _DecideCard(),
           _CoinCard(),
           _WhoCard(),
+          _SplitCard(),
           _WalkCard(),
           _WeekCard(),
           _SunCard(),
@@ -432,6 +434,126 @@ class _PrayerCard extends ConsumerWidget {
         const SizedBox(height: KSpace.xs),
         Text(tr('Worked out with the Egyptian method. Your mosque may differ by a minute or two.'),
             style: Theme.of(context).textTheme.bodySmall),
+      ]),
+    );
+  }
+}
+
+/// Your next group outing and your next plan with a date, with a countdown.
+class _CountdownCard extends ConsumerWidget {
+  const _CountdownCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final group = ref.watch(nextOutingProvider);
+    final plans = (ref.watch(recentPlansProvider).value ?? const <OutingPlan>[])
+        .where((p) => p.request.date != null && daysUntilText(p.request.day, now) != null)
+        .toList()
+      ..sort((a, b) => a.request.day.compareTo(b.request.day));
+    final plan = plans.firstOrNull;
+    if (group == null && plan == null) return const SizedBox.shrink();
+    return _ToolCard(
+      emoji: '⏳',
+      title: tr('Coming up'),
+      child: Column(children: [
+        if (group != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Text('🎉', style: TextStyle(fontSize: 22)),
+            title: Text(group.name),
+            subtitle: Text(DateFormat('EEE d MMM · HH:mm').format(group.scheduledAt!)),
+            trailing: Text(daysUntilText(group.scheduledAt!, now) ?? ''),
+            onTap: () => context.push('/group/${group.id}'),
+          ),
+        if (plan != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Text('🗺️', style: TextStyle(fontSize: 22)),
+            title: Text(plan.title),
+            subtitle: Text(DateFormat('EEE d MMM').format(plan.request.day)),
+            trailing: Text(daysUntilText(plan.request.day, now) ?? ''),
+            onTap: () => context.push('/plan/${plan.id}'),
+          ),
+      ]),
+    );
+  }
+}
+
+/// Split a bill you typed in: service and VAT the way Egyptian bills add
+/// them, then per person. We never guess prices; you type the total.
+class _SplitCard extends StatefulWidget {
+  const _SplitCard();
+
+  @override
+  State<_SplitCard> createState() => _SplitCardState();
+}
+
+class _SplitCardState extends State<_SplitCard> {
+  final _amount = TextEditingController();
+  int _people = 2;
+  bool _service = true;
+  bool _vat = true;
+  int _tip = 0;
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = double.tryParse(latinDigits(_amount.text.trim()).replaceAll(',', '.')) ?? 0;
+    final total = billTotal(amount, servicePct: _service ? 12 : 0, vatPct: _vat ? 14 : 0, tipPct: _tip);
+    return _ToolCard(
+      emoji: '🧾',
+      title: tr('Split a bill'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TextField(
+          controller: _amount,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(hintText: tr('Amount on the menu (EGP)')),
+          onChanged: (_) => setState(() {}),
+        ),
+        Row(children: [
+          Text(tr('People')),
+          IconButton(
+            onPressed: _people > 1 ? () => setState(() => _people--) : null,
+            icon: const Icon(Icons.remove_circle_outline),
+          ),
+          Text('$_people', style: Theme.of(context).textTheme.titleMedium),
+          IconButton(
+            onPressed: _people < 30 ? () => setState(() => _people++) : null,
+            icon: const Icon(Icons.add_circle_outline),
+          ),
+        ]),
+        Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+          FilterChip(
+            label: Text(tr('12% service')),
+            selected: _service,
+            onSelected: (v) => setState(() => _service = v),
+          ),
+          FilterChip(
+            label: Text(tr('14% VAT')),
+            selected: _vat,
+            onSelected: (v) => setState(() => _vat = v),
+          ),
+          for (final t in const [0, 5, 10])
+            ChoiceChip(
+              label: Text(t == 0 ? tr('No tip') : trf('{n}% tip', {'n': t})),
+              selected: _tip == t,
+              showCheckmark: false,
+              onSelected: (_) => setState(() => _tip = t),
+            ),
+        ]),
+        if (amount > 0) ...[
+          const SizedBox(height: KSpace.sm),
+          Text(trf('Total {total} EGP · {each} EGP each', {
+            'total': total.toStringAsFixed(0),
+            'each': (total / _people).toStringAsFixed(0),
+          }), style: Theme.of(context).textTheme.titleMedium),
+        ],
       ]),
     );
   }

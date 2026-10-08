@@ -113,6 +113,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         ..clear()
         ..addAll(idea.vibes);
       _time = idea.time;
+      _needs.addAll(idea.needs);
       return;
     }
     _time = hour < 11
@@ -297,6 +298,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           const SizedBox(height: KSpace.xs),
           Text(tr('Tell us the vibe. We only suggest real places.'),
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+          const _TodayStrip(),
           const _WhatsNewCard(),
           const _NextOutingCard(),
           const _RecentPlans(),
@@ -1003,6 +1005,48 @@ class _BestDay extends ConsumerWidget {
           'r': best.rainPct,
         })),
         onPressed: () => onPick(best.day),
+      ),
+    );
+  }
+}
+
+/// "Today in Cairo: 31° · 🌇 17:32 · Next prayer Asr 15:05". Weather is
+/// the real forecast (hidden offline); the rest is worked out on the phone.
+class _TodayStrip extends ConsumerWidget {
+  const _TodayStrip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final city = ref.watch(cityProvider);
+    final now = DateTime.now();
+    final today = (ref.watch(weekForecastProvider(city)).value ?? const <DayForecast>[])
+        .where((d) => sameDay(d.day, now))
+        .firstOrNull;
+    final c = cityCenters[city] ?? cityCenters['cairo']!;
+    final sun = sunTimes(now, c.$1, c.$2);
+    final pray = prayerTimes(now, c.$1, c.$2);
+    final next = pray == null
+        ? null
+        : [
+            (tr('Fajr'), pray.fajr),
+            (tr('Dhuhr'), pray.dhuhr),
+            (tr('Asr'), pray.asr),
+            (tr('Maghrib'), pray.maghrib),
+            (tr('Isha'), pray.isha),
+          ].where((p) => p.$2.isAfter(now.toUtc())).firstOrNull;
+    final parts = [
+      if (today != null) trf('{t}° · {r}% rain', {'t': today.maxC.round(), 'r': today.rainPct}),
+      if (sun != null && sun.sunset.isAfter(now.toUtc())) trf('🌇 Sunset at {time}', {'time': hhmmLocal(sun.sunset)}),
+      if (next != null) trf('🕌 {name} {time}', {'name': next.$1, 'time': hhmmLocal(next.$2)}),
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.sm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => context.push('/tools'),
+        child: Text(parts.join('  ·  '),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
       ),
     );
   }

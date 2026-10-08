@@ -328,7 +328,10 @@ List<Place> placesInArea(List<Place> all, String city, String area) => all
 /// A ready-made outing idea: it only fills in the plan form.
 class OutingIdea {
   const OutingIdea(this.emoji, this._title, this._blurb, this.vibes, this.time, this.stops,
-      {this.people = 2});
+      {this.people = 2, this.needs = const []});
+
+  /// Must-haves (see planNeeds in planner.dart), judged from map facts.
+  final List<String> needs;
   final String emoji;
   final String _title;
   final String _blurb;
@@ -353,6 +356,12 @@ const outingIdeas = [
   OutingIdea('🧘', 'Me time', 'A quiet solo outing.', ['chill', 'culture'], 'morning', 2, people: 1),
   OutingIdea('👯', 'Friends catch-up', 'Somewhere to sit and talk for hours.', ['chill', 'foodie'], 'evening', 2, people: 4),
   OutingIdea('🌅', 'Sunset plan', 'Outside before sunset, food after.', ['chill', 'romantic'], 'afternoon', 2),
+  OutingIdea('🌙', 'After iftar', 'Food and a late sit-down after sunset.', ['foodie', 'chill'], 'night', 2, people: 4),
+  OutingIdea('🌧️', 'Rainy or hot day', 'Indoor places only: malls and culture.', ['shopping', 'culture'], 'afternoon', 3),
+  OutingIdea('💻', 'Work from a café', 'Cafés whose map entry lists Wi-Fi.', ['chill'], 'morning', 1, people: 1, needs: ['wifi']),
+  OutingIdea('♿', 'Step-free outing', 'Only places mapped with wheelchair access.', ['chill', 'culture'], 'afternoon', 2, needs: ['wheelchair']),
+  OutingIdea('🥗', 'Veggie food tour', 'Food places mapped with vegetarian options.', ['foodie'], 'evening', 2, needs: ['vegetarian']),
+  OutingIdea('🚭', 'Smoke-free evening', 'Places mapped as no smoking.', ['chill', 'foodie'], 'evening', 2, needs: ['noSmoking']),
 ];
 
 /// A random item, or null for an empty list.

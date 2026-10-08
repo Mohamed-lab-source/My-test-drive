@@ -86,6 +86,7 @@ void main() {
       expect(i.vibes.every(vibes.contains), isTrue, reason: i.title);
       expect(times.contains(i.time), isTrue);
       expect(i.stops, inInclusiveRange(1, 5));
+      expect(i.needs.every({'wheelchair', 'vegetarian', 'noSmoking', 'wifi', 'cards'}.contains), isTrue);
     }
     expect(randomOf(<int>[], math.Random(1)), isNull);
     expect(randomOf([7], math.Random(1)), 7);

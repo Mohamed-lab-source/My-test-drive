@@ -143,6 +143,20 @@ How the code enforces it (keep it this way):
   app use; flutter_map caches tiles on the phone, and the place-page map only
   loads when tapped. If the app ever outgrows the free allowance, switch
   `urlTemplate` in `khroga_map.dart`.
+- Version 0.6 extras (`lib/app/extras.dart`, tested in `test/extras_test.dart`):
+  sunrise/sunset and prayer times are *calculated* (NOAA formula, Egyptian
+  method 19.5°/17.5°), never looked up; Egypt's fixed-date holidays only
+  (Islamic ones follow the moon, so they're not listed); forgiving search
+  (`fuzzyContains`, one typo, only when nothing matches exactly); outing
+  ideas (`outingIdeas`, fill the form only). Week weather = one Open-Meteo
+  call per city per session (`weekForecastProvider`).
+- Plan must-haves (`PlanRequest.needs`, `meetsNeeds`): wheelchair,
+  vegetarian (food places only), noSmoking, wifi, cards. Unknown = no.
+- Screens in `lib/features/tools/`: ideas, areas + area page, tools (decide
+  for us, coin, who pays, split a bill, walk time, weather week, sun,
+  prayers, holidays, coming up), my stats + my map, notes (one `get()` of
+  100, not a listener). Plan-form presets live on the phone
+  (`planPresetsProvider`, max 8).
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the
