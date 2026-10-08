@@ -156,6 +156,16 @@ export async function fetchMyRatings() {
   return data;
 }
 
+export async function deleteMyRating(slug: string) {
+  const { data } = await api.delete<{ average: number; count: number }>(`/recipes/${slug}/ratings`);
+  return data;
+}
+
+export async function toggleHelpful(ratingId: string) {
+  const { data } = await api.post<{ helpfulCount: number; helpfulByMe: boolean }>(`/ratings/${ratingId}/helpful`);
+  return data;
+}
+
 export async function fetchIngredients() {
   const { data } = await api.get<PantryIngredient[]>("/ingredients");
   return data;

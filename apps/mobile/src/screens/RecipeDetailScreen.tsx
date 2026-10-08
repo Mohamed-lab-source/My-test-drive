@@ -17,7 +17,7 @@ import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { fetchRecipeDetail, fetchRecipes, rateRecipe } from "../api/endpoints";
+import { fetchRecipeDetail, fetchRecipes, rateRecipe, toggleHelpful } from "../api/endpoints";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
@@ -91,6 +91,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [myRating, setMyRating] = useState<number | null>(null);
   const [rating, setRating] = useState(false);
   const [reviewText, setReviewText] = useState("");
+  const [reviewSort, setReviewSort] = useState<"newest" | "highest" | "lowest">("newest");
   const [similarRecipes, setSimilarRecipes] = useState<RecipeSummary[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [showingOfflineCache, setShowingOfflineCache] = useState(false);
@@ -219,6 +220,39 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   const cookCount = cookCountFor(recipe.slug);
   const myCollections = collectionsContaining(recipe.slug);
+  const sortedReviews = useMemo(() => {
+    const copy = [...recipe.reviews];
+    if (reviewSort === "highest") copy.sort((a, b) => b.score - a.score);
+    else if (reviewSort === "lowest") copy.sort((a, b) => a.score - b.score);
+    return copy;
+  }, [recipe.reviews, reviewSort]);
+
+  const handleToggleHelpful = (reviewId: string) => {
+    setRecipe((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        reviews: prev.reviews.map((r) =>
+          r.id === reviewId
+            ? { ...r, helpfulByMe: !r.helpfulByMe, helpfulCount: r.helpfulCount + (r.helpfulByMe ? -1 : 1) }
+            : r
+        ),
+      };
+    });
+    toggleHelpful(reviewId).catch(() => {
+      setRecipe((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          reviews: prev.reviews.map((r) =>
+            r.id === reviewId
+              ? { ...r, helpfulByMe: !r.helpfulByMe, helpfulCount: r.helpfulCount + (r.helpfulByMe ? -1 : 1) }
+              : r
+          ),
+        };
+      });
+    });
+  };
 
   const handleToggleFavorite = () => {
     const wasFavorited = isFavorite(recipe.slug);
@@ -278,8 +312,21 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
       const result = await rateRecipe(recipe.slug, score, trimmedComment || undefined);
       setRecipe((prev) => {
         if (!prev) return prev;
+        const mine = prev.reviews.find((r) => r.name === user?.name);
         const others = prev.reviews.filter((r) => r.name !== user?.name);
-        const reviews = trimmedComment ? [{ name: user?.name ?? "", score, comment: trimmedComment }, ...others] : others;
+        const reviews = trimmedComment
+          ? [
+              {
+                id: mine?.id ?? `local-${recipe.slug}`,
+                name: user?.name ?? "",
+                score,
+                comment: trimmedComment,
+                helpfulCount: mine?.helpfulCount ?? 0,
+                helpfulByMe: mine?.helpfulByMe ?? false,
+              },
+              ...others,
+            ]
+          : others;
         return { ...prev, avgRating: result.average, ratingCount: result.count, reviews };
       });
     } catch {
@@ -565,14 +612,41 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           {recipe.reviews.length > 0 ? (
             <>
               <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.reviews")}</Text>
-              {recipe.reviews.map((review, i) => (
-                <FadeSlideIn key={`${review.name}-${i}`} index={i}>
+              <View style={styles.reviewSortRow}>
+                <Chip
+                  label={t("recipeDetail.sortNewest")}
+                  selected={reviewSort === "newest"}
+                  onPress={() => setReviewSort("newest")}
+                />
+                <Chip
+                  label={t("recipeDetail.sortHighest")}
+                  selected={reviewSort === "highest"}
+                  onPress={() => setReviewSort("highest")}
+                />
+                <Chip
+                  label={t("recipeDetail.sortLowest")}
+                  selected={reviewSort === "lowest"}
+                  onPress={() => setReviewSort("lowest")}
+                />
+              </View>
+              {sortedReviews.map((review, i) => (
+                <FadeSlideIn key={review.id} index={i}>
                   <View style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
                       <Text style={styles.reviewName}>{review.name}</Text>
                       <StarRating value={review.score} size={12} />
                     </View>
                     <Text style={[styles.reviewComment, { textAlign }]}>{review.comment}</Text>
+                    <AnimatedPressable
+                      style={styles.helpfulRow}
+                      pressScale={0.95}
+                      onPress={() => handleToggleHelpful(review.id)}
+                    >
+                      <Text style={[styles.helpfulText, review.helpfulByMe && styles.helpfulTextActive]}>
+                        {review.helpfulByMe ? "👍" : "🤍"}{" "}
+                        {t("recipeDetail.helpfulCount", { count: review.helpfulCount })}
+                      </Text>
+                    </AnimatedPressable>
                   </View>
                 </FadeSlideIn>
               ))}
@@ -783,6 +857,10 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
   reviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   reviewName: { fontSize: 13, fontWeight: "700", color: colors.text },
   reviewComment: { fontSize: 13, color: colors.textMuted, marginTop: spacing(0.75), lineHeight: 18 },
+  reviewSortRow: { flexDirection: "row", gap: spacing(1), marginBottom: spacing(1.5) },
+  helpfulRow: { marginTop: spacing(1), alignSelf: "flex-start" },
+  helpfulText: { fontSize: 12, fontWeight: "700", color: colors.textMuted },
+  helpfulTextActive: { color: colors.primaryDark },
   notesInput: {
     backgroundColor: colors.surface,
     borderWidth: 1,

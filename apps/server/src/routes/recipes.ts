@@ -376,7 +376,15 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
       },
       steps: { orderBy: { order: "asc" } },
       ratings: {
-        select: { userId: true, score: true, comment: true, createdAt: true, user: { select: { name: true } } },
+        select: {
+          id: true,
+          userId: true,
+          score: true,
+          comment: true,
+          createdAt: true,
+          user: { select: { name: true } },
+          _count: { select: { helpfulVotes: true } },
+        },
       },
     },
   });
@@ -393,10 +401,24 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
   for (const r of recipe.ratings) {
     if (r.score >= 1 && r.score <= 5) ratingBreakdown[r.score as 1 | 2 | 3 | 4 | 5] += 1;
   }
+  const myHelpfulVotes = req.userId
+    ? await prisma.ratingHelpfulVote.findMany({
+        where: { userId: req.userId, ratingId: { in: recipe.ratings.map((r) => r.id) } },
+        select: { ratingId: true },
+      })
+    : [];
+  const myHelpfulRatingIds = new Set(myHelpfulVotes.map((v) => v.ratingId));
   const reviews = recipe.ratings
     .filter((r) => r.comment && r.comment.trim().length > 0)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .map((r) => ({ name: r.user.name, score: r.score, comment: r.comment as string }));
+    .map((r) => ({
+      id: r.id,
+      name: r.user.name,
+      score: r.score,
+      comment: r.comment as string,
+      helpfulCount: r._count.helpfulVotes,
+      helpfulByMe: myHelpfulRatingIds.has(r.id),
+    }));
 
   const adapted = await applyGoalSubstitutions(recipe.ingredients, goal);
   const effectiveIngredients = adapted.map((a) => a.ri);

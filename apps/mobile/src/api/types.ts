@@ -83,9 +83,12 @@ export type NutritionPerServing = {
 };
 
 export type Review = {
+  id: string;
   name: string;
   score: number;
   comment: string;
+  helpfulCount: number;
+  helpfulByMe: boolean;
 };
 
 export type RatingBreakdown = { 1: number; 2: number; 3: number; 4: number; 5: number };

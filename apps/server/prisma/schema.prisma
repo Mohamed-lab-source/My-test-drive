@@ -62,6 +62,7 @@ model User {
   favorites     Favorite[]
   ratings       Rating[]
   collections   Collection[]
+  helpfulVotes  RatingHelpfulVote[]
 }
 
 model Preference {
@@ -203,18 +204,31 @@ model Favorite {
 }
 
 model Rating {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipeId  String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  score     Int
-  comment   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String              @id @default(cuid())
+  userId       String
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId     String
+  recipe       Recipe              @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  score        Int
+  comment      String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  helpfulVotes RatingHelpfulVote[]
 
   @@unique([userId, recipeId])
   @@index([recipeId])
+}
+
+model RatingHelpfulVote {
+  id        String   @id @default(cuid())
+  ratingId  String
+  rating    Rating   @relation(fields: [ratingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([ratingId, userId])
+  @@index([ratingId])
 }
 
 model Collection {

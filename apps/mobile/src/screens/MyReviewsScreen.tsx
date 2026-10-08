@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { fetchMyRatings } from "../api/endpoints";
+import { deleteMyRating, fetchMyRatings } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { useLocale } from "../i18n/LocaleContext";
@@ -34,6 +34,21 @@ export function MyReviewsScreen({ navigation }: Props) {
       .then(setEntries)
       .catch(() => {})
       .finally(() => setRefreshing(false));
+  };
+
+  const confirmDelete = (slug: string) => {
+    Alert.alert(t("myReviews.deleteConfirmTitle"), t("myReviews.deleteConfirmMessage"), [
+      { text: t("home.cancel"), style: "cancel" },
+      {
+        text: t("myReviews.delete"),
+        style: "destructive",
+        onPress: () => {
+          deleteMyRating(slug)
+            .then(() => setEntries((prev) => (prev ?? []).filter((e) => e.recipe.slug !== slug)))
+            .catch(() => {});
+        },
+      },
+    ]);
   };
 
   if (entries === null) {
@@ -69,6 +84,14 @@ export function MyReviewsScreen({ navigation }: Props) {
                   </Text>
                 ) : null}
               </View>
+              <AnimatedPressable
+                style={styles.deleteButton}
+                pressScale={0.85}
+                onPress={() => confirmDelete(item.recipe.slug)}
+                accessibilityLabel={t("myReviews.delete")}
+              >
+                <Text style={styles.deleteIcon}>✕</Text>
+              </AnimatedPressable>
             </AnimatedPressable>
           </FadeSlideIn>
         )}
@@ -100,4 +123,14 @@ const createStyles = (colors: ThemeColors) =>
     stars: { fontSize: 13, color: colors.primary, marginTop: 4 },
     comment: { fontSize: 13, color: colors.textMuted, marginTop: 4, lineHeight: 18 },
     empty: { textAlign: "center", color: colors.textMuted, marginTop: spacing(6) },
+    deleteButton: {
+      width: 26,
+      height: 26,
+      borderRadius: radius.pill,
+      backgroundColor: colors.chipBackground,
+      alignItems: "center",
+      justifyContent: "center",
+      marginStart: spacing(1),
+    },
+    deleteIcon: { color: colors.textMuted, fontSize: 11, fontWeight: "800" },
   });
