@@ -9,6 +9,10 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🔗', 'Links that open Khroga', 'Share a plan, a place, a group invite or "add me" as a link. Friends tap it and it opens in the app.'),
+    ('📸', 'Share as a picture', 'Send a plan, a place or your numbers as a story-size picture.'),
+    ('💾', 'Save a friend\'s plan', 'Open a shared plan and save it to your plans with one tap.'),
+    ('⭐', 'Rate Khroga', 'A good rating helps more people find it.'),
     ('💡', 'Outing ideas', '18 ready-made outings, from date night to a step-free day.'),
     ('🏘️', 'Areas', 'Every neighbourhood with its places, a map and "Plan an outing here".'),
     ('✅', 'Must-haves', 'Plan only with places mapped with wheelchair access, Wi-Fi, no smoking and more.'),

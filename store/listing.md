@@ -20,6 +20,12 @@ Cafés, restaurants, cinemas, malls, parks, museums, escape rooms and more. Filt
 👯 BRING YOUR FRIENDS
 Make a group, vote in polls, chat, pick a meeting point, see who's coming and split the bill. Check in at a place so friends know where you are (for 24 hours, only friends).
 
+🔗 SHARE IN ONE TAP
+Send a plan, a place or a group invite as a link or a story-size picture. Friends tap it and it opens right in Khroga.
+
+💡 IDEAS AND TOOLS
+18 ready-made outing ideas, the week's weather with the best day to go out, sunset and prayer times, "decide for us", flip a coin, who pays and a bill splitter.
+
 🗺️ MAPS AND DIRECTIONS
 Your plan on a map, walking times, and one tap to Google Maps, Waze, Uber or public transport.
 

@@ -9,6 +9,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../app/extras.dart';
 import '../../app/helpers.dart';
+import '../../app/share_texts.dart';
+import '../../app/links.dart' show appRouteFor;
+import '../../app/web_host.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -372,6 +375,16 @@ class _Header extends ConsumerWidget {
                 ],
               ),
               if (group.scheduledAt != null) _OutingDay(group: group),
+              if (group.memberUids.length == 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: KSpace.sm),
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.group_add_outlined),
+                    label: Text(tr('Invite friends with a link')),
+                    onPressed: () => SharePlus.instance
+                        .share(ShareParams(text: groupInviteText(group.name, group.joinCode))),
+                  ),
+                ),
               if (group.planTitle != null) ...[
                 const SizedBox(height: KSpace.xs),
                 InkWell(
@@ -653,8 +666,7 @@ class _MembersSheet extends ConsumerWidget {
                     tooltip: tr('Share'),
                     icon: const Icon(Icons.share_outlined),
                     onPressed: () => SharePlus.instance.share(ShareParams(
-                      text: 'Join "${group.name}" on Khroga with code '
-                          '${group.joinCode}',
+                      text: groupInviteText(group.name, group.joinCode),
                     )),
                   ),
                 ],
@@ -1161,11 +1173,20 @@ class _Bubble extends ConsumerWidget {
               _MessageText(text: message.text, mine: mine),
               for (final (link, _) in splitLinks(message.text).where((p) => p.$2).take(3))
                 InkWell(
-                  onTap: () => openUri(Uri.parse(link)),
+                  onTap: () {
+                    // Our own links open inside the app.
+                    final uri = Uri.parse(link);
+                    final inApp = uri.host == webHost() ? appRouteFor(uri) : null;
+                    inApp != null ? context.push(inApp) : openUri(uri);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      link.contains('google.com/maps') ? tr('🗺️ Open in Maps') : tr('🔗 Open link'),
+                      Uri.tryParse(link)?.host == webHost() && webHost() != null
+                          ? tr('✨ Open in Khroga')
+                          : link.contains('google.com/maps')
+                              ? tr('🗺️ Open in Maps')
+                              : tr('🔗 Open link'),
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           decoration: TextDecoration.underline,
@@ -1279,7 +1300,7 @@ class _ComposerState extends ConsumerState<_Composer> {
         ),
       ),
     );
-    if (picked != null) await _send(placeChatText(picked));
+    if (picked != null) await _send(placeChatText(picked) + placeLinkLine(picked.id));
   }
 
   Future<void> _sendMyLocation() async {

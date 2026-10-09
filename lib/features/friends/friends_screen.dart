@@ -1,3 +1,4 @@
+import '../../app/share_texts.dart';
 import '../../app/i18n.dart';
 import 'dart:async';
 
@@ -59,6 +60,13 @@ class FriendsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(tr('Friends')),
         actions: [
+          IconButton(
+            tooltip: tr('Invite a friend to add you'),
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            onPressed: uid == null
+                ? null
+                : () => SharePlus.instance.share(ShareParams(text: friendInviteText(uid, me?.username))),
+          ),
           if (me?.username != null)
             IconButton(
               tooltip: tr('Copy my username'),
@@ -72,9 +80,8 @@ class FriendsScreen extends ConsumerWidget {
             IconButton(
               tooltip: tr('Share my username'),
               icon: const Icon(Icons.share_outlined),
-              onPressed: () => SharePlus.instance.share(ShareParams(
-                  text: 'Add me on Khroga: @${me!.username}\n'
-                      'Open Friends, search "${me.username}" and tap Add.')),
+              onPressed: () => SharePlus.instance.share(
+                  ShareParams(text: friendInviteText(me!.uid, me.username))),
             ),
           if (me?.username != null)
             IconButton(

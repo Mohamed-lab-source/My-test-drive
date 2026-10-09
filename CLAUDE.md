@@ -157,6 +157,20 @@ How the code enforces it (keep it this way):
   prayers, holidays, coming up), my stats + my map, notes (one `get()` of
   100, not a listener). Plan-form presets live on the phone
   (`planPresetsProvider`, max 8).
+- Share links (0.7, `lib/app/links.dart` + `share_texts.dart`, tested in
+  `test/links_test.dart`): `https://<project>.web.app/p/<placeId>`, `/j/<code>`
+  (group invite), `/u/<uid>` (add friend), `/s?c=&t=&d=&s=id~HH:mm~min|…`
+  (shared plan: only ids/times/title; places are looked up again in our
+  data, unknown ids dropped), `/get`. Android App Links: intent-filter with
+  `${webHost}` (gradle `KHROGA_WEB_HOST`, set in CI from google-services.json),
+  `site/.well-known/assetlinks.json` written by CI with test/release/Play
+  SHA-256. Hosting rewrites those paths to `site/open.html` (open in app /
+  Get it on Google Play). Router maps links in its redirect and keeps a link
+  opened before sign-in (`_pendingLink`). Chat opens our own links in-app.
+- Story-size picture sharing (`lib/widgets/share_card.dart`: `StoryCard`,
+  `sharePictureCard`) for plans, places and stats. In-app review
+  (`lib/app/review.dart`, `in_app_review`): asked after 3 happy moments, at
+  most every 90 days. Release notes: `store/release-notes.md`.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

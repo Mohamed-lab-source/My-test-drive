@@ -27,6 +27,9 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Our free website (Firebase Hosting). Links to it open the app
+        // (App Links). The GitHub build sets it; test builds use a dummy.
+        manifestPlaceholders["webHost"] = System.getenv("KHROGA_WEB_HOST")?.takeIf { it.isNotBlank() } ?: "khroga-not-connected.invalid"
     }
 
     // Two signing keys:

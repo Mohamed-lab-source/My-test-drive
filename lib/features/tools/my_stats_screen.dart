@@ -11,6 +11,8 @@ import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
 import '../../widgets/khroga_map.dart';
+import '../../widgets/share_card.dart';
+import '../../app/share_texts.dart';
 
 /// Your outings in numbers: only from your own account and this phone.
 class MyStatsScreen extends ConsumerWidget {
@@ -78,6 +80,27 @@ class MyStatsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(tr('My outings in numbers')),
         actions: [
+          IconButton(
+            tooltip: tr('Share as a picture'),
+            icon: const Icon(Icons.ios_share),
+            onPressed: () => sharePictureCard(
+              context,
+              StoryCard(
+                emoji: '📊',
+                title: tr('My outings in numbers'),
+                subtitle: tr('On Khroga'),
+                lines: [
+                  ('🗺️', trf('{n} plans made', {'n': count ?? plans.length}), null),
+                  ('✅', trf("{n} places I've been", {'n': visited.length}), null),
+                  if (streak > 0) ('🔥', trf('{n} weeks in a row', {'n': streak}), null),
+                  if (byArea.isNotEmpty) ('🏘️', trf('Top area: {area}', {'area': byArea.first.$1}), null),
+                  if (byCat.isNotEmpty)
+                    (Categories.emoji(byCat.first.$1), trf('Most visited: {kind}', {'kind': Categories.label(byCat.first.$1)}), null),
+                ],
+              ),
+              appInviteText(),
+            ),
+          ),
           IconButton(
             tooltip: tr('My map'),
             icon: const Icon(Icons.map_outlined),

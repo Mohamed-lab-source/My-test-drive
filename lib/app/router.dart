@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 
 import '../data/providers.dart';
 import '../models/social.dart';
+import 'links.dart';
 import 'local_prefs.dart';
+import '../features/links/link_screens.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/explore/explore_screen.dart';
 import '../features/explore/compare_screen.dart';
@@ -33,6 +35,9 @@ import '../features/profile/welcome_screen.dart';
 import '../features/profile/whats_new_screen.dart';
 import '../features/profile/profile_screen.dart';
 
+/// A link opened before signing in, opened right after.
+String? _pendingLink;
+
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authRepositoryProvider);
   final refresh = _StreamListenable(auth.authChanges());
@@ -43,12 +48,26 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: start,
     refreshListenable: refresh,
     redirect: (context, state) {
+      // A Khroga link (place, plan, invite, friend) opened from outside.
+      final link = appRouteFor(state.uri);
       final signedIn = FirebaseAuth.instance.currentUser != null;
       final atSignIn = state.matchedLocation == '/sign-in';
-      if (!signedIn) return atSignIn ? null : '/sign-in';
+      if (!signedIn) {
+        if (link != null) _pendingLink = link; // open it after signing in
+        return atSignIn ? null : '/sign-in';
+      }
       // First time after signing in: a short welcome.
       final atWelcome = state.matchedLocation == '/welcome';
-      if (!ref.read(appSettingsProvider).onboarded) return atWelcome ? null : '/welcome';
+      if (!ref.read(appSettingsProvider).onboarded) {
+        if (link != null) _pendingLink = link;
+        return atWelcome ? null : '/welcome';
+      }
+      if (link != null) return link;
+      if (_pendingLink != null) {
+        final next = _pendingLink;
+        _pendingLink = null;
+        return next;
+      }
       if (atSignIn) return start;
       return null;
     },
@@ -109,6 +128,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/whats-new', builder: (_, _) => const WhatsNewScreen()),
       GoRoute(path: '/lists', builder: (_, _) => const ListsScreen()),
       GoRoute(path: '/ideas', builder: (_, _) => const IdeasScreen()),
+      // Web links (`https://{project}.web.app/...`) are mapped by the redirect
+      // above; these keep the router from treating them as unknown.
+      for (final p in const ['/p/:id', '/j/:code', '/u/:uid', '/s', '/get'])
+        GoRoute(path: p, redirect: (_, s) => appRouteFor(s.uri) ?? '/plan'),
+      GoRoute(
+          path: '/join/:code',
+          builder: (_, s) => JoinLinkScreen(code: s.pathParameters['code']!)),
+      GoRoute(
+          path: '/add-friend/:uid',
+          builder: (_, s) => AddFriendLinkScreen(uid: s.pathParameters['uid']!)),
+      GoRoute(path: '/shared', builder: (_, s) => SharedPlanScreen(uri: s.uri)),
       GoRoute(path: '/areas', builder: (_, _) => const AreasScreen()),
       GoRoute(
         path: '/area/:city/:name',

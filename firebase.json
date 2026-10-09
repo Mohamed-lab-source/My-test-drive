@@ -16,7 +16,40 @@
     "cleanUrls": true,
     "ignore": [
       "firebase.json",
-      "**/.*"
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/p/**",
+        "destination": "/open.html"
+      },
+      {
+        "source": "/j/**",
+        "destination": "/open.html"
+      },
+      {
+        "source": "/u/**",
+        "destination": "/open.html"
+      },
+      {
+        "source": "/s",
+        "destination": "/open.html"
+      },
+      {
+        "source": "/get",
+        "destination": "/open.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/.well-known/assetlinks.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
     ]
   }
 }

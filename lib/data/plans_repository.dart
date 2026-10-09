@@ -171,4 +171,11 @@ class PlansRepository {
 
   Future<void> delete(String uid, String planId) =>
       _plans(uid).doc(planId).delete();
+
+  /// Saves a plan a friend shared with you (stops rebuilt from our data).
+  Future<String> saveShared(String uid, OutingPlan plan) async {
+    final doc = _plans(uid).doc();
+    await doc.set({...plan.toMap(), 'source': 'local', 'saved': false, 'createdAt': FieldValue.serverTimestamp()});
+    return doc.id;
+  }
 }

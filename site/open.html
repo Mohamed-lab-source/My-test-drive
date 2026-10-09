@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Khroga</title>
+<meta name="description" content="Plan real outings in Cairo, Giza and Alexandria with friends. Free, no ads.">
+<meta property="og:title" content="Khroga · خروجة"><meta property="og:description" content="Plan real outings in Cairo, Giza and Alexandria with friends. Free, no ads. · خطط خروجات حقيقية مع أصحابك.">
+<meta property="og:image" content="/icon.png"><meta name="theme-color" content="#111318">
+<style>
+:root{--bg:#111318;--card:#1b1e26;--ink:#f3f5f9;--muted:#b7becb;--accent:#ff8a65;--on:#111318;--line:#343a46}
+@media (prefers-color-scheme:light){:root{--bg:#f2f3f6;--card:#fff;--ink:#14161b;--muted:#4a505c;--accent:#c93d1b;--on:#fff;--line:#d5d8e0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif}
+main{max-width:520px;margin:0 auto;padding:32px 16px 64px;text-align:center}
+img{width:96px;height:96px;border-radius:24px}h1{margin:12px 0 4px;font-size:1.6rem}p{color:var(--muted);margin:4px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;margin-top:20px}
+a.btn{display:block;margin:12px 0;padding:14px 18px;border-radius:999px;text-decoration:none;font-weight:700}
+a.primary{background:var(--accent);color:var(--on)}a.secondary{border:1px solid var(--line);color:var(--ink)}
+.ar{direction:rtl}#what{font-size:1.15rem;color:var(--ink);font-weight:600}small{color:var(--muted)}
+</style></head><body><main>
+<img src="/icon.png" alt="Khroga icon">
+<h1>Khroga · خروجة</h1>
+<p>Plan real outings in Cairo, Giza and Alexandria.</p>
+<p class="ar">خطط خروجات حقيقية في القاهرة والجيزة وإسكندرية.</p>
+<div class="card">
+  <p id="what"></p><p id="what-ar" class="ar"></p>
+  <a id="open" class="btn primary" href="#">Open in Khroga · افتح في خروجة</a>
+  <a id="play" class="btn secondary" href="https://play.google.com/store/apps/details?id=com.khroga.khroga">Get Khroga on Google Play · نزّل خروجة</a>
+  <p><small>Free, no ads. Only real places from the map. · مجاني ومن غير إعلانات.</small></p>
+</div>
+<p style="margin-top:24px"><small><a href="/privacy" style="color:var(--accent)">Privacy · الخصوصية</a> · <a href="/terms" style="color:var(--accent)">Terms · الشروط</a></small></p>
+</main>
+<script>
+(function () {
+  var path = location.pathname, q = new URLSearchParams(location.search);
+  var en = "", ar = "";
+  function text(s) { return (s || "").replace(/[<>]/g, "").slice(0, 80); }
+  if (path.indexOf("/j/") === 0) { var code = text(path.slice(3)).toUpperCase(); en = "You're invited to a group. Code: " + code; ar = "إنت معزوم على جروب. الكود: " + code; }
+  else if (path.indexOf("/u/") === 0) { en = "A friend wants to add you on Khroga."; ar = "صاحبك عايز يضيفك على خروجة."; }
+  else if (path.indexOf("/p/") === 0) { en = "A friend shared a place with you."; ar = "صاحبك بعتلك مكان."; }
+  else if (path === "/s") { var t = text(q.get("t")); en = "A friend shared a plan" + (t ? ": " + t : "") + "."; ar = "صاحبك بعتلك خطة" + (t ? ": " + t : "") + "."; }
+  document.getElementById("what").textContent = en;
+  document.getElementById("what-ar").textContent = ar;
+  var play = document.getElementById("play").href;
+  var target = location.host + path + location.search;
+  var open = document.getElementById("open");
+  if (/android/i.test(navigator.userAgent)) {
+    open.href = "intent://" + target + "#Intent;scheme=https;package=com.khroga.khroga;S.browser_fallback_url=" + encodeURIComponent(play) + ";end";
+  } else { open.style.display = "none"; }
+  if (path === "/get") open.style.display = "none";
+})();
+</script></body></html>

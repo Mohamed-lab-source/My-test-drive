@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../app/extras.dart';
 import '../../app/helpers.dart';
+import '../../app/share_texts.dart';
 import '../../app/local_history.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -18,6 +19,7 @@ import '../../planner/planner.dart'
     show similarNearby, nearbyPlaces, haversineKm, addStop, otherBranches;
 import 'lists_screen.dart' show newListDialog;
 import '../../widgets/khroga_map.dart';
+import '../../widgets/share_card.dart';
 import '../../widgets/launchers.dart';
 import 'explore_screen.dart';
 
@@ -51,10 +53,16 @@ class _PlaceDetailsScreenState extends ConsumerState<PlaceDetailsScreen> {
       appBar: AppBar(
         actions: [
           if (loaded != null)
-            IconButton(
+            PopupMenuButton<String>(
               tooltip: tr('Share'),
               icon: const Icon(Icons.share_outlined),
-              onPressed: () => SharePlus.instance.share(ShareParams(text: placeShareText(loaded))),
+              onSelected: (v) => v == 'picture'
+                  ? sharePictureCard(context, _placeStoryCard(loaded), placeShareText(loaded))
+                  : SharePlus.instance.share(ShareParams(text: placeShareText(loaded))),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'picture', child: Text(tr('Share as a picture'))),
+                PopupMenuItem(value: 'text', child: Text(tr('Share as text'))),
+              ],
             ),
           IconButton(
             tooltip: favorite ? tr('Remove from favorites') : tr('Add to favorites'),
@@ -579,7 +587,7 @@ String placeShareText(Place p) {
     if (p.hasLocation)
       Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '${p.lat},${p.lng}'}).toString(),
     '',
-    tr('Found on Khroga'),
+    tr('Found on Khroga') + placeLinkLine(p.id),
   ];
   return lines.join('\n');
 }
@@ -967,7 +975,7 @@ Future<void> _sendToGroup(BuildContext context, WidgetRef ref, Place place) asyn
           groupId: picked,
           uid: uid,
           name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
-          text: placeChatText(place),
+          text: placeChatText(place) + placeLinkLine(place.id),
         );
     if (context.mounted) showMessage(context, tr('Sent to the group'));
   } catch (e) {
@@ -1224,4 +1232,20 @@ class _DayNote extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
     );
   }
+}
+
+/// A place as a story-size picture card (map facts only).
+Widget _placeStoryCard(Place p) {
+  final today = todaysHours(p, DateTime.now());
+  return StoryCard(
+    emoji: Categories.emoji(p.category),
+    title: p.shownName,
+    subtitle: [p.kindLabel ?? Categories.label(p.category), ?p.area].join(' · '),
+    lines: [
+      if (today != null) ('🕒', trf('Today: {hours}', {'hours': tr(today)}), null),
+      if (p.cuisineLabel != null) ('🍽️', p.cuisineLabel!, null),
+      for (final l in p.details.labels.take(3)) (l.characters.first, l.characters.skip(1).toString().trim(), null),
+      if (p.address != null) ('📍', p.address!, null),
+    ],
+  );
 }

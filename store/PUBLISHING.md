@@ -48,9 +48,27 @@ Google Play signs the app with its own key. After your first upload:
 4. Run the workflow again. It registers them with Firebase and the AI key. Until you do this,
    "Continue with Google" won't work in the Play Store version (guests still work).
 
+## 5b. Check that Khroga links open the app
+Khroga's share links (`https://<project>.web.app/p/…`, `/j/…`, `/s?…`) open the app when Google has
+checked our website's `/.well-known/assetlinks.json` (the build publishes it with every key's
+fingerprint). After step 5 and one more build:
+1. Play Console → **Grow users → Deep links**. Our web address should show **Verified** (it can take a day).
+2. If it says not verified, run the workflow once more (it re-publishes the file) and check again.
+Links still work without this: Android just asks which app to use.
+
 ## 6. Go public
 After 14 days with 12+ testers, Play Console shows **Apply for production**. Answer the short questions
 about your test, then submit. Google's review usually takes a few days.
+
+## What to write in "What's new" for each update
+See `store/release-notes.md` (English and Arabic, under 500 characters each).
+
+## Ideas that help people find Khroga
+- Ask testers to share a plan as a **picture** to their WhatsApp status: it shows the Khroga web address.
+- Share group invites as links in your WhatsApp groups: friends tap and join.
+- After launch, reply to Play Store reviews (Play Console → Ratings and reviews). It improves ranking.
+- The app asks for a rating only after 3 happy moments (a loved plan, a saved plan, joining a group),
+  at most once every 90 days, so it never nags.
 
 ## Every update after that
 Push changes → the build makes a new `.aab` with a higher version number → upload it in Play Console

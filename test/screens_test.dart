@@ -12,6 +12,7 @@ import 'package:khroga/features/profile/whats_new_screen.dart';
 import 'package:khroga/features/tools/ideas_screen.dart';
 import 'package:khroga/features/tools/tools_screen.dart';
 import 'package:khroga/models/place.dart';
+import 'package:khroga/widgets/share_card.dart';
 
 Widget _app(Widget child) => ProviderScope(child: _router(child));
 
@@ -75,6 +76,27 @@ void main() {
     await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
     await tester.pump();
     expect(find.text('Coming public holidays'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('story picture card fits with long text', (tester) async {
+    await tester.pumpWidget(_app(Scaffold(
+      body: Center(
+        child: SizedBox(
+          width: 300,
+          child: StoryCard(
+            emoji: '🗺️',
+            title: 'A rather long test plan title that goes on and on and on',
+            subtitle: 'Friday 9 Oct · Cairo',
+            lines: [
+              for (var i = 0; i < 8; i++) ('☕', 'Test Place $i with a long name indeed', '18:00 · Test Area'),
+            ],
+          ),
+        ),
+      ),
+    )));
+    await tester.pump();
+    expect(find.text('Made with Khroga'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

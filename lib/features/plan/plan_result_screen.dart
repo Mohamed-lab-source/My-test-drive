@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../app/extras.dart';
 import '../../app/helpers.dart' show sameDay, totalStopMinutes, showTime, walkingMinutes, weatherIcon;
 import '../../app/local_prefs.dart';
+import '../../app/review.dart';
+import '../../app/share_texts.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
@@ -17,6 +19,7 @@ import '../../planner/planner.dart';
 import '../../planner/services.dart' show AiUnavailable;
 import '../../widgets/common.dart';
 import '../../widgets/khroga_map.dart';
+import '../../widgets/share_card.dart';
 import '../../widgets/launchers.dart';
 import '../groups/create_group_sheet.dart';
 import 'plan_form_screen.dart';
@@ -35,10 +38,16 @@ class PlanResultScreen extends ConsumerWidget {
         title: Text(tr('Your plan')),
         actions: [
           if (loaded != null)
-            IconButton(
+            PopupMenuButton<String>(
               tooltip: tr('Share plan'),
               icon: const Icon(Icons.share_outlined),
-              onPressed: () => SharePlus.instance.share(ShareParams(text: planShareText(loaded))),
+              onSelected: (v) => v == 'picture'
+                  ? sharePictureCard(context, planStoryCard(loaded), planShareText(loaded))
+                  : SharePlus.instance.share(ShareParams(text: planShareText(loaded))),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'picture', child: Text(tr('Share as a picture'))),
+                PopupMenuItem(value: 'text', child: Text(tr('Share as text'))),
+              ],
             ),
           if (loaded != null)
             PopupMenuButton<String>(
@@ -352,6 +361,7 @@ class _PlanBody extends ConsumerWidget {
                     await ref
                         .read(plansRepositoryProvider)
                         .setSaved(uid, plan.id, !plan.saved);
+                    if (!plan.saved) happyMoment(ref);
                   } catch (e) {
                     if (context.mounted) showError(context, e);
                   }
@@ -369,6 +379,12 @@ class _PlanBody extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: KSpace.sm),
+        FilledButton.tonalIcon(
+          onPressed: () => sharePictureCard(context, planStoryCard(plan), planShareText(plan)),
+          icon: const Icon(Icons.photo_camera_back_outlined),
+          label: Text(tr('Send to friends as a picture')),
         ),
       ],
     );
@@ -737,7 +753,7 @@ String planShareText(OutingPlan plan) {
   }
   lines
     ..add('')
-    ..add(tr('Planned with Khroga'));
+    ..add(tr('Planned with Khroga') + planLinkLine(plan));
   return lines.join('\n');
 }
 
@@ -1091,7 +1107,10 @@ class _HowWasIt extends ConsumerWidget {
           children: [
             IconButton(
               tooltip: tr('Loved it'),
-              onPressed: () => n.set(planId, rating == 'up' ? null : 'up'),
+              onPressed: () {
+                n.set(planId, rating == 'up' ? null : 'up');
+                if (rating != 'up') happyMoment(ref);
+              },
               icon: Icon(rating == 'up' ? Icons.thumb_up : Icons.thumb_up_outlined,
                   color: rating == 'up' ? context.k.accent : null),
             ),
@@ -1250,3 +1269,17 @@ String? _dayFacts(OutingPlan plan) {
   ];
   return lines.isEmpty ? null : lines.join('\n');
 }
+
+/// The plan as a story-size picture card.
+Widget planStoryCard(OutingPlan plan) => StoryCard(
+      emoji: '🗺️',
+      title: plan.title,
+      subtitle: [
+        if (plan.request.date != null) DateFormat('EEEE d MMM').format(plan.request.day),
+        tr(Cities.all[plan.request.city] ?? plan.request.city),
+      ].join(' · '),
+      lines: [
+        for (final s in plan.stops)
+          (Categories.emoji(s.category), s.name, [?s.startTime, ?s.area].join(' · ')),
+      ],
+    );

@@ -265,6 +265,20 @@ jobs:
           echo "Allowed services now:"
           gcloud services api-keys describe "$NAME" --format=json | jq -r '.restrictions.apiTargets[]?.service'
 
+      - name: Let Khroga links open the app (assetlinks.json)
+        if: steps.check.outputs.connected == 'true'
+        env:
+          P: ${{ steps.auth.outputs.project_id }}
+          REL_SHA256: ${{ steps.relsha.outputs.sha256 }}
+          PLAY_SHA256: ${{ secrets.PLAY_APP_SIGNING_SHA256 }}
+        run: |
+          mkdir -p site/.well-known
+          FPS=$(printf '%s\n' "$SHA256" "$REL_SHA256" "$PLAY_SHA256" | grep -E '^[0-9A-Fa-f:]{95}$' | sort -u | jq -R . | jq -s -c .)
+          jq -n --arg pkg "$ANDROID_PACKAGE" --argjson fps "$FPS" \
+            '[{relation:["delegate_permission/common.handle_all_urls"],target:{namespace:"android_app",package_name:$pkg,sha256_cert_fingerprints:$fps}}]' \
+            > site/.well-known/assetlinks.json
+          cat site/.well-known/assetlinks.json
+
       - name: Put the privacy policy, terms and account-deletion pages online
         if: steps.check.outputs.connected == 'true'
         continue-on-error: true
@@ -394,7 +408,10 @@ jobs:
 
       - name: Connect the app to Firebase
         if: needs.firebase.outputs.connected == 'true'
-        run: node tool/gen_firebase_options.mjs /tmp/app-config/google-services.json "$ANDROID_PACKAGE"
+        run: |
+          node tool/gen_firebase_options.mjs /tmp/app-config/google-services.json "$ANDROID_PACKAGE"
+          # Links to our website open the app (see AndroidManifest.xml).
+          echo "KHROGA_WEB_HOST=$(jq -r .project_info.project_id /tmp/app-config/google-services.json).web.app" >> "$GITHUB_ENV"
 
       - name: Use the private release key (if the secret is set)
         id: signing

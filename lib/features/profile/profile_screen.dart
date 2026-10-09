@@ -7,6 +7,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../app/helpers.dart';
 import '../../app/local_history.dart';
 import '../../app/local_prefs.dart';
+import '../../app/review.dart';
+import '../../app/share_texts.dart';
 
 import '../../app/theme.dart';
 import '../../data/providers.dart';
@@ -136,9 +138,25 @@ class ProfileScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.share_outlined),
                   title: Text(tr('Share Khroga with friends')),
-                  onTap: () => SharePlus.instance.share(ShareParams(
-                      text: 'I plan outings in Cairo, Giza and Alexandria with Khroga. '
-                          'It only suggests real places and it\'s free. Ask me for the app!')),
+                  onTap: () => SharePlus.instance.share(ShareParams(text: appInviteText())),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.star_outline),
+                  title: Text(tr('Rate Khroga')),
+                  subtitle: Text(tr('A good rating helps more people find it')),
+                  onTap: openStoreListing,
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.person_add_alt_1_outlined),
+                  title: Text(tr('Invite a friend to add you')),
+                  subtitle: Text(tr('Sends a link that adds you as a friend')),
+                  onTap: () {
+                    final uid = ref.read(uidProvider);
+                    if (uid == null) return;
+                    SharePlus.instance.share(ShareParams(text: friendInviteText(uid, me?.username)));
+                  },
                 ),
                 const Divider(),
                 ListTile(
