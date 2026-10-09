@@ -138,11 +138,12 @@ How the code enforces it (keep it this way):
   folder (privacy, terms, delete-account pages, AR+EN) deploys to Firebase
   Hosting (free) at `<project>.web.app`. Store texts/graphics: `store/`
   (`tool/make_store_graphic.py`).
-- Map tiles come from CARTO (free for non-commercial use with credit, has a
-  monthly allowance) instead of OpenStreetMap's server, which forbids heavy
-  app use; flutter_map caches tiles on the phone, and the place-page map only
-  loads when tapped. If the app ever outgrows the free allowance, switch
-  `urlTemplate` in `khroga_map.dart`.
+- Map tiles: with the `MAP_TILES_KEY` secret (free Stadia Maps key,
+  non-commercial tier, no card) the app uses Stadia's light/dark tiles;
+  without it, OpenStreetMap's own tiles (dark filter in dark mode), which
+  their policy only allows for light use, so the key is needed before going
+  public. CARTO was dropped: it started asking for an API key. flutter_map
+  caches tiles on the phone; the place-page map only loads when tapped.
 - Version 0.6 extras (`lib/app/extras.dart`, tested in `test/extras_test.dart`):
   sunrise/sunset and prayer times are *calculated* (NOAA formula, Egyptian
   method 19.5°/17.5°), never looked up; Egypt's fixed-date holidays only

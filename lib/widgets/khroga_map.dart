@@ -30,14 +30,19 @@ class MapPin {
   final VoidCallback? onTap;
 }
 
-/// A free map (OpenStreetMap data, CARTO map tiles) with pins, and an
-/// optional line joining them in order (a plan's route).
+/// Free key for Stadia Maps (non-commercial free tier, no card), added by the
+/// GitHub build from the MAP_TILES_KEY secret. See store/PUBLISHING.md.
+const mapTilesKey = String.fromEnvironment('MAP_TILES_KEY');
+
+/// A free map (OpenStreetMap data) with pins, and an optional line joining
+/// them in order (a plan's route).
 ///
-/// Why CARTO: OpenStreetMap's own tile server doesn't allow apps with many
-/// users. CARTO's basemaps are free for non-commercial apps (with credit) up
-/// to a monthly allowance, need no account, and have a dark style that
-/// matches the app. Tiles are cached on the phone (flutter_map's built-in
-/// cache), so places you've looked at don't download again.
+/// Tiles: with a Stadia Maps key, Stadia's tiles (made for apps, light and
+/// dark styles). Without one, OpenStreetMap's own tiles (fine for a few
+/// testers, with a dark filter in dark mode; their policy doesn't allow
+/// heavy app use, so add the key before going public). Tiles are cached on
+/// the phone (flutter_map's built-in cache), so places you've looked at don't
+/// download again.
 class KhrogaMap extends StatelessWidget {
   const KhrogaMap({
     super.key,
@@ -59,6 +64,7 @@ class KhrogaMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final points = [for (final p in pins) LatLng(p.lat, p.lng)];
     final all = [...points, if (me != null) LatLng(me!.$1, me!.$2)];
     if (all.isEmpty) return const SizedBox.shrink();
@@ -75,15 +81,23 @@ class KhrogaMap extends StatelessWidget {
         ),
       ),
       children: [
-        TileLayer(
-          urlTemplate: Theme.of(context).brightness == Brightness.dark
-              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-              : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-          subdomains: const ['a', 'b', 'c', 'd'],
-          retinaMode: RetinaMode.isHighDensity(context),
-          userAgentPackageName: 'com.khroga.khroga',
-          maxZoom: 19,
-        ),
+        if (mapTilesKey.isNotEmpty)
+          TileLayer(
+            urlTemplate: dark
+                ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key={key}'
+                : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key={key}',
+            additionalOptions: const {'key': mapTilesKey},
+            retinaMode: RetinaMode.isHighDensity(context),
+            userAgentPackageName: 'com.khroga.khroga',
+            maxZoom: 20,
+          )
+        else
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.khroga.khroga',
+            tileBuilder: dark ? darkModeTileBuilder : null,
+            maxZoom: 19,
+          ),
         if (route && points.length > 1)
           PolylineLayer(polylines: [
             Polyline(points: points, strokeWidth: 4, color: k.accent),
@@ -135,10 +149,16 @@ class KhrogaMap extends StatelessWidget {
               'OpenStreetMap contributors',
               onTap: () => openWebsite('https://www.openstreetmap.org/copyright'),
             ),
-            TextSourceAttribution(
-              'CARTO',
-              onTap: () => openWebsite('https://carto.com/attributions'),
-            ),
+            if (mapTilesKey.isNotEmpty) ...[
+              TextSourceAttribution(
+                'Stadia Maps',
+                onTap: () => openWebsite('https://stadiamaps.com/'),
+              ),
+              TextSourceAttribution(
+                'OpenMapTiles',
+                onTap: () => openWebsite('https://openmaptiles.org/'),
+              ),
+            ],
           ],
         ),
       ],

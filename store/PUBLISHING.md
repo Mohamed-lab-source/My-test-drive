@@ -13,6 +13,15 @@ Everything happens in your browser (phone or computer). Do the steps in order.
 6. Push any change (or **Run workflow** without ticking anything). From now on each build also makes
    **khroga-play-store-bundle** (the `.aab` file you upload to Google Play).
 
+## 1b. Free map key (5 minutes, do this before going public)
+The map uses OpenStreetMap's own map for now, which only allows a few users. For everyone:
+1. Go to **stadiamaps.com** → **Sign up** (free, no card). Pick the free plan.
+2. In the Stadia dashboard: **Manage properties** → create a property called Khroga →
+   **Add API key** → copy the key.
+3. GitHub → your project → **Settings → Secrets and variables → Actions → New repository secret**:
+   name `MAP_TILES_KEY`, secret = the key. Save.
+4. The next build uses Stadia's maps (with a proper dark style). Nothing else to change.
+
 ## 2. Open a Google Play developer account ($25 once)
 play.google.com/console → sign up as a **personal** account → pay $25 → verify your identity
 (Google asks for ID and a phone number; it can take a few days).

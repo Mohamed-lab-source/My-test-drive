@@ -433,6 +433,8 @@ jobs:
           echo "release=true" >> "$GITHUB_OUTPUT"
 
       - name: Build APK
+        env:
+          MAP_KEY: ${{ secrets.MAP_TILES_KEY }}
         run: |
           KEY=""
           if [ -f /tmp/app-config/gemini.key ]; then KEY=$(cat /tmp/app-config/gemini.key); fi
@@ -442,6 +444,7 @@ jobs:
           [ -n "$CERT" ] && EXTRA="--dart-define=ANDROID_CERT_SHA1=$CERT"
           # Every build gets a higher version number (the Play Store needs that).
           flutter build apk --release --dart-define=GEMINI_API_KEY="$KEY" $EXTRA \
+            --dart-define=MAP_TILES_KEY="$MAP_KEY" \
             --build-number=$((100 + ${{ github.run_number }})) \
             --dart-define=BUILD_DATE="$(date -u +%Y-%m-%d)"
 
@@ -455,11 +458,14 @@ jobs:
       # with the private release key, never the shared test key.
       - name: Build the Play Store bundle (.aab)
         if: steps.signing.outputs.release == 'true'
+        env:
+          MAP_KEY: ${{ secrets.MAP_TILES_KEY }}
         run: |
           KEY=""
           if [ -f /tmp/app-config/gemini.key ]; then KEY=$(cat /tmp/app-config/gemini.key); fi
           echo "::add-mask::$KEY"
           flutter build appbundle --release --dart-define=GEMINI_API_KEY="$KEY" \
+            --dart-define=MAP_TILES_KEY="$MAP_KEY" \
             --dart-define=ANDROID_CERT_SHA1="${{ steps.signing.outputs.cert }}" \
             --build-number=$((100 + ${{ github.run_number }})) \
             --dart-define=BUILD_DATE="$(date -u +%Y-%m-%d)"

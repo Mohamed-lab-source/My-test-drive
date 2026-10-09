@@ -447,7 +447,7 @@ const arabic = <String, String>{
   'Place not found': 'المكان مش موجود',
   'Places, opening hours and other facts come from OpenStreetMap and Overture Maps and may be out of date. Check before you go.': 'الأماكن ومواعيد الفتح وباقي المعلومات جاية من OpenStreetMap و Overture Maps وممكن تكون قديمة. اتأكد قبل ما تروح.',
   'Places: © OpenStreetMap contributors (openstreetmap.org/copyright) and Overture Maps Foundation.\nPhotos from Wikimedia Commons.': 'الأماكن: © مساهمو OpenStreetMap ‏(openstreetmap.org/copyright) ومؤسسة Overture Maps.\nالصور من ويكيميديا كومنز.',
-  'Places: © OpenStreetMap contributors (openstreetmap.org/copyright) and Overture Maps Foundation. Maps © CARTO.\nPhotos from Wikimedia Commons.': 'الأماكن: © مساهمو OpenStreetMap ‏(openstreetmap.org/copyright) ومؤسسة Overture Maps. الخرايط © CARTO.\nالصور من ويكيميديا كومنز.',
+  'Places: © OpenStreetMap contributors (openstreetmap.org/copyright) and Overture Maps Foundation. Map tiles: OpenStreetMap or Stadia Maps.\nPhotos from Wikimedia Commons.': 'الأماكن: © مساهمو OpenStreetMap ‏(openstreetmap.org/copyright) ومؤسسة Overture Maps. الخرايط: OpenStreetMap أو Stadia Maps.\nالصور من ويكيميديا كومنز.',
   'Plan': 'خطة',
   'Plan again (new places)': 'خطط تاني (أماكن جديدة)',
   'Plan an outing around here': 'خطط خروجة حوالين هنا',

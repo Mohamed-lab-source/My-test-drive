@@ -35,7 +35,7 @@ The whole app in both languages, with dark mode and 8 color themes.
 💚 FREE, NO ADS
 No ads, no selling your data. Delete your account any time.
 
-Places: © OpenStreetMap contributors and Overture Maps. Maps © CARTO. Photos from Wikimedia Commons. Weather by Open-Meteo.
+Places: © OpenStreetMap contributors and Overture Maps. Map tiles: OpenStreetMap / Stadia Maps. Photos from Wikimedia Commons. Weather by Open-Meteo.
 
 ## العربي
 
@@ -66,7 +66,7 @@ Places: © OpenStreetMap contributors and Overture Maps. Maps © CARTO. Photos f
 💚 مجاني ومن غير إعلانات
 لا إعلانات ولا بيع لبياناتك. امسح حسابك في أي وقت.
 
-الأماكن: © مساهمو OpenStreetMap و Overture Maps. الخرايط © CARTO. الصور من ويكيميديا كومنز. الجو من Open-Meteo.
+الأماكن: © مساهمو OpenStreetMap و Overture Maps. الخرايط: OpenStreetMap / Stadia Maps. الصور من ويكيميديا كومنز. الجو من Open-Meteo.
 
 ## Graphics
 - App icon (512×512): `store/icon-512.png`
