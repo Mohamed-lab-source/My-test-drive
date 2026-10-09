@@ -84,7 +84,8 @@ export function HomeScreen({ navigation }: Props) {
   const { recentlyRated } = useRecentlyRated();
   const { favoriteRecipes } = useFavorites();
   const { isVisible: isSectionVisible } = useHomeLayout();
-  const { leftovers, removeLeftover, restoreLeftover } = useLeftovers();
+  const { leftovers, removeLeftover, restoreLeftover, remindersEnabled: leftoverRemindersEnabled, setRemindersEnabled: setLeftoverRemindersEnabled } =
+    useLeftovers();
   const { showToast } = useToast();
   const { plan } = useMealPlan();
   const { preference } = useLocalPreference();
@@ -679,7 +680,26 @@ export function HomeScreen({ navigation }: Props) {
 
             {leftovers.length > 0 && isSectionVisible("leftovers") ? (
               <>
-                <Text style={styles.sectionTitle}>{t("home.leftoversTitle")}</Text>
+                <View style={styles.recentHeaderRow}>
+                  <Text style={[styles.sectionTitle, styles.recentHeaderTitle]}>{t("home.leftoversTitle")}</Text>
+                  <AnimatedPressable
+                    pressScale={0.92}
+                    accessibilityLabel={t(
+                      leftoverRemindersEnabled ? "home.leftoverRemindersOn" : "home.leftoverRemindersOff"
+                    )}
+                    onPress={async () => {
+                      const result = await setLeftoverRemindersEnabled(!leftoverRemindersEnabled);
+                      if (!leftoverRemindersEnabled && !result) {
+                        Alert.alert(
+                          t("mealPlanner.remindersPermissionDeniedTitle"),
+                          t("mealPlanner.remindersPermissionDeniedMessage")
+                        );
+                      }
+                    }}
+                  >
+                    <Text style={styles.clearLink}>{t(leftoverRemindersEnabled ? "home.leftoverBellOn" : "home.leftoverBellOff")}</Text>
+                  </AnimatedPressable>
+                </View>
                 {leftovers.map((item, i) => {
                   const remaining = daysUntil(item.useByDate);
                   const statusLabel =

@@ -1,7 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocale } from "../i18n/LocaleContext";
+import { hasReminderPermission, requestReminderPermission } from "../utils/mealReminders";
+import { rescheduleLeftoverReminders } from "../utils/leftoverReminders";
 
 const STORAGE_KEY = "cookmate.leftovers";
+const REMINDERS_ENABLED_KEY = "cookmate.leftoverReminders.enabled";
 const USE_BY_DAYS = 3;
 
 export type LeftoverEntry = {
@@ -41,23 +45,54 @@ type LeftoversContextValue = {
   removeLeftover: (id: string) => void;
   /** Re-inserts an exact previously-removed entry (used for "Undo remove"). */
   restoreLeftover: (entry: LeftoverEntry) => void;
+  remindersEnabled: boolean;
+  /** Resolves to the enabled state that actually took effect -- false if permission was denied. */
+  setRemindersEnabled: (value: boolean) => Promise<boolean>;
 };
 
 const LeftoversContext = createContext<LeftoversContextValue | undefined>(undefined);
 
 export function LeftoversProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
   const [leftovers, setLeftovers] = useState<LeftoverEntry[]>([]);
+  const [remindersEnabled, setRemindersEnabledState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const [stored, storedReminders] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY),
+          AsyncStorage.getItem(REMINDERS_ENABLED_KEY),
+        ]);
         if (stored) setLeftovers(JSON.parse(stored));
+        if (storedReminders === "true") setRemindersEnabledState(true);
       } finally {
         setIsLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
+    rescheduleLeftoverReminders(leftovers, remindersEnabled, (title) => ({
+      title: t("leftoverReminder.notificationTitle"),
+      body: t("leftoverReminder.notificationBody", { title }),
+    })).catch(() => {});
+  }, [leftovers, remindersEnabled, isLoading, t]);
+
+  const setRemindersEnabled = useCallback(async (value: boolean) => {
+    if (value) {
+      const granted = (await hasReminderPermission()) || (await requestReminderPermission());
+      if (!granted) {
+        setRemindersEnabledState(false);
+        await AsyncStorage.setItem(REMINDERS_ENABLED_KEY, "false");
+        return false;
+      }
+    }
+    setRemindersEnabledState(value);
+    await AsyncStorage.setItem(REMINDERS_ENABLED_KEY, String(value));
+    return value;
   }, []);
 
   const persist = useCallback((next: LeftoverEntry[]) => {
@@ -101,8 +136,16 @@ export function LeftoversProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ isLoading, leftovers, addLeftover, removeLeftover, restoreLeftover }),
-    [isLoading, leftovers, addLeftover, removeLeftover, restoreLeftover]
+    () => ({
+      isLoading,
+      leftovers,
+      addLeftover,
+      removeLeftover,
+      restoreLeftover,
+      remindersEnabled,
+      setRemindersEnabled,
+    }),
+    [isLoading, leftovers, addLeftover, removeLeftover, restoreLeftover, remindersEnabled, setRemindersEnabled]
   );
 
   return <LeftoversContext.Provider value={value}>{children}</LeftoversContext.Provider>;
