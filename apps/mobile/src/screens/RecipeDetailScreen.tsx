@@ -43,6 +43,7 @@ import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
 import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
+import { suggestBeverage } from "../data/beveragePairings";
 import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -218,6 +219,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   }
 
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
+  const beverage = suggestBeverage(recipe.cuisine.slug, recipe.tags);
   const textAlign = isRTL ? "right" : "left";
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   const cookCount = cookCountFor(recipe.slug);
@@ -419,6 +421,14 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             {cookCount > 0 ? (
               <MetaPill label={t("recipeDetail.cookedCount", { count: cookCount })} styles={styles} />
             ) : null}
+          </View>
+
+          <View style={styles.pairingRow}>
+            <Text style={[styles.pairingText, { textAlign }]}>
+              {t("recipeDetail.pairsWith", {
+                beverage: `${beverage.emoji} ${t(beverage.nameKey)}`,
+              })}
+            </Text>
           </View>
 
           {hasBodyGoal ? (
@@ -885,6 +895,8 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
     marginBottom: spacing(1),
   },
   metaPillText: { fontSize: 11, fontWeight: "700", color: colors.primaryDark },
+  pairingRow: { marginTop: spacing(1) },
+  pairingText: { fontSize: 13, color: colors.textMuted },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
   nutritionRow: { flexDirection: "row", justifyContent: "space-between" },
   nutritionStat: {
