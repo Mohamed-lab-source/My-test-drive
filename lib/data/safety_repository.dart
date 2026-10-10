@@ -1,16 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/review.dart';
 import '../models/social.dart';
 import 'groups_repository.dart';
+import 'reviews_repository.dart';
 
 /// Reports, feedback, error reports and "Delete my account".
 /// Reports/feedback/errors are write-only: the owner reads them in the
 /// Firebase console, nobody can read them from the app.
 class SafetyRepository {
-  SafetyRepository(this._db, this._groups);
+  SafetyRepository(this._db, this._groups, this._reviews);
 
   final FirebaseFirestore _db;
   final GroupsRepository _groups;
+  final ReviewsRepository _reviews;
 
   Future<void> reportMessage({
     required String by,
@@ -25,6 +28,17 @@ class SafetyRepository {
         'groupId': group.id,
         'messageId': message.id,
         'text': message.text.length > 1000 ? message.text.substring(0, 1000) : message.text,
+        'reason': reason,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+  Future<void> reportReview({required String by, required Review review, required String reason}) =>
+      _db.collection('reports').add({
+        'by': by,
+        'kind': 'review',
+        'targetUid': review.uid,
+        'placeId': review.placeId,
+        'text': review.text,
         'reason': reason,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -64,6 +78,7 @@ class SafetyRepository {
   /// "been there", check-in, friendships, username, profile. Groups they run
   /// are deleted; other groups they simply leave.
   Future<void> deleteAllData(String uid, {String? username}) async {
+    await _reviews.deleteAllMine(uid);
     final groups = await _db.collection('groups').where('memberUids', arrayContains: uid).get();
     for (final d in groups.docs) {
       final g = Group.fromMap(d.id, d.data());

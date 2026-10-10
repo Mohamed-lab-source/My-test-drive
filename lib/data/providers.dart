@@ -8,6 +8,7 @@ import '../app/extras.dart' show DayForecast;
 import '../planner/planner.dart' show areaCenters;
 import '../planner/services.dart' show fetchWeek;
 import '../models/plan.dart';
+import '../models/review.dart';
 import '../models/social.dart';
 import 'auth_repository.dart';
 import 'checkins_repository.dart';
@@ -17,6 +18,7 @@ import 'personal_repository.dart';
 import 'groups_repository.dart';
 import 'places_repository.dart';
 import 'plans_repository.dart';
+import 'reviews_repository.dart';
 import 'safety_repository.dart';
 import 'social_repository.dart';
 
@@ -259,8 +261,20 @@ final friendUidsProvider = Provider<List<String>>((ref) {
 });
 
 // ---- Safety: reports, feedback, account deletion ----
-final safetyRepositoryProvider = Provider((ref) =>
-    SafetyRepository(ref.watch(firestoreProvider), ref.watch(groupsRepositoryProvider)));
+final safetyRepositoryProvider = Provider((ref) => SafetyRepository(ref.watch(firestoreProvider),
+    ref.watch(groupsRepositoryProvider), ref.watch(reviewsRepositoryProvider)));
+
+// ---- Reviews, place stars and guide levels (read on request, no listeners) ----
+final reviewsRepositoryProvider = Provider((ref) => ReviewsRepository(ref.watch(firestoreProvider)));
+
+final placeStatsProvider = FutureProvider.autoDispose.family<PlaceStats, String>(
+    (ref, placeId) => ref.watch(reviewsRepositoryProvider).placeStats(placeId));
+
+final myReviewerStatsProvider = FutureProvider<ReviewerStats>((ref) {
+  final uid = ref.watch(uidProvider);
+  if (uid == null) return Future.value(const ReviewerStats());
+  return ref.watch(reviewsRepositoryProvider).reviewerStats(uid);
+});
 
 // ---- Weather this week (Open-Meteo, free) ----
 /// Kept while the app runs, so it's fetched once per city per session.

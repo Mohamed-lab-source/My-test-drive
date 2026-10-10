@@ -20,6 +20,9 @@ Cafés, restaurants, cinemas, malls, parks, museums, escape rooms and more. Filt
 👯 BRING YOUR FRIENDS
 Make a group, vote in polls, chat, pick a meeting point, see who's coming and split the bill. Check in at a place so friends know where you are (for 24 hours, only friends).
 
+✍️ REVIEWS AND GUIDE LEVELS
+Rate places and answer quick questions about them. Every review earns points: grow from Newcomer to Local Guide, Advanced Guide and Khroga Legend, and earn Food, Café, Culture or Fun expert badges.
+
 🔗 SHARE IN ONE TAP
 Send a plan, a place or a group invite as a link or a story-size picture. Friends tap it and it opens right in Khroga.
 

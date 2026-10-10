@@ -20,6 +20,7 @@ import '../../planner/planner.dart'
 import 'lists_screen.dart' show newListDialog;
 import '../../widgets/khroga_map.dart';
 import '../../widgets/share_card.dart';
+import '../reviews/review_screens.dart' show PlaceReviewsSection;
 import '../../widgets/launchers.dart';
 import 'explore_screen.dart';
 
@@ -187,6 +188,7 @@ class _Details extends ConsumerWidget {
                   context.push('/area/${place.city}/${Uri.encodeComponent(place.area!)}'),
             ),
           ),
+        PlaceReviewsSection(place: place),
         if (place.hasLocation && place.category != 'shop') ...[
           const SizedBox(height: KSpace.sm),
           FilledButton.tonalIcon(
@@ -739,6 +741,15 @@ class _VisitedAndNote extends ConsumerWidget {
               if (uid == null) return;
               try {
                 await ref.read(personalRepositoryProvider).setVisited(uid, place.id, v);
+                if (v && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr('How was it? A review earns you points.')),
+                    action: SnackBarAction(
+                      label: tr('Review'),
+                      onPressed: () => context.push('/review/${Uri.encodeComponent(place.id)}'),
+                    ),
+                  ));
+                }
               } catch (e) {
                 if (context.mounted) showError(context, e);
               }

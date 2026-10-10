@@ -172,6 +172,19 @@ How the code enforces it (keep it this way):
   `sharePictureCard`) for plans, places and stats. In-app review
   (`lib/app/review.dart`, `in_app_review`): asked after 3 happy moments, at
   most every 90 days. Release notes: `store/release-notes.md`.
+- Reviews (0.8, `lib/models/review.dart`, `lib/data/reviews_repository.dart`,
+  `lib/features/reviews/`, tested in `test/review_test.dart` + rules-test):
+  real user submissions, shown as "Khroga reviews", never mixed with map
+  facts. `reviews/{placeId}__{uid}` (one per person per place, Google
+  accounts only, stars 1–5, answers to category questions, text ≤1000).
+  Each write is a transaction that also updates `placeStats/{placeId}`
+  (count, sum) and `reviewerStats/{uid}` (total, detailed, cats, place);
+  firestore.rules checks the deltas both ways (`statsAfter` mirrors them).
+  Points: 10 per review, +10 if detailed (3+ answers, 50+ chars). Tiers
+  `guideTiers`, expert badges `expertBadges` (enough reviews of a kind and
+  ≥ half of all). Reads on request only: place page reads placeStats (1
+  doc); the list loads the newest 20 when tapped. Reports kind 'review';
+  blocked people's reviews hidden; deleting the account deletes reviews.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

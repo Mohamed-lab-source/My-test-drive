@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 0.8.0
+
+<en-US>
+• Write reviews: stars, quick questions and a few words
+• Earn points and level up: Local Guide, Advanced Guide, Khroga Legend
+• Expert badges for food, cafés, culture, fun and more
+• See how you rank with your friends
+</en-US>
+
+<ar>
+• اكتب تقييمات: نجوم وأسئلة سريعة وكلمتين
+• اكسب نقط وارتقي: مرشد محلي، مرشد متقدم، أسطورة خروجة
+• شارات خبرة في الأكل والكافيهات والثقافة والفسح وغيرهم
+• شوف ترتيبك وسط أصحابك
+</ar>
+
 ## 0.7.0
 
 <en-US>

@@ -14,6 +14,7 @@ import 'app/router.dart';
 import 'app/theme.dart';
 import 'app/theme_settings.dart';
 import 'data/groups_repository.dart';
+import 'data/reviews_repository.dart';
 import 'data/safety_repository.dart';
 import 'features/profile/about_screen.dart' show appVersion;
 import 'firebase_options.dart';
@@ -136,7 +137,8 @@ void _catchErrors(SharedPreferences? prefs) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
     sent++;
-    SafetyRepository(FirebaseFirestore.instance, GroupsRepository(FirebaseFirestore.instance))
+    final db = FirebaseFirestore.instance;
+    SafetyRepository(db, GroupsRepository(db), ReviewsRepository(db))
         .sendError(by: uid, message: '$error', stack: '$stack', version: appVersion)
         .catchError((_) {});
   }

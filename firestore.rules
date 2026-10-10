@@ -144,16 +144,129 @@ service cloud.firestore {
       allow delete: if isMe(uid);
     }
 
+    // ---- Reviews, place stars and reviewer levels ----
+    // One review per person per place (id = placeId + "__" + uid). Writing,
+    // changing or deleting a review must update placeStats (count, sum of
+    // stars) and your reviewerStats (total, detailed, per kind) in the same
+    // batch, by exactly the right amounts, so nobody can fake stars or points.
+    function reviewPath(placeId, uid) {
+      return /databases/$(database)/documents/reviews/$(placeId + '__' + uid);
+    }
+    function placeStatsPath(placeId) {
+      return /databases/$(database)/documents/placeStats/$(placeId);
+    }
+    function reviewerStatsPath(uid) {
+      return /databases/$(database)/documents/reviewerStats/$(uid);
+    }
+    function detailed(r) { return r.answers.size() >= 3 && r.text.size() >= 50; }
+    function oneIf(b) { return b ? 1 : 0; }
+    function revBefore(placeId, uid) { return exists(reviewPath(placeId, uid)); }
+    function revAfter(placeId, uid) { return existsAfter(reviewPath(placeId, uid)); }
+    function starsBefore(placeId, uid) {
+      return revBefore(placeId, uid) ? get(reviewPath(placeId, uid)).data.stars : 0;
+    }
+    function starsAfter(placeId, uid) {
+      return revAfter(placeId, uid) ? getAfter(reviewPath(placeId, uid)).data.stars : 0;
+    }
+    function validReview(r, placeId) {
+      return r.keys().hasOnly(['placeId', 'uid', 'name', 'stars', 'text', 'answers', 'category',
+                               'createdAt', 'updatedAt'])
+        && r.uid == me() && r.placeId == placeId
+        && placeId is string && placeId.size() > 0 && placeId.size() <= 120
+        && validName(r.name)
+        && r.stars is int && r.stars >= 1 && r.stars <= 5
+        && r.text is string && r.text.size() <= 1000
+        && r.answers is map && r.answers.size() <= 20
+        && r.category is string && r.category.size() > 0 && r.category.size() <= 30
+        && r.updatedAt == request.time;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && !isGuest()
+        && reviewId == newData().placeId + '__' + me()
+        && validReview(newData(), newData().placeId)
+        && newData().createdAt == request.time
+        && existsAfter(placeStatsPath(newData().placeId))
+        && existsAfter(reviewerStatsPath(me()))
+        && psAfter(newData().placeId).count == psBefore(newData().placeId).count + 1
+        && psAfter(newData().placeId).sum == psBefore(newData().placeId).sum + newData().stars
+        && rsAfter().total == rsBefore().total + 1;
+      allow update: if signedIn() && !isGuest()
+        && resource.data.uid == me()
+        && validReview(newData(), resource.data.placeId)
+        && newData().createdAt == resource.data.createdAt
+        && newData().category == resource.data.category
+        && psAfter(resource.data.placeId).sum
+             == psBefore(resource.data.placeId).sum - resource.data.stars + newData().stars
+        && rsAfter().detailed == rsBefore().detailed
+             - oneIf(detailed(resource.data)) + oneIf(detailed(newData()));
+      allow delete: if signedIn() && resource.data.uid == me()
+        && psAfter(resource.data.placeId).count == psBefore(resource.data.placeId).count - 1
+        && rsAfter().total == rsBefore().total - 1;
+    }
+
+    // Stars of a place: only changed alongside your own review, by its delta.
+    match /placeStats/{placeId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && newData().keys().hasOnly(['count', 'sum'])
+        && newData().count == (resource == null ? 0 : resource.data.count)
+             + oneIf(revAfter(placeId, me())) - oneIf(revBefore(placeId, me()))
+        && newData().sum == (resource == null ? 0 : resource.data.sum)
+             + starsAfter(placeId, me()) - starsBefore(placeId, me())
+        && (revAfter(placeId, me()) || revBefore(placeId, me()));
+      allow delete: if false;
+    }
+
+    // Your reviewer numbers (public, for levels and badges). Each change must
+    // match the review you're writing in the same batch.
+    match /reviewerStats/{uid} {
+      function oldS() { return resource == null ? {'total': 0, 'detailed': 0, 'cats': {}} : resource.data; }
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && newData().keys().hasOnly(['total', 'detailed', 'cats', 'place'])
+        && newData().place is string
+        && statsMatch(oldS(), newData(), newData().place, uid);
+      allow delete: if isMe(uid) && resource.data.total == 0;
+    }
+    function statsMatch(o, n, placeId, uid) {
+      return statsDelta(o, n, placeId, uid,
+        revBefore(placeId, uid) ? get(reviewPath(placeId, uid)).data : null,
+        revAfter(placeId, uid) ? getAfter(reviewPath(placeId, uid)).data : null);
+    }
+    function statsDelta(o, n, placeId, uid, b, a) {
+      return (a != null || b != null)
+        && n.total == o.total + oneIf(a != null) - oneIf(b != null)
+        && n.detailed == o.detailed + oneIf(a != null && detailed(a)) - oneIf(b != null && detailed(b))
+        && catsDelta(o.cats, n.cats, a != null ? a.category : b.category,
+                     oneIf(a != null) - oneIf(b != null));
+    }
+    function catsDelta(oc, nc, cat, dc) {
+      return nc is map
+        && (dc == 0 ? nc == oc
+                    : nc.diff(oc).affectedKeys().hasOnly([cat]) && nc.get(cat, 0) == oc.get(cat, 0) + dc);
+    }
+    // What the stats docs hold before and after this batch.
+    function psBefore(placeId) {
+      return exists(placeStatsPath(placeId)) ? get(placeStatsPath(placeId)).data : {'count': 0, 'sum': 0};
+    }
+    function psAfter(placeId) { return getAfter(placeStatsPath(placeId)).data; }
+    function rsBefore() {
+      return exists(reviewerStatsPath(me())) ? get(reviewerStatsPath(me())).data : {'total': 0, 'detailed': 0};
+    }
+    function rsAfter() { return getAfter(reviewerStatsPath(me())).data; }
+
     // ---- Reports, feedback and error reports: write-only ----
     // Nobody can read them in the app; the owner reviews them in the
     // Firebase console. Small and limited so they can't be abused.
     match /reports/{id} {
       allow read, update, delete: if false;
       allow create: if signedIn()
-        && newData().keys().hasOnly(['by', 'kind', 'targetUid', 'groupId', 'messageId', 'text',
-                                     'reason', 'createdAt'])
+        && newData().keys().hasOnly(['by', 'kind', 'targetUid', 'groupId', 'messageId', 'placeId',
+                                     'text', 'reason', 'createdAt'])
         && newData().by == me()
-        && newData().kind in ['message', 'user']
+        && newData().kind in ['message', 'user', 'review']
         && newData().reason is string && newData().reason.size() > 0 && newData().reason.size() <= 300
         && (!('text' in newData()) || (newData().text is string && newData().text.size() <= 1000))
         && newData().createdAt == request.time;

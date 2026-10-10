@@ -14,7 +14,7 @@ These match what the app really does. Answer the form like this.
 | Location → Precise location | Yes | No | Optional (only when you tap "Send my location") | App functionality |
 | Messages → Other in-app messages | Yes (group chats) | No | Optional | App functionality |
 | Photos and videos | No | — | — | (QR scanning stays on the phone) |
-| App activity → Other user-generated content | Yes (plans, notes, polls, check-ins) | No | Optional | App functionality |
+| App activity → Other user-generated content | Yes (plans, notes, polls, check-ins, place reviews) | No | Optional | App functionality |
 | App info and performance → Crash logs | Yes | No | Optional (can be turned off) | Analytics (fixing bugs) |
 
 Notes for the form:
@@ -22,4 +22,5 @@ Notes for the form:
 - Recently viewed places, searches, star ratings, lists and settings stay **on the phone**: not "collected".
 - Messages and locations you send to a group are seen by its members because you chose to send them: Google doesn't count that as "sharing".
 - The AI request (vibe, time, a list of real places, and your optional note) goes to Google Gemini as a **service provider**: not "sharing".
+- Place reviews (stars, answers, words) are shown publicly with your display name and guide level, because you chose to post them: not "sharing". You can delete them any time, and "Delete my account" removes them.
 - No ads, no analytics SDKs, no data sold.

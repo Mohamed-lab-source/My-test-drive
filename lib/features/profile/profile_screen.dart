@@ -14,6 +14,7 @@ import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
+import '../../models/review.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
 import '../auth/username_sheet.dart';
@@ -48,6 +49,7 @@ class ProfileScreen extends ConsumerWidget {
           const SizedBox(height: KSpace.lg),
           const _Stats(),
           const SizedBox(height: KSpace.md),
+          const _GuideCard(),
           const _Badges(),
           const _VisitedBreakdown(),
           const SizedBox(height: KSpace.md),
@@ -653,6 +655,29 @@ class _VisitedBreakdown extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Your Khroga Guide level, from your reviews.
+class _GuideCard extends ConsumerWidget {
+  const _GuideCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(myReviewerStatsProvider).value ?? const ReviewerStats();
+    final tier = tierFor(s.points);
+    final next = nextTier(s.points);
+    return Card(
+      child: ListTile(
+        leading: Text(tier.emoji, style: const TextStyle(fontSize: 30)),
+        title: Text(guideTitle(s)),
+        subtitle: Text(next == null
+            ? trf('{n} points', {'n': s.points})
+            : trf('{n} points · {m} more to {tier}', {'n': s.points, 'm': next.$2, 'tier': next.$1.name})),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push('/guide'),
       ),
     );
   }

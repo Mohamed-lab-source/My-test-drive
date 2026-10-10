@@ -325,3 +325,48 @@ test("chat: reply to a message, delete only your own", async () => {
   });
   await assertSucceeds(deleteDoc(doc(as(BOB), "groups/g1/messages/m2")));
 });
+
+test("reviews: one per person, stars and points can't be faked", async () => {
+  const db = as(ALICE);
+  const review = (stars, extra = {}) => ({
+    placeId: "p1", uid: ALICE, name: "Alice", stars, text: "", answers: { again: "yes" },
+    category: "cafe", createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...extra,
+  });
+  const write = (d, r, ps, rs) => {
+    const b = writeBatch(d);
+    if (r) b.set(doc(d, "reviews/p1__alice"), r);
+    if (ps) b.set(doc(d, "placeStats/p1"), ps);
+    if (rs) b.set(doc(d, "reviewerStats/alice"), rs);
+    return b.commit();
+  };
+  // Must come with the right stats.
+  await assertFails(write(db, review(5), null, null), "review alone");
+  await assertFails(write(db, review(5), { count: 1, sum: 99 }, { total: 1, detailed: 0, cats: { cafe: 1 }, place: "p1" }), "fake sum");
+  await assertFails(write(db, review(5), { count: 1, sum: 5 }, { total: 9, detailed: 0, cats: { cafe: 1 }, place: "p1" }), "fake points");
+  await assertFails(write(guest(ALICE), review(5), { count: 1, sum: 5 }, { total: 1, detailed: 0, cats: { cafe: 1 }, place: "p1" }), "guests can't review");
+  await assertFails(write(db, review(9), { count: 1, sum: 9 }, { total: 1, detailed: 0, cats: { cafe: 1 }, place: "p1" }), "stars 1-5");
+  await assertSucceeds(write(db, review(5), { count: 1, sum: 5 }, { total: 1, detailed: 0, cats: { cafe: 1 }, place: "p1" }));
+  // Anyone signed in can read it.
+  await assertSucceeds(getDoc(doc(as(BOB), "reviews/p1__alice")));
+  await assertSucceeds(getDocs(query(collection(as(BOB), "reviews"), where("placeId", "==", "p1"))));
+  // Someone else can't write it or its stats.
+  await assertFails(setDoc(doc(as(BOB), "placeStats/p1"), { count: 5, sum: 25 }));
+  await assertFails(setDoc(doc(as(BOB), "reviewerStats/alice"), { total: 50, detailed: 50, cats: {}, place: "p1" }));
+  // Change the stars: sum moves by the difference, count stays.
+  const snap = (await getDoc(doc(db, "reviews/p1__alice"))).data();
+  const longText = "x".repeat(60);
+  await assertFails(write(db, { ...review(3), createdAt: snap.createdAt }, { count: 1, sum: 5 }, { total: 1, detailed: 0, cats: { cafe: 1 }, place: "p1" }), "sum must change");
+  await assertSucceeds(write(db, { ...review(3, { text: longText, answers: { a: "1", b: "2", c: "3" } }), createdAt: snap.createdAt },
+    { count: 1, sum: 3 }, { total: 1, detailed: 1, cats: { cafe: 1 }, place: "p1" }));
+  // Delete: both stats go down.
+  const del = (ps, rs) => {
+    const b = writeBatch(db);
+    b.delete(doc(db, "reviews/p1__alice"));
+    if (ps) b.set(doc(db, "placeStats/p1"), ps);
+    if (rs) b.set(doc(db, "reviewerStats/alice"), rs);
+    return b.commit();
+  };
+  await assertFails(del(null, null), "delete alone");
+  await assertSucceeds(del({ count: 0, sum: 0 }, { total: 0, detailed: 0, cats: {}, place: "p1" }));
+  await assertSucceeds(deleteDoc(doc(db, "reviewerStats/alice")));
+});
