@@ -1,6 +1,7 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -11,12 +12,15 @@ import { useFavorites } from "../context/FavoritesContext";
 import { useCollections } from "../context/CollectionsContext";
 import { useToast } from "../context/ToastContext";
 import { deleteShoppingList, fetchShoppingListHistory } from "../api/endpoints";
+import { hasReminderPermission, requestReminderPermission } from "../utils/mealReminders";
+import { rescheduleShoppingReminder } from "../utils/shoppingReminders";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { RecipeCard } from "../components/RecipeCard";
 import { useLocale } from "../i18n/LocaleContext";
+import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 
@@ -27,6 +31,10 @@ type Props = CompositeScreenProps<
 
 type HistoryItem = Awaited<ReturnType<typeof fetchShoppingListHistory>>[number];
 type Segment = "favorites" | "collections" | "shoppingLists";
+
+const SHOPPING_REMINDER_ENABLED_KEY = "cookmate.shoppingReminder.enabled";
+const SHOPPING_REMINDER_DAY_KEY = "cookmate.shoppingReminder.day";
+const DEFAULT_SHOPPING_REMINDER_DAY = 5; // Friday
 
 export function ListsScreen({ navigation }: Props) {
   const { isAuthenticated } = useAuth();
@@ -51,6 +59,52 @@ export function ListsScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [historyLoadError, setHistoryLoadError] = useState(false);
   const [favSort, setFavSort] = useState<"recent" | "az">("recent");
+  const [shoppingReminderEnabled, setShoppingReminderEnabledState] = useState(false);
+  const [shoppingReminderDay, setShoppingReminderDayState] = useState(DEFAULT_SHOPPING_REMINDER_DAY);
+  const [shoppingReminderLoading, setShoppingReminderLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [storedEnabled, storedDay] = await Promise.all([
+          AsyncStorage.getItem(SHOPPING_REMINDER_ENABLED_KEY),
+          AsyncStorage.getItem(SHOPPING_REMINDER_DAY_KEY),
+        ]);
+        if (storedEnabled === "true") setShoppingReminderEnabledState(true);
+        if (storedDay != null) setShoppingReminderDayState(Number(storedDay));
+      } finally {
+        setShoppingReminderLoading(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (shoppingReminderLoading) return;
+    rescheduleShoppingReminder(shoppingReminderEnabled, shoppingReminderDay, {
+      title: t("shoppingReminder.notificationTitle"),
+      body: t("shoppingReminder.notificationBody"),
+    }).catch(() => {});
+  }, [shoppingReminderEnabled, shoppingReminderDay, shoppingReminderLoading, t]);
+
+  const setShoppingReminderEnabled = async (value: boolean) => {
+    if (value) {
+      const granted = (await hasReminderPermission()) || (await requestReminderPermission());
+      if (!granted) {
+        Alert.alert(
+          t("mealPlanner.remindersPermissionDeniedTitle"),
+          t("mealPlanner.remindersPermissionDeniedMessage")
+        );
+        return;
+      }
+    }
+    setShoppingReminderEnabledState(value);
+    await AsyncStorage.setItem(SHOPPING_REMINDER_ENABLED_KEY, String(value));
+  };
+
+  const setShoppingReminderDay = async (day: number) => {
+    setShoppingReminderDayState(day);
+    await AsyncStorage.setItem(SHOPPING_REMINDER_DAY_KEY, String(day));
+  };
 
   const sortedFavorites = useMemo(() => {
     if (favSort === "az") return [...favoriteRecipes].sort((a, b) => a.title.localeCompare(b.title));
@@ -355,6 +409,26 @@ export function ListsScreen({ navigation }: Props) {
                 <Text style={styles.spendingValue}>{t("lists.spendingAmount", { amount: monthSpending })}</Text>
               </View>
             ) : null}
+
+            <Text style={styles.sectionTitle}>{t("shoppingReminder.label")}</Text>
+            <View style={styles.chipRow}>
+              <Chip
+                label={t(shoppingReminderEnabled ? "mealPlanner.remindersOn" : "mealPlanner.remindersOff")}
+                selected={shoppingReminderEnabled}
+                onPress={() => setShoppingReminderEnabled(!shoppingReminderEnabled)}
+              />
+              {shoppingReminderEnabled
+                ? [0, 1, 2, 3, 4, 5, 6].map((day) => (
+                    <Chip
+                      key={day}
+                      label={t(`weekdayShort.${day}` as TranslationKey)}
+                      selected={shoppingReminderDay === day}
+                      onPress={() => setShoppingReminderDay(day)}
+                    />
+                  ))
+                : null}
+            </View>
+
             <Text style={styles.sectionTitle}>{t("lists.headline")}</Text>
           </View>
         }
@@ -453,6 +527,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   newCollectionButtonDisabled: { opacity: 0.5 },
   newCollectionButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   sectionTitle: { fontSize: 18, fontWeight: "800", color: colors.text, marginBottom: spacing(2) },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginBottom: spacing(2) },
   spendingBanner: {
     backgroundColor: colors.chipBackground,
     borderRadius: radius.md,
