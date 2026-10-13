@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/theme_settings.dart' show sharedPrefsProvider;
 import '../models/place.dart';
-import '../app/extras.dart' show DayForecast;
+import '../app/extras.dart' show DayForecast, cityCenters;
+import 'live_data.dart';
 import '../planner/planner.dart' show areaCenters;
 import '../planner/services.dart' show fetchWeek;
 import '../models/plan.dart';
@@ -275,6 +276,21 @@ final myReviewerStatsProvider = FutureProvider<ReviewerStats>((ref) {
   if (uid == null) return Future.value(const ReviewerStats());
   return ref.watch(reviewsRepositoryProvider).reviewerStats(uid);
 });
+
+// ---- Live extras (Open-Meteo, Wikipedia; free, fetched on request) ----
+/// Hour-by-hour weather for (lat, lng, "yyyy-MM-dd"), kept for the session.
+final hourlyWeatherProvider = FutureProvider.family<Map<int, HourWeather>, (double, double, String)>(
+    (ref, k) => fetchHourly(k.$1, k.$2, DateTime.parse(k.$3)));
+
+/// UV and air quality now, per city.
+final airProvider = FutureProvider.family<AirNow?, String>((ref, city) {
+  final c = cityCenters[city] ?? cityCenters['cairo']!;
+  return fetchAir(c.$1, c.$2);
+});
+
+/// A Wikipedia summary for (wikidata id, language).
+final wikiProvider = FutureProvider.autoDispose.family<WikiSummary?, (String, String)>(
+    (ref, k) => fetchWikiSummary(k.$1, k.$2));
 
 // ---- Weather this week (Open-Meteo, free) ----
 /// Kept while the app runs, so it's fetched once per city per session.

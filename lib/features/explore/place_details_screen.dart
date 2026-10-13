@@ -188,6 +188,7 @@ class _Details extends ConsumerWidget {
                   context.push('/area/${place.city}/${Uri.encodeComponent(place.area!)}'),
             ),
           ),
+        if (place.wikidata != null) _WikiCard(place: place),
         PlaceReviewsSection(place: place),
         if (place.hasLocation && place.category != 'shop') ...[
           const SizedBox(height: KSpace.sm),
@@ -237,7 +238,25 @@ class _Details extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => openWebsite(place.website!),
                 icon: const Icon(Icons.language),
-                label: Text(websiteDomain(place.website) ?? 'Website'),
+                label: Text(websiteDomain(place.website) ?? tr('Website')),
+              ),
+            if (place.menuUrl != null)
+              OutlinedButton.icon(
+                onPressed: () => openWebsite(place.menuUrl!),
+                icon: const Icon(Icons.restaurant_menu),
+                label: Text(tr('Menu (their link)')),
+              ),
+            if (place.instagram != null)
+              OutlinedButton.icon(
+                onPressed: () => openWebsite(place.instagram!),
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: Text(tr('Instagram')),
+              ),
+            if (place.facebook != null)
+              OutlinedButton.icon(
+                onPressed: () => openWebsite(place.facebook!),
+                icon: const Icon(Icons.facebook),
+                label: Text(tr('Facebook')),
               ),
             if (wazeUrl(place) != null)
               OutlinedButton.icon(
@@ -429,14 +448,25 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (place.photoUrl == null) {
+      final hue = Categories.hue(place.category);
+      final accent = HSLColor.fromColor(context.k.accent);
+      final tint = accent.withHue(hue).toColor();
       return Container(
-        height: 120,
+        height: 150,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: context.k.accentSoft,
           borderRadius: BorderRadius.circular(KRadius.card),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [tint.withValues(alpha: 0.85), context.k.accentSoft],
+          ),
         ),
-        child: Text(Categories.emoji(place.category), style: const TextStyle(fontSize: 56)),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(Categories.emoji(place.category), style: const TextStyle(fontSize: 64)),
+          if (place.details.brand != null && place.details.brand != place.name)
+            Text(place.details.brand!, style: TextStyle(color: context.k.ink, fontWeight: FontWeight.w700)),
+        ]),
       );
     }
     return Column(
@@ -1259,4 +1289,68 @@ Widget _placeStoryCard(Place p) {
       if (p.address != null) ('📍', p.address!, null),
     ],
   );
+}
+
+/// A short Wikipedia summary for famous places (via the map's Wikidata link),
+/// credited and linked. With data saver on, it loads only when tapped.
+class _WikiCard extends ConsumerStatefulWidget {
+  const _WikiCard({required this.place});
+
+  final Place place;
+
+  @override
+  ConsumerState<_WikiCard> createState() => _WikiCardState();
+}
+
+class _WikiCardState extends ConsumerState<_WikiCard> {
+  bool _load = false;
+  bool _long = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final saver = ref.watch(appSettingsProvider.select((s) => s.dataSaver));
+    final text = Theme.of(context).textTheme;
+    if (saver && !_load) {
+      return Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TextButton.icon(
+          icon: const Icon(Icons.menu_book_outlined, size: 18),
+          label: Text(tr('About this place (Wikipedia)')),
+          onPressed: () => setState(() => _load = true),
+        ),
+      );
+    }
+    final wiki = ref.watch(wikiProvider((widget.place.wikidata!, isArabic ? 'ar' : 'en'))).value;
+    if (wiki == null) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(top: KSpace.md),
+      child: InkWell(
+        onTap: () => setState(() => _long = !_long),
+        borderRadius: BorderRadius.circular(KRadius.card),
+        child: Padding(
+          padding: const EdgeInsets.all(KSpace.md),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Icon(Icons.menu_book_outlined, size: 20),
+              const SizedBox(width: KSpace.sm),
+              Expanded(child: Text(trf('About {name}', {'name': wiki.title}), style: text.titleMedium)),
+            ]),
+            const SizedBox(height: KSpace.xs),
+            Text(wiki.extract,
+                maxLines: _long ? 30 : 5,
+                overflow: TextOverflow.ellipsis,
+                textDirection: wiki.lang == 'ar' ? TextDirection.rtl : TextDirection.ltr),
+            const SizedBox(height: KSpace.xs),
+            Row(children: [
+              Expanded(
+                child: Text(tr('From Wikipedia (CC BY-SA)'),
+                    style: text.bodySmall?.copyWith(color: context.k.inkMuted)),
+              ),
+              TextButton(onPressed: () => openWebsite(wiki.url), child: Text(tr('Read more'))),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
 }

@@ -182,6 +182,10 @@ ThemeData buildTheme({
     colorScheme: scheme,
     extensions: [p],
     scaffoldBackgroundColor: p.background,
+    // Android's newer back gesture shows a preview of the screen behind.
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+    }),
     appBarTheme: AppBarTheme(
       backgroundColor: p.background,
       foregroundColor: p.ink,

@@ -93,11 +93,39 @@ export function detailsOf(t) {
     reservation: ["yes", "required", "recommended", "no"].includes(t.reservation) ? t.reservation : undefined,
     cards: cards.includes("yes") ? true : cards.filter(Boolean).length && cards.filter(Boolean).every((v) => v === "no") ? false : undefined,
     level: t.level || t["level:ref"] || undefined,
+    halal: ["yes", "only"].includes(t["diet:halal"]) ? true : undefined,
+    kidsArea: t.kids_area === "yes" || t["kids_area"] === "indoor" || t["kids_area"] === "outdoor" ? true : undefined,
     brand: t.brand || undefined,
     description: (t["description:en"] || t.description || "").slice(0, 300) || undefined,
   };
   for (const k of Object.keys(d)) if (d[k] === undefined) delete d[k];
   return d;
+}
+
+/**
+ * A social page from a map tag: a full Instagram/Facebook URL, or a bare
+ * handle ("@name" / "name"). Anything else is ignored (we never guess).
+ */
+export function socialUrl(kind, value) {
+  const v = (value ?? "").split(";")[0].trim();
+  if (!v) return undefined;
+  const domain = kind === "instagram" ? "instagram.com" : "facebook.com";
+  if (/^https?:\/\//i.test(v)) {
+    try {
+      const host = new URL(v).hostname.replace(/^(www|m|web)\./, "");
+      return host === domain || host === "fb.com" && kind === "facebook" ? v : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  const handle = v.replace(/^@/, "");
+  return /^[A-Za-z0-9._-]{2,60}$/.test(handle) ? `https://www.${domain}/${handle}` : undefined;
+}
+
+/** A menu link the map lists (website:menu / contact:menu), if it's a URL. */
+export function menuUrlOf(t) {
+  const v = (t["website:menu"] || t["contact:menu"] || "").split(";")[0].trim();
+  return /^https?:\/\//i.test(v) ? v : undefined;
 }
 
 /** A Wikimedia Commons file named directly on the map, if any. */
@@ -224,6 +252,9 @@ export function convert(city, elements, shapes = []) {
       parentMallId: mall?.id,
       website: t.website || t["contact:website"],
       phone: t.phone || t["contact:phone"],
+      instagram: socialUrl("instagram", t["contact:instagram"] || t.instagram),
+      facebook: socialUrl("facebook", t["contact:facebook"] || t.facebook),
+      menuUrl: menuUrlOf(t),
       indoor: category === "park" ? false : undefined,
       osmUrl: `https://www.openstreetmap.org/${el.type}/${el.id}`,
       wikidata: /^Q\d+$/.test(t.wikidata ?? "") ? t.wikidata : undefined,

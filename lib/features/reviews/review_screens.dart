@@ -16,6 +16,7 @@ import '../../models/review.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
 import '../../widgets/share_card.dart';
+import 'challenge_card.dart';
 
 /// The newest reviews of a place, plus each reviewer's numbers (for levels).
 final placeReviewsProvider = FutureProvider.autoDispose
@@ -293,6 +294,7 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
       ref.invalidate(placeStatsProvider(place.id));
       ref.invalidate(placeReviewsProvider(place.id));
       ref.invalidate(myReviewerStatsProvider);
+      ref.invalidate(myWeekReviewsProvider);
       happyMoment(ref);
       if (!mounted) return;
       await _celebrate(before, after);
@@ -537,6 +539,7 @@ class GuideScreen extends ConsumerWidget {
                     ]),
                   ),
                 ),
+                const ChallengeCard(),
                 SectionTitle(tr('Levels')),
                 for (final t in guideTiers)
                   ListTile(

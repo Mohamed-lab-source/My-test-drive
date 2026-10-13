@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   convert, categoryOf, insidePolygon, mallShapes, detailsOf, commonsFileOf, commonsUrls,
+  socialUrl, menuUrlOf,
 } from "./fetch_osm_places.mjs";
 
 const elements = [
@@ -99,4 +100,16 @@ test("categories and geometry helpers", () => {
   const square = [[0, 0], [0, 1], [1, 1], [1, 0]];
   assert.equal(insidePolygon([0.5, 0.5], square), true);
   assert.equal(insidePolygon([1.5, 0.5], square), false);
+});
+
+test("social pages, menu links, halal and kids areas only from real tags", () => {
+  assert.equal(socialUrl("instagram", "@test_cafe"), "https://www.instagram.com/test_cafe");
+  assert.equal(socialUrl("instagram", "https://www.instagram.com/test.cafe/"), "https://www.instagram.com/test.cafe/");
+  assert.equal(socialUrl("instagram", "https://evil.example/insta"), undefined);
+  assert.equal(socialUrl("facebook", "https://m.facebook.com/TestPage"), "https://m.facebook.com/TestPage");
+  assert.equal(socialUrl("facebook", "not a handle!"), undefined);
+  assert.equal(socialUrl("facebook", undefined), undefined);
+  assert.equal(menuUrlOf({ "website:menu": "https://example.test/menu" }), "https://example.test/menu");
+  assert.equal(menuUrlOf({ "website:menu": "ask the waiter" }), undefined);
+  assert.deepEqual(detailsOf({ "diet:halal": "yes", kids_area: "yes" }), { halal: true, kidsArea: true });
 });

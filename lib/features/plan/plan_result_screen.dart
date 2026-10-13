@@ -16,6 +16,7 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../planner/planner.dart';
+import '../../data/live_data.dart' show weatherAt;
 import '../../planner/services.dart' show AiUnavailable;
 import '../../widgets/common.dart';
 import '../../widgets/khroga_map.dart';
@@ -553,12 +554,7 @@ class _StopTile extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                PlaceImage(
-                                  url: null,
-                                  emoji: Categories.emoji(stop.category),
-                                  width: 56,
-                                  height: 56,
-                                ),
+                                _StopPhoto(stop: stop),
                                 const SizedBox(width: KSpace.md),
                                 Expanded(
                                   child: Column(
@@ -586,6 +582,7 @@ class _StopTile extends StatelessWidget {
                               ],
                             ),
                             _OpenThen(stop: stop, day: day),
+                            _StopWeather(stop: stop, day: day),
                             if (stop.why != null && stop.why!.isNotEmpty) ...[
                               const SizedBox(height: KSpace.sm),
                               Text(stop.why!, style: text.bodyMedium),
@@ -1316,5 +1313,48 @@ Future<void> _reportAi(BuildContext context, WidgetRef ref, OutingPlan plan) asy
     if (context.mounted) showMessage(context, tr('Thanks. We\'ll look at it.'));
   } catch (e) {
     if (context.mounted) showError(context, e);
+  }
+}
+
+/// The stop's real photo (Wikimedia Commons) when our data has one.
+class _StopPhoto extends ConsumerWidget {
+  const _StopPhoto({required this.stop});
+
+  final PlanStop stop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photo = ref.watch(placeProvider(stop.placeId)).value?.photoUrl;
+    return PlaceImage(url: photo, emoji: Categories.emoji(stop.category), width: 56, height: 56);
+  }
+}
+
+/// "🌤️ 27° · 10% rain at 18:00" from the real hourly forecast (Open-Meteo),
+/// when the outing day is within the forecast range.
+class _StopWeather extends ConsumerWidget {
+  const _StopWeather({required this.stop, required this.day});
+
+  final PlanStop stop;
+  final DateTime day;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = DateTime.now();
+    final ahead = DateTime(day.year, day.month, day.day).difference(DateTime(today.year, today.month, today.day)).inDays;
+    if (!stop.hasLocation || stop.startTime == null || ahead < 0 || ahead > 15) return const SizedBox.shrink();
+    final key = (
+      // ~10 km grid: one forecast request covers a whole plan.
+      (stop.lat! * 10).round() / 10,
+      (stop.lng! * 10).round() / 10,
+      DateFormat('yyyy-MM-dd').format(day),
+    );
+    final w = weatherAt(ref.watch(hourlyWeatherProvider(key)).value ?? const {}, stop.startTime);
+    if (w == null) return const SizedBox.shrink();
+    final icon = w.rain >= 40 ? '🌧️' : w.temp >= 35 ? '🥵' : w.temp <= 14 ? '🧥' : '🌤️';
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(trf('{icon} {t}° · {r}% rain then', {'icon': icon, 't': w.temp.round(), 'r': w.rain}),
+          style: Theme.of(context).textTheme.bodySmall),
+    );
   }
 }

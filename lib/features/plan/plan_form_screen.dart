@@ -11,6 +11,7 @@ import '../../app/extras.dart';
 import '../../app/helpers.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
+import '../../data/live_data.dart' show aqiLabel, uvLabel;
 import '../../data/providers.dart';
 import '../../models/plan.dart';
 import '../../planner/services.dart' show aiResting;
@@ -18,6 +19,7 @@ import '../../planner/planner.dart' show compactRadiusKm, planNeeds;
 import '../../widgets/common.dart';
 import '../profile/about_screen.dart' show appVersion;
 import '../profile/theme_sheet.dart';
+import '../reviews/challenge_card.dart';
 
 /// The home tab: describe your outing, get a real plan.
 class PlanFormScreen extends ConsumerStatefulWidget {
@@ -299,6 +301,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           Text(tr('Tell us the vibe. We only suggest real places.'),
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const _TodayStrip(),
+          const ChallengeCard(),
           const _WhatsNewCard(),
           const _NextOutingCard(),
           const _RecentPlans(),
@@ -1025,6 +1028,7 @@ class _TodayStrip extends ConsumerWidget {
     final c = cityCenters[city] ?? cityCenters['cairo']!;
     final sun = sunTimes(now, c.$1, c.$2);
     final pray = prayerTimes(now, c.$1, c.$2);
+    final air = ref.watch(airProvider(city)).value;
     final next = pray == null
         ? null
         : [
@@ -1038,6 +1042,8 @@ class _TodayStrip extends ConsumerWidget {
       if (today != null) trf('{t}° · {r}% rain', {'t': today.maxC.round(), 'r': today.rainPct}),
       if (sun != null && sun.sunset.isAfter(now.toUtc())) trf('🌇 Sunset at {time}', {'time': hhmmLocal(sun.sunset)}),
       if (next != null) trf('🕌 {name} {time}', {'name': next.$1, 'time': hhmmLocal(next.$2)}),
+      if (air?.uv case final uv? when uv >= 3) trf('☀️ UV {n} ({label})', {'n': uv.round(), 'label': uvLabel(uv)}),
+      if (air?.aqi case final aqi?) trf('🌫️ Air: {label}', {'label': aqiLabel(aqi)}),
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
     return Padding(

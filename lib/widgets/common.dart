@@ -59,12 +59,7 @@ class AsyncView<T> extends StatelessWidget {
     return value.when(
       skipLoadingOnReload: true,
       data: builder,
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(KSpace.xl),
-          child: CircularProgressIndicator(),
-        ),
-      ),
+      loading: () => const SkeletonList(),
       error: (e, _) => EmptyState(
         emoji: '⚠️',
         title: tr('Could not load this'),
@@ -302,5 +297,62 @@ class _BusyButtonState extends State<BusyButton> {
     return widget.outlined
         ? OutlinedButton(onPressed: onPressed, child: child)
         : FilledButton(onPressed: onPressed, child: child);
+  }
+}
+
+/// Soft shimmering placeholder cards while something loads (calmer than a
+/// spinner). Stays still when "Reduce motion" is on.
+class SkeletonList extends StatefulWidget {
+  const SkeletonList({super.key, this.rows = 4});
+
+  final int rows;
+
+  @override
+  State<SkeletonList> createState() => _SkeletonListState();
+}
+
+class _SkeletonListState extends State<SkeletonList> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final still = MediaQuery.of(context).disableAnimations;
+    Widget bar(double w, double h) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(color: k.line, borderRadius: BorderRadius.circular(8)),
+        );
+    final body = ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      padding: const EdgeInsets.all(KSpace.md),
+      itemCount: widget.rows,
+      itemBuilder: (_, _) => Padding(
+        padding: const EdgeInsets.only(bottom: KSpace.md),
+        child: Row(children: [
+          bar(64, 64),
+          const SizedBox(width: KSpace.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              bar(double.infinity, 14),
+              const SizedBox(height: 8),
+              bar(140, 12),
+              const SizedBox(height: 8),
+              bar(80, 12),
+            ]),
+          ),
+        ]),
+      ),
+    );
+    if (still) return Opacity(opacity: 0.6, child: body);
+    return FadeTransition(opacity: Tween(begin: 0.35, end: 0.85).animate(_c), child: body);
   }
 }

@@ -131,4 +131,27 @@ class ReviewsRepository {
     final rs = await _reviewerStats(uid).get();
     if (rs.exists && ReviewerStats.fromMap(rs.data()).total == 0) await _reviewerStats(uid).delete();
   }
+
+  /// The most-reviewed places (one small query, read when the page opens).
+  Future<List<(String, PlaceStats)>> mostReviewed({int limit = 40}) async {
+    final snap = await _db.collection('placeStats').orderBy('count', descending: true).limit(limit).get();
+    return [for (final d in snap.docs) (d.id, PlaceStats.fromMap(d.data()))];
+  }
+
+  /// The newest reviews anywhere.
+  Future<List<Review>> newest({int limit = 15}) async {
+    final snap = await _reviews.orderBy('updatedAt', descending: true).limit(limit).get();
+    return snap.docs.map((d) => Review.fromMap(d.data())).toList();
+  }
+
+  /// Your reviews since [since] (this week's challenge): small and cheap.
+  Future<List<Review>> mineSince(String uid, DateTime since) async {
+    final snap = await _reviews
+        .where('uid', isEqualTo: uid)
+        .where('updatedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
+        .orderBy('updatedAt', descending: true)
+        .limit(20)
+        .get();
+    return snap.docs.map((d) => Review.fromMap(d.data())).toList();
+  }
 }

@@ -168,6 +168,18 @@ const NAMED_MALL_KM = 1.5;
 const CAPS = { restaurant: 5000, cafe: 3500, shop: 8000 };
 const SHOPS_PER_MALL = 250;
 
+/** The first Instagram/Facebook URL among Overture's social links. */
+export function socialOf(o, kind) {
+  const domain = kind === "instagram" ? "instagram.com" : "facebook.com";
+  for (const s of o.socials ?? []) {
+    try {
+      const host = new URL(s).hostname.replace(/^(www|m|web)\./, "");
+      if (host === domain) return s;
+    } catch { /* not a URL */ }
+  }
+  return undefined;
+}
+
 export function merge(osmPlaces, overtureRows) {
   // Start clean: drop Overture places from an earlier merge.
   const places = osmPlaces.filter((p) => p.source !== "overture");
@@ -186,6 +198,10 @@ export function merge(osmPlaces, overtureRows) {
       duplicates++;
       twin.phone ??= o.phone ?? undefined;
       twin.website ??= o.website ?? undefined;
+      twin.instagram ??= socialOf(o, "instagram");
+      twin.facebook ??= socialOf(o, "facebook");
+      if (!twin.instagram) delete twin.instagram;
+      if (!twin.facebook) delete twin.facebook;
       if (!twin.phone) delete twin.phone;
       if (!twin.website) delete twin.website;
       continue;
@@ -202,6 +218,8 @@ export function merge(osmPlaces, overtureRows) {
       lng: o.lng,
       website: o.website || undefined,
       phone: o.phone || undefined,
+      instagram: socialOf(o, "instagram"),
+      facebook: socialOf(o, "facebook"),
       details: o.tax === "hookah_bar" ? { shisha: true } : o.brand ? { brand: o.brand } : undefined,
       source: "overture",
       quality: overtureQuality(o),

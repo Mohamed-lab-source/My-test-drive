@@ -263,3 +263,7 @@ final exploreMemoryProvider =
 /// Your own saved plan-form choices ("Our usual Friday"): name → JSON.
 final planPresetsProvider =
     NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('plan.presets'));
+
+/// Weekly challenges you finished (week key → challenge id), on the phone.
+final challengesDoneProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('challenges.done'));

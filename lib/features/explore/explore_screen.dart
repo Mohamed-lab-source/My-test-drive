@@ -402,6 +402,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     onPressed: () => context.push('/lists'),
                   ),
                   ActionChip(
+                    avatar: const Text('⭐'),
+                    label: Text(tr('Top on Khroga')),
+                    onPressed: () => context.push('/community'),
+                  ),
+                  ActionChip(
                     avatar: const Text('🏘️'),
                     label: Text(tr('Areas')),
                     onPressed: () => context.push('/areas'),

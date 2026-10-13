@@ -192,6 +192,19 @@ How the code enforces it (keep it this way):
   `reviewTextProblem` + firestore.rules regex) or blocked rude words
   (client). Terms cover reviews and AI text. Play Console answers and the
   screenshot list are in store/PUBLISHING.md (5c, 5d).
+- 0.9 live extras (`lib/data/live_data.dart`, tested in `test/live_data_test.dart`):
+  Open-Meteo hourly weather per plan stop (`hourlyWeatherProvider`, ~10 km
+  grid so one request per plan), UV + European AQI (`airProvider`, Plan tab
+  line), Wikipedia summary via the place's Wikidata id (`wikiProvider`,
+  Arabic article first, credited CC BY-SA; tap-to-load with data saver).
+  Community page `/community` (top rated = placeStats by count, Bayesian
+  average; fresh reviews). Weekly challenges (`lib/app/challenges.dart`,
+  Saturday weeks, progress from this week's reviews via the
+  reviews(uid, updatedAt) index in firestore.indexes.json, and plans; done
+  weeks on the phone). Pipeline copies Instagram/Facebook (OSM tags,
+  Overture socials), menu links (`website:menu`), halal and kids areas.
+  Skeleton loading in `AsyncView`; predictive-back page transitions;
+  category-coloured headers for places without photos.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

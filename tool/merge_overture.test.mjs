@@ -2,7 +2,8 @@
 // Run: node --test tool/merge_overture.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { merge, overtureCategory, mentionsMall, sameName, distinctiveWords } from "./merge_overture.mjs";
+import { merge, overtureCategory, mentionsMall, sameName, distinctiveWords, socialOf,
+} from "./merge_overture.mjs";
 
 const osm = [
   { id: "osm-node-1", name: "Test Cafe", category: "cafe", city: "cairo", lat: 30.05, lng: 31.30, quality: 5 },
@@ -81,4 +82,11 @@ test("name helpers", () => {
   assert.ok(mentionsMall("Shop 12, City Center Almaza, Cairo", "Almaza City Center"));
   assert.ok(!mentionsMall("Behind Almaza bridge", "Almaza City Center"));
   assert.ok(mentionsMall("Ground floor, Mall of Egypt", "Mall of Egypt"));
+});
+
+test("Overture social links: only real Instagram/Facebook URLs", () => {
+  assert.equal(socialOf({ socials: ["https://www.facebook.com/TestPage"] }, "facebook"), "https://www.facebook.com/TestPage");
+  assert.equal(socialOf({ socials: ["https://www.facebook.com/TestPage"] }, "instagram"), undefined);
+  assert.equal(socialOf({ socials: ["nonsense"] }, "facebook"), undefined);
+  assert.equal(socialOf({}, "facebook"), undefined);
 });

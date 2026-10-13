@@ -11,6 +11,7 @@ import '../models/social.dart';
 import 'links.dart';
 import 'local_prefs.dart';
 import '../features/links/link_screens.dart';
+import '../features/reviews/community_screen.dart';
 import '../features/reviews/review_screens.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/explore/explore_screen.dart';
@@ -148,6 +149,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/tools', builder: (_, _) => const ToolsScreen()),
       GoRoute(path: '/guide', builder: (_, _) => const GuideScreen()),
+      GoRoute(path: '/community', builder: (_, _) => const CommunityScreen()),
       GoRoute(
           path: '/review/:placeId',
           builder: (_, s) => ReviewFormScreen(placeId: s.pathParameters['placeId']!)),

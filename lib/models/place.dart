@@ -22,6 +22,9 @@ class Place {
     this.parentMallId,
     this.website,
     this.phone,
+    this.instagram,
+    this.facebook,
+    this.menuUrl,
     this.indoor,
     this.osmUrl,
     this.wikidata,
@@ -54,6 +57,11 @@ class Place {
   final String? parentMallId;
   final String? website;
   final String? phone;
+
+  /// Social pages and a menu link, only when the map lists them.
+  final String? instagram;
+  final String? facebook;
+  final String? menuUrl;
   final bool? indoor;
 
   /// Link to this place on openstreetmap.org (for attribution and fixes).
@@ -113,6 +121,9 @@ class Place {
       parentMallId: m['parentMallId'] as String?,
       website: m['website'] as String?,
       phone: m['phone'] as String?,
+      instagram: m['instagram'] as String?,
+      facebook: m['facebook'] as String?,
+      menuUrl: m['menuUrl'] as String?,
       indoor: m['indoor'] as bool?,
       osmUrl: m['osmUrl'] as String?,
       wikidata: m['wikidata'] as String?,
@@ -146,7 +157,12 @@ class PlaceFacts {
     this.level,
     this.brand,
     this.description,
+    this.halal,
+    this.kidsArea,
   });
+
+  final bool? halal;
+  final bool? kidsArea;
 
   final String? wheelchair; // yes / limited / no
   final bool? outdoorSeating;
@@ -178,6 +194,8 @@ class PlaceFacts {
         level: m['level'] as String?,
         brand: m['brand'] as String?,
         description: m['description'] as String?,
+        halal: m['halal'] as bool?,
+        kidsArea: m['kidsArea'] as bool?,
       );
 
   /// Readable floor name, e.g. "0" → "Ground floor", "2" → "Floor 2".
@@ -212,6 +230,8 @@ class PlaceFacts {
         if (reservation == 'required') '📅 Booking required',
         if (reservation == 'recommended') '📅 Booking recommended',
         if (reservation == 'yes') '📅 Takes bookings',
+        if (kidsArea == true) '🧸 Kids area',
+        if (halal == true) '🥩 Halal',
       ];
 }
 
@@ -234,6 +254,22 @@ class Categories {
   };
 
   static String label(String category) => tr(all[category] ?? category.replaceAll('_', ' '));
+
+  /// A hue (0–360) per kind of place, for colorful headers without photos.
+  static double hue(String category) => switch (category) {
+        'restaurant' => 14,
+        'cafe' => 30,
+        'cinema' => 270,
+        'mall' => 320,
+        'shop' => 300,
+        'escape_room' => 250,
+        'entertainment' => 200,
+        'park' => 120,
+        'museum' => 45,
+        'sight' => 40,
+        'activity' => 180,
+        _ => 210,
+      };
 
   static String emoji(String category) => switch (category) {
         'restaurant' => '🍽️',

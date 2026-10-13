@@ -9,6 +9,12 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('📖', 'Wikipedia on place pages', 'Famous places show a short summary from Wikipedia, with a link.'),
+    ('🌤️', 'Weather at every stop', 'Plans show the forecast for the hour you\'ll be at each place.'),
+    ('☀️', 'UV and air quality', 'Today\'s UV and air quality for your city on the Plan tab.'),
+    ('⭐', 'Top on Khroga', 'The best-rated places in your city and the newest reviews.'),
+    ('🏆', 'Weekly challenges', 'A new small goal every Saturday.'),
+    ('📸', 'More real facts', 'Instagram, Facebook and menu links, kids areas and halal tags, when the maps list them.'),
     ('✍️', 'Reviews', 'Rate places, answer quick questions about them and read what other Khroga users say.'),
     ('🏅', 'Guide levels', 'Every review earns points: grow from Newcomer to Local Guide, Advanced Guide and more.'),
     ('🍽️', 'Expert badges', 'Review lots of one kind of place to become a Food, Café, Culture or Fun expert.'),

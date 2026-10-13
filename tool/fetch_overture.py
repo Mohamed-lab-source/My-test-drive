@@ -66,7 +66,7 @@ def main(out_path):
     dataset = ds.dataset(f"{BUCKET}/release/{release}/theme=places/type=place",
                          filesystem=fs, format="parquet")
     columns = ["id", "names", "confidence", "basic_category", "taxonomy", "websites",
-               "phones", "addresses", "brand", "operating_status", "bbox"]
+               "phones", "socials", "addresses", "brand", "operating_status", "bbox"]
     kept = 0
     seen = set()
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
@@ -101,6 +101,7 @@ def main(out_path):
                     "lng": round(r["bbox"]["xmin"], 6),
                     "website": first(r.get("websites") or []),
                     "phone": first(r.get("phones") or []),
+                    "socials": [s for s in (r.get("socials") or []) if isinstance(s, str)][:4],
                     "brand": ((r.get("brand") or {}).get("names") or {}).get("primary"),
                     "address": address.get("freeform"),
                     "locality": address.get("locality"),

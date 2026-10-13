@@ -2,6 +2,26 @@
 
 Keep each under 500 characters.
 
+## 0.9.0
+
+<en-US>
+• Wikipedia summaries for famous places
+• Weather for the hour of every plan stop, plus UV and air quality
+• Top on Khroga: best-rated places and the newest reviews
+• Weekly challenges, a new one every Saturday
+• Instagram, Facebook and menu links when the maps list them
+• Smoother loading and colourful place headers
+</en-US>
+
+<ar>
+• ملخصات من ويكيبيديا للأماكن المشهورة
+• الطقس في ساعة كل محطة في الخطة، والأشعة فوق البنفسجية وجودة الهوا
+• الأعلى على خروجة: أحسن الأماكن تقييماً وأحدث التقييمات
+• تحدي جديد كل سبت
+• لينكات إنستجرام وفيسبوك والمنيو لو موجودة على الخرايط
+• تحميل أنعم وألوان حلوة لصفحات الأماكن
+</ar>
+
 ## 0.8.1
 
 <en-US>
