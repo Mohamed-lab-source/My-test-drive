@@ -210,6 +210,15 @@ How the code enforces it (keep it this way):
   app-config-<run>), the APK and the .aab are published as release assets
   (`latest-apk/khroga.apk`, `play-store-bundle/khroga.aab`), and the last
   step deletes Khroga's old artifacts (only its own names).
+- Customer-first behaviour (0.9.1): `friendlyError` maps every error to a
+  kind next step (never raw/English-only text; `isOfflineError` → 📡);
+  `showUndo` for deletes (plans via `PlansRepository.restore`, favorites,
+  been-there, notes); empty states offer an action (e.g. clear filters);
+  review form asks before discarding; plans with fewer stops explain how to
+  get more; app-made plans get a factual `localSummary`; the AI prompt has a
+  friendly "local friend" voice rule; "Right now" idea card (`ideaForNow`);
+  Explore remembers map/list; delete-account text lists reviews and accepts
+  "حذف".
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

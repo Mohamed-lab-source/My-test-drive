@@ -76,6 +76,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final cat = mem['category'];
     if (cat != null && Categories.all.containsKey(cat)) _category = cat;
     if (mem['sort'] == 'az') _sort = _Sort.az;
+    _map = mem['view'] == 'map'; // remember map or list
     _scroll.addListener(() {
       final show = _scroll.offset > 1200;
       if (show != _showTop) setState(() => _showTop = show);
@@ -295,7 +296,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           IconButton(
             tooltip: _map ? tr('List') : tr('Map'),
             icon: Icon(_map ? Icons.view_list_outlined : Icons.map_outlined),
-            onPressed: () => setState(() => _map = !_map),
+            onPressed: () {
+              setState(() => _map = !_map);
+              ref.read(exploreMemoryProvider.notifier).set('view', _map ? 'map' : null);
+            },
           ),
           if (!_map)
           IconButton(
@@ -574,7 +578,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     title: tr('Nothing matches'),
                     message: _openNow || _extras.isNotEmpty
                         ? tr('Filters only show places whose map entry says so. Try fewer filters.')
+                        : tr('Try another word, another area, or check the spelling.'),
+                    actionLabel: _query.isNotEmpty || _openNow || _extras.isNotEmpty || _area != null || _category != null
+                        ? tr('Clear search and filters')
                         : null,
+                    onAction: () {
+                      _useQuery('');
+                      _clearFilters();
+                    },
                   ),
                 )
               else if (_map)
@@ -914,7 +925,13 @@ Future<void> showPlaceQuickActions(BuildContext context, Place place) =>
                 Navigator.pop(sheetContext);
                 if (uid == null) return;
                 try {
-                  await ref.read(favoritesRepositoryProvider).set(uid, place.id, !fav);
+                  final repo = ref.read(favoritesRepositoryProvider);
+                  await repo.set(uid, place.id, !fav);
+                  if (context.mounted) {
+                    fav
+                        ? showUndo(context, tr('Removed from favorites'), () => repo.set(uid, place.id, true))
+                        : showMessage(context, tr('Saved to your favorites ❤️'));
+                  }
                 } catch (e) {
                   if (context.mounted) showError(context, e);
                 }

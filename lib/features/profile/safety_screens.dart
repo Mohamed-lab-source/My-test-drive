@@ -117,7 +117,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
     if (uid == null || text.isEmpty) throw Exception(tr('Write a few words first.'));
     await ref.read(safetyRepositoryProvider).sendFeedback(by: uid, text: text, version: appVersion);
     if (!mounted) return;
-    showMessage(context, tr('Thanks! We read every message.'));
+    showMessage(context, tr('Thank you! We read every message, and many ideas end up in the app.'));
     context.pop();
   }
 
@@ -188,9 +188,12 @@ Future<void> deleteMyAccount(BuildContext context, WidgetRef ref) async {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(tr('This deletes your plans, favorites, notes, friends, check-ins and username. Groups you organize are deleted for everyone. This can\'t be undone.')),
+            Text(tr('This deletes your plans, favorites, notes, reviews and points, friends, check-ins and username. Groups you organize are deleted for everyone. This can\'t be undone.')),
+            const SizedBox(height: KSpace.sm),
+            Text(tr('Want a copy first? Use Profile → Export my data.'),
+                style: Theme.of(d).textTheme.bodySmall),
             const SizedBox(height: KSpace.md),
-            Text(tr('Type DELETE to confirm')),
+            Text(tr('Type DELETE (or حذف) to confirm')),
             TextField(controller: controller, onChanged: (_) => setState(() {})),
           ],
         ),
@@ -198,7 +201,9 @@ Future<void> deleteMyAccount(BuildContext context, WidgetRef ref) async {
           TextButton(onPressed: () => Navigator.pop(d, false), child: Text(tr('Cancel'))),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(d).colorScheme.error),
-            onPressed: controller.text.trim().toUpperCase() == 'DELETE' ? () => Navigator.pop(d, true) : null,
+            onPressed: const {'DELETE', 'حذف'}.contains(controller.text.trim().toUpperCase())
+                ? () => Navigator.pop(d, true)
+                : null,
             child: Text(tr('Delete forever')),
           ),
         ],

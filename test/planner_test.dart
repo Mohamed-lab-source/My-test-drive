@@ -58,6 +58,21 @@ List<Place> pick(PlanRequest r, [Weather? w]) =>
     pickCandidates(places, r, w, random: Random(1));
 
 void main() {
+  test('local summary uses only the plan\'s own facts', () {
+    const r = PlanRequest(city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening');
+    final stops = [
+      const PlanStop(placeId: 'a', name: 'Test A', category: 'cafe', startTime: '18:00', durationMinutes: 60),
+      const PlanStop(placeId: 'b', name: 'Test B', category: 'restaurant', startTime: '19:20',
+          durationMinutes: 90, kmFromPrevious: 1.2),
+    ];
+    final s = localSummary(r, stops);
+    expect(s, contains('2 stops'));
+    expect(s, contains('1.2 km'));
+    expect(s, contains('from 18:00 to about 20:50'));
+    expect(s, isNot(contains('EGP')));
+    expect(localSummary(r, const []), '');
+  });
+
   test('must-haves only use what the map says (unknown = no)', () {
     const yes = Place(id: 'y', name: 'Test Yes', category: 'cafe', city: 'cairo',
         details: PlaceFacts(wheelchair: 'yes', vegetarian: 'yes', wifi: true, smoking: 'no', cards: true));

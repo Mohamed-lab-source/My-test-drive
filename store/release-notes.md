@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 0.9.1
+
+<en-US>
+• Undo when you delete a plan, a favorite or a note
+• Clearer, kinder messages that tell you what to do next
+• A "Right now" idea that fits the day, time and weather
+• Plans explain themselves and how to get more stops
+</en-US>
+
+<ar>
+• تقدر ترجّع الخطة أو المفضلة أو الملاحظة بعد ما تمسحها
+• رسايل أوضح وألطف بتقولك تعمل إيه بعدها
+• فكرة "دلوقتي" مناسبة لليوم والوقت والجو
+• الخطط بتشرح نفسها وإزاي تجيب محطات أكتر
+</ar>
+
 ## 0.9.0
 
 <en-US>

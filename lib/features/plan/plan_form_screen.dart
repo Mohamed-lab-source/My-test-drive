@@ -301,6 +301,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           Text(tr('Tell us the vibe. We only suggest real places.'),
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const _TodayStrip(),
+          const _IdeaForNow(),
           const ChallengeCard(),
           const _WhatsNewCard(),
           const _NextOutingCard(),
@@ -713,8 +714,35 @@ Future<String?> runPlanGeneration(BuildContext context, WidgetRef ref, PlanReque
   }
 }
 
-class _GeneratingDialog extends StatelessWidget {
+class _GeneratingDialog extends StatefulWidget {
   const _GeneratingDialog();
+
+  @override
+  State<_GeneratingDialog> createState() => _GeneratingDialogState();
+}
+
+class _GeneratingDialogState extends State<_GeneratingDialog> {
+  static const _steps = [
+    'Picking real places and checking the weather',
+    'Checking which places are open then',
+    'Keeping your stops close together',
+    'Almost there…',
+  ];
+  int _i = 0;
+  late final _timer = Stream.periodic(const Duration(milliseconds: 1400), (n) => n + 1)
+      .listen((n) => mounted ? setState(() => _i = n.clamp(0, _steps.length - 1)) : null);
+
+  @override
+  void initState() {
+    super.initState();
+    _timer;
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -729,7 +757,7 @@ class _GeneratingDialog extends StatelessWidget {
             Text(tr('Building your plan…'),
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             SizedBox(height: KSpace.xs),
-            Text(tr('Picking real places and checking the weather'),
+            Text(tr(_steps[_i]),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.k.inkMuted)),
           ],
@@ -1053,6 +1081,36 @@ class _TodayStrip extends ConsumerWidget {
         onTap: () => context.push('/tools'),
         child: Text(parts.join('  ·  '),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.k.inkMuted)),
+      ),
+    );
+  }
+}
+
+/// "Right now: 🌙 Night out" — one idea that suits the day, time and weather.
+class _IdeaForNow extends ConsumerWidget {
+  const _IdeaForNow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final today = (ref.watch(weekForecastProvider(ref.watch(cityProvider))).value ?? const <DayForecast>[])
+        .where((d) => sameDay(d.day, now))
+        .firstOrNull;
+    final i = ideaForNow(now, maxTempC: today?.maxC, rainPct: today?.rainPct);
+    if (i < 0) return const SizedBox.shrink();
+    final idea = outingIdeas[i];
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.sm),
+      child: Card(
+        child: ListTile(
+          leading: Text(idea.emoji, style: const TextStyle(fontSize: 28)),
+          title: Text(trf('Right now: {idea}', {'idea': idea.title})),
+          subtitle: Text(idea.blurb),
+          trailing: FilledButton.tonal(
+            onPressed: () => context.push('/new-plan?idea=$i'),
+            child: Text(tr('Try it')),
+          ),
+        ),
       ),
     );
   }

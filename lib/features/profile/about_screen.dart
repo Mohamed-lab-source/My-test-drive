@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 import '../../widgets/launchers.dart';
 
-const appVersion = '0.9.0';
+const appVersion = '0.9.1';
 
 /// What Khroga is, where its facts come from, and that it's free.
 class AboutScreen extends StatelessWidget {

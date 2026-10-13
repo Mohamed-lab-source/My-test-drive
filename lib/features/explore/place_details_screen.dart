@@ -74,7 +74,15 @@ class _PlaceDetailsScreenState extends ConsumerState<PlaceDetailsScreen> {
               if (uid == null) return;
               tapFeedback(ref.read(phoneSettingsProvider).haptics);
               try {
-                await ref.read(favoritesRepositoryProvider).set(uid, placeId, !favorite);
+                final repo = ref.read(favoritesRepositoryProvider);
+                await repo.set(uid, placeId, !favorite);
+                if (!context.mounted) return;
+                if (favorite) {
+                  showUndo(context, tr('Removed from favorites'), () => repo.set(uid, placeId, true));
+                } else {
+                  showMessage(context, tr('Saved to your favorites ❤️'),
+                      actionLabel: tr('See all'), onAction: () => context.push('/saved'));
+                }
               } catch (e) {
                 if (context.mounted) showError(context, e);
               }
@@ -747,8 +755,15 @@ class _VisitedAndNote extends ConsumerWidget {
     );
     controller.dispose();
     if (text == null) return;
+    final repo = ref.read(personalRepositoryProvider);
     try {
-      await ref.read(personalRepositoryProvider).saveNote(uid, place.id, text);
+      await repo.saveNote(uid, place.id, text);
+      if (!context.mounted) return;
+      if (text.trim().isEmpty && (current ?? '').isNotEmpty) {
+        showUndo(context, tr('Note deleted'), () => repo.saveNote(uid, place.id, current!));
+      } else if (text.trim().isNotEmpty) {
+        showMessage(context, tr('Note saved. Only you can see it.'));
+      }
     } catch (e) {
       if (context.mounted) showError(context, e);
     }
@@ -771,6 +786,10 @@ class _VisitedAndNote extends ConsumerWidget {
               if (uid == null) return;
               try {
                 await ref.read(personalRepositoryProvider).setVisited(uid, place.id, v);
+                if (!v && context.mounted) {
+                  showUndo(context, tr('Removed from places you\'ve been'),
+                      () => ref.read(personalRepositoryProvider).setVisited(uid, place.id, true));
+                }
                 if (v && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(tr('How was it? A review earns you points.')),

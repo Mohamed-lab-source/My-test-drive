@@ -8,25 +8,60 @@ import '../app/local_prefs.dart';
 import '../app/theme.dart';
 import '../models/social.dart';
 
-/// Turns any error into one short sentence a person can act on.
+/// Turns any error into one short, kind sentence that says what to do next.
+/// Never shows raw technical text (which would also be English-only).
 String friendlyError(Object error) {
   if (error is GoogleSignInException) {
     return error.code == GoogleSignInExceptionCode.canceled
-        ? tr('Sign-in was cancelled.')
-        : tr('Google sign-in failed. Please try again.');
+        ? tr('Sign-in was cancelled. You can try again any time.')
+        : tr("Google sign-in didn't work. Check your internet and try again.");
   }
   if (error is FirebaseAuthException) {
-    return error.message ?? tr('Sign-in failed. Please try again.');
+    return switch (error.code) {
+      'network-request-failed' => tr('No internet right now. Connect and try again.'),
+      'too-many-requests' => tr('Too many tries. Wait a minute, then try again.'),
+      'credential-already-in-use' || 'account-exists-with-different-credential' =>
+        tr('That Google account is already used in Khroga. Sign out, then sign in with it.'),
+      'requires-recent-login' => tr('For your safety, please sign in again first.'),
+      'user-disabled' => tr('This account is turned off. Contact us from the Play Store page.'),
+      _ => tr("Sign-in didn't work. Please try again."),
+    };
   }
   if (error is FirebaseException) {
     return switch (error.code) {
-      'permission-denied' => tr("You don't have access to that."),
-      'unavailable' => tr("You're offline. Check your internet connection."),
-      _ => error.message ?? tr('Something went wrong. Please try again.'),
+      'permission-denied' => tr("That isn't allowed. If it should be, tell us in Profile → Report a problem."),
+      'unavailable' || 'deadline-exceeded' =>
+        tr("You're offline or the connection is slow. Your saved things still work; try again soon."),
+      'resource-exhausted' => tr('Khroga is very busy today. Please try again in a little while.'),
+      'not-found' => tr('That no longer exists. It may have been deleted.'),
+      'unauthenticated' => tr('Please sign in again.'),
+      _ => tr("That didn't work. Please try again."),
     };
   }
-  final text = error.toString().replaceFirst('Exception: ', '');
-  return text.length > 160 ? tr('Something went wrong. Please try again.') : tr(text);
+  final raw = error.toString();
+  if (RegExp('SocketException|TimeoutException|ClientException|Failed host lookup|Connection')
+      .hasMatch(raw)) {
+    return tr('No internet right now. Connect and try again.');
+  }
+  final text = raw.replaceFirst('Exception: ', '');
+  return text.length > 160 || text.contains('Error') ? tr("That didn't work. Please try again.") : tr(text);
+}
+
+/// True for "no internet / too slow" problems (shown with a 📡).
+bool isOfflineError(Object e) =>
+    (e is FirebaseException && (e.code == 'unavailable' || e.code == 'deadline-exceeded')) ||
+    (e is FirebaseAuthException && e.code == 'network-request-failed') ||
+    RegExp('SocketException|TimeoutException|ClientException|Failed host lookup').hasMatch('$e');
+
+/// A short message with an Undo button (deleting is never a dead end).
+void showUndo(BuildContext context, String text, VoidCallback onUndo) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      content: Text(text),
+      duration: const Duration(seconds: 5),
+      action: SnackBarAction(label: tr('Undo'), onPressed: onUndo),
+    ));
 }
 
 void showError(BuildContext context, Object error) {
@@ -35,10 +70,15 @@ void showError(BuildContext context, Object error) {
     ..showSnackBar(SnackBar(content: Text(friendlyError(error))));
 }
 
-void showMessage(BuildContext context, String text) {
+void showMessage(BuildContext context, String text, {String? actionLabel, VoidCallback? onAction}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(text)));
+    ..showSnackBar(SnackBar(
+      content: Text(text),
+      action: actionLabel == null || onAction == null
+          ? null
+          : SnackBarAction(label: actionLabel, onPressed: onAction),
+    ));
 }
 
 /// Renders loading / error / data states the same way everywhere.
@@ -61,10 +101,10 @@ class AsyncView<T> extends StatelessWidget {
       data: builder,
       loading: () => const SkeletonList(),
       error: (e, _) => EmptyState(
-        emoji: '⚠️',
-        title: tr('Could not load this'),
+        emoji: isOfflineError(e) ? '📡' : '🙈',
+        title: tr("We couldn't load this"),
         message: friendlyError(e),
-        actionLabel: onRetry == null ? null : 'Try again',
+        actionLabel: onRetry == null ? null : tr('Try again'),
         onAction: onRetry,
       ),
     );

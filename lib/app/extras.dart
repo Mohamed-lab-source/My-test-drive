@@ -387,3 +387,16 @@ String? reviewTextProblem(String text) {
   if (words.any(_blockedWords.contains)) return tr('Please keep it kind: remove rude words.');
   return null;
 }
+
+/// The outing idea that suits right now (day, time, weather), as an index
+/// into [outingIdeas]. Only fills in the form; places are still real.
+int ideaForNow(DateTime now, {double? maxTempC, int? rainPct}) {
+  int idx(String title) => outingIdeas.indexWhere((i) => i._title == title);
+  final weekend = isEgyptWeekend(now);
+  final h = now.hour;
+  if ((maxTempC ?? 0) >= 36 || (rainPct ?? 0) >= 50) return idx('Rainy or hot day');
+  if (h >= 21 || h < 4) return idx(weekend ? 'Night out' : 'Friends catch-up');
+  if (h < 11) return idx(weekend ? 'Culture morning' : 'Coffee and a walk');
+  if (h < 16) return idx(weekend ? 'Family day' : 'Coffee and a walk');
+  return idx(weekend ? 'Friends catch-up' : 'Date night');
+}

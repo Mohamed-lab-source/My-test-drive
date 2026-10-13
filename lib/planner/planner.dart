@@ -271,8 +271,10 @@ String buildPrompt(PlanRequest input, List<Place> candidates, Weather? weather, 
     "5. Prefer places in the same or nearby areas so the group doesn't cross the city.",
     "6. Times must be realistic and in order. Keep 'why' to one friendly sentence.",
     '7. Tips: up to 3 short practical tips (e.g. booking ahead, traffic). No prices.',
+    '8. Voice: warm and friendly, like a local friend talking to them ("you"). Short, clear '
+        'sentences. No hype and no promises about food quality, crowds or service: we can\'t know them.',
     if (isArabic)
-      '8. Write the title, summary, every "why" and the tips in Egyptian Arabic. '
+      '9. Write the title, summary, every "why" and the tips in Egyptian Arabic. '
           'Keep placeId values exactly as given.',
   ].join('\n');
 }
@@ -799,6 +801,22 @@ String localTitle(PlanRequest r, List<PlanStop> stops) {
       ? r.nearLabel!
       : stops.map((s) => s.area).whereType<String>().firstOrNull ?? tr(Cities.all[r.city] ?? r.city);
   return _clip(trf('{vibe} {time} in {area}', {'vibe': vibe, 'time': time, 'area': where}).trim(), 60);
+}
+
+/// A friendly, factual summary for plans the app made itself, e.g.
+/// "3 stops, all within 2.1 km, from 18:00 to about 22:30. Tap a stop for
+/// directions." Uses only our data and the plan's own times.
+String localSummary(PlanRequest r, List<PlanStop> stops) {
+  if (stops.isEmpty) return '';
+  final km = stops.fold<double>(0, (s, x) => s + (x.kmFromPrevious ?? 0));
+  final start = stops.first.startTime;
+  final end = planEndTime(stops);
+  final parts = [
+    stops.length == 1 ? tr('1 stop') : trf('{n} stops', {'n': stops.length}),
+    if (stops.length > 1 && km > 0) trf('about {km} km between them in total', {'km': km.toStringAsFixed(1)}),
+    if (start != null && end != null) trf('from {start} to about {end}', {'start': start, 'end': end}),
+  ];
+  return '${parts.join(', ')}. ${tr('Tap a stop for directions, or swap any place you don\'t like.')}';
 }
 
 /// Fills in a factual "why" for stops that have none.

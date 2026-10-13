@@ -225,6 +225,16 @@ class _PlanBody extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis),
           ),
         ],
+        if (plan.stops.length < plan.request.stops) ...[
+          const SizedBox(height: KSpace.md),
+          _InfoBanner(
+            icon: Icons.lightbulb_outline,
+            text: trf(
+                'We found {n} of the {want} stops you asked for that fit everything. For more, try a bigger '
+                'distance, fewer must-haves, or turn off "Only places open at that time".',
+                {'n': plan.stops.length, 'want': plan.request.stops}),
+          ),
+        ],
         if (plan.weatherNote != null) ...[
           const SizedBox(height: KSpace.md),
           _InfoBanner(icon: weatherIcon(plan.weatherNote!), text: plan.weatherNote!),

@@ -140,4 +140,15 @@ void main() {
     expect(reviewTextProblem('Opened in 2019, 3 floors'), isNull);
     expect(reviewTextProblem('كسرت الكوباية'), isNull); // a normal word, not blocked
   });
+
+  test('an idea for right now', () {
+    String title(DateTime t, {double? temp}) => outingIdeas[ideaForNow(t, maxTempC: temp)].title;
+    expect(title(DateTime(2026, 10, 9, 22)), 'Night out'); // Friday night
+    expect(title(DateTime(2026, 10, 12, 9)), 'Coffee and a walk'); // Monday morning
+    expect(title(DateTime(2026, 10, 10, 13)), 'Family day'); // Saturday afternoon
+    expect(title(DateTime(2026, 10, 12, 13), temp: 39), 'Rainy or hot day');
+    for (var h = 0; h < 24; h++) {
+      expect(ideaForNow(DateTime(2026, 10, 12, h)), greaterThanOrEqualTo(0));
+    }
+  });
 }

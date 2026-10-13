@@ -61,7 +61,7 @@ class PlansRepository {
     final outing = OutingPlan(
       id: '',
       title: aiWrote ? plan.title : localTitle(request, stops),
-      summary: aiWrote ? plan.summary : '',
+      summary: aiWrote ? plan.summary : localSummary(request, stops),
       tips: aiWrote ? plan.tips : const [],
       stops: stops,
       request: request,
@@ -157,6 +157,14 @@ class PlansRepository {
       _plans(uid).doc(planId).update({'saved': saved});
 
   /// Saves a copy of a plan (e.g. to try changes but keep the original).
+  /// Puts a just-deleted plan back (Undo). New plans must start unsaved
+  /// (security rules), so "saved" is set again right after.
+  Future<void> restore(String uid, OutingPlan plan) async {
+    final doc = _plans(uid).doc(plan.id);
+    await doc.set({...plan.toMap(), 'saved': false, 'createdAt': FieldValue.serverTimestamp()});
+    if (plan.saved) await doc.update({'saved': true});
+  }
+
   Future<String> duplicate(String uid, OutingPlan plan) async {
     final t = 'Copy of ${plan.title}';
     final doc = _plans(uid).doc();

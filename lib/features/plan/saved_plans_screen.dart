@@ -220,7 +220,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
                   ? Column(children: [
                       if (widget.onLoadMore != null && list.length >= (widget.pageSize ?? 1 << 30))
                         TextButton(onPressed: widget.onLoadMore, child: Text(tr('Show older plans'))),
-                      Text(tr('Swipe a plan sideways to delete it.'),
+                      Text(tr('Swipe a plan sideways to delete it. You can undo.'),
                           textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
                     ])
                   : _withMonth(context, list, i, Dismissible(
@@ -234,25 +234,22 @@ class _PlanListState extends ConsumerState<_PlanList> {
                         ),
                         child: const Icon(Icons.delete_outline),
                       ),
-                      confirmDismiss: (_) => showDialog<bool>(
-                        context: context,
-                        builder: (dialogContext) => AlertDialog(
-                          title: Text(tr('Delete this plan?')),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(dialogContext, false),
-                                child: Text(tr('Cancel'))),
-                            FilledButton(
-                                onPressed: () => Navigator.pop(dialogContext, true),
-                                child: Text(tr('Delete'))),
-                          ],
-                        ),
-                      ),
                       onDismissed: (_) async {
                         final uid = ref.read(uidProvider);
                         if (uid == null) return;
+                        final plan = list[i];
+                        final repo = ref.read(plansRepositoryProvider);
                         try {
-                          await ref.read(plansRepositoryProvider).delete(uid, list[i].id);
+                          await repo.delete(uid, plan.id);
+                          if (context.mounted) {
+                            showUndo(context, trf('Deleted "{name}"', {'name': plan.title}), () async {
+                              try {
+                                await repo.restore(uid, plan);
+                              } catch (e) {
+                                if (context.mounted) showError(context, e);
+                              }
+                            });
+                          }
                         } catch (e) {
                           if (context.mounted) showError(context, e);
                         }

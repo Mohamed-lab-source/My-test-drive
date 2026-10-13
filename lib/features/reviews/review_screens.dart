@@ -20,12 +20,17 @@ import 'challenge_card.dart';
 
 /// The newest reviews of a place, plus each reviewer's numbers (for levels).
 final placeReviewsProvider = FutureProvider.autoDispose
-    .family<(List<Review>, Map<String, ReviewerStats>), String>((ref, placeId) async {
-  final repo = ref.watch(reviewsRepositoryProvider);
-  final list = await repo.latest(placeId);
-  final stats = list.isEmpty ? const <String, ReviewerStats>{} : await repo.reviewerStatsFor(list.map((r) => r.uid));
-  return (list, stats);
-});
+    .family<(List<Review>, Map<String, ReviewerStats>), String>((
+      ref,
+      placeId,
+    ) async {
+      final repo = ref.watch(reviewsRepositoryProvider);
+      final list = await repo.latest(placeId);
+      final stats = list.isEmpty
+          ? const <String, ReviewerStats>{}
+          : await repo.reviewerStatsFor(list.map((r) => r.uid));
+      return (list, stats);
+    });
 
 final myReviewsProvider = FutureProvider.autoDispose<List<Review>>((ref) {
   final uid = ref.watch(uidProvider);
@@ -44,7 +49,8 @@ class PlaceReviewsSection extends ConsumerStatefulWidget {
   final Place place;
 
   @override
-  ConsumerState<PlaceReviewsSection> createState() => _PlaceReviewsSectionState();
+  ConsumerState<PlaceReviewsSection> createState() =>
+      _PlaceReviewsSectionState();
 }
 
 class _PlaceReviewsSectionState extends ConsumerState<PlaceReviewsSection> {
@@ -62,12 +68,21 @@ class _PlaceReviewsSectionState extends ConsumerState<PlaceReviewsSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Expanded(child: Text(tr('Khroga reviews'), style: text.titleMedium)),
-              if (avg != null)
-                Text('★ ${avg.toStringAsFixed(1)}',
-                    style: text.titleMedium?.copyWith(color: context.k.accent, fontWeight: FontWeight.w800)),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(tr('Khroga reviews'), style: text.titleMedium),
+                ),
+                if (avg != null)
+                  Text(
+                    '★ ${avg.toStringAsFixed(1)}',
+                    style: text.titleMedium?.copyWith(
+                      color: context.k.accent,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+              ],
+            ),
             Text(
               stats == null || stats.count == 0
                   ? tr('No reviews yet. Be the first and earn points!')
@@ -75,18 +90,26 @@ class _PlaceReviewsSectionState extends ConsumerState<PlaceReviewsSection> {
               style: text.bodySmall?.copyWith(color: context.k.inkMuted),
             ),
             const SizedBox(height: KSpace.sm),
-            Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
-              FilledButton.icon(
-                icon: const Icon(Icons.rate_review_outlined),
-                label: Text(tr('Write a review')),
-                onPressed: () => context.push('/review/${Uri.encodeComponent(widget.place.id)}'),
-              ),
-              if ((stats?.count ?? 0) > 0)
-                OutlinedButton(
-                  onPressed: () => setState(() => _open = !_open),
-                  child: Text(_open ? tr('Hide reviews') : tr('Read reviews')),
+            Wrap(
+              spacing: KSpace.sm,
+              runSpacing: KSpace.sm,
+              children: [
+                FilledButton.icon(
+                  icon: const Icon(Icons.rate_review_outlined),
+                  label: Text(tr('Write a review')),
+                  onPressed: () => context.push(
+                    '/review/${Uri.encodeComponent(widget.place.id)}',
+                  ),
                 ),
-            ]),
+                if ((stats?.count ?? 0) > 0)
+                  OutlinedButton(
+                    onPressed: () => setState(() => _open = !_open),
+                    child: Text(
+                      _open ? tr('Hide reviews') : tr('Read reviews'),
+                    ),
+                  ),
+              ],
+            ),
             if (_open) _ReviewList(place: widget.place),
           ],
         ),
@@ -113,27 +136,48 @@ class _ReviewList extends ConsumerWidget {
         final list = all.where((r) => !blocked.containsKey(r.uid)).toList();
         final again = answerCounts(list, 'again');
         final againTotal = (again['yes'] ?? 0) + (again['no'] ?? 0);
-        final goodFor = answerCounts(list, 'goodFor').entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-        final goodForQ = reviewQuestionsFor(place.category).where((q) => q.key == 'goodFor').firstOrNull;
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: KSpace.sm),
-          if (againTotal > 0)
-            Text(trf('👍 {n} of {t} would go again', {'n': again['yes'] ?? 0, 't': againTotal})),
-          if (goodFor.isNotEmpty && goodForQ != null)
-            Text(trf('👥 Most say it\'s good for: {list}', {
-              'list': goodFor.take(3).map((e) => tr(goodForQ.options[e.key] ?? e.key)).join(', '),
-            })),
-          if (list.length >= 20)
-            Text(tr('Showing the newest 20 reviews.'), style: text.bodySmall),
-          for (final r in list) _ReviewTile(review: r, stats: stats[r.uid], place: place),
-        ]);
+        final goodFor = answerCounts(list, 'goodFor').entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        final goodForQ = reviewQuestionsFor(place.category)
+            .where((q) => q.key == 'goodFor')
+            .firstOrNull;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: KSpace.sm),
+            if (againTotal > 0)
+              Text(
+                trf('👍 {n} of {t} would go again', {
+                  'n': again['yes'] ?? 0,
+                  't': againTotal,
+                }),
+              ),
+            if (goodFor.isNotEmpty && goodForQ != null)
+              Text(
+                trf('👥 Most say it\'s good for: {list}', {
+                  'list': goodFor
+                      .take(3)
+                      .map((e) => tr(goodForQ.options[e.key] ?? e.key))
+                      .join(', '),
+                }),
+              ),
+            if (list.length >= 20)
+              Text(tr('Showing the newest 20 reviews.'), style: text.bodySmall),
+            for (final r in list)
+              _ReviewTile(review: r, stats: stats[r.uid], place: place),
+          ],
+        );
       },
     );
   }
 }
 
 class _ReviewTile extends ConsumerWidget {
-  const _ReviewTile({required this.review, required this.stats, required this.place});
+  const _ReviewTile({
+    required this.review,
+    required this.stats,
+    required this.place,
+  });
 
   final Review review;
   final ReviewerStats? stats;
@@ -143,62 +187,112 @@ class _ReviewTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
     final me = ref.watch(uidProvider);
-    final questions = {for (final q in reviewQuestionsFor(review.category)) q.key: q};
+    final questions = {
+      for (final q in reviewQuestionsFor(review.category)) q.key: q,
+    };
     return Padding(
       padding: const EdgeInsets.only(top: KSpace.md),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          CircleAvatar(radius: 16, child: Text(review.name.isEmpty ? '?' : review.name.characters.first)),
-          const SizedBox(width: KSpace.sm),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(review.name, style: text.titleSmall),
-              if (stats != null)
-                Text(guideTitle(stats!), style: text.labelSmall?.copyWith(color: context.k.accent)),
-            ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                child: Text(
+                  review.name.isEmpty ? '?' : review.name.characters.first,
+                ),
+              ),
+              const SizedBox(width: KSpace.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(review.name, style: text.titleSmall),
+                    if (stats != null)
+                      Text(
+                        guideTitle(stats!),
+                        style: text.labelSmall?.copyWith(
+                          color: context.k.accent,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (review.uid != me)
+                PopupMenuButton<String>(
+                  onSelected: (v) async {
+                    if (v == 'block') {
+                      ref
+                          .read(blockedUsersProvider.notifier)
+                          .set(review.uid, review.name);
+                      return;
+                    }
+                    try {
+                      await ref
+                          .read(safetyRepositoryProvider)
+                          .reportReview(
+                            by: me ?? '',
+                            review: review,
+                            reason: v == 'fake'
+                                ? 'Fake or spam'
+                                : 'Rude or hateful',
+                          );
+                      if (context.mounted) {
+                        showMessage(context, tr('Thanks. We\'ll look at it.'));
+                      }
+                    } catch (e) {
+                      if (context.mounted) showError(context, e);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'fake',
+                      child: Text(tr('Report: fake or spam')),
+                    ),
+                    PopupMenuItem(
+                      value: 'rude',
+                      child: Text(tr('Report: rude or hateful')),
+                    ),
+                    PopupMenuItem(
+                      value: 'block',
+                      child: Text(tr('Block this person')),
+                    ),
+                  ],
+                ),
+            ],
           ),
-          if (review.uid != me)
-            PopupMenuButton<String>(
-              onSelected: (v) async {
-                if (v == 'block') {
-                  ref.read(blockedUsersProvider.notifier).set(review.uid, review.name);
-                  return;
-                }
-                try {
-                  await ref
-                      .read(safetyRepositoryProvider)
-                      .reportReview(by: me ?? '', review: review, reason: v == 'fake' ? 'Fake or spam' : 'Rude or hateful');
-                  if (context.mounted) showMessage(context, tr('Thanks. We\'ll look at it.'));
-                } catch (e) {
-                  if (context.mounted) showError(context, e);
-                }
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(value: 'fake', child: Text(tr('Report: fake or spam'))),
-                PopupMenuItem(value: 'rude', child: Text(tr('Report: rude or hateful'))),
-                PopupMenuItem(value: 'block', child: Text(tr('Block this person'))),
-              ],
+          const SizedBox(height: 4),
+          Text(
+            [
+              starsText(review.stars),
+              if (review.updatedAt != null)
+                DateFormat('d MMM y').format(review.updatedAt!),
+            ].join('  ·  '),
+            style: TextStyle(color: context.k.accent),
+          ),
+          if (review.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(review.text),
             ),
-        ]),
-        const SizedBox(height: 4),
-        Text(
-          [
-            starsText(review.stars),
-            if (review.updatedAt != null) DateFormat('d MMM y').format(review.updatedAt!),
-          ].join('  ·  '),
-          style: TextStyle(color: context.k.accent),
-        ),
-        if (review.text.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(review.text)),
-        if (review.answers.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Wrap(spacing: 6, runSpacing: 6, children: [
-              for (final e in review.answers.entries)
-                if (questions[e.key] case final q?)
-                  Pill('${q.text} ${e.value.split(',').map((a) => tr(q.options[a] ?? a)).join(', ')}'),
-            ]),
-          ),
-      ]),
+          if (review.answers.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final e in review.answers.entries)
+                    if (questions[e.key] case final q?)
+                      Pill(
+                        '${q.text} ${e.value.split(',').map((a) => tr(q.options[a] ?? a)).join(', ')}',
+                      ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -219,6 +313,7 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
   final _text = TextEditingController();
   bool _loaded = false;
   bool _existing = false;
+  bool _leaving = false;
 
   @override
   void initState() {
@@ -230,13 +325,18 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
     final uid = ref.read(uidProvider);
     if (uid != null) {
       try {
-        final r = await ref.read(reviewsRepositoryProvider).myReview(widget.placeId, uid);
+        final r = await ref
+            .read(reviewsRepositoryProvider)
+            .myReview(widget.placeId, uid);
         if (r != null) {
           _existing = true;
           _stars = r.stars;
           _text.text = r.text;
           for (final e in r.answers.entries) {
-            _answers[e.key] = e.value.split(',').where((s) => s.isNotEmpty).toSet();
+            _answers[e.key] = e.value
+                .split(',')
+                .where((s) => s.isNotEmpty)
+                .toSet();
           }
         }
       } catch (_) {}
@@ -251,26 +351,29 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
   }
 
   Map<String, String> get _answerMap => {
-        for (final e in _answers.entries)
-          if (e.value.isNotEmpty) e.key: e.value.join(','),
-      };
+    for (final e in _answers.entries)
+      if (e.value.isNotEmpty) e.key: e.value.join(','),
+  };
 
   Review _draft(Place p) => Review(
-        placeId: p.id,
-        uid: '',
-        name: '',
-        stars: _stars.clamp(1, 5),
-        category: p.category,
-        text: _text.text.trim(),
-        answers: _answerMap,
-      );
+    placeId: p.id,
+    uid: '',
+    name: '',
+    stars: _stars.clamp(1, 5),
+    category: p.category,
+    text: _text.text.trim(),
+    answers: _answerMap,
+  );
 
   Future<void> _submit(Place place) async {
     final uid = ref.read(uidProvider);
     final name = ref.read(myProfileProvider).value?.displayName ?? '';
     if (uid == null) return;
     if (name.isEmpty) {
-      showMessage(context, tr('Add your name in Profile first; reviews show it.'));
+      showMessage(
+        context,
+        tr('Add your name in Profile first; reviews show it.'),
+      );
       return;
     }
     if (_stars == 0) {
@@ -283,7 +386,9 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
     }
     if (!await ensureCommunityRules(context, ref)) return;
     try {
-      final (before, after) = await ref.read(reviewsRepositoryProvider).save(
+      final (before, after) = await ref
+          .read(reviewsRepositoryProvider)
+          .save(
             uid: uid,
             name: name,
             place: place,
@@ -298,7 +403,10 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
       happyMoment(ref);
       if (!mounted) return;
       await _celebrate(before, after);
-      if (mounted) context.pop();
+      if (mounted) {
+        setState(() => _leaving = true);
+        context.pop();
+      }
     } catch (e) {
       if (mounted) showError(context, e);
     }
@@ -307,31 +415,69 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
   Future<void> _celebrate(ReviewerStats before, ReviewerStats after) {
     final gained = after.points - before.points;
     final oldTier = tierFor(before.points), newTier = tierFor(after.points);
-    final newBadges = expertBadgesFor(after).where((b) => !expertBadgesFor(before).contains(b)).toList();
+    final newBadges = expertBadgesFor(after)
+        .where((b) => !expertBadgesFor(before).contains(b))
+        .toList();
     final next = nextTier(after.points);
     final levelUp = newTier.minPoints > oldTier.minPoints;
     return showDialog<void>(
       context: context,
       builder: (c) => AlertDialog(
-        title: Text(levelUp ? trf('{emoji} You\'re now a {tier}!', {'emoji': newTier.emoji, 'tier': newTier.name}) : tr('Thanks for your review!')),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (gained > 0) Text(trf('+{n} points · {total} in total', {'n': gained, 'total': after.points})),
-          if (gained <= 0) Text(trf('{total} points in total', {'total': after.points})),
-          for (final b in newBadges) Text(trf('{emoji} New badge: {name}', {'emoji': b.emoji, 'name': b.name})),
-          if (next != null)
-            Text(trf('{n} more points to {tier}', {'n': next.$2, 'tier': next.$1.name}),
-                style: Theme.of(c).textTheme.bodySmall),
-        ]),
+        title: Text(
+          levelUp
+              ? trf('{emoji} You\'re now a {tier}!', {
+                  'emoji': newTier.emoji,
+                  'tier': newTier.name,
+                })
+              : tr('Thanks for your review!'),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (gained > 0)
+              Text(
+                trf('+{n} points · {total} in total', {
+                  'n': gained,
+                  'total': after.points,
+                }),
+              ),
+            if (gained <= 0)
+              Text(trf('{total} points in total', {'total': after.points})),
+            for (final b in newBadges)
+              Text(
+                trf('{emoji} New badge: {name}', {
+                  'emoji': b.emoji,
+                  'name': b.name,
+                }),
+              ),
+            if (next != null)
+              Text(
+                trf('{n} more points to {tier}', {
+                  'n': next.$2,
+                  'tier': next.$1.name,
+                }),
+                style: Theme.of(c).textTheme.bodySmall,
+              ),
+          ],
+        ),
         actions: [
           if (levelUp || newBadges.isNotEmpty)
             TextButton(
               onPressed: () {
                 Navigator.pop(c);
-                sharePictureCard(context, guideStoryCard(after), appInviteText());
+                sharePictureCard(
+                  context,
+                  guideStoryCard(after),
+                  appInviteText(),
+                );
               },
               child: Text(tr('Share')),
             ),
-          FilledButton(onPressed: () => Navigator.pop(c), child: Text(tr('Done'))),
+          FilledButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text(tr('Done')),
+          ),
         ],
       ),
     );
@@ -346,8 +492,14 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
         title: Text(tr('Delete your review?')),
         content: Text(tr('Its points are removed too.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(tr('Cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(tr('Delete'))),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text(tr('Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text(tr('Delete')),
+          ),
         ],
       ),
     );
@@ -357,7 +509,10 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
       ref.invalidate(placeStatsProvider(widget.placeId));
       ref.invalidate(placeReviewsProvider(widget.placeId));
       ref.invalidate(myReviewerStatsProvider);
-      if (mounted) context.pop();
+      if (mounted) {
+        setState(() => _leaving = true);
+        context.pop();
+      }
     } catch (e) {
       if (mounted) showError(context, e);
     }
@@ -368,99 +523,183 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
     final place = ref.watch(placeProvider(widget.placeId));
     final isGuest = ref.watch(authStateProvider).value?.isAnonymous ?? true;
     final text = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_existing ? tr('Edit your review') : tr('Write a review')),
-        actions: [
-          if (_existing) IconButton(tooltip: tr('Delete'), icon: const Icon(Icons.delete_outline), onPressed: _delete),
-        ],
-      ),
-      body: AsyncView<Place?>(
-        value: place,
-        builder: (p) {
-          if (p == null) return EmptyState(emoji: '🤷', title: tr('Place not found'));
-          if (isGuest) {
-            return EmptyState(
-              emoji: '✍️',
-              title: tr('Sign in to write reviews'),
-              message: tr('Reviews show your name, so they need a Google account. Sign in from Profile.'),
-            );
-          }
-          if (!_loaded) return const Center(child: CircularProgressIndicator());
-          final draft = _draft(p);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 120),
-            children: [
-              Text(p.shownName, style: text.headlineSmall),
-              Text([p.kindLabel ?? Categories.label(p.category), ?p.area].join(' · '),
-                  style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
-              const SizedBox(height: KSpace.md),
-              Text(tr('Your rating'), style: text.titleMedium),
-              Row(children: [
-                for (var i = 1; i <= 5; i++)
-                  IconButton(
-                    iconSize: 38,
-                    tooltip: trf('{n} stars', {'n': i}),
-                    onPressed: () => setState(() => _stars = i),
-                    icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: context.k.accent),
-                  ),
-              ]),
-              for (final q in reviewQuestionsFor(p.category)) ...[
-                const SizedBox(height: KSpace.sm),
-                Text(q.text, style: text.titleSmall),
-                const SizedBox(height: 4),
-                Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
-                  for (final o in q.options.entries)
-                    q.multi
-                        ? FilterChip(
-                            label: Text(tr(o.value)),
-                            selected: _answers[q.key]?.contains(o.key) ?? false,
-                            onSelected: (on) => setState(() {
-                              final s = _answers.putIfAbsent(q.key, () => {});
-                              on ? s.add(o.key) : s.remove(o.key);
-                            }),
-                          )
-                        : ChoiceChip(
-                            label: Text(tr(o.value)),
-                            selected: _answers[q.key]?.contains(o.key) ?? false,
-                            showCheckmark: false,
-                            onSelected: (on) => setState(() => _answers[q.key] = on ? {o.key} : {}),
-                          ),
-                ]),
-              ],
-              const SizedBox(height: KSpace.md),
-              TextField(
-                controller: _text,
-                maxLines: 5,
-                maxLength: 1000,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: tr('Tell others about it (optional)'),
-                  hintText: tr('What did you like? What should people know before going?'),
-                ),
+    final dirty =
+        _loaded &&
+        (_stars > 0 ||
+            _text.text.trim().isNotEmpty ||
+            _answers.values.any((v) => v.isNotEmpty));
+    return PopScope(
+      canPop: !dirty || _leaving,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final leave = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text(tr('Leave without posting?')),
+            content: Text(
+              tr(
+                'Your review isn\'t posted yet. If you leave, your answers are lost.',
               ),
-              Card(
-                color: context.k.accentSoft,
-                child: ListTile(
-                  leading: const Text('🏆', style: TextStyle(fontSize: 24)),
-                  title: Text(trf('This review earns {n} points', {'n': draft.points})),
-                  subtitle: Text(draft.isDetailed
-                      ? tr('Detailed review: double points!')
-                      : tr('Answer 3+ questions and write 50+ letters for double points.')),
-                ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: Text(tr('Leave')),
               ),
-              const SizedBox(height: KSpace.sm),
-              Text(tr('Reviews are public with your name. Be honest and kind; no ads or personal details.'),
-                  style: text.bodySmall),
-              const SizedBox(height: KSpace.md),
-              BusyButton(
-                label: _existing ? tr('Update review') : tr('Post review'),
-                icon: Icons.send,
-                onPressed: () => _submit(p),
+              FilledButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: Text(tr('Keep writing')),
               ),
             ],
-          );
-        },
+          ),
+        );
+        if (leave == true && context.mounted) {
+          setState(() => _leaving = true);
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _existing ? tr('Edit your review') : tr('Write a review'),
+          ),
+          actions: [
+            if (_existing)
+              IconButton(
+                tooltip: tr('Delete'),
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _delete,
+              ),
+          ],
+        ),
+        body: AsyncView<Place?>(
+          value: place,
+          builder: (p) {
+            if (p == null) {
+              return EmptyState(emoji: '🤷', title: tr('Place not found'));
+            }
+            if (isGuest) {
+              return EmptyState(
+                emoji: '✍️',
+                title: tr('Sign in to write reviews'),
+                message: tr(
+                  'Reviews show your name, so they need a Google account. Sign in from Profile.',
+                ),
+              );
+            }
+            if (!_loaded) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final draft = _draft(p);
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 120),
+              children: [
+                Text(p.shownName, style: text.headlineSmall),
+                Text(
+                  [
+                    p.kindLabel ?? Categories.label(p.category),
+                    ?p.area,
+                  ].join(' · '),
+                  style: text.bodyMedium?.copyWith(color: context.k.inkMuted),
+                ),
+                const SizedBox(height: KSpace.md),
+                Text(tr('Your rating'), style: text.titleMedium),
+                Row(
+                  children: [
+                    for (var i = 1; i <= 5; i++)
+                      IconButton(
+                        iconSize: 38,
+                        tooltip: trf('{n} stars', {'n': i}),
+                        onPressed: () => setState(() => _stars = i),
+                        icon: Icon(
+                          i <= _stars
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          color: context.k.accent,
+                        ),
+                      ),
+                  ],
+                ),
+                for (final q in reviewQuestionsFor(p.category)) ...[
+                  const SizedBox(height: KSpace.sm),
+                  Text(q.text, style: text.titleSmall),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: KSpace.sm,
+                    runSpacing: KSpace.sm,
+                    children: [
+                      for (final o in q.options.entries)
+                        q.multi
+                            ? FilterChip(
+                                label: Text(tr(o.value)),
+                                selected:
+                                    _answers[q.key]?.contains(o.key) ?? false,
+                                onSelected: (on) => setState(() {
+                                  final s = _answers.putIfAbsent(
+                                    q.key,
+                                    () => {},
+                                  );
+                                  on ? s.add(o.key) : s.remove(o.key);
+                                }),
+                              )
+                            : ChoiceChip(
+                                label: Text(tr(o.value)),
+                                selected:
+                                    _answers[q.key]?.contains(o.key) ?? false,
+                                showCheckmark: false,
+                                onSelected: (on) => setState(
+                                  () => _answers[q.key] = on ? {o.key} : {},
+                                ),
+                              ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: KSpace.md),
+                TextField(
+                  controller: _text,
+                  maxLines: 5,
+                  maxLength: 1000,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    labelText: tr('Tell others about it (optional)'),
+                    hintText: tr(
+                      'What did you like? What should people know before going?',
+                    ),
+                  ),
+                ),
+                Card(
+                  color: context.k.accentSoft,
+                  child: ListTile(
+                    leading: const Text('🏆', style: TextStyle(fontSize: 24)),
+                    title: Text(
+                      trf('This review earns {n} points', {'n': draft.points}),
+                    ),
+                    subtitle: Text(
+                      draft.isDetailed
+                          ? tr('Detailed review: double points!')
+                          : tr(
+                              'Answer 3+ questions and write 50+ letters for double points.',
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: KSpace.sm),
+                Text(
+                  tr(
+                    'Reviews are public with your name. Be honest and kind; no ads or personal details.',
+                  ),
+                  style: text.bodySmall,
+                ),
+                const SizedBox(height: KSpace.md),
+                BusyButton(
+                  label: _existing ? tr('Update review') : tr('Post review'),
+                  icon: Icons.send,
+                  onPressed: () => _submit(p),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -499,7 +738,11 @@ class GuideScreen extends ConsumerWidget {
             IconButton(
               tooltip: tr('Share as a picture'),
               icon: const Icon(Icons.ios_share),
-              onPressed: () => sharePictureCard(context, guideStoryCard(stats.value!), appInviteText()),
+              onPressed: () => sharePictureCard(
+                context,
+                guideStoryCard(stats.value!),
+                appInviteText(),
+              ),
             ),
         ],
       ),
@@ -515,28 +758,49 @@ class GuideScreen extends ConsumerWidget {
             final next = nextTier(s.points);
             final progress = next == null
                 ? 1.0
-                : (s.points - tier.minPoints) / (next.$1.minPoints - tier.minPoints);
+                : (s.points - tier.minPoints) /
+                      (next.$1.minPoints - tier.minPoints);
             return ListView(
-              padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
+              padding: const EdgeInsets.fromLTRB(
+                KSpace.md,
+                0,
+                KSpace.md,
+                KSpace.xl,
+              ),
               children: [
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(KSpace.md),
-                    child: Column(children: [
-                      Text(tier.emoji, style: const TextStyle(fontSize: 52)),
-                      Text(tier.name, style: text.headlineSmall),
-                      Text(trf('{n} points · {r} reviews', {'n': s.points, 'r': s.total})),
-                      const SizedBox(height: KSpace.sm),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(value: progress.clamp(0, 1), minHeight: 10),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        next == null ? tr('You reached the top level!') : trf('{n} more points to {tier}', {'n': next.$2, 'tier': next.$1.name}),
-                        style: text.bodySmall,
-                      ),
-                    ]),
+                    child: Column(
+                      children: [
+                        Text(tier.emoji, style: const TextStyle(fontSize: 52)),
+                        Text(tier.name, style: text.headlineSmall),
+                        Text(
+                          trf('{n} points · {r} reviews', {
+                            'n': s.points,
+                            'r': s.total,
+                          }),
+                        ),
+                        const SizedBox(height: KSpace.sm),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: progress.clamp(0, 1),
+                            minHeight: 10,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          next == null
+                              ? tr('You reached the top level!')
+                              : trf('{n} more points to {tier}', {
+                                  'n': next.$2,
+                                  'tier': next.$1.name,
+                                }),
+                          style: text.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const ChallengeCard(),
@@ -544,44 +808,85 @@ class GuideScreen extends ConsumerWidget {
                 for (final t in guideTiers)
                   ListTile(
                     dense: true,
-                    leading: Text(t.emoji, style: const TextStyle(fontSize: 22)),
-                    title: Text(t.name, style: t == tier ? TextStyle(color: context.k.accent, fontWeight: FontWeight.w800) : null),
+                    leading: Text(
+                      t.emoji,
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                    title: Text(
+                      t.name,
+                      style: t == tier
+                          ? TextStyle(
+                              color: context.k.accent,
+                              fontWeight: FontWeight.w800,
+                            )
+                          : null,
+                    ),
                     trailing: Text(trf('{n} points', {'n': t.minPoints})),
                   ),
                 SectionTitle(tr('Expert badges')),
-                Text(tr('Earn one when enough of your reviews (and at least half of them) are about one kind of place.'),
-                    style: text.bodySmall),
+                Text(
+                  tr(
+                    'Earn one when enough of your reviews (and at least half of them) are about one kind of place.',
+                  ),
+                  style: text.bodySmall,
+                ),
                 for (final b in expertBadges)
                   ListTile(
                     dense: true,
-                    leading: Text(b.emoji, style: const TextStyle(fontSize: 22)),
+                    leading: Text(
+                      b.emoji,
+                      style: const TextStyle(fontSize: 22),
+                    ),
                     title: Text(b.name),
-                    subtitle: Text(trf('{n} of {t} reviews', {'n': reviewsFor(b, s).clamp(0, b.needed), 't': b.needed})),
+                    subtitle: Text(
+                      trf('{n} of {t} reviews', {
+                        'n': reviewsFor(b, s).clamp(0, b.needed),
+                        't': b.needed,
+                      }),
+                    ),
                     trailing: expertBadgesFor(s).contains(b)
                         ? Icon(Icons.verified, color: context.k.accent)
                         : const Icon(Icons.lock_outline),
                   ),
                 SectionTitle(tr('How to earn points')),
-                Text(tr('• 10 points for every review\n• 10 more for a detailed one: 3+ answers and 50+ letters\n'
-                    '• One review per place; you can update it any time')),
+                Text(
+                  tr(
+                    '• 10 points for every review\n• 10 more for a detailed one: 3+ answers and 50+ letters\n'
+                    '• One review per place; you can update it any time',
+                  ),
+                ),
                 const _FriendsBoard(),
                 SectionTitle(tr('Your reviews')),
                 mine.when(
                   loading: () => const LinearProgressIndicator(),
                   error: (e, _) => Text(friendlyError(e)),
                   data: (list) => list.isEmpty
-                      ? Text(tr('No reviews yet. Open any place you\'ve been to and tap "Write a review".'))
-                      : Column(children: [
-                          for (final r in list)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Text(Categories.emoji(r.category), style: const TextStyle(fontSize: 22)),
-                              title: Text(byId[r.placeId]?.shownName ?? tr('A place no longer on the map')),
-                              subtitle: Text(starsText(r.stars)),
-                              trailing: Text(trf('+{n}', {'n': r.points})),
-                              onTap: byId[r.placeId] == null ? null : () => context.push('/place/${r.placeId}'),
-                            ),
-                        ]),
+                      ? Text(
+                          tr(
+                            'No reviews yet. Open any place you\'ve been to and tap "Write a review".',
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            for (final r in list)
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: Text(
+                                  Categories.emoji(r.category),
+                                  style: const TextStyle(fontSize: 22),
+                                ),
+                                title: Text(
+                                  byId[r.placeId]?.shownName ??
+                                      tr('A place no longer on the map'),
+                                ),
+                                subtitle: Text(starsText(r.stars)),
+                                trailing: Text(trf('+{n}', {'n': r.points})),
+                                onTap: byId[r.placeId] == null
+                                    ? null
+                                    : () => context.push('/place/${r.placeId}'),
+                              ),
+                          ],
+                        ),
                 ),
               ],
             );
@@ -603,32 +908,52 @@ class _FriendsBoard extends ConsumerWidget {
     if (uid == null || friends.isEmpty) return const SizedBox.shrink();
     final ids = [uid, ...friends.take(29)];
     final stats = ref.watch(_boardProvider(profilesKey(ids)));
-    final profiles = ref.watch(profilesProvider(profilesKey(ids))).value ?? const <String, PublicProfile>{};
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle(tr('You and your friends')),
-      stats.when(
-        loading: () => const LinearProgressIndicator(),
-        error: (e, _) => Text(friendlyError(e)),
-        data: (m) {
-          final rows = [for (final id in ids) (id, m[id] ?? const ReviewerStats())]
-            ..sort((a, b) => b.$2.points.compareTo(a.$2.points));
-          return Column(children: [
-            for (var i = 0; i < rows.length; i++)
-              ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(radius: 14, child: Text('${i + 1}')),
-                title: Text(rows[i].$1 == uid ? tr('You') : (profiles[rows[i].$1]?.displayName ?? '…'),
-                    style: rows[i].$1 == uid ? const TextStyle(fontWeight: FontWeight.w800) : null),
-                subtitle: Text(guideTitle(rows[i].$2)),
-                trailing: Text(trf('{n} points', {'n': rows[i].$2.points})),
-              ),
-          ]);
-        },
-      ),
-    ]);
+    final profiles =
+        ref.watch(profilesProvider(profilesKey(ids))).value ??
+        const <String, PublicProfile>{};
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(tr('You and your friends')),
+        stats.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (e, _) => Text(friendlyError(e)),
+          data: (m) {
+            final rows = [
+              for (final id in ids) (id, m[id] ?? const ReviewerStats()),
+            ]..sort((a, b) => b.$2.points.compareTo(a.$2.points));
+            return Column(
+              children: [
+                for (var i = 0; i < rows.length; i++)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(radius: 14, child: Text('${i + 1}')),
+                    title: Text(
+                      rows[i].$1 == uid
+                          ? tr('You')
+                          : (profiles[rows[i].$1]?.displayName ?? '…'),
+                      style: rows[i].$1 == uid
+                          ? const TextStyle(fontWeight: FontWeight.w800)
+                          : null,
+                    ),
+                    subtitle: Text(guideTitle(rows[i].$2)),
+                    trailing: Text(trf('{n} points', {'n': rows[i].$2.points})),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
-final _boardProvider = FutureProvider.autoDispose.family<Map<String, ReviewerStats>, String>((ref, key) =>
-    key.isEmpty ? Future.value(const {}) : ref.watch(reviewsRepositoryProvider).reviewerStatsFor(key.split(',')));
+final _boardProvider = FutureProvider.autoDispose
+    .family<Map<String, ReviewerStats>, String>(
+      (ref, key) => key.isEmpty
+          ? Future.value(const {})
+          : ref
+                .watch(reviewsRepositoryProvider)
+                .reviewerStatsFor(key.split(',')),
+    );
