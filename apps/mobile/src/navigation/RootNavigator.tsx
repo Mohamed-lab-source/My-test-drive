@@ -31,6 +31,7 @@ import { CookingStatsScreen } from "../screens/CookingStatsScreen";
 import { BadgesScreen } from "../screens/BadgesScreen";
 import { MiseEnPlaceScreen } from "../screens/MiseEnPlaceScreen";
 import { WeeklyRecapScreen } from "../screens/WeeklyRecapScreen";
+import { MealPrepScreen } from "../screens/MealPrepScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -173,6 +174,7 @@ export function RootNavigator() {
           component={LeanMuscleModeScreen}
           options={{ title: t("leanMuscle.title") }}
         />
+        <Stack.Screen name="MealPrep" component={MealPrepScreen} options={{ title: t("mealPrep.title") }} />
         <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>

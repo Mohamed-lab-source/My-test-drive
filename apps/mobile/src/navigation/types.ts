@@ -63,6 +63,7 @@ export type RootStackParamList = {
   Badges: undefined;
   WeeklyRecap: undefined;
   LeanMuscleMode: undefined;
+  MealPrep: undefined;
   WhatsNew: undefined;
 };
 

@@ -445,6 +445,13 @@ export function MealPlannerScreen({ navigation }: Props) {
         </View>
         <View style={styles.autoFillButton}>
           <PrimaryButton
+            label={t("mealPrep.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("MealPrep")}
+          />
+        </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
             label={t("mealPlanner.viewCalendar")}
             variant="outline"
             onPress={() => navigation.navigate("CookingCalendar")}

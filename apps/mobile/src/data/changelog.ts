@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-meal-prep",
+    date: "2026-10-13",
+    title: { en: "Meal Prep Planner", ar: "مخطط تحضير الوجبات" },
+    body: {
+      en: "Build a week of 3 meals a day from the cuisines you love, within your budget, with the calories of every meal worked out -- in a calorie deficit if you like, with a free day and a cheat meal, plus a batch-cook list for prep day.",
+      ar: "جهّزي أسبوعاً من 3 وجبات يومياً من المطابخ التي تحبينها وضمن ميزانيتك، مع حساب سعرات كل وجبة -- بعجز في السعرات إن أردتِ، مع يوم حر ووجبة حرة، وقائمة طبخ مسبق ليوم التحضير.",
+    },
+  },
+  {
     id: "2026-09-discovery",
     date: "2026-09-28",
     title: { en: "Trending & substitution finder", ar: "الرائج وبديل المكونات" },
