@@ -481,7 +481,7 @@ jobs:
           tag_name: play-store-bundle
           name: Khroga — Play Store bundle
           body: |
-            Newest Play Store bundle (${{ github.sha }}), version code ${{ 100 + github.run_number }}.
+            Newest Play Store bundle (${{ github.sha }}), from build run ${{ github.run_number }}.
             Download **khroga.aab** and upload it in Google Play Console. Not for installing on phones.
           prerelease: true
           make_latest: false
