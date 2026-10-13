@@ -11,7 +11,8 @@ Everything happens in your browser (phone or computer). Do the steps in order.
    - `KHROGA_RELEASE_PASSWORD` = all the text in `KHROGA_RELEASE_PASSWORD.txt`
 5. Save both files somewhere private (e.g. Google Drive). Then delete the download on GitHub.
 6. Push any change (or **Run workflow** without ticking anything). From now on each build also makes
-   **khroga-play-store-bundle** (the `.aab` file you upload to Google Play).
+   **khroga.aab** at https://github.com/Mohamed-lab-source/My-test-drive/releases/download/play-store-bundle/khroga.aab
+   (the file you upload to Google Play).
 
 ## 1b. Free map key (5 minutes, do this before going public)
 The map uses OpenStreetMap's own map for now, which only allows a few users. For everyone:
@@ -44,7 +45,7 @@ and 4–8 screenshots from your phone.
 
 ## 4. Closed test (required: 12+ testers for 14 days)
 1. Play Console → **Testing → Closed testing** → create a track → upload the newest `.aab`
-   (GitHub → Actions → latest Khroga run → Artifacts → **khroga-play-store-bundle**; unzip it first).
+   (download **khroga.aab** from https://github.com/Mohamed-lab-source/My-test-drive/releases/download/play-store-bundle/khroga.aab; no unzipping).
 2. Add your testers' Gmail addresses (at least 12) and send them the opt-in link.
 3. They install Khroga from the Play Store and keep it for **14 days**. Ask them to try it and send
    problems with "Report a problem or idea" in the app.

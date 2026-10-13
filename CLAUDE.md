@@ -205,6 +205,11 @@ How the code enforces it (keep it this way):
   Overture socials), menu links (`website:menu`), halal and kids areas.
   Skeleton loading in `AsyncView`; predictive-back page transitions;
   category-coloured headers for places without photos.
+- CI storage: GitHub's artifact storage is tiny, so the app config goes from
+  the firebase job to the android job through actions/cache (key
+  app-config-<run>), the APK and the .aab are published as release assets
+  (`latest-apk/khroga.apk`, `play-store-bundle/khroga.aab`), and the last
+  step deletes Khroga's old artifacts (only its own names).
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the
