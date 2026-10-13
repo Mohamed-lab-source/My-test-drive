@@ -401,6 +401,9 @@ jobs:
         with:
           path: out/
           key: app-config-${{ github.run_id }}-${{ github.run_attempt }}
+          # "Re-run failed jobs" only re-runs this job, so the config saved by
+          # an earlier attempt of the same run must still be found.
+          restore-keys: app-config-${{ github.run_id }}-
           fail-on-cache-miss: true
 
       - name: Connect the app to Firebase
