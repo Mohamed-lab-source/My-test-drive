@@ -88,6 +88,8 @@ class TermsScreen extends StatelessWidget {
         ('Be kind', 'No harassment, hate, threats, spam or illegal content in groups and chats. Reported content may be removed and accounts may be blocked.'),
         ('Facts can change', 'Places, opening hours and other facts come from OpenStreetMap and Overture Maps and may be out of date. Check before you go.'),
         ('Your outings', 'Khroga suggests places; you decide where to go. Stay safe and respect places\' rules.'),
+        ('Reviews', 'Review only places you really visited, and be honest and kind. No ads, links, phone numbers or other people\'s private details. Reviews are public with your name; reported reviews may be removed.'),
+        ('AI-written text', 'When you turn on the AI, Google Gemini writes the plan\'s words. It can make mistakes; the places themselves always come from the map. Use "Report the AI-written text" if something is wrong or offensive.'),
         ('Free service', 'Khroga is free and offered as it is. Features may change.'),
       ]);
 }

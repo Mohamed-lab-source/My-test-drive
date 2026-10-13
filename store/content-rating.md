@@ -2,7 +2,8 @@
 
 **Content rating questionnaire (IARC)** — category: *All other app types*.
 - Violence, sex, language, drugs, gambling: **No** to all.
-- Does the app let users interact or exchange content? **Yes** (group chats with friends and invite codes).
+- Does the app let users interact or exchange content? **Yes** (group chats with friends and invite codes, and public place reviews).
+- Does the app contain AI-generated content? **Yes**: optional plan text written by Google Gemini. People can report it in the app ("Report the AI-written text").
 - Does the app share the user's location with other users? **Yes** (only when the user taps "Send my location" or "Check in").
 - Does the app allow purchases? **No**.
 

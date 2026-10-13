@@ -43,6 +43,16 @@ class SafetyRepository {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+  /// Google Play: people must be able to flag offensive AI-written text.
+  Future<void> reportAiText({required String by, required String text, required String reason}) =>
+      _db.collection('reports').add({
+        'by': by,
+        'kind': 'ai',
+        'text': text.length > 1000 ? text.substring(0, 1000) : text,
+        'reason': reason,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
   Future<void> reportUser({required String by, required String targetUid, required String reason}) =>
       _db.collection('reports').add({
         'by': by,

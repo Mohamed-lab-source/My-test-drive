@@ -65,6 +65,27 @@ fingerprint). After step 5 and one more build:
 2. If it says not verified, run the workflow once more (it re-publishes the file) and check again.
 Links still work without this: Android just asks which app to use.
 
+## 5c. Play Console "App content" answers (copy these)
+| Question | Answer |
+|---|---|
+| Privacy policy | `https://<project>.web.app/privacy` |
+| App access | All functionality is available without special access (guest mode). Reviews and friends need any Google account. |
+| Ads | No ads |
+| Content rating | See `store/content-rating.md` |
+| Target audience | 18 and over (see content-rating.md) |
+| Data safety | See `store/data-safety.md` |
+| Account deletion URL | `https://<project>.web.app/delete-account` |
+| Government / financial / health / news app | No |
+| User-generated content | Yes: chats and reviews. Rules people agree to before posting, in-app reporting of messages, reviews, people and AI text, and blocking. |
+| AI-generated content | Yes (optional plan text). People can report it in the app. |
+
+## 5d. Screenshots (take them on your phone, 4–8 of them)
+Use the newest app, dark mode, Arabic or English (you can upload both sets):
+1. Plan tab with a vibe picked · 2. A plan result with the map · 3. Explore with "Open now" ·
+4. A place page with Khroga reviews · 5. A group chat with a poll · 6. Khroga Guide (your level) ·
+7. Outing ideas · 8. A plan shared as a picture.
+Avoid showing other people's names or private chats.
+
 ## 6. Go public
 After 14 days with 12+ testers, Play Console shows **Apply for production**. Answer the short questions
 about your test, then submit. Google's review usually takes a few days.

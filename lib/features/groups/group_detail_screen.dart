@@ -24,6 +24,7 @@ import '../../widgets/common.dart';
 import '../../widgets/launchers.dart';
 import '../friends/friends_screen.dart' show groupQrPrefix;
 import 'create_group_sheet.dart';
+import '../profile/community_rules.dart';
 
 class GroupDetailScreen extends ConsumerWidget {
   const GroupDetailScreen({super.key, required this.groupId});
@@ -1315,6 +1316,8 @@ class _ComposerState extends ConsumerState<_Composer> {
   Future<void> _send([String? quick]) async {
     final text = (quick ?? _controller.text).trim();
     if (text.isEmpty || _sending) return;
+    if (!await ensureCommunityRules(context, ref)) return;
+    if (!mounted) return;
     setState(() => _sending = true);
     final name = ref.read(myProfileProvider).value?.displayName ?? 'Someone';
     try {

@@ -176,6 +176,9 @@ service cloud.firestore {
         && validName(r.name)
         && r.stars is int && r.stars >= 1 && r.stars <= 5
         && r.text is string && r.text.size() <= 1000
+        // No links or phone numbers in public reviews (no spam or ads).
+        && !r.text.matches('(?s).*(https?://|www[.]).*')
+        && !r.text.matches('(?s).*[0-9٠-٩][0-9٠-٩ -]{7,}[0-9٠-٩].*')
         && r.answers is map && r.answers.size() <= 20
         && r.category is string && r.category.size() > 0 && r.category.size() <= 30
         && r.updatedAt == request.time;
@@ -266,7 +269,7 @@ service cloud.firestore {
         && newData().keys().hasOnly(['by', 'kind', 'targetUid', 'groupId', 'messageId', 'placeId',
                                      'text', 'reason', 'createdAt'])
         && newData().by == me()
-        && newData().kind in ['message', 'user', 'review']
+        && newData().kind in ['message', 'user', 'review', 'ai']
         && newData().reason is string && newData().reason.size() > 0 && newData().reason.size() <= 300
         && (!('text' in newData()) || (newData().text is string && newData().text.size() <= 1000))
         && newData().createdAt == request.time;

@@ -367,3 +367,23 @@ const outingIdeas = [
 /// A random item, or null for an empty list.
 T? randomOf<T>(List<T> items, math.Random random) =>
     items.isEmpty ? null : items[random.nextInt(items.length)];
+
+final _link = RegExp(r'(https?://|www\.|\.com\b|\.net\b)', caseSensitive: false);
+final _phone = RegExp(r'[0-9٠-٩][0-9٠-٩ -]{7,}[0-9٠-٩]');
+
+/// Words we don't allow in public reviews (checked word by word, so normal
+/// words that merely contain them are fine).
+const _blockedWords = {
+  'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'bastard', 'slut', 'whore', 'dick', 'cunt',
+  'شرموط', 'شرموطة', 'متناك', 'خول', 'عرص', 'وسخة', 'كسمك', 'منيوك', 'زبي',
+};
+
+/// Why a review text can't be posted, or null when it's fine: no links,
+/// no phone numbers, no rude words.
+String? reviewTextProblem(String text) {
+  if (_link.hasMatch(text)) return tr('Please remove links from your review.');
+  if (_phone.hasMatch(text)) return tr('Please remove phone numbers from your review.');
+  final words = text.toLowerCase().split(RegExp(r'[^\p{L}]+', unicode: true));
+  if (words.any(_blockedWords.contains)) return tr('Please keep it kind: remove rude words.');
+  return null;
+}

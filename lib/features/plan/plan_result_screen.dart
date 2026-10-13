@@ -243,6 +243,15 @@ class _PlanBody extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           _MakeNicer(plan: plan),
         ],
+        if (plan.source == 'ai')
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              icon: const Icon(Icons.flag_outlined, size: 18),
+              label: Text(tr('Report the AI-written text')),
+              onPressed: () => _reportAi(context, ref, plan),
+            ),
+          ),
         const SizedBox(height: KSpace.lg),
         for (var i = 0; i < plan.stops.length; i++)
           _StopTile(
@@ -1283,3 +1292,29 @@ Widget planStoryCard(OutingPlan plan) => StoryCard(
           (Categories.emoji(s.category), s.name, [?s.startTime, ?s.area].join(' · ')),
       ],
     );
+
+/// Flag offensive or wrong AI-written words (Google Play's AI content rule).
+Future<void> _reportAi(BuildContext context, WidgetRef ref, OutingPlan plan) async {
+  final reason = await showModalBottomSheet<String>(
+    context: context,
+    useSafeArea: true,
+    builder: (c) => ListView(shrinkWrap: true, children: [
+      ListTile(title: Text(tr('What\'s wrong with the AI text?'), style: Theme.of(c).textTheme.titleMedium)),
+      for (final r in const ['Offensive or inappropriate', 'Wrong or made-up information', 'Something else'])
+        ListTile(title: Text(tr(r)), onTap: () => Navigator.pop(c, r)),
+    ]),
+  );
+  if (reason == null) return;
+  final uid = ref.read(uidProvider);
+  if (uid == null) return;
+  try {
+    await ref.read(safetyRepositoryProvider).reportAiText(
+          by: uid,
+          reason: reason,
+          text: [plan.title, plan.summary, ...plan.tips, for (final s in plan.stops) ?s.why].join('\n'),
+        );
+    if (context.mounted) showMessage(context, tr('Thanks. We\'ll look at it.'));
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}

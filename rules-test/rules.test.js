@@ -370,3 +370,24 @@ test("reviews: one per person, stars and points can't be faked", async () => {
   await assertSucceeds(del({ count: 0, sum: 0 }, { total: 0, detailed: 0, cats: {}, place: "p1" }));
   await assertSucceeds(deleteDoc(doc(db, "reviewerStats/alice")));
 });
+
+test("reviews: no links or phone numbers; AI text can be reported", async () => {
+  const db = as(ALICE);
+  const write = (text) => {
+    const b = writeBatch(db);
+    b.set(doc(db, "reviews/p2__alice"), {
+      placeId: "p2", uid: ALICE, name: "Alice", stars: 4, text, answers: {}, category: "cafe",
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    b.set(doc(db, "placeStats/p2"), { count: 1, sum: 4 });
+    b.set(doc(db, "reviewerStats/alice"), { total: 1, detailed: 0, cats: { cafe: 1 }, place: "p2" });
+    return b.commit();
+  };
+  await assertFails(write("order at https://spam.test"));
+  await assertFails(write("call 0100 123 4567 now"));
+  await assertSucceeds(write("Lovely terrace, opened 2019."));
+  await assertSucceeds(addDoc(collection(db, "reports"), {
+    by: ALICE, kind: "ai", text: "plan words", reason: "Offensive or inappropriate", createdAt: serverTimestamp(),
+  }));
+});
+

@@ -2,6 +2,20 @@
 
 Keep each under 500 characters.
 
+## 0.8.1
+
+<en-US>
+• Community rules before your first review or message
+• Report AI-written plan text if something is wrong
+• Cleaner reviews: no links, phone numbers or rude words
+</en-US>
+
+<ar>
+• قواعد المجتمع قبل أول تقييم أو رسالة
+• بلّغ عن كلام الذكاء الاصطناعي لو فيه حاجة غلط
+• تقييمات أنضف: من غير لينكات أو أرقام أو كلام وحش
+</ar>
+
 ## 0.8.0
 
 <en-US>

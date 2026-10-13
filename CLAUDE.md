@@ -185,6 +185,13 @@ How the code enforces it (keep it this way):
   ≥ half of all). Reads on request only: place page reads placeStats (1
   doc); the list loads the newest 20 when tapped. Reports kind 'review';
   blocked people's reviews hidden; deleting the account deletes reviews.
+- Play policy items (0.8.1): people agree to community rules once before
+  their first review or chat message (`ensureCommunityRules`, phone pref
+  `community.accepted`); AI-written plan text can be reported (reports kind
+  'ai'); reviews can't contain links, phone numbers (client
+  `reviewTextProblem` + firestore.rules regex) or blocked rude words
+  (client). Terms cover reviews and AI text. Play Console answers and the
+  screenshot list are in store/PUBLISHING.md (5c, 5d).
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

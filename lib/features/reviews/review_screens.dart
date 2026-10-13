@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/extras.dart' show reviewTextProblem;
 import '../../app/i18n.dart';
+import '../profile/community_rules.dart';
 import '../../app/local_prefs.dart';
 import '../../app/review.dart' show happyMoment;
 import '../../app/share_texts.dart';
@@ -265,11 +267,20 @@ class _ReviewFormScreenState extends ConsumerState<ReviewFormScreen> {
   Future<void> _submit(Place place) async {
     final uid = ref.read(uidProvider);
     final name = ref.read(myProfileProvider).value?.displayName ?? '';
-    if (uid == null || name.isEmpty) return;
+    if (uid == null) return;
+    if (name.isEmpty) {
+      showMessage(context, tr('Add your name in Profile first; reviews show it.'));
+      return;
+    }
     if (_stars == 0) {
       showMessage(context, tr('Tap the stars first.'));
       return;
     }
+    if (reviewTextProblem(_text.text) case final problem?) {
+      showMessage(context, problem);
+      return;
+    }
+    if (!await ensureCommunityRules(context, ref)) return;
     try {
       final (before, after) = await ref.read(reviewsRepositoryProvider).save(
             uid: uid,

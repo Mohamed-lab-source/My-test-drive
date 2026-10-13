@@ -130,4 +130,14 @@ void main() {
     expect(prayersDuring(DateTime(2026, 6, 21), '03:00', '04:00', 30.0444, 31.2357), isEmpty);
     expect(prayersDuring(DateTime(2026, 6, 21), 'bad', '04:00', 30.0444, 31.2357), isEmpty);
   });
+
+  test('review text checks: links, phone numbers, rude words', () {
+    expect(reviewTextProblem('Great koshary, friendly staff. Will come back!'), isNull);
+    expect(reviewTextProblem('order at https://example.test'), isNotNull);
+    expect(reviewTextProblem('call 0100 123 4567'), isNotNull);
+    expect(reviewTextProblem('اتصل ٠١٠٠١٢٣٤٥٦٧'), isNotNull);
+    expect(reviewTextProblem('this place is shit'), isNotNull);
+    expect(reviewTextProblem('Opened in 2019, 3 floors'), isNull);
+    expect(reviewTextProblem('كسرت الكوباية'), isNull); // a normal word, not blocked
+  });
 }
