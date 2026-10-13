@@ -1,3 +1,4 @@
+import '../../app/fun.dart' show nextDays;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1784,6 +1785,50 @@ class _PollsSheet extends ConsumerWidget {
                     icon: const Icon(Icons.add),
                     label: Text(tr('Add option')),
                   ),
+                Wrap(spacing: KSpace.sm, children: [
+                  ActionChip(
+                    avatar: const Text('📅'),
+                    label: Text(tr('Which day?')),
+                    onPressed: () => setState(() {
+                      question.text = tr('Which day works for you?');
+                      for (final c in options) {
+                        c.dispose();
+                      }
+                      final now = DateTime.now();
+                      options
+                        ..clear()
+                        ..addAll(nextDays(now, count: 6).map((d) => TextEditingController(
+                            text: d.day == now.day ? tr('Today') : DateFormat('EEE d MMM').format(d))));
+                    }),
+                  ),
+                  ActionChip(
+                    avatar: const Text('🕒'),
+                    label: Text(tr('What time?')),
+                    onPressed: () => setState(() {
+                      question.text = tr('What time should we meet?');
+                      for (final c in options) {
+                        c.dispose();
+                      }
+                      options
+                        ..clear()
+                        ..addAll(['12:00', '15:00', '18:00', '20:00', '22:00'].map((t) => TextEditingController(text: t)));
+                    }),
+                  ),
+                  ActionChip(
+                    avatar: const Text('✨'),
+                    label: Text(tr('What vibe?')),
+                    onPressed: () => setState(() {
+                      question.text = tr('What are we in the mood for?');
+                      for (final c in options) {
+                        c.dispose();
+                      }
+                      options
+                        ..clear()
+                        ..addAll(['chill', 'foodie', 'active', 'culture', 'shopping', 'nightlife']
+                            .map((v) => TextEditingController(text: tr(Vibes.all[v]!))));
+                    }),
+                  ),
+                ]),
                 if (stopNames.length >= 2)
                   TextButton.icon(
                     onPressed: () => setState(() {

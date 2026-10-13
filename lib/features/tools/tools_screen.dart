@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/extras.dart';
+import '../../app/fun.dart' show makeTeams, conversationStarters;
 import '../../app/helpers.dart' show billTotal, walkingMinutes, tapFeedback;
 import '../../app/i18n.dart';
 import '../../app/local_prefs.dart';
@@ -30,6 +31,9 @@ class ToolsScreen extends StatelessWidget {
           _DecideCard(),
           _CoinCard(),
           _WhoCard(),
+          _TeamsCard(),
+          _DiceCard(),
+          _StarterCard(),
           _SplitCard(),
           _WalkCard(),
           _WeekCard(),
@@ -209,6 +213,144 @@ class _CoinCardState extends ConsumerState<_CoinCard> {
               child: Text('$_side!',
                   key: ValueKey(_flips), style: Theme.of(context).textTheme.headlineSmall),
             ),
+        ]),
+      );
+}
+
+/// Split friends into teams for games (bowling, quizzes, football…).
+class _TeamsCard extends ConsumerStatefulWidget {
+  const _TeamsCard();
+
+  @override
+  ConsumerState<_TeamsCard> createState() => _TeamsCardState();
+}
+
+class _TeamsCardState extends ConsumerState<_TeamsCard> {
+  final _names = TextEditingController();
+  int _teams = 2;
+  List<List<String>> _result = const [];
+
+  @override
+  void dispose() {
+    _names.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final names = _names.text.split(RegExp(r'[,\n،]')).map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    return _ToolCard(
+      emoji: '🧑‍🤝‍🧑',
+      title: tr('Make teams'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TextField(
+          controller: _names,
+          decoration: InputDecoration(hintText: tr('Names, separated by commas')),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: KSpace.sm),
+        Wrap(spacing: KSpace.sm, runSpacing: KSpace.xs, children: [
+          for (final n in [2, 3, 4])
+            ChoiceChip(
+              label: Text(trf('{n} teams', {'n': n})),
+              selected: _teams == n,
+              showCheckmark: false,
+              onSelected: (_) => setState(() => _teams = n),
+            ),
+        ]),
+        const SizedBox(height: KSpace.sm),
+        FilledButton.tonal(
+          onPressed: names.length < 2
+              ? null
+              : () {
+                  tapFeedback(ref.read(phoneSettingsProvider).haptics);
+                  setState(() => _result = makeTeams(names, _teams, math.Random()));
+                },
+          child: Text(tr('Shuffle teams')),
+        ),
+        for (final (i, team) in _result.indexed)
+          Padding(
+            padding: const EdgeInsets.only(top: KSpace.xs),
+            child: Text('${trf('Team {n}', {'n': i + 1})}: ${team.join(', ')}'),
+          ),
+      ]),
+    );
+  }
+}
+
+/// Roll one or two dice.
+class _DiceCard extends ConsumerStatefulWidget {
+  const _DiceCard();
+
+  @override
+  ConsumerState<_DiceCard> createState() => _DiceCardState();
+}
+
+class _DiceCardState extends ConsumerState<_DiceCard> {
+  static const _faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+  List<int> _roll = const [];
+  int _count = 2;
+
+  @override
+  Widget build(BuildContext context) => _ToolCard(
+        emoji: '🎲',
+        title: tr('Roll the dice'),
+        child: Row(children: [
+          FilledButton.tonal(
+            onPressed: () {
+              tapFeedback(ref.read(phoneSettingsProvider).haptics);
+              final r = math.Random();
+              setState(() => _roll = [for (var i = 0; i < _count; i++) r.nextInt(6)]);
+            },
+            child: Text(tr('Roll')),
+          ),
+          const SizedBox(width: KSpace.sm),
+          TextButton(
+            onPressed: () => setState(() {
+              _count = _count == 1 ? 2 : 1;
+              _roll = const [];
+            }),
+            child: Text(_count == 1 ? tr('1 die') : tr('2 dice')),
+          ),
+          const Spacer(),
+          if (_roll.isNotEmpty)
+            Text(
+              '${_roll.map((i) => _faces[i]).join(' ')}  ${_roll.fold<int>(0, (s, i) => s + i + 1)}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+        ]),
+      );
+}
+
+/// Questions to get people talking at the table.
+class _StarterCard extends StatefulWidget {
+  const _StarterCard();
+
+  @override
+  State<_StarterCard> createState() => _StarterCardState();
+}
+
+class _StarterCardState extends State<_StarterCard> {
+  int? _i;
+
+  @override
+  Widget build(BuildContext context) => _ToolCard(
+        emoji: '💬',
+        title: tr('Conversation starters'),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (_i != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: KSpace.sm),
+              child: Text(tr(conversationStarters[_i!]), style: Theme.of(context).textTheme.titleMedium),
+            ),
+          FilledButton.tonal(
+            onPressed: () => setState(() {
+              var next = math.Random().nextInt(conversationStarters.length);
+              if (next == _i) next = (next + 1) % conversationStarters.length;
+              _i = next;
+            }),
+            child: Text(_i == null ? tr('Give us a question') : tr('Another one')),
+          ),
         ]),
       );
 }

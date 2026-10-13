@@ -173,10 +173,22 @@ final myLocationProvider =
 final personalRepositoryProvider =
     Provider((ref) => PersonalRepository(ref.watch(firestoreProvider)));
 
-final visitedIdsProvider = StreamProvider<List<String>>((ref) {
+/// Places you've been with the day you marked them (one listener).
+final visitedEntriesProvider = StreamProvider<List<(String, DateTime?)>>((ref) {
   final uid = ref.watch(uidProvider);
   if (uid == null) return Stream.value(const []);
   return ref.watch(personalRepositoryProvider).watchVisited(uid);
+});
+
+final visitedIdsProvider = FutureProvider<List<String>>(
+    (ref) async => [for (final e in await ref.watch(visitedEntriesProvider.future)) e.$1]);
+
+/// Places you've been (real places only) with when you marked them.
+final visitedDatedProvider = FutureProvider<List<(Place, DateTime?)>>((ref) async {
+  final entries = await ref.watch(visitedEntriesProvider.future);
+  final all = await ref.watch(placesRepositoryProvider).all();
+  final byId = {for (final p in all) p.id: p};
+  return [for (final (id, t) in entries) if (byId[id] case final p?) (p, t)];
 });
 
 final visitedPlacesProvider = FutureProvider<List<Place>>((ref) async {

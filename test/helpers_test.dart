@@ -107,12 +107,6 @@ void main() {
       expect(nextWeekday(mon(10), DateTime.monday), DateTime(2026, 10, 5));
     });
 
-    test('badges come only from real counts', () {
-      expect(badgesFor(const MyCounts()).where((b) => b.earned), isEmpty);
-      final b = badgesFor(const MyCounts(plans: 1, visited: 5));
-      expect(b.where((x) => x.earned).map((x) => x.title), ['First plan', 'Out and about']);
-    });
-
     test('links only when the map has the facts', () {
       const p = Place(id: 'x', name: 'Test Cafe', category: 'cafe', city: 'cairo', area: 'Test Area');
       expect(wazeUrl(p), isNull);

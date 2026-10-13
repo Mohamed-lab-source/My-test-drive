@@ -41,45 +41,6 @@ DateTime nextWeekday(DateTime now, int weekday) {
   return today.add(Duration(days: (weekday - now.weekday + 7) % 7));
 }
 
-/// Your own numbers, used for badges. All come from your account.
-class MyCounts {
-  const MyCounts({
-    this.plans = 0,
-    this.favorites = 0,
-    this.visited = 0,
-    this.groups = 0,
-    this.friends = 0,
-    this.visitedCategories = 0,
-  });
-  final int plans;
-  final int favorites;
-  final int visited;
-  final int groups;
-  final int friends;
-  final int visitedCategories;
-}
-
-class Achievement {
-  const Achievement(this.emoji, this._title, this._hint, {required this.earned});
-  final String emoji;
-  final String _title;
-  final String _hint;
-  String get title => tr(_title);
-  String get hint => tr(_hint);
-  final bool earned;
-}
-
-List<Achievement> badgesFor(MyCounts c) => [
-      Achievement('🗺️', 'First plan', 'Make your first plan', earned: c.plans >= 1),
-      Achievement('🧭', 'Planner', 'Make 10 plans', earned: c.plans >= 10),
-      Achievement('❤️', 'Collector', 'Save 5 favorite places', earned: c.favorites >= 5),
-      Achievement('✅', 'Out and about', "Mark 5 places you've been", earned: c.visited >= 5),
-      Achievement('🏙️', 'City explorer', "Mark 25 places you've been", earned: c.visited >= 25),
-      Achievement('🎨', 'All-rounder', 'Visit 5 different kinds of places', earned: c.visitedCategories >= 5),
-      Achievement('👯', 'Organizer', 'Be in a group', earned: c.groups >= 1),
-      Achievement('🤝', 'Social', 'Have 3 friends', earned: c.friends >= 3),
-    ];
-
 /// Waze's documented deep link, navigating to real coordinates.
 Uri? wazeUrl(Place p) => p.hasLocation
     ? Uri.https('waze.com', '/ul', {'ll': '${p.lat},${p.lng}', 'navigate': 'yes'})

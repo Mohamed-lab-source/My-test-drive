@@ -1,3 +1,4 @@
+import '../fun/place_of_day.dart';
 import '../../app/i18n.dart';
 import 'dart:convert';
 
@@ -302,6 +303,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const _TodayStrip(),
           const _IdeaForNow(),
+          const PlaceOfDayCard(),
           const ChallengeCard(),
           const _WhatsNewCard(),
           const _NextOutingCard(),

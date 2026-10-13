@@ -219,6 +219,18 @@ How the code enforces it (keep it this way):
   friendly "local friend" voice rule; "Right now" idea card (`ideaForNow`);
   Explore remembers map/list; delete-account text lists reviews and accepts
   "حذف".
+- 0.10 game layer (`lib/app/fun.dart`, tested in `test/fun_test.dart`;
+  screens in `lib/features/fun/`): 32 badges with progress (`allBadges`,
+  `badgesProvider` uses only already-loaded data; celebrated once with
+  confetti, seen keys in phone pref `fun`), recap for a month/year
+  (`recapOf`, reads one page of 50 plans) + outing personality
+  (`outerTypeFor`), monthly bingo (`bingoFor`, same card for everyone; ticks
+  from `visitedDatedProvider` = visited docs' `createdAt`) and monthly goal,
+  place of the day (`placeOfTheDay`, date-seeded), Feeling lucky, smart
+  collections from map tags (`smartCollections`, unknown = not included),
+  area explorer (`areaProgress`), friends leaderboard (public
+  `reviewerStats`, one get per friend, max 60), Mystery mode
+  (`/mystery/:id`), poll templates, teams/dice/conversation starters.
 - **Plans** are made on the phone (`PlansRepository.generate`): weather from
   Open-Meteo, AI from Gemini (free tier, key passed with
   `--dart-define=GEMINI_API_KEY`, restricted to the Android app via the

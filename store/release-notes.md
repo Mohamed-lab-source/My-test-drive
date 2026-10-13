@@ -2,6 +2,26 @@
 
 Keep each under 500 characters.
 
+## 0.10.0
+
+<en-US>
+• 32 badges with progress, and confetti when you earn one
+• My recap: your month or year as a story picture, plus your outing personality
+• Monthly bingo and your own monthly goal
+• Place of the day, Feeling lucky and smart collections (work spots, open late…)
+• Friends leaderboard and Mystery mode for plans
+• Quick group polls, team maker, dice and conversation starters
+</en-US>
+
+<ar>
+• 32 شارة بتقدّم واضح، وكونفيتي لما تكسب واحدة
+• ملخصي: شهرك أو سنتك كصورة ستوري، وشخصيتك في الخروج
+• بينجو الشهر وهدفك الشهري
+• مكان النهارده، جرّب حظك، ومجموعات ذكية (أماكن للشغل، فاتحة متأخر…)
+• ترتيب الصحاب ووضع المفاجأة للخطط
+• تصويتات سريعة للجروب، تقسيم فرق، زهر وأسئلة تفتح الكلام
+</ar>
+
 ## 0.9.1
 
 <en-US>

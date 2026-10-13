@@ -9,6 +9,17 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🏅', '32 badges', 'Badges with progress bars, and confetti when you earn one.'),
+    ('🎉', 'My recap', 'Your month or year on Khroga as a story picture, plus your outing personality.'),
+    ('🎯', 'Monthly bingo', '9 kinds of places to try this month, and your own goal.'),
+    ('✨', 'Place of the day', 'One real place in your city every day, the same for everyone.'),
+    ('🗂️', 'Collections', 'Work spots, open late, wheelchair friendly, kids areas and more, from the map.'),
+    ('🏆', 'Friends leaderboard', 'See who has the most guide points among your friends.'),
+    ('🎁', 'Mystery mode', 'Reveal a plan one stop at a time. Great for dates and surprises.'),
+    ('🍀', 'Feeling lucky', 'A random real place in Explore.'),
+    ('🗺️', 'Area explorer', 'See how many areas you\'ve explored.'),
+    ('📅', 'Quick polls', '"Which day?", "What time?" and "What vibe?" polls in groups with one tap.'),
+    ('🎲', 'Party tools', 'Make teams, roll dice and get conversation starters.'),
     ('📖', 'Wikipedia on place pages', 'Famous places show a short summary from Wikipedia, with a link.'),
     ('🌤️', 'Weather at every stop', 'Plans show the forecast for the hour you\'ll be at each place.'),
     ('☀️', 'UV and air quality', 'Today\'s UV and air quality for your city on the Plan tab.'),

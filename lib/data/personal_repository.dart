@@ -12,10 +12,11 @@ class PersonalRepository {
   CollectionReference<Map<String, dynamic>> _notes(String uid) =>
       _db.collection('users').doc(uid).collection('notes');
 
-  Stream<List<String>> watchVisited(String uid) => _visited(uid)
+  /// Places you've been, newest first, with when you marked them.
+  Stream<List<(String, DateTime?)>> watchVisited(String uid) => _visited(uid)
       .orderBy('createdAt', descending: true)
       .snapshots()
-      .map((s) => s.docs.map((d) => d.id).toList());
+      .map((s) => [for (final d in s.docs) (d.id, (d.data()['createdAt'] as Timestamp?)?.toDate())]);
 
   Future<void> setVisited(String uid, String placeId, bool visited) => visited
       ? _visited(uid).doc(placeId).set({'createdAt': FieldValue.serverTimestamp()})

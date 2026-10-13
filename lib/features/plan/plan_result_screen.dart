@@ -54,6 +54,7 @@ class PlanResultScreen extends ConsumerWidget {
             PopupMenuButton<String>(
               onSelected: (v) => _menu(context, ref, loaded, v),
               itemBuilder: (_) => [
+                PopupMenuItem(value: 'mystery', child: Text(tr('🎁 Mystery mode: reveal stop by stop'))),
                 PopupMenuItem(value: 'copy', child: Text(tr('Copy plan as text'))),
                 PopupMenuItem(value: 'calendar', child: Text(tr('Add to Google Calendar'))),
                 PopupMenuItem(value: 'duplicate', child: Text(tr('Make a copy'))),
@@ -79,6 +80,8 @@ class PlanResultScreen extends ConsumerWidget {
 
 Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String action) async {
   switch (action) {
+    case 'mystery':
+      context.push('/mystery/${plan.id}');
     case 'copy':
       await Clipboard.setData(ClipboardData(text: planShareText(plan)));
       if (context.mounted) showMessage(context, tr('Plan copied. Paste it anywhere.'));

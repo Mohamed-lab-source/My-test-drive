@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../app/helpers.dart';
 import '../../app/local_history.dart';
 import '../../app/local_prefs.dart';
 import '../../app/review.dart';
@@ -20,6 +19,7 @@ import '../../widgets/common.dart';
 import '../auth/username_sheet.dart';
 import 'safety_screens.dart' show deleteMyAccount;
 import 'theme_sheet.dart';
+import '../fun/badges_screen.dart' show BadgesSummaryCard;
 import '../../widgets/launchers.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -50,13 +50,17 @@ class ProfileScreen extends ConsumerWidget {
           const _Stats(),
           const SizedBox(height: KSpace.md),
           const _GuideCard(),
-          const _Badges(),
+          const BadgesSummaryCard(),
           const _VisitedBreakdown(),
           const SizedBox(height: KSpace.md),
           Card(
             child: Column(
               children: [
                 for (final (icon, title, sub, path) in [
+                  (Icons.celebration_outlined, tr('My recap'), tr('Your month or year on Khroga, and your outing personality'), '/recap'),
+                  (Icons.grid_view, tr('Monthly bingo'), tr('9 kinds of places to try this month'), '/bingo'),
+                  (Icons.leaderboard_outlined, tr('Friends leaderboard'), tr('Who has the most guide points'), '/leaderboard'),
+                  (Icons.collections_bookmark_outlined, tr('Collections'), tr('Work spots, open late, wheelchair friendly…'), '/collections'),
                   (Icons.insights_outlined, tr('My outings in numbers'), tr('Streaks, top areas, kinds of places'), '/stats'),
                   (Icons.map_outlined, tr('My map'), tr('Favorites and places you\'ve been'), '/my-map'),
                   (Icons.sticky_note_2_outlined, tr('My notes'), tr('All your private notes'), '/notes'),
@@ -424,78 +428,6 @@ class _Stats extends ConsumerWidget {
             stat('✅', visited, 'Been there', '/saved'),
             stat('👯', groups, 'Groups', '/groups'),
             stat('🤝', friends, 'Friends', '/friends'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Badges earned from your own real activity.
-class _Badges extends ConsumerWidget {
-  const _Badges();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final visitedPlaces = ref.watch(visitedPlacesProvider).value ?? const [];
-    final counts = MyCounts(
-      plans: ref.watch(plansCountProvider).value ?? 0,
-      favorites: ref.watch(favoriteIdsProvider).value?.length ?? 0,
-      visited: ref.watch(visitedIdsProvider).value?.length ?? 0,
-      groups: ref.watch(myGroupsProvider).value?.length ?? 0,
-      friends: ref
-              .watch(friendshipsProvider)
-              .value
-              ?.where((f) => f.status == FriendshipStatus.accepted)
-              .length ??
-          0,
-      visitedCategories: visitedPlaces.map((p) => p.category).toSet().length,
-    );
-    final badges = badgesFor(counts);
-    final earned = badges.where((b) => b.earned).length;
-    final text = Theme.of(context).textTheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(KSpace.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(trf('Badges · {a} of {b}', {'a': earned, 'b': badges.length}), style: text.titleMedium),
-            const SizedBox(height: KSpace.sm),
-            Wrap(
-              spacing: KSpace.sm,
-              runSpacing: KSpace.sm,
-              children: [
-                for (final b in badges)
-                  Tooltip(
-                    message: b.earned ? b.title : 'To earn: ${b.hint}',
-                    triggerMode: TooltipTriggerMode.tap,
-                    child: Opacity(
-                      opacity: b.earned ? 1 : 0.35,
-                      child: Container(
-                        width: 72,
-                        padding: const EdgeInsets.symmetric(vertical: KSpace.sm),
-                        decoration: BoxDecoration(
-                          color: b.earned ? context.k.accentSoft : context.k.background,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(b.emoji, style: const TextStyle(fontSize: 24)),
-                            const SizedBox(height: 2),
-                            Text(b.title,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                style: text.bodySmall?.copyWith(fontSize: 11)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: KSpace.xs),
-            Text(tr('Tap a badge to see how to earn it.'), style: text.bodySmall),
           ],
         ),
       ),

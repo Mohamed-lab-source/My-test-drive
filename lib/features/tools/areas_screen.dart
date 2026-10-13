@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/extras.dart';
+import '../../app/fun.dart' show areaProgress;
 import '../../app/helpers.dart' show normalizeSearch;
 import '../../app/i18n.dart';
 import '../../app/theme.dart';
@@ -73,15 +74,47 @@ class _AreasScreenState extends ConsumerState<AreasScreen> {
                 if (shown.isEmpty) {
                   return EmptyState(emoji: '🏘️', title: tr('No areas found'));
                 }
+                final visited = (ref.watch(visitedIdsProvider).value ?? const <String>[]).toSet();
+                final all = ref.watch(allPlacesProvider).value ?? const <Place>[];
+                final been = {
+                  for (final a in areaProgress(all, visited, city, minPlaces: 1))
+                    if (a.been > 0) a.area: a.been,
+                };
                 return ListView.builder(
                   padding: const EdgeInsets.only(bottom: KSpace.xl),
-                  itemCount: shown.length,
-                  itemBuilder: (_, i) {
-                    final a = shown[i];
+                  itemCount: shown.length + 1,
+                  itemBuilder: (_, index) {
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.sm, KSpace.md, 0),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(trf("🗺️ You've explored {a} of {b} areas", {'a': been.length, 'b': list.length}),
+                              style: Theme.of(context).textTheme.titleSmall),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: list.isEmpty ? 0 : been.length / list.length,
+                              minHeight: 8,
+                              color: context.k.accent,
+                              backgroundColor: context.k.accentSoft,
+                            ),
+                          ),
+                        ]),
+                      );
+                    }
+                    final a = shown[index - 1];
+                    final b = been[a.name] ?? 0;
                     return ListTile(
-                      leading: CircleAvatar(child: Text(initialsOf(a.name))),
+                      leading: CircleAvatar(
+                        backgroundColor: b > 0 ? context.k.accent : null,
+                        foregroundColor: b > 0 ? context.k.onAccent : null,
+                        child: Text(b > 0 ? '✓' : initialsOf(a.name)),
+                      ),
                       title: Text(a.name),
-                      subtitle: Text(trf('{n} places', {'n': a.count})),
+                      subtitle: Text(b > 0
+                          ? trf("{n} places · you've been to {b}", {'n': a.count, 'b': b})
+                          : trf('{n} places', {'n': a.count})),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push(
                           '/area/$city/${Uri.encodeComponent(a.name)}'),

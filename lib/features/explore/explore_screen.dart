@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import '../../app/fun.dart' show luckyPlace;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -404,6 +407,21 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     avatar: const Text('📋'),
                     label: Text(tr('My lists')),
                     onPressed: () => context.push('/lists'),
+                  ),
+                  ActionChip(
+                    avatar: const Text('🍀'),
+                    label: Text(tr('Feeling lucky')),
+                    onPressed: () {
+                      final city = ref.read(cityProvider);
+                      final all = ref.read(allPlacesProvider).value ?? const <Place>[];
+                      final p = luckyPlace(all.where((p) => p.city == city).toList(), math.Random());
+                      if (p != null) context.push('/place/${p.id}');
+                    },
+                  ),
+                  ActionChip(
+                    avatar: const Text('🗂️'),
+                    label: Text(tr('Collections')),
+                    onPressed: () => context.push('/collections'),
                   ),
                   ActionChip(
                     avatar: const Text('⭐'),

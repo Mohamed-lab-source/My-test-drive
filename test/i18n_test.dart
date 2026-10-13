@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:khroga/app/fun.dart';
 import 'package:khroga/app/helpers.dart';
 import 'package:khroga/app/i18n.dart';
 import 'package:khroga/app/strings_ar.dart';
@@ -62,7 +63,7 @@ void main() {
     expect(OpeningHours.parse('Mo-Su 10:00-23:00')!.statusText(DateTime(2026, 10, 5, 12)),
         'فاتح · بيقفل 23:00');
     expect(timeAgo(DateTime(2026, 10, 5, 10), DateTime(2026, 10, 5, 13)), 'من 3 ساعة');
-    expect(badgesFor(const MyCounts()).first.title, 'أول خطة');
+    expect(allBadges(const BadgeCounts()).first.title, 'أول خطة');
     const p = Place(id: 'x', name: 'Test Cafe', nameAr: 'كافيه تجربة', category: 'cafe', city: 'cairo');
     expect(p.shownName, 'كافيه تجربة');
     expect(p.otherName, 'Test Cafe');

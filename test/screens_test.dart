@@ -5,7 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:khroga/app/theme.dart';
+import 'package:khroga/data/providers.dart';
 import 'package:khroga/features/explore/explore_screen.dart';
+import 'package:khroga/features/fun/badges_screen.dart';
+import 'package:khroga/features/fun/bingo_screen.dart';
+import 'package:khroga/features/fun/recap_screen.dart';
 import 'package:khroga/features/profile/about_screen.dart';
 import 'package:khroga/features/profile/welcome_screen.dart';
 import 'package:khroga/features/profile/whats_new_screen.dart';
@@ -57,7 +61,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('Wikipedia on place pages'), findsOneWidget);
+    expect(find.text('32 badges'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -73,8 +77,8 @@ void main() {
     await tester.tap(find.text('Flip'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.textContaining(RegExp('Heads|Tails')), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
-    await tester.pump();
+    await tester.scrollUntilVisible(find.text('Coming public holidays'), 400,
+        scrollable: find.byType(Scrollable).first);
     expect(find.text('Coming public holidays'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -97,6 +101,36 @@ void main() {
     )));
     await tester.pump();
     expect(find.text('Made with Khroga'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('badges, bingo, recap and mystery screens fit when empty', (tester) async {
+    Widget signedOut(Widget child) => ProviderScope(
+          overrides: [uidProvider.overrideWith((_) => null)],
+          child: _router(child),
+        );
+    for (final (screen, expected) in [
+      (const BadgesScreen(), 'Closest next'),
+      (const BingoScreen(), 'My goal this month'),
+      (const RecapScreen(), 'Your outing personality'),
+    ]) {
+      await tester.pumpWidget(signedOut(screen));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text(expected), findsOneWidget, reason: expected);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('new party tools work', (tester) async {
+    await tester.pumpWidget(_app(const ToolsScreen()));
+    await tester.pump();
+    await tester.scrollUntilVisible(find.text('Give us a question'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Give us a question'));
+    await tester.pump();
+    await tester.tap(find.text('Give us a question'));
+    await tester.pump();
+    expect(find.text('Another one'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

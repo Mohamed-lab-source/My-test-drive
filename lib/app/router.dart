@@ -16,6 +16,12 @@ import '../features/reviews/review_screens.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/explore/explore_screen.dart';
 import '../features/explore/compare_screen.dart';
+import '../features/fun/badges_screen.dart';
+import '../features/fun/bingo_screen.dart';
+import '../features/fun/collections_screen.dart';
+import '../features/fun/leaderboard_screen.dart';
+import '../features/fun/mystery_screen.dart';
+import '../features/fun/recap_screen.dart';
 import '../features/explore/lists_screen.dart';
 import '../features/explore/malls_screen.dart';
 import '../features/explore/place_details_screen.dart';
@@ -148,6 +154,19 @@ final routerProvider = Provider<GoRouter>((ref) {
             AreaScreen(city: s.pathParameters['city']!, name: s.pathParameters['name']!),
       ),
       GoRoute(path: '/tools', builder: (_, _) => const ToolsScreen()),
+      GoRoute(path: '/badges', builder: (_, _) => const BadgesScreen()),
+      GoRoute(path: '/recap', builder: (_, _) => const RecapScreen()),
+      GoRoute(path: '/bingo', builder: (_, _) => const BingoScreen()),
+      GoRoute(path: '/leaderboard', builder: (_, _) => const LeaderboardScreen()),
+      GoRoute(path: '/collections', builder: (_, _) => const CollectionsScreen()),
+      GoRoute(
+        path: '/collection/:key',
+        builder: (_, s) => CollectionScreen(collectionKey: s.pathParameters['key']!),
+      ),
+      GoRoute(
+        path: '/mystery/:id',
+        builder: (_, s) => MysteryPlanScreen(planId: s.pathParameters['id']!),
+      ),
       GoRoute(path: '/guide', builder: (_, _) => const GuideScreen()),
       GoRoute(path: '/community', builder: (_, _) => const CommunityScreen()),
       GoRoute(
