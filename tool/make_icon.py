@@ -119,6 +119,11 @@ def main():
         save(bg, os.path.join(folder, 'ic_launcher_background.png'), round(108 * k))
         save(mono, os.path.join(folder, 'ic_launcher_monochrome.png'), round(108 * k))
 
+    # Small white icon for outing reminders in the status bar (24dp).
+    stat = pin_layer(big, 0.9, hole=True)
+    for name, k in DENSITIES.items():
+        save(stat, os.path.join(RES, f'drawable-{name}', 'ic_stat_khroga.png'), round(24 * k))
+
     save(legacy, os.path.join(ROOT, 'assets', 'icon', 'khroga.png'), 512)
     print('Icons written.')
 

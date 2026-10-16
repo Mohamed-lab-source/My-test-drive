@@ -173,6 +173,13 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const Divider(),
                 ListTile(
+                  leading: const Icon(Icons.help_outline),
+                  title: Text(tr('Help & questions')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/help'),
+                ),
+                const Divider(),
+                ListTile(
                   leading: const Icon(Icons.feedback_outlined),
                   title: Text(tr('Report a problem or idea')),
                   trailing: const Icon(Icons.chevron_right),

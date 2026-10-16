@@ -1,3 +1,4 @@
+import 'reminder_sheet.dart' show forgetReminder;
 import '../../app/extras.dart' show daysUntilText;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
@@ -204,6 +205,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
     try {
       for (final p in unsaved) {
         await ref.read(plansRepositoryProvider).delete(uid, p.id);
+        forgetReminder(ref, 'plan:${p.id}');
       }
       if (mounted) showMessage(context, tr('Cleared'));
     } catch (e) {
@@ -241,6 +243,7 @@ class _PlanListState extends ConsumerState<_PlanList> {
                         final repo = ref.read(plansRepositoryProvider);
                         try {
                           await repo.delete(uid, plan.id);
+                          forgetReminder(ref, 'plan:${plan.id}');
                           if (context.mounted) {
                             showUndo(context, trf('Deleted "{name}"', {'name': plan.title}), () async {
                               try {

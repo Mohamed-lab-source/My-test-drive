@@ -42,6 +42,7 @@ import '../features/profile/safety_screens.dart';
 import '../features/profile/welcome_screen.dart';
 import '../features/profile/whats_new_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/profile/help_screen.dart';
 
 /// A link opened before signing in, opened right after.
 String? _pendingLink;
@@ -155,6 +156,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/tools', builder: (_, _) => const ToolsScreen()),
       GoRoute(path: '/badges', builder: (_, _) => const BadgesScreen()),
+      GoRoute(path: '/help', builder: (_, _) => const HelpScreen()),
       GoRoute(path: '/recap', builder: (_, _) => const RecapScreen()),
       GoRoute(path: '/bingo', builder: (_, _) => const BingoScreen()),
       GoRoute(path: '/leaderboard', builder: (_, _) => const LeaderboardScreen()),

@@ -240,7 +240,22 @@ How the code enforces it (keep it this way):
   invite codes via `/joinCodes` (get only, no list), join = add only yourself,
   add friend only if the friendship is accepted (`lastAddedUid`), organizer
   deletes the group, its messages and its code.
-- **No push notifications** (they'd need a paid server).
+- **No push notifications** (they'd need a paid server). Outing reminders
+  are *local* notifications instead (`lib/app/reminders.dart`,
+  flutter_local_notifications ^21 + timezone, Africa/Cairo, inexact alarms so
+  no exact-alarm permission; bell `ReminderButton` in
+  `features/plan/reminder_sheet.dart` on plans and group outings; phone pref
+  `reminders`; boot receivers in the manifest; status icon
+  `ic_stat_khroga` drawn by make_icon.py and kept via res/raw/keep.xml;
+  core library desugaring in build.gradle.kts).
+- 1.0 extras: live "How busy is it now?" (`lib/models/crowd.dart`,
+  `data/crowd_repository.dart`, `features/explore/crowd_card.dart`, tested
+  in test/crowd_test.dart + rules-test): `crowd/{placeId}` holds only counts
+  {quiet, normal, busy, since, last}; each report adds exactly 1 in a batch
+  with the private `users/{uid}/crowdMarks/{placeId}` (one per place per 30
+  min, Google accounts only); a new window starts when `since` is 2 h old.
+  Real prices = the optional review question `spend` (`spendOptions`,
+  `typicalSpend`, needs 2+ answers). Help screen `/help`.
 
 ## Setup (browser only, see SETUP.md)
 
@@ -301,6 +316,5 @@ cd rules-test && npm install && npm test   # needs Java + firebase-tools
 
 ## Not built yet
 
-user-submitted menus/prices, crowd check-ins,
-iOS build,
-photos (could use Wikimedia Commons, free).
+user-submitted menus, iOS build, user photo uploads (Firebase Storage now
+needs the paid Blaze plan, so stick to Wikimedia Commons photos).

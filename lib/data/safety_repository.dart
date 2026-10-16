@@ -99,7 +99,7 @@ class SafetyRepository {
       await d.reference.delete();
     }
     final user = _db.collection('users').doc(uid);
-    for (final sub in ['plans', 'favorites', 'visited', 'notes']) {
+    for (final sub in ['plans', 'favorites', 'visited', 'notes', 'crowdMarks']) {
       while (true) {
         final page = await user.collection(sub).limit(400).get();
         if (page.docs.isEmpty) break;

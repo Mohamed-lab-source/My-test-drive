@@ -69,6 +69,18 @@ service cloud.firestore {
           && newData().updatedAt == request.time;
       }
 
+      // When you last said how busy a place is (private). Written together
+      // with crowd/{placeId}; at most once per place every 30 minutes.
+      match /crowdMarks/{placeId} {
+        allow read, delete: if isMe(uid);
+        allow create, update: if isMe(uid) && !isGuest()
+          && placeId.size() <= 80
+          && newData().keys().hasOnly(['at'])
+          && newData().at == request.time
+          && (resource == null || resource.data.at < request.time - duration.value(30, 'm'))
+          && getAfter(/databases/$(database)/documents/crowd/$(placeId)).data.last == request.time;
+      }
+
       // Favorite places: just a place id and when it was added.
       match /favorites/{placeId} {
         allow read, delete: if isMe(uid);
@@ -219,6 +231,41 @@ service cloud.firestore {
         && newData().sum == (resource == null ? 0 : resource.data.sum)
              + starsAfter(placeId, me()) - starsBefore(placeId, me())
         && (revAfter(placeId, me()) || revBefore(placeId, me()));
+      allow delete: if false;
+    }
+
+    // How busy a place is right now: counts only, no names. Each report adds
+    // exactly 1, together with your private crowdMarks entry (which limits
+    // you to one report per place every 30 minutes). A new 2-hour window
+    // starts from zero.
+    match /crowd/{placeId} {
+      function crowdKeys() { return ['quiet', 'normal', 'busy', 'since', 'last']; }
+      function c(d, k) { return d.get(k, 0); }
+      function oneOrZero(n) { return n == 0 || n == 1; }
+      function sumOf(d) { return c(d, 'quiet') + c(d, 'normal') + c(d, 'busy'); }
+      function continues() {
+        return resource != null
+          && resource.data.since > request.time - duration.value(2, 'h')
+          && newData().since == resource.data.since
+          && oneOrZero(newData().quiet - c(resource.data, 'quiet'))
+          && oneOrZero(newData().normal - c(resource.data, 'normal'))
+          && oneOrZero(newData().busy - c(resource.data, 'busy'))
+          && sumOf(newData()) == sumOf(resource.data) + 1;
+      }
+      function startsOver() {
+        return (resource == null || resource.data.since <= request.time - duration.value(2, 'h'))
+          && newData().since == request.time
+          && oneOrZero(newData().quiet) && oneOrZero(newData().normal) && oneOrZero(newData().busy)
+          && sumOf(newData()) == 1;
+      }
+      allow read: if signedIn();
+      allow create, update: if signedIn() && !isGuest()
+        && placeId.size() <= 80
+        && newData().keys().hasOnly(crowdKeys()) && newData().keys().hasAll(crowdKeys())
+        && newData().quiet is int && newData().normal is int && newData().busy is int
+        && newData().last == request.time
+        && getAfter(/databases/$(database)/documents/users/$(me())/crowdMarks/$(placeId)).data.at == request.time
+        && (continues() || startsOver());
       allow delete: if false;
     }
 

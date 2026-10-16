@@ -1,3 +1,4 @@
+import 'reminder_sheet.dart' show ReminderButton;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +39,15 @@ class PlanResultScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(tr('Your plan')),
         actions: [
+          if (loaded != null)
+            ReminderButton(
+              reminderKey: 'plan:${loaded.id}',
+              title: loaded.title,
+              route: '/plan/${loaded.id}',
+              day: loaded.request.date == null ? null : loaded.request.day,
+              start: loaded.stops.firstOrNull?.startTime,
+              firstStop: loaded.stops.firstOrNull?.name,
+            ),
           if (loaded != null)
             PopupMenuButton<String>(
               tooltip: tr('Share plan'),
@@ -799,7 +809,7 @@ Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan
         controller: controller,
         padding: const EdgeInsets.all(KSpace.lg),
         children: [
-          Text('Swap "${plan.stops[index].name}"',
+          Text(trf('Swap "{place}"', {'place': plan.stops[index].name}),
               style: Theme.of(sheetContext).textTheme.titleLarge),
           const SizedBox(height: KSpace.xs),
           Text(tr('Similar real places nearby'), style: Theme.of(sheetContext).textTheme.bodySmall),

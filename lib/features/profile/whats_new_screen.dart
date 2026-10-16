@@ -9,6 +9,10 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('⏰', 'Outing reminders', 'Tap the bell on a plan or group outing and your phone reminds you before it starts.'),
+    ('👥', 'How busy is it now?', 'People at a place say Quiet, Normal or Busy, so you know before you go.'),
+    ('💵', 'Real prices from people', 'Reviews can say what you spent per person. Place pages show what most people spent.'),
+    ('❓', 'Help & questions', 'Plain answers to common questions, in Profile.'),
     ('🏅', '32 badges', 'Badges with progress bars, and confetti when you earn one.'),
     ('🎉', 'My recap', 'Your month or year on Khroga as a story picture, plus your outing personality.'),
     ('🎯', 'Monthly bingo', '9 kinds of places to try this month, and your own goal.'),

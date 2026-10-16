@@ -138,6 +138,7 @@ class _ReviewList extends ConsumerWidget {
         final againTotal = (again['yes'] ?? 0) + (again['no'] ?? 0);
         final goodFor = answerCounts(list, 'goodFor').entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
+        final spend = typicalSpend(list);
         final goodForQ = reviewQuestionsFor(place.category)
             .where((q) => q.key == 'goodFor')
             .firstOrNull;
@@ -159,6 +160,14 @@ class _ReviewList extends ConsumerWidget {
                       .take(3)
                       .map((e) => tr(goodForQ.options[e.key] ?? e.key))
                       .join(', '),
+                }),
+              ),
+            if (spend != null)
+              Text(
+                trf('💵 Most spent {range} per person ({n} of {t} reviews)', {
+                  'range': tr(spendOptions[spend.$1]!),
+                  'n': spend.$2,
+                  't': spend.$3,
                 }),
               ),
             if (list.length >= 20)

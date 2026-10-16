@@ -68,6 +68,16 @@ class ReviewQuestion {
 }
 
 const _yesNo = {'yes': 'Yes', 'no': 'No'};
+
+/// What people say they spent per person (their own answer, never ours).
+const spendOptions = {
+  'free': 'Nothing (free)',
+  'u100': 'Under 100 EGP',
+  '100': '100–300 EGP',
+  '300': '300–600 EGP',
+  '600': '600–1000 EGP',
+  '1000': 'Over 1000 EGP',
+};
 const _quality = {'great': 'Great', 'good': 'Good', 'ok': 'OK', 'poor': 'Poor'};
 
 const _common = [
@@ -75,6 +85,7 @@ const _common = [
   ReviewQuestion('crowd', 'How busy was it?', {'quiet': 'Quiet', 'normal': 'Normal', 'busy': 'Busy'}),
   ReviewQuestion('clean', 'How clean was it?', _quality),
   ReviewQuestion('value', 'Worth what you paid?', {'yes': 'Yes', 'fair': 'Fair', 'no': 'No'}),
+  ReviewQuestion('spend', 'About how much did you spend per person?', spendOptions),
   ReviewQuestion('goodFor', 'Good for…', {
     'friends': 'Friends',
     'family': 'Family',
@@ -266,6 +277,19 @@ String guideTitle(ReviewerStats s) {
     '${tier.emoji} ${tier.name}',
     if (experts.isNotEmpty) '${experts.first.emoji} ${experts.first.name}',
   ].join(' · ');
+}
+
+/// What most reviewers said they spent per person: (answer key, how many
+/// said it, how many answered). Null until at least 2 people answered.
+(String, int, int)? typicalSpend(Iterable<Review> reviews) {
+  final counts = answerCounts(reviews, 'spend')..removeWhere((k, _) => !spendOptions.containsKey(k));
+  final total = counts.values.fold(0, (a, b) => a + b);
+  if (total < 2) return null;
+  // Most common answer; a tie goes to the higher range (no nasty surprises).
+  final order = spendOptions.keys.toList();
+  final top = counts.entries.reduce((a, b) =>
+      b.value > a.value || (b.value == a.value && order.indexOf(b.key) > order.indexOf(a.key)) ? b : a);
+  return (top.key, top.value, total);
 }
 
 /// "8 of 10 would go again"-style summary of the latest reviews' answers to

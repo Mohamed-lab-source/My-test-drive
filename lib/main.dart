@@ -1,3 +1,4 @@
+import 'app/reminders.dart';
 import 'app/i18n.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -44,6 +45,7 @@ Future<void> main() async {
   appLang = prefs?.getString('app.lang') ??
       (PlatformDispatcher.instance.locale.languageCode == 'ar' ? 'ar' : 'en');
   _catchErrors(prefs);
+  await Reminders.init();
   runApp(ProviderScope(
     overrides: [sharedPrefsProvider.overrideWithValue(prefs)],
     child: const KhrogaApp(),
@@ -56,6 +58,12 @@ class KhrogaApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final look = ref.watch(themeSettingsProvider);
+    // Tapping an outing reminder opens its plan or group.
+    Reminders.onOpen = (route) => ref.read(routerProvider).push(route);
+    if (Reminders.launchRoute case final route?) {
+      Reminders.launchRoute = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(routerProvider).push(route));
+    }
     final lang = ref.watch(appSettingsProvider.select((s) => s.lang));
     return MaterialApp.router(
       key: ValueKey(lang), // rebuild every screen in the new language

@@ -1,3 +1,4 @@
+import '../plan/reminder_sheet.dart' show ReminderButton;
 import '../../app/fun.dart' show nextDays;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
@@ -131,6 +132,13 @@ class _GroupViewState extends ConsumerState<_GroupView> {
             icon: Icon(_search == null ? Icons.search : Icons.close),
             onPressed: () => setState(() => _search = _search == null ? '' : null),
           ),
+          if (group.scheduledAt case final meetAt? when meetAt.isAfter(DateTime.now()))
+            ReminderButton(
+              reminderKey: 'group:${group.id}',
+              title: group.planTitle ?? group.name,
+              route: '/group/${group.id}',
+              fixedStart: meetAt,
+            ),
           IconButton(
             tooltip: tr('Polls'),
             icon: Badge(
@@ -680,7 +688,7 @@ class _MembersSheet extends ConsumerWidget {
             onPressed: () => showDialog<void>(
               context: context,
               builder: (dialogContext) => AlertDialog(
-                title: Text('Join "${group.name}"', textAlign: TextAlign.center),
+                title: Text(trf('Join "{group}"', {'group': group.name}), textAlign: TextAlign.center),
                 content: SizedBox(
                   width: 240,
                   height: 280,

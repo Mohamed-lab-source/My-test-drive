@@ -67,4 +67,16 @@ void main() {
     expect(answerCounts(list, 'again'), {'yes': 1, 'no': 1});
     expect(answerCounts(list, 'goodFor'), {'friends': 2, 'dates': 1});
   });
+
+  test('what people spent: only their answers, needs 2', () {
+    Review r(String? spend) => Review(
+        placeId: 'p', uid: 'u', name: 'Test', stars: 4, category: 'cafe',
+        answers: {'spend': ?spend});
+    expect(typicalSpend([r('100')]), isNull);
+    expect(typicalSpend([r('100'), r(null)]), isNull);
+    expect(typicalSpend([r('100'), r('100'), r('300')]), ('100', 2, 3));
+    expect(typicalSpend([r('100'), r('300')]), ('300', 1, 2), reason: 'a tie goes to the higher range');
+    expect(typicalSpend([r('junk'), r('junk')]), isNull);
+    expect(reviewQuestionsFor('cafe').any((q) => q.key == 'spend'), isTrue);
+  });
 }

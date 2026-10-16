@@ -7,7 +7,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs,
-  serverTimestamp, deleteField, arrayUnion, arrayRemove, writeBatch, runTransaction,
+  serverTimestamp, deleteField, arrayUnion, arrayRemove, writeBatch, runTransaction, Timestamp,
 } from "firebase/firestore";
 
 let env;
@@ -391,3 +391,35 @@ test("reviews: no links or phone numbers; AI text can be reported", async () => 
   }));
 });
 
+
+test("crowd: counts only go up by one, with your own mark, once per 30 minutes", async () => {
+  const db = as(ALICE);
+  const report = (d, counts, { since = serverTimestamp(), mark = true, place = "p9" } = {}) => {
+    const b = writeBatch(d);
+    b.set(doc(d, `crowd/${place}`), { ...counts, since, last: serverTimestamp() });
+    if (mark) b.set(doc(d, `users/${d === db ? ALICE : BOB}/crowdMarks/${place}`), { at: serverTimestamp() });
+    return b.commit();
+  };
+  await assertFails(report(db, { quiet: 0, normal: 0, busy: 1 }, { mark: false }), "needs the mark");
+  await assertFails(report(db, { quiet: 0, normal: 0, busy: 5 }), "can't add 5");
+  await assertFails(report(guest("gina"), { quiet: 0, normal: 0, busy: 1 }), "guests can't report");
+  await assertSucceeds(report(db, { quiet: 0, normal: 0, busy: 1 }));
+  await assertFails(report(db, { quiet: 0, normal: 0, busy: 2 }, { since: (await getDoc(doc(db, "crowd/p9"))).data().since }),
+    "same person again within 30 minutes");
+  // Bob adds one to the same window; he can't wipe Alice's report.
+  const bob = as(BOB);
+  const since = (await getDoc(doc(bob, "crowd/p9"))).data().since;
+  await assertFails(report(bob, { quiet: 1, normal: 0, busy: 0 }), "can't start over while the window is fresh");
+  await assertFails(report(bob, { quiet: 1, normal: 0, busy: 1 }, { since: Timestamp.fromMillis(0) }), "can't move the window");
+  await assertSucceeds(report(bob, { quiet: 1, normal: 0, busy: 1 }, { since }));
+  // After 2 hours a new window starts from zero.
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "crowd/p8"), {
+      quiet: 0, normal: 4, busy: 0, since: Timestamp.fromMillis(Date.now() - 3 * 3600 * 1000), last: Timestamp.now(),
+    });
+  });
+  await assertSucceeds(report(db, { quiet: 1, normal: 0, busy: 0 }, { place: "p8" }));
+  await assertFails(deleteDoc(doc(db, "crowd/p8")));
+  await assertSucceeds(getDoc(doc(as(EVE), "crowd/p8")));
+  await assertFails(getDoc(doc(as(EVE), "users/alice/crowdMarks/p8")), "marks are private");
+});

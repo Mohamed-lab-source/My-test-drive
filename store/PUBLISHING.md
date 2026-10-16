@@ -2,6 +2,25 @@
 
 Everything happens in your browser (phone or computer). Do the steps in order.
 
+## Version 1.0 launch checklist
+
+Already done in the app and the build (nothing to do):
+- ✅ Signed with your private release key; the `.aab` is made by every build
+- ✅ Targets Android 16 (API 36), as Google Play requires
+- ✅ Privacy policy, terms and account-deletion pages online (English + Arabic)
+- ✅ Delete my account, report, block, community rules, report AI text (Play policy items)
+- ✅ Store texts (`listing.md`), icon, feature graphic, data-safety and content-rating answers
+- ✅ First release notes ready (`release-notes.md`, "1.0.0")
+
+Only you can do these (in this order):
+1. ☐ **Free map key** (step 1b): needed before many people use the map.
+2. ☐ **Google Play developer account** (step 2): $25 once, ID check takes a few days.
+3. ☐ **Create the app and fill App content** (steps 3 and 5c): copy the answers from this folder.
+4. ☐ **Screenshots** (step 5d): 4–8 from your phone.
+5. ☐ **Closed test with 12+ testers for 14 days** (step 4): upload `khroga.aab`.
+6. ☐ **Play's signing fingerprints** (step 5): two GitHub secrets so Google sign-in works in the Play version.
+7. ☐ **Apply for production** (step 6).
+
 ## 1. Make your private signing key (once, 5 minutes)
 1. GitHub → your project → **Actions** → **Khroga** → **Run workflow**.
 2. Tick **"Make my private Play Store signing key"** → **Run workflow**.

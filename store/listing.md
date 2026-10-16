@@ -20,14 +20,23 @@ Cafés, restaurants, cinemas, malls, parks, museums, escape rooms and more. Filt
 👯 BRING YOUR FRIENDS
 Make a group, vote in polls, chat, pick a meeting point, see who's coming and split the bill. Check in at a place so friends know where you are (for 24 hours, only friends).
 
-✍️ REVIEWS AND GUIDE LEVELS
-Rate places and answer quick questions about them. Every review earns points: grow from Newcomer to Local Guide, Advanced Guide and Khroga Legend, and earn Food, Café, Culture or Fun expert badges.
+👥 HOW BUSY IS IT NOW?
+People at a place tap Quiet, Normal or Busy, so you know before you go. Live, from the last 2 hours, no names.
+
+⏰ REMINDERS
+Tap the bell on a plan or group outing and your phone reminds you before it starts, even offline.
+
+✍️ REVIEWS, REAL PRICES AND GUIDE LEVELS
+Rate places and answer quick questions, including what you spent per person, so prices come from real people. Every review earns points: grow from Newcomer to Local Guide, Advanced Guide and Khroga Legend, and earn Food, Café, Culture or Fun expert badges.
+
+🏅 BADGES, BINGO AND YOUR RECAP
+32 badges, a monthly bingo card of places to try, a place of the day, and your month on Khroga as a story picture with your outing personality. See who leads among your friends.
 
 🔗 SHARE IN ONE TAP
 Send a plan, a place or a group invite as a link or a story-size picture. Friends tap it and it opens right in Khroga.
 
 💡 IDEAS AND TOOLS
-18 ready-made outing ideas, the week's weather with the best day to go out, sunset and prayer times, "decide for us", flip a coin, who pays and a bill splitter.
+18 ready-made outing ideas, 16 smart collections (work spots, open late, wheelchair friendly…), the week's weather with the best day to go out, sunset and prayer times, "decide for us", who pays, a bill splitter, team maker and dice. Mystery mode reveals a plan one stop at a time.
 
 🗺️ MAPS AND DIRECTIONS
 Your plan on a map, walking times, and one tap to Google Maps, Waze, Uber or public transport.
@@ -59,6 +68,24 @@ Places: © OpenStreetMap contributors and Overture Maps. Map tiles: OpenStreetMa
 
 👯 هات أصحابك
 اعمل جروب، صوّتوا، اتكلموا، حددوا مكان التجمع، شوفوا مين جاي، وقسّموا الحساب. سجّل وصولك لمكان عشان أصحابك يعرفوا إنت فين (لمدة 24 ساعة، للأصحاب بس).
+
+👥 زحمة قد إيه دلوقتي؟
+الناس اللي في المكان بيدوسوا هادي أو عادي أو زحمة، فتعرف قبل ما تروح. لايف من آخر ساعتين ومن غير أسماء.
+
+⏰ تذكير
+دوس على الجرس في خطة أو خروجة جروب وموبايلك هيفكّرك قبلها، حتى من غير نت.
+
+✍️ تقييمات وأسعار حقيقية ومستويات مرشد
+قيّم الأماكن وجاوب على أسئلة سريعة، منها صرفت كام للفرد، فالأسعار جاية من ناس حقيقية. كل تقييم بنقط: اطلع من مبتدئ لمرشد محلي ومرشد متقدم وأسطورة خروجة، واكسب شارات خبير أكل أو كافيهات أو ثقافة أو ترفيه.
+
+🏅 شارات وبينجو وملخصك
+32 شارة، كارت بينجو كل شهر لأماكن تجربها، مكان النهارده، وشهرك على خروجة كصورة ستوري مع شخصيتك في الخروج. شوف مين الأول بين صحابك.
+
+🔗 شارك بدوسة
+ابعت خطة أو مكان أو دعوة جروب كلينك أو صورة ستوري. صحابك يدوسوا عليه ويفتح في خروجة على طول.
+
+💡 أفكار وأدوات
+18 فكرة خروجة جاهزة، 16 مجموعة ذكية (أماكن للشغل، فاتحة متأخر، مناسبة للكراسي المتحركة…)، طقس الأسبوع وأحسن يوم للخروج، مواعيد الغروب والصلاة، "اختار بدالنا"، مين يدفع، تقسيم الحساب، تقسيم فرق وزهر. وضع المفاجأة بيكشف الخطة محطة محطة.
 
 🗺️ خرايط واتجاهات
 خطتك على الخريطة، ووقت المشي، ودوسة واحدة لخرائط جوجل أو ويز أو أوبر أو المواصلات.

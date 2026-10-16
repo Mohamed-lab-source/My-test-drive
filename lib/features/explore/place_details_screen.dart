@@ -22,6 +22,7 @@ import '../../widgets/khroga_map.dart';
 import '../../widgets/share_card.dart';
 import '../reviews/review_screens.dart' show PlaceReviewsSection;
 import '../../widgets/launchers.dart';
+import 'crowd_card.dart';
 import 'explore_screen.dart';
 
 class PlaceDetailsScreen extends ConsumerStatefulWidget {
@@ -392,6 +393,7 @@ class _Details extends ConsumerWidget {
           Text(tr('Hours can change. Call ahead if it matters.'), style: text.bodySmall),
         ],
         const SizedBox(height: KSpace.md),
+        CrowdCard(place: place),
         _CheckInCard(place: place),
         _VisitedAndNote(place: place),
         _MyRating(place: place),
@@ -995,7 +997,7 @@ Future<void> _addToPlan(BuildContext context, WidgetRef ref, Place place) async 
   if (picked == null) return;
   try {
     await ref.read(plansRepositoryProvider).updateStops(uid, picked.id, addStop(picked.stops, place));
-    if (context.mounted) showMessage(context, 'Added to "${picked.title}"');
+    if (context.mounted) showMessage(context, trf('Added to "{plan}"', {'plan': picked.title}));
   } catch (e) {
     if (context.mounted) showError(context, e);
   }
@@ -1168,7 +1170,7 @@ class _CheckInCard extends ConsumerWidget {
         children: [
           ListTile(
             leading: const Text('📍', style: TextStyle(fontSize: 22)),
-            title: Text(hereNow ? "You're checked in here" : "I'm here"),
+            title: Text(hereNow ? tr("You're checked in here") : tr("I'm here")),
             subtitle: Text(hereNow
                 ? tr('Your friends can see it for 24 hours')
                 : friendCount == 0
@@ -1194,7 +1196,7 @@ class _CheckInCard extends ConsumerWidget {
                       try {
                         await ref.read(checkInsRepositoryProvider).checkIn(
                               uid: uid,
-                              name: ref.read(myProfileProvider).value?.displayName ?? 'A friend',
+                              name: ref.read(myProfileProvider).value?.displayName ?? tr('A friend'),
                               place: place,
                               friendUids: ref.read(friendUidsProvider),
                             );

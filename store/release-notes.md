@@ -2,6 +2,26 @@
 
 Keep each under 500 characters.
 
+## 1.0.0 (first public version)
+
+<en-US>
+Welcome to Khroga! Plan outings in Cairo, Giza and Alexandria with real places:
+• Plans in seconds, alone or with friends in groups
+• Live "how busy is it now?" from people at the place
+• Reminders before your outings
+• Reviews with real prices from people, guide levels and badges
+• Arabic and English, free, no ads
+</en-US>
+
+<ar>
+أهلاً بيك في خروجة! خطط خروجات في القاهرة والجيزة وإسكندرية بأماكن حقيقية:
+• خطة في ثواني، لوحدك أو مع صحابك في جروبات
+• "زحمة قد إيه دلوقتي؟" لايف من الناس اللي هناك
+• تذكير قبل خروجاتك
+• تقييمات بأسعار حقيقية من الناس، ومستويات مرشد وشارات
+• عربي وإنجليزي، مجاني ومن غير إعلانات
+</ar>
+
 ## 0.10.0
 
 <en-US>

@@ -11,6 +11,7 @@ import 'package:khroga/features/fun/badges_screen.dart';
 import 'package:khroga/features/fun/bingo_screen.dart';
 import 'package:khroga/features/fun/recap_screen.dart';
 import 'package:khroga/features/profile/about_screen.dart';
+import 'package:khroga/features/profile/help_screen.dart';
 import 'package:khroga/features/profile/welcome_screen.dart';
 import 'package:khroga/features/profile/whats_new_screen.dart';
 import 'package:khroga/features/tools/ideas_screen.dart';
@@ -61,7 +62,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('32 badges'), findsOneWidget);
+    expect(find.text('Outing reminders'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -131,6 +132,17 @@ void main() {
     await tester.tap(find.text('Give us a question'));
     await tester.pump();
     expect(find.text('Another one'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('help screen fits and searches', (tester) async {
+    await tester.pumpWidget(_app(const HelpScreen()));
+    await tester.pump();
+    expect(find.text('Are the places real?'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'reminder');
+    await tester.pump();
+    expect(find.text('How do reminders work?'), findsOneWidget);
+    expect(find.text('Are the places real?'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

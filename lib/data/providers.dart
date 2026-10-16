@@ -1,3 +1,5 @@
+import '../models/crowd.dart';
+import 'crowd_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -308,3 +310,10 @@ final wikiProvider = FutureProvider.autoDispose.family<WikiSummary?, (String, St
 /// Kept while the app runs, so it's fetched once per city per session.
 final weekForecastProvider =
     FutureProvider.family<List<DayForecast>, String>((ref, city) => fetchWeek(city));
+
+// ---- How busy is it now (live reports from people there) ----
+final crowdRepositoryProvider = Provider((ref) => CrowdRepository(ref.watch(firestoreProvider)));
+
+/// One read when a place page opens.
+final crowdNowProvider = FutureProvider.autoDispose.family<CrowdNow, String>(
+    (ref, placeId) => ref.watch(crowdRepositoryProvider).now(placeId));

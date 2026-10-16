@@ -958,7 +958,7 @@ Future<void> showPlaceQuickActions(BuildContext context, Place place) =>
             for (final l in lists.keys)
               CheckboxListTile(
                 secondary: const Icon(Icons.bookmark_outline),
-                title: Text('In "$l"'),
+                title: Text(trf('In "{list}"', {'list': l})),
                 value: lists[l]!.contains(place.id),
                 onChanged: (_) => ref.read(placeListsProvider.notifier).toggle(l, place.id),
               ),
