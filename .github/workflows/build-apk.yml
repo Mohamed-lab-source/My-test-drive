@@ -106,11 +106,15 @@ jobs:
           mkdir -p dist
           cp android/app/build/outputs/apk/release/app-release.apk dist/anchor-debug.apk
 
+      # The release below is where the APK is downloaded from; this copy is a
+      # convenience, so a full artifact quota mustn't block publishing.
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: anchor-debug-apk
           path: dist/anchor-debug.apk
+          retention-days: 2
 
       - name: Publish to "latest APK" release
         uses: softprops/action-gh-release@v2
