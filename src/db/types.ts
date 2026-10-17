@@ -428,3 +428,14 @@ export interface HifzEntry {
   status: 'learning' | 'memorised';
   updated_at: string;
 }
+
+export type VitalKind = 'bp' | 'sugar' | 'heart';
+export interface Vital {
+  id: string;
+  date: string; // ISO time of the reading
+  kind: VitalKind;
+  value: number;
+  value2: number | null;
+  note: string | null;
+  created_at: string;
+}

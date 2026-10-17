@@ -16,6 +16,9 @@ import { SeasonCountdownCard } from '../../src/features/home/SeasonCountdownCard
 import { MoodCheckinCard } from '../../src/features/home/MoodCheckinCard';
 import { NameOfDayCard } from '../../src/features/home/NameOfDayCard';
 import { InsightOfDayCard, SpentTodayLine } from '../../src/features/home/InsightOfDayCard';
+import { HadithCard } from '../../src/features/home/HadithCard';
+import { GratitudeMemoryCard } from '../../src/features/home/GratitudeMemoryCard';
+import { QUICK_ACTIONS } from '../../src/features/home/homeCards';
 import { RamadanCard } from '../../src/features/home/RamadanCard';
 import { VerseCard } from '../../src/features/home/VerseCard';
 import { CountdownCard } from '../../src/features/home/CountdownCard';
@@ -65,6 +68,10 @@ export default function HomeScreen() {
   const hijriOffset = useSettingsStore((s) => s.hijriOffset);
   const [expenseVisible, setExpenseVisible] = useState(false);
   const [taskVisible, setTaskVisible] = useState(false);
+  const [incomeVisible, setIncomeVisible] = useState(false);
+  const quickActionIds = useSettingsStore((s) => s.homeQuickActions);
+  const displayName = useSettingsStore((s) => s.displayName);
+  const quickActions = quickActionIds.map((id) => QUICK_ACTIONS.find((q) => q.id === id)).filter(Boolean).slice(0, 4) as typeof QUICK_ACTIONS;
   const [customizeVisible, setCustomizeVisible] = useState(false);
   const hiddenHomeCards = useSettingsStore((s) => s.hiddenHomeCards);
   const show = (id: string) => !hiddenHomeCards.includes(id);
@@ -143,7 +150,7 @@ export default function HomeScreen() {
         >
           <View>
             <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
-              {greeting()} · {formatHijri(new Date(), hijriOffset)}
+              {greeting()}{displayName.trim() ? `, ${displayName.trim()}` : ''} · {formatHijri(new Date(), hijriOffset)}
             </Text>
             <Text style={[typography.largeTitle, { color: colors.label }]}>Anchor</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -157,10 +164,23 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <QuickAction icon="cart.fill" label="Expense" color={colors.red} onPress={() => setExpenseVisible(true)} />
-          <QuickAction icon="checkmark.circle.fill" label="Task" color={colors.blue} onPress={() => setTaskVisible(true)} />
-          <QuickAction icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
-          <QuickAction icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
+          {quickActions.map((a) => (
+            <QuickAction
+              key={a.id}
+              icon={a.icon}
+              label={a.label}
+              color={(colors as unknown as Record<string, string>)[a.color] ?? colors.blue}
+              onPress={() =>
+                a.id === 'expense'
+                  ? setExpenseVisible(true)
+                  : a.id === 'income'
+                    ? setIncomeVisible(true)
+                    : a.id === 'task'
+                      ? setTaskVisible(true)
+                      : a.route && router.push(a.route as never)
+              }
+            />
+          ))}
         </View>
         {show('spent') ? <SpentTodayLine /> : null}
 
@@ -174,6 +194,8 @@ export default function HomeScreen() {
           {show('mood') ? <MoodCheckinCard /> : null}
           {show('verse') ? <VerseCard /> : null}
           {show('names') ? <NameOfDayCard /> : null}
+          {show('hadith') ? <HadithCard /> : null}
+          {show('gratitude') ? <GratitudeMemoryCard /> : null}
           {show('insight') ? <InsightOfDayCard /> : null}
           {show('water') ? <WaterCard /> : null}
         </View>
@@ -362,6 +384,7 @@ export default function HomeScreen() {
       </ScrollView>
       <CustomizeHomeSheet visible={customizeVisible} onClose={() => setCustomizeVisible(false)} />
       <AddTransactionSheet visible={expenseVisible} onClose={() => setExpenseVisible(false)} />
+      <AddTransactionSheet visible={incomeVisible} initialType="income" onClose={() => setIncomeVisible(false)} />
       <AddTaskSheet visible={taskVisible} onClose={() => setTaskVisible(false)} />
     </View>
   );

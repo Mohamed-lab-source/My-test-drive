@@ -43,6 +43,7 @@ const TABLES = [
   'med_logs',
   'card_links',
   'hifz',
+  'vitals',
 ];
 
 export async function exportAllData(): Promise<string> {

@@ -10,7 +10,7 @@ import { TextField } from '../../../src/ui/TextField';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
-import { useSmsStore, smsTargetAccount, syncSmsAlertConfig, accountForImport, creditCardFor } from '../../../src/sms/smsStore';
+import { useSmsStore, smsTargetAccount, syncSmsAlertConfig, accountForImport, creditCardFor, billFor } from '../../../src/sms/smsStore';
 import * as linksRepo from '../../../src/db/repositories/cardLinks';
 import { guessCategory } from '../../../src/sms/categorize';
 import { hasReceivePermission, hasSmsPermission, isSmsReadingAvailable, requestSmsPermission } from '../../../src/sms/native';
@@ -23,7 +23,7 @@ import { SkippedMessagesCard, TestMessageCard } from '../../../src/features/mone
 
 export default function SmsInboxScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, categories, transactions } = useFinanceStore();
+  const { accounts, categories, transactions, recurringRules } = useFinanceStore();
   const {
     smsImportEnabled,
     setSmsImportEnabled,
@@ -36,6 +36,8 @@ export default function SmsInboxScreen() {
     setSmsAutoAddKnown,
     smsReadCredits,
     setSmsReadCredits,
+    smsIgnored,
+    setSmsIgnored,
   } = useSettingsStore();
   const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules, links, loadLinks } = useSmsStore();
   const addAccount = useFinanceStore((s) => s.addAccount);
@@ -98,8 +100,15 @@ export default function SmsInboxScreen() {
   };
 
   // Flags a debit that matches something already logged by hand that day.
+  // An entry of the same amount within a day either side — often the same
+  // charge logged by hand before the SMS was read.
   const looksLogged = (p: SmsImport) =>
-    transactions.some((t) => t.type === (p.kind === 'credit' ? 'income' : 'expense') && t.amount === p.amount && localDateKey(t.date) === localDateKey(p.sms_date));
+    transactions.find(
+      (t) =>
+        t.type === (p.kind === 'credit' ? 'income' : 'expense') &&
+        t.amount === p.amount &&
+        Math.abs(new Date(t.date).getTime() - new Date(p.sms_date).getTime()) <= 36 * 3600000
+    ) ?? null;
 
   const enable = async () => {
     const granted = await requestSmsPermission();
@@ -128,9 +137,9 @@ export default function SmsInboxScreen() {
     syncSmsAlertConfig();
   };
 
-  const handleAdd = async (p: SmsImport) => {
+  const handleAdd = async (p: SmsImport, ruleId?: string) => {
     try {
-      await add(p, categoryFor(p) ?? null, accountFor(p)?.id ?? null);
+      await add(p, categoryFor(p) ?? null, accountFor(p)?.id ?? null, { ruleId });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       if (e instanceof Error && e.message === 'NO_CREDIT_CARD') {
@@ -437,10 +446,50 @@ export default function SmsInboxScreen() {
                         {p.body}
                       </Text>
                     </Pressable>
+                    {(() => {
+                      const bill = billFor(p, recurringRules);
+                      return bill ? (
+                        <View style={{ marginTop: 6, padding: spacing.sm, borderRadius: 10, backgroundColor: colors.indigo + '14' }}>
+                          <Text style={[typography.caption1, { color: colors.indigo, fontWeight: '600' }]}>
+                            📅 Looks like your {bill.name} bill (due {formatRelativeDay(bill.next_due_date)})
+                          </Text>
+                          <Pressable onPress={() => handleAdd(p, bill.id)} hitSlop={6} style={{ marginTop: 2 }}>
+                            <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Add & mark bill paid</Text>
+                          </Pressable>
+                        </View>
+                      ) : null;
+                    })()}
+                    {p.merchant ? (
+                      <Pressable
+                        onPress={() =>
+                          Alert.alert('Ignore this merchant?', `Future bank texts from "${p.merchant}" won't be imported, and pending ones are dismissed.`, [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Ignore',
+                              style: 'destructive',
+                              onPress: async () => {
+                                const key = p.merchant!.toLowerCase();
+                                setSmsIgnored([...smsIgnored.filter((m) => m !== key), key]);
+                                for (const x of pending.filter((x) => x.merchant?.toLowerCase() === key)) await dismiss(x.id);
+                              },
+                            },
+                          ])
+                        }
+                        hitSlop={6}
+                        style={{ marginTop: 4 }}
+                      >
+                        <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Always ignore {p.merchant}</Text>
+                      </Pressable>
+                    ) : null}
                     {dup ? (
+                      <View>
                       <Text style={[typography.caption1, { color: colors.orange, marginTop: 4 }]}>
-                        You already logged an expense of this amount that day — dismiss if it's the same one.
+                        Already logged? "{dup.note || 'Untitled'}" ({formatRelativeDay(dup.date)}) has the same amount.
                       </Text>
+                      <Pressable onPress={() => dismiss(p.id)} hitSlop={6}>
+                        <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Same one — dismiss</Text>
+                      </Pressable>
+                      </View>
                     ) : null}
                     {foreign ? (
                       <Text style={[typography.caption1, { color: colors.orange, marginTop: 4 }]}>
@@ -518,6 +567,19 @@ export default function SmsInboxScreen() {
               })
             )}
           </>
+        ) : null}
+        {smsIgnored.length ? (
+          <Card style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.headline, { color: colors.label }]}>Ignored merchants</Text>
+            {smsIgnored.map((m) => (
+              <View key={m} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+                <Text style={[typography.body, { color: colors.label, textTransform: 'capitalize' }]}>{m}</Text>
+                <Pressable onPress={() => setSmsIgnored(smsIgnored.filter((x) => x !== m))} hitSlop={6}>
+                  <Text style={[typography.subhead, { color: colors.blue }]}>Stop ignoring</Text>
+                </Pressable>
+              </View>
+            ))}
+          </Card>
         ) : null}
         {active ? <SkippedMessagesCard /> : null}
         <TestMessageCard />

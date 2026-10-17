@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Image, Pressable, Modal } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { Sheet } from '../../ui/Sheet';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
@@ -10,7 +11,7 @@ import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
+import { evalAmount, formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
 import { frequentTransactions, type FrequentTemplate } from '../../utils/frequent';
 import type { Transaction, TransactionFlag, TransactionType } from '../../db/types';
 
@@ -18,12 +19,17 @@ interface AddTransactionSheetProps {
   visible: boolean;
   onClose: () => void;
   editing?: Transaction | null;
+  // For a new transaction: start on this type / account.
+  initialType?: TransactionType;
+  initialAccountId?: string;
+  initialToAccountId?: string;
 }
 
 const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
-export function AddTransactionSheet({ visible, onClose, editing }: AddTransactionSheetProps) {
+export function AddTransactionSheet({ visible, onClose, editing, initialType, initialAccountId, initialToAccountId }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
+  const router = useRouter();
   const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt, addRecurringRule } = useFinanceStore();
   const currency = useSettingsStore((s) => s.currency);
   const defaultAccountId = useSettingsStore((s) => s.defaultAccountId);
@@ -39,6 +45,8 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
   const [splitWith, setSplitWith] = useState('');
   const [instalments, setInstalments] = useState(1);
   const [flag, setFlag] = useState<TransactionFlag | null>(null);
+  const [splitCat, setSplitCat] = useState<string | null>(null);
+  const [splitAmount, setSplitAmount] = useState('');
   const [previewVisible, setPreviewVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const frequent = useMemo(() => (editing ? [] : frequentTransactions(transactions)), [transactions, editing]);
@@ -68,10 +76,15 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
       setNote(editing.note ?? '');
       setReceiptUri(editing.receipt_uri);
     } else {
-      setTypeIndex(0);
+      setTypeIndex(initialType ? TYPES.indexOf(initialType) : 0);
       setAmount('');
-      setAccountId(activeAccounts.find((a) => a.id === defaultAccountId)?.id ?? activeAccounts[0]?.id ?? null);
-      setToAccountId(activeAccounts[1]?.id ?? activeAccounts[0]?.id ?? null);
+      const from =
+        activeAccounts.find((a) => a.id === initialAccountId)?.id ??
+        activeAccounts.find((a) => a.id === defaultAccountId)?.id ??
+        activeAccounts[0]?.id ??
+        null;
+      setAccountId(from);
+      setToAccountId(activeAccounts.find((a) => a.id === initialToAccountId && a.id !== from)?.id ?? activeAccounts.find((a) => a.id !== from)?.id ?? from);
       setCategoryId(null);
       setNote('');
       setReceiptUri(null);
@@ -79,13 +92,18 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
     setSplitWith('');
     setInstalments(1);
     setFlag(editing?.flag ?? null);
+    setSplitCat(null);
+    setSplitAmount('');
   }, [visible, editing?.id]);
 
+  // Typed amounts may be sums like "120+45.5".
+  const amountValue = evalAmount(amount);
+  const isExpression = /[+\-*/×÷]/.test(amount.replace(/^-/, ''));
   const splitNames = splitWith
     .split(',')
     .map((n) => n.trim())
     .filter(Boolean);
-  const splitShare = splitNames.length > 0 ? Math.round(toMinorUnits(Number(amount) || 0) / (splitNames.length + 1)) : 0;
+  const splitShare = splitNames.length > 0 ? Math.round(toMinorUnits(amountValue || 0) / (splitNames.length + 1)) : 0;
 
   const pickReceipt = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -99,7 +117,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
     [categories, type]
   );
 
-  const canSave = amount.length > 0 && !isNaN(Number(amount)) && Number(amount) > 0 && accountId;
+  const canSave = amount.length > 0 && !isNaN(amountValue) && amountValue > 0 && accountId;
 
   const handleSave = async () => {
     if (!canSave || !accountId) return;
@@ -107,7 +125,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
     try {
       const fields = {
         type,
-        amount: toMinorUnits(Number(amount)),
+        amount: toMinorUnits(amountValue),
         account_id: accountId,
         transfer_to_account_id: type === 'transfer' ? toAccountId : null,
         category_id: type === 'transfer' ? null : categoryId,
@@ -218,6 +236,22 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
           onChangeText={setAmount}
           style={{ fontSize: 28, fontWeight: '700', height: 60 }}
         />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -spacing.sm, marginBottom: spacing.md }}>
+          {['+', '−', '×', '÷'].map((op) => (
+            <Pressable
+              key={op}
+              onPress={() => setAmount((a) => (a && !/[+\-−×÷*/]$/.test(a) ? a + op : a))}
+              style={{ width: 36, height: 30, borderRadius: 8, marginRight: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.tertiaryFill }}
+            >
+              <Text style={[typography.headline, { color: colors.label }]}>{op}</Text>
+            </Pressable>
+          ))}
+          {isExpression ? (
+            <Text style={[typography.subhead, { color: isNaN(amountValue) ? colors.red : colors.secondaryLabel, marginLeft: 4 }]}>
+              {isNaN(amountValue) ? 'Not a valid sum' : `= ${formatMoney(toMinorUnits(amountValue), currency)}`}
+            </Text>
+          ) : null}
+        </View>
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           {type === 'transfer' ? 'From account' : 'Account'}
@@ -251,6 +285,17 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
         )}
 
         <TextField label="Note" placeholder="Optional — add #tags like #travel" value={note} onChangeText={setNote} />
+        {editing && editing.type === 'expense' && editing.note ? (
+          <Pressable
+            onPress={() => {
+              onClose();
+              router.push({ pathname: '/money/merchant', params: { name: editing.note!.replace(/\s*\([A-Z]{3} [\d.,]+\)$/, '').trim() } });
+            }}
+            style={{ marginTop: -spacing.sm, marginBottom: spacing.md }}
+          >
+            <Text style={[typography.subhead, { color: colors.blue }]}>Everything at "{editing.note}" ›</Text>
+          </Pressable>
+        ) : null}
 
         {!editing && type === 'expense' ? (
           <>
@@ -262,9 +307,9 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
                 onSelect={(id) => setInstalments(Number(id))}
               />
             </View>
-            {instalments > 1 && Number(amount) > 0 ? (
+            {instalments > 1 && amountValue > 0 ? (
               <Text style={[typography.caption1, { color: colors.secondaryLabel, marginBottom: spacing.md }]}>
-                {formatMoney(Math.round(toMinorUnits(Number(amount)) / instalments), currency)} now and each month for {instalments - 1} more month
+                {formatMoney(Math.round(toMinorUnits(amountValue) / instalments), currency)} now and each month for {instalments - 1} more month
                 {instalments - 1 === 1 ? '' : 's'} — posted automatically (see Subscriptions & bills).
               </Text>
             ) : null}
@@ -333,6 +378,52 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
             </Pressable>
           )}
         </View>
+
+        {editing && editing.type === 'expense' ? (
+          <View style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+              Split off part into another category
+            </Text>
+            <ChipSelector
+              options={relevantCategories.filter((c) => c.id !== editing.category_id).map((c) => ({ id: c.id, label: c.name, color: c.color, icon: c.icon }))}
+              selectedId={splitCat}
+              onSelect={setSplitCat}
+            />
+            {splitCat ? (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: spacing.sm }}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <TextField placeholder="Amount to move" keyboardType="decimal-pad" value={splitAmount} onChangeText={setSplitAmount} />
+                </View>
+                <Pressable
+                  onPress={async () => {
+                    // One receipt, two categories: the moved part becomes its own
+                    // expense and the original shrinks, so balances don't change.
+                    const part = toMinorUnits(evalAmount(splitAmount));
+                    if (!(part > 0) || part >= editing.amount) return;
+                    await updateTransaction(editing.id, { amount: editing.amount - part });
+                    await addTransaction({
+                      type: 'expense',
+                      amount: part,
+                      currency: editing.currency,
+                      account_id: editing.account_id,
+                      transfer_to_account_id: null,
+                      category_id: splitCat,
+                      recurring_id: null,
+                      note: editing.note,
+                      date: editing.date,
+                    });
+                    setSplitAmount('');
+                    setSplitCat(null);
+                    onClose();
+                  }}
+                  style={{ paddingTop: 12 }}
+                >
+                  <Text style={[typography.headline, { color: colors.blue }]}>Split</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <Button title="Save" onPress={handleSave} disabled={!canSave} loading={saving} style={{ marginTop: spacing.sm }} />
       </ScrollView>

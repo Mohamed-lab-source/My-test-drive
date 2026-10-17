@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -19,6 +19,7 @@ import * as lifeRepo from '../../../src/db/repositories/life';
 import { todayKey } from '../../../src/db/client';
 import { requestNotificationPermission, scheduleQuranReminder } from '../../../src/notifications/scheduler';
 import { formatClock } from '../../../src/utils/date';
+import { daysUntilHijri, toHijri } from '../../../src/utils/hijri';
 
 const GOALS = [0, 2, 4, 5, 10, 20];
 
@@ -51,6 +52,13 @@ export default function QuranScreen() {
 
   const read = Math.min(QURAN_PAGES, quranLogs.reduce((sum, l) => sum + l.pages, 0));
   const remaining = QURAN_PAGES - read;
+  const hijriOffset = useSettingsStore((s) => s.hijriOffset);
+  // During Ramadan, aim for Eid; otherwise for the start of Ramadan.
+  const ramadanTarget = useMemo(() => {
+    const inRamadan = toHijri(new Date(), hijriOffset).month === 9;
+    const days = inRamadan ? daysUntilHijri(10, 1, hijriOffset) : daysUntilHijri(9, 1, hijriOffset);
+    return days ? { days, label: inRamadan ? 'Eid al-Fitr' : 'Ramadan' } : null;
+  }, [hijriOffset]);
   const complete = remaining <= 0;
   const finishDate = complete
     ? null
@@ -141,6 +149,12 @@ export default function QuranScreen() {
                 {todayPages >= quranDailyGoal ? '✅ Done for today' : `${todayPages} of ${quranDailyGoal} pages today`}
                 {goalStreak > 0 ? ` · 🔥 ${goalStreak} day${goalStreak === 1 ? '' : 's'} in a row` : ''}
               </Text>
+              {ramadanTarget && !complete ? (
+                <Text style={[typography.caption1, { color: colors.green, marginTop: 2 }]}>
+                  {ramadanTarget.label} is in {ramadanTarget.days} days — {Math.ceil(remaining / ramadanTarget.days)} page
+                  {Math.ceil(remaining / ramadanTarget.days) === 1 ? '' : 's'} a day finishes this khatm before it.
+                </Text>
+              ) : null}
               {quranDailyGoal > 0 && !complete ? (
                 <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>
                   At {quranDailyGoal} pages a day you'd finish this khatm in {Math.ceil(remaining / quranDailyGoal)} days

@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Appearance = 'system' | 'light' | 'dark';
+export type Accent = 'blue' | 'indigo' | 'purple' | 'pink' | 'red' | 'orange' | 'green' | 'teal';
 
 interface SettingsState {
   appearance: Appearance;
@@ -127,6 +128,22 @@ interface SettingsState {
   setLastBackupAt: (v: string | null) => void;
   checklists: Record<string, string[]>;
   toggleChecklistItem: (key: string, item: string) => void;
+  smsIgnored: string[];
+  setSmsIgnored: (v: string[]) => void;
+  monthlyRecapReminder: boolean;
+  setMonthlyRecapReminder: (v: boolean) => void;
+  tahajjudReminder: boolean;
+  setTahajjudReminder: (v: boolean) => void;
+  accent: Accent;
+  setAccent: (v: Accent) => void;
+  displayName: string;
+  setDisplayName: (v: string) => void;
+  quietHours: { from: number; to: number } | null;
+  setQuietHours: (v: { from: number; to: number } | null) => void;
+  homeQuickActions: string[];
+  setHomeQuickActions: (v: string[]) => void;
+  weeklyReviewReminder: boolean;
+  setWeeklyReviewReminder: (v: boolean) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -272,6 +289,22 @@ export const useSettingsStore = create<SettingsState>()(
           const cur = s.checklists[key] ?? [];
           return { checklists: { ...s.checklists, [key]: cur.includes(item) ? cur.filter((x) => x !== item) : [...cur, item] } };
         }),
+      smsIgnored: [],
+      setSmsIgnored: (v) => set({ smsIgnored: v }),
+      monthlyRecapReminder: true,
+      setMonthlyRecapReminder: (v) => set({ monthlyRecapReminder: v }),
+      tahajjudReminder: false,
+      setTahajjudReminder: (v) => set({ tahajjudReminder: v }),
+      accent: 'blue',
+      setAccent: (v) => set({ accent: v }),
+      displayName: '',
+      setDisplayName: (v) => set({ displayName: v }),
+      quietHours: null,
+      setQuietHours: (v) => set({ quietHours: v }),
+      homeQuickActions: ['expense', 'task', 'tasbih', 'quran'],
+      setHomeQuickActions: (v) => set({ homeQuickActions: v }),
+      weeklyReviewReminder: false,
+      setWeeklyReviewReminder: (v) => set({ weeklyReviewReminder: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

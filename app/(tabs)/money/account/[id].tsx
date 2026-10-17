@@ -27,6 +27,7 @@ export default function AccountDetailScreen() {
   const [rows, setRows] = useState<Transaction[]>([]);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [periodKey, setPeriodKey] = useState<string | null>(null);
+  const [adding, setAdding] = useState<'expense' | 'income' | 'transfer' | null>(null);
   const balance = useBalanceFormatter();
 
   useEffect(() => {
@@ -156,6 +157,24 @@ export default function AccountDetailScreen() {
           ) : null}
         </Card>
 
+        <View style={{ flexDirection: 'row', marginBottom: spacing.md }}>
+          {(
+            [
+              { type: 'expense', label: isCredit ? '+ Charge' : '+ Expense', color: colors.red },
+              { type: 'income', label: isCredit ? '+ Refund' : '+ Income', color: colors.green },
+              { type: 'transfer', label: isCredit ? 'Pay card' : 'Transfer', color: colors.blue },
+            ] as const
+          ).map((b) => (
+            <Pressable
+              key={b.type}
+              onPress={() => setAdding(b.type)}
+              style={{ flex: 1, marginHorizontal: 3, paddingVertical: 10, borderRadius: 12, alignItems: 'center', backgroundColor: b.color + '1A' }}
+            >
+              <Text style={[typography.subhead, { color: b.color, fontWeight: '600' }]}>{b.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
           <Text style={[typography.title3, { color: colors.label }]}>Statement</Text>
           <View style={{ flexDirection: 'row' }}>
@@ -234,6 +253,14 @@ export default function AccountDetailScreen() {
         )}
       </ScrollView>
       <AddTransactionSheet visible={!!editing} editing={editing} onClose={() => setEditing(null)} />
+      <AddTransactionSheet
+        visible={!!adding}
+        initialType={adding ?? undefined}
+        // Paying a card moves money from a bank account into it.
+        initialAccountId={isCredit && adding === 'transfer' ? accounts.find((a) => a.type === 'bank' && !a.is_archived)?.id : account.id}
+        initialToAccountId={isCredit && adding === 'transfer' ? account.id : undefined}
+        onClose={() => setAdding(null)}
+      />
     </View>
   );
 }

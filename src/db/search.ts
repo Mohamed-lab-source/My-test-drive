@@ -1,9 +1,9 @@
 import { getDb } from './client';
 import { formatDateShort } from '../utils/date';
 import { formatMoney } from '../utils/money';
-import type { Book, Countdown, Meeting, Note, ShoppingItem, Task, Transaction, WishlistItem } from './types';
+import type { Book, Countdown, JournalEntry, Meeting, Note, ShoppingItem, Task, Transaction, WishlistItem } from './types';
 
-export type SearchResultType = 'transaction' | 'task' | 'meeting' | 'wishlist' | 'note' | 'book' | 'shopping' | 'countdown';
+export type SearchResultType = 'transaction' | 'task' | 'meeting' | 'wishlist' | 'note' | 'book' | 'shopping' | 'countdown' | 'journal';
 export interface SearchResult {
   type: SearchResultType;
   id: string;
@@ -23,7 +23,7 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   const amountClause = amount > 0 ? ' OR (amount >= ? AND amount < ?)' : '';
   const amountArgs = amount > 0 ? [Math.floor(amount) * 100, (Math.floor(amount) + 1) * 100] : [];
 
-  const [transactions, tasks, meetings, wishlist, notes, books, shopping, countdowns] = await Promise.all([
+  const [transactions, tasks, meetings, wishlist, notes, books, shopping, countdowns, journal] = await Promise.all([
     db.getAllAsync<Transaction>(`SELECT * FROM transactions WHERE note LIKE ?${amountClause} ORDER BY date DESC LIMIT 20`, [like, ...amountArgs]),
     db.getAllAsync<Task>(
       'SELECT * FROM tasks WHERE title LIKE ? OR notes LIKE ? ORDER BY created_at DESC LIMIT 20',
@@ -41,6 +41,10 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
     db.getAllAsync<Book>('SELECT * FROM books WHERE title LIKE ? OR author LIKE ? ORDER BY created_at DESC LIMIT 20', [like, like]),
     db.getAllAsync<ShoppingItem>('SELECT * FROM shopping_items WHERE title LIKE ? ORDER BY created_at DESC LIMIT 20', [like]),
     db.getAllAsync<Countdown>('SELECT * FROM countdowns WHERE title LIKE ? ORDER BY date ASC LIMIT 20', [like]),
+    db.getAllAsync<JournalEntry>(
+      'SELECT * FROM journal_entries WHERE note LIKE ? OR gratitude LIKE ? ORDER BY date DESC LIMIT 20',
+      [like, like]
+    ),
   ]);
 
   return [
@@ -57,5 +61,11 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
     ...books.map((b) => ({ type: 'book' as const, id: b.id, title: b.title, subtitle: b.author ?? undefined })),
     ...shopping.map((i) => ({ type: 'shopping' as const, id: i.id, title: i.title, subtitle: i.is_done ? 'In the cart' : 'Shopping list' })),
     ...countdowns.map((c) => ({ type: 'countdown' as const, id: c.id, title: c.title, subtitle: c.date })),
+    ...journal.map((j) => ({
+      type: 'journal' as const,
+      id: j.id,
+      title: (j.note || j.gratitude || '').split('\n')[0] || 'Journal entry',
+      subtitle: `Journal · ${j.date}`,
+    })),
   ];
 }

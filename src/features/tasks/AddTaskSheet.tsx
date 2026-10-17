@@ -45,19 +45,26 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
     setSaving(true);
     try {
       const status: TaskStatus = when === 'backlog' ? 'backlog' : 'todo';
-      await addTask({
-        project_id: projectId,
-        title: title.trim(),
-        notes: notes || null,
-        status,
-        priority: PRIORITIES[priorityIndex],
-        due_date: deadlineFromOption(deadline),
-        scheduled_date: when === 'today' ? todayKey() : null,
-        sort_order: Date.now(),
-        repeat_frequency: repeat === 'none' ? null : repeat,
-        repeat_interval: repeat === 'none' ? null : 1,
-        estimate_minutes: estimate || null,
-      });
+      // Several lines (e.g. a pasted list) become one task each.
+      const titles = title
+        .split('\n')
+        .map((l) => l.replace(/^\s*(?:[-*•☐]|\d+[.)])\s*/, '').trim())
+        .filter(Boolean);
+      for (const [i, line] of titles.entries()) {
+        await addTask({
+          project_id: projectId,
+          title: line,
+          notes: notes || null,
+          status,
+          priority: PRIORITIES[priorityIndex],
+          due_date: deadlineFromOption(deadline),
+          scheduled_date: when === 'today' ? todayKey() : null,
+          repeat_frequency: repeat === 'none' ? null : repeat,
+          repeat_interval: repeat === 'none' ? null : 1,
+          estimate_minutes: estimate || null,
+          sort_order: Date.now() + i,
+        });
+      }
       setTitle('');
       setNotes('');
       setPriorityIndex(1);
@@ -75,7 +82,12 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
     <Sheet visible={visible} onClose={onClose}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
         <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.md }]}>New Task</Text>
-        <TextField label="Title" placeholder="What needs to happen?" value={title} onChangeText={setTitle} autoFocus />
+        <TextField label="Title" placeholder="What needs to happen?" value={title} onChangeText={setTitle} autoFocus multiline />
+        {title.includes('\n') ? (
+          <Text style={[typography.caption1, { color: colors.blue, marginTop: -spacing.sm, marginBottom: spacing.sm }]}>
+            {title.split('\n').filter((l) => l.trim()).length} tasks will be added — one per line.
+          </Text>
+        ) : null}
         <TextField label="Notes" placeholder="Optional details" value={notes} onChangeText={setNotes} multiline />
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>When</Text>
@@ -121,7 +133,7 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
           </>
         ) : null}
 
-        <Button title="Add task" onPress={handleSave} disabled={!canSave} loading={saving} />
+        <Button title={title.split('\n').filter((l) => l.trim()).length > 1 ? 'Add tasks' : 'Add task'} onPress={handleSave} disabled={!canSave} loading={saving} />
       </ScrollView>
     </Sheet>
   );

@@ -25,7 +25,7 @@ import { TextField } from '../../../src/ui/TextField';
 import { parseQuickTask } from '../../../src/utils/quickAdd';
 import { formatDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
-import { formatRelativeDay, formatTime } from '../../../src/utils/date';
+import { formatRelativeDay, formatTime, localDateKey } from '../../../src/utils/date';
 import type { Task } from '../../../src/db/types';
 import { insertRow } from '../../../src/db/helpers';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
@@ -91,6 +91,7 @@ export default function TasksScreen() {
   const todaysMeetingMinutes = meetings
     .filter((m) => new Date(m.start_at).toDateString() === new Date().toDateString())
     .reduce((sum, m) => sum + (m.end_at ? Math.max(0, (new Date(m.end_at).getTime() - new Date(m.start_at).getTime()) / 60000) : 30), 0);
+  const doneToday = tasks.filter((t) => t.status === 'done' && t.completed_at && localDateKey(t.completed_at) === todayStr).length;
   const overdue = useMemo(
     () => tasks.filter((t) => t.status !== 'done' && t.due_date && daysToDeadline(t.due_date) < 0 && t.scheduled_date !== todayStr),
     [tasks, todayStr]
@@ -293,6 +294,17 @@ export default function TasksScreen() {
             <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
               Tasks waiting on someone else. Set "Waiting on" in a task to add it here.
             </Text>
+          ) : null}
+          {segment === 0 && !query && (doneToday > 0 || bySegment.length > 0) ? (
+            <View style={{ marginBottom: spacing.sm }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
+                  {doneToday} of {doneToday + bySegment.length} done today
+                </Text>
+                {bySegment.length === 0 ? <Text style={[typography.subhead, { color: colors.green, fontWeight: '600' }]}>All clear 🎉</Text> : null}
+              </View>
+              <ProgressBar progress={doneToday / Math.max(1, doneToday + bySegment.length)} color={colors.green} height={6} />
+            </View>
           ) : null}
           {segment === 0 && !query ? <WeeklyGoalsCard /> : null}
           {segment === 0 && !query && (plannedMinutes(bySegment) > 0 || todaysMeetingMinutes > 0) ? (

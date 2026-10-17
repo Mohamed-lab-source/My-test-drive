@@ -408,6 +408,18 @@ CREATE TABLE IF NOT EXISTS hifz (
   updated_at TEXT NOT NULL
 );
 
+-- Health readings: blood pressure (value = systolic, value2 = diastolic),
+-- blood sugar (mg/dL) and resting heart rate (bpm).
+CREATE TABLE IF NOT EXISTS vitals (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('bp', 'sugar', 'heart')),
+  value REAL NOT NULL,
+  value2 REAL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS notes (
   id TEXT PRIMARY KEY NOT NULL,
   body TEXT NOT NULL,

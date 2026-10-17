@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, Share } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { ChipSelector } from '../../ui/ChipSelector';
@@ -182,7 +182,24 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
         {editing ? (
           <>
             <Button title="Create follow-up task" variant="secondary" onPress={createFollowUp} style={{ marginTop: spacing.sm }} />
-            <Button title="Copy to next week" variant="secondary" onPress={copyToNextWeek} style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+            <Button title="Copy to next week" variant="secondary" onPress={copyToNextWeek} style={{ marginTop: spacing.sm }} />
+            <Button
+              title="Share meeting details"
+              variant="secondary"
+              onPress={() =>
+                Share.share({
+                  message: [
+                    editing.title,
+                    `🕐 ${new Date(editing.start_at).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })}${duration ? ` (${duration} min)` : ''}`,
+                    location ? `📍 ${location}` : null,
+                    notes.trim() ? `\n${notes.trim()}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join('\n'),
+                })
+              }
+              style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}
+            />
           </>
         ) : null}
       </ScrollView>

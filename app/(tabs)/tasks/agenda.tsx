@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -8,12 +8,15 @@ import { Icon } from '../../../src/ui/Icon';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { formatTime, localDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
+import { SegmentedControl } from '../../../src/ui/SegmentedControl';
+import { MonthCalendar } from '../../../src/features/tasks/MonthCalendar';
 
 const DAYS_AHEAD = 14;
 
 export default function AgendaScreen() {
   const { colors, typography, spacing } = useTheme();
   const { tasks, meetings } = useProductivityStore();
+  const [view, setView] = useState(0);
 
   const days = useMemo(() => {
     const list: { key: string; label: string }[] = [];
@@ -36,7 +39,7 @@ export default function AgendaScreen() {
     () =>
       days.map((day) => ({
         ...day,
-        tasks: tasks.filter((t) => t.status !== 'done' && t.scheduled_date === day.key),
+        tasks: tasks.filter((t) => t.status !== 'done' && (t.scheduled_date === day.key || t.due_date === day.key)),
         meetings: meetings.filter((m) => localDateKey(m.start_at) === day.key),
       })),
     [days, tasks, meetings]
@@ -48,7 +51,12 @@ export default function AgendaScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Agenda" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
-        {!hasAnything ? (
+        <View style={{ marginBottom: spacing.md }}>
+          <SegmentedControl options={['Next 2 weeks', 'Month']} selectedIndex={view} onChange={setView} />
+        </View>
+        {view === 1 ? (
+          <MonthCalendar />
+        ) : !hasAnything ? (
           <EmptyState icon="calendar" title="Nothing scheduled" message="Tasks and meetings for the next two weeks show up here." />
         ) : (
           sections

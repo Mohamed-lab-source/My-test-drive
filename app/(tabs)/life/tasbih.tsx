@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -10,6 +10,17 @@ import * as repo from '../../../src/db/repositories/life';
 import { todayKey } from '../../../src/db/client';
 import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
 import { useSettingsStore } from '../../../src/store/settingsStore';
+
+const PHRASES = [
+  { id: 'subhan', arabic: 'سُبْحَانَ اللَّهِ', text: 'SubhanAllah — Glory be to Allah' },
+  { id: 'hamd', arabic: 'الْحَمْدُ لِلَّهِ', text: 'Alhamdulillah — All praise is for Allah' },
+  { id: 'akbar', arabic: 'اللَّهُ أَكْبَرُ', text: 'Allahu Akbar — Allah is the Greatest' },
+  { id: 'tahlil', arabic: 'لَا إِلَٰهَ إِلَّا اللَّهُ', text: 'La ilaha illallah — None is worthy of worship but Allah' },
+  { id: 'istighfar', arabic: 'أَسْتَغْفِرُ اللَّهَ', text: "Astaghfirullah — I seek Allah's forgiveness" },
+  { id: 'salawat', arabic: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ', text: 'O Allah, send blessings upon Muhammad ﷺ' },
+  { id: 'bihamdihi', arabic: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ', text: 'SubhanAllahi wa bihamdihi' },
+  { id: 'hawqala', arabic: 'لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ', text: 'La hawla wa la quwwata illa billah' },
+];
 
 const TARGETS = [33, 99, 100];
 
@@ -42,6 +53,7 @@ export default function TasbihScreen() {
   const { colors, typography, spacing } = useTheme();
   const dhikrToday = useLifeStore((s) => s.dhikrToday);
   const { dhikrGoal, setDhikrGoal } = useSettingsStore();
+  const [phrase, setPhrase] = useState<string | null>(null);
   const [total, setTotal] = useState(dhikrToday);
   const [target, setTarget] = useState(33);
   const [mode, setMode] = useState<'free' | 'salah'>('free');
@@ -112,7 +124,7 @@ export default function TasbihScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Tasbih" />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
         <View style={{ marginBottom: spacing.xl }}>
           <ChipSelector
             options={[...TARGETS.map((t) => ({ id: String(t), label: `${t}` })), { id: 'salah', label: 'After salah' }]}
@@ -128,6 +140,21 @@ export default function TasbihScreen() {
             }}
           />
         </View>
+        {mode === 'free' ? (
+          <View style={{ alignSelf: 'stretch', marginTop: -spacing.lg, marginBottom: spacing.md }}>
+            <ChipSelector
+              options={[{ id: 'none', label: 'Any dhikr' }, ...PHRASES.map((p) => ({ id: p.id, label: p.arabic }))]}
+              selectedId={phrase ?? 'none'}
+              onSelect={(id) => setPhrase(id === 'none' ? null : id)}
+            />
+            {phrase ? (
+              <View style={{ alignItems: 'center', marginTop: spacing.sm }}>
+                <Text style={{ fontSize: 28, color: colors.label, writingDirection: 'rtl' }}>{PHRASES.find((p) => p.id === phrase)?.arabic}</Text>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>{PHRASES.find((p) => p.id === phrase)?.text}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
         <Animated.View style={buttonStyle}>
           <Pressable
             onPress={tap}
@@ -217,7 +244,7 @@ export default function TasbihScreen() {
             height={50}
           />
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

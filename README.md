@@ -80,6 +80,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - All Transactions: period filter (week, month, last month, 3 months, year — reads full history), sort by oldest or largest, minimum amount, and totals for what's shown
 - Weekly spending limit card (with an alert), challenges (no-spend days goal, 52-week savings), net worth by account type, credit card "still to pay" and minimum payment
 - Tools: tip & split, sale price, which-is-cheaper, time to save, savings growth, loan amortisation table
+- Live exchange rates: "Update rates online" in Settings fetches today's rates for every currency you hold or spend in
+- Bank SMS: a charge matching a due bill (amount within 3%, due within a week) offers "Add & mark bill paid"; "Always ignore" a merchant; a smarter duplicate check (±1 day, shows the matching entry, "Same one — dismiss")
+- Split one transaction across categories; merchant pages (totals, visits, average, 12-month chart) from Insights or any expense
+- Spending pace card (this month vs. the same days last month), quick + Expense / + Income / Transfer (or Pay card) buttons on every account, and sums in the amount field (120+45.5, with + − × ÷ keys)
 
 **Tasks**
 - Today / Backlog / All views, with unfinished "Today" tasks rolling into Backlog automatically
@@ -112,6 +116,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - "Waiting on" someone, with its own Waiting tab
 - Task insights: done vs added, best weekday and hour, typical time to finish, on-time rate, open tasks by priority, meeting hours this week
 - Meeting length, copy a meeting to next week, daily focus goal
+- Month calendar in Agenda (tasks, deadlines, meetings), deadlines in the 2-week list, paste several lines to add several tasks, a 9 AM reminder on deadline days
+- "Done today" progress on Tasks, meeting length-aware sharing of meeting details
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -156,6 +162,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Blessed seasons: last ten nights checklist, first ten days of Dhul Hijjah (fasting days + acts) and the six fasts of Shawwal
 - Hifz revision plan (the memorised surahs you revised longest ago), daily dhikr goal in Tasbih
 - Life insights: prayers marked on time, mood by weekday, journal streak and gratitude count, strongest/weakest habit, water, sleep week-on-week, BMI, medication adherence, reading pace and finish dates
+- Vitals in Health: blood pressure, blood sugar and heart rate with 7-day averages and general guidance ranges
+- Tahajjud reminder at the last third of the night, dhikr phrases in Tasbih, journal search and mood filter, make-up (qada) plan with a finish date, "finish your khatm before Ramadan" pages-per-day
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
@@ -172,6 +180,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Day recap, achievements, larger text option, and a "Your data" summary
 - Insight of the day, Name of Allah of the day and a "spent today" line (each can be hidden in Customize Home)
 - Search finds transactions by amount too (type 125.50) and shows each amount in the results
+- Hadith of the day and a past gratitude on Home; customisable quick actions (choose any 4 of 12) and a greeting with your name
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood
@@ -191,6 +200,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - 24-hour clock and whole-number amounts (Settings → Appearance); recent searches
 - Big-spending-day alert, weekend days (Fri–Sat / Sat–Sun) and the day your week starts
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
+- Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
 ## Tech stack
 

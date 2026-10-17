@@ -15,6 +15,7 @@ import { todayKey } from '../../../src/db/client';
 import { formatClock, formatDateKey } from '../../../src/utils/date';
 import { requestNotificationPermission, scheduleBedtimeReminder } from '../../../src/notifications/scheduler';
 import type { SleepLog, WaterLog, WeightLog } from '../../../src/db/types';
+import { VitalsCard } from '../../../src/features/life/VitalsCard';
 
 const SLEEP_OPTIONS = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9];
 
@@ -186,6 +187,7 @@ export default function HealthScreen() {
             onBlur={() => setWeightGoal(Number(goalInput.replace(',', '.')) || 0)}
           />
         </Card>
+        <VitalsCard />
       </ScrollView>
     </View>
   );

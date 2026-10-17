@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useSettingsStore } from '../store/settingsStore';
-import { findPrayerCity, getPrayerSchedule, type PrayerCity } from '../utils/prayerTimes';
+import { findPrayerCity, getDayDetails, getPrayerSchedule, type PrayerCity } from '../utils/prayerTimes';
 import { todayKey } from '../db/client';
 import type { Account, Debt, Habit, Medication, Meeting, Occasion, RecurringRule, Task, Transaction } from '../db/types';
 import { formatMoney } from '../utils/money';
@@ -178,9 +178,27 @@ export async function cancelFocusEnd(): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(FOCUS_ID).catch(() => {});
 }
 
+// The end of quiet hours (Settings) if `now` falls inside them, else null.
+// Hours wrap past midnight, e.g. 23 → 7.
+export function quietUntil(now: Date, quiet: { from: number; to: number } | null): Date | null {
+  if (!quiet || quiet.from === quiet.to) return null;
+  const h = now.getHours();
+  const inside = quiet.from < quiet.to ? h >= quiet.from && h < quiet.to : h >= quiet.from || h < quiet.to;
+  if (!inside) return null;
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), quiet.to);
+  if (end <= now) end.setDate(end.getDate() + 1);
+  return end;
+}
+
+// Spending/budget/savings alerts. During quiet hours they're held until
+// quiet hours end instead of buzzing at night.
 export async function notifyNow(title: string, body: string): Promise<void> {
   if (!(await areNotificationsEnabled())) return;
-  await Notifications.scheduleNotificationAsync({ content: { title, body }, trigger: null });
+  const until = quietUntil(new Date(), useSettingsStore.getState().quietHours);
+  await Notifications.scheduleNotificationAsync({
+    content: { title, body },
+    trigger: until ? { type: Notifications.SchedulableTriggerInputTypes.DATE, date: until, channelId: CHANNEL_ID } : null,
+  });
 }
 
 const PRAYER_PREFIX = 'prayer-';
@@ -441,11 +459,12 @@ export async function scheduleBedtimeReminder(): Promise<void> {
 const ISLAMIC_PREFIXES = ['occ-', 'monthu-', 'hawl-'];
 const OCCASION_LABELS = new Set(['Ramadan begins', 'Eid al-Fitr', 'Eid al-Adha', 'Islamic New Year', 'Last ten nights']);
 
-async function scheduleAt(identifier: string, date: Date, title: string, body: string): Promise<void> {
+// url: the screen to open when the notification is tapped (see app/_layout).
+async function scheduleAt(identifier: string, date: Date, title: string, body: string, url?: string): Promise<void> {
   if (date.getTime() <= Date.now()) return;
   await Notifications.scheduleNotificationAsync({
     identifier,
-    content: { title, body },
+    content: { title, body, data: url ? { url } : undefined },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: CHANNEL_ID },
   });
 }
@@ -552,8 +571,8 @@ export async function rescheduleCardDueReminders(accounts: Account[]): Promise<v
       const lastDay = new Date(now.getFullYear(), now.getMonth() + m + 1, 0).getDate();
       const due = new Date(now.getFullYear(), now.getMonth() + m, Math.min(a.due_day, lastDay), 9);
       const before = new Date(due.getFullYear(), due.getMonth(), due.getDate() - 3, 9);
-      await scheduleAt(`${CARD_DUE_PREFIX}${a.id}-${m}-early`, before, `${a.name} payment due in 3 days`, `You owe ${owed}. Pay in full to avoid interest.`);
-      await scheduleAt(`${CARD_DUE_PREFIX}${a.id}-${m}`, due, `${a.name} payment due today`, `You owe ${owed}.`);
+      await scheduleAt(`${CARD_DUE_PREFIX}${a.id}-${m}-early`, before, `${a.name} payment due in 3 days`, `You owe ${owed}. Pay in full to avoid interest.`, `/money/account/${a.id}`);
+      await scheduleAt(`${CARD_DUE_PREFIX}${a.id}-${m}`, due, `${a.name} payment due today`, `You owe ${owed}.`, `/money/account/${a.id}`);
     }
   }
 }
@@ -588,7 +607,77 @@ export async function scheduleSpendDigest(transactions: Transaction[], accounts:
   }
   await Notifications.scheduleNotificationAsync({
     identifier: DIGEST_ID,
-    content: { title: "Today's spending", body },
+    content: { title: "Today's spending", body, data: { url: '/money/transactions' } },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: target, channelId: CHANNEL_ID },
+  });
+}
+
+// ---------- Monthly recap ----------
+const RECAP_ID = 'monthly-recap';
+
+// 10 AM on the 1st: last month's recap is ready.
+export async function scheduleMonthlyRecap(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(RECAP_ID).catch(() => {});
+  if (!useSettingsStore.getState().monthlyRecapReminder || !(await areNotificationsEnabled())) return;
+  const now = new Date();
+  const at = new Date(now.getFullYear(), now.getMonth() + 1, 1, 10);
+  const month = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString(undefined, { month: 'long' });
+  await scheduleAt(RECAP_ID, at, `Your ${month} recap is ready`, 'See last month next to the rest of your year.', '/money/year');
+}
+
+// ---------- Task deadlines ----------
+const DEADLINE_PREFIX = 'deadline-';
+
+// 9 AM on the deadline day for open tasks with a deadline (nearest 40).
+export async function rescheduleDeadlineReminders(tasks: Task[]): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => n.identifier.startsWith(DEADLINE_PREFIX))
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {}))
+  );
+  if (!(await areNotificationsEnabled())) return;
+  const upcoming = tasks
+    .filter((t) => t.status !== 'done' && t.due_date)
+    .sort((a, b) => a.due_date!.localeCompare(b.due_date!))
+    .slice(0, 40);
+  for (const t of upcoming) {
+    const [y, m, d] = t.due_date!.slice(0, 10).split('-').map(Number);
+    await scheduleAt(`${DEADLINE_PREFIX}${t.id}`, new Date(y, m - 1, d, 9), 'Due today', t.title, '/tasks');
+  }
+}
+
+// ---------- Tahajjud ----------
+const TAHAJJUD_PREFIX = 'tahajjud-';
+
+// At the start of the last third of the night for the next week (the
+// time shifts nightly, so each night is its own one-off notification).
+export async function scheduleTahajjudReminders(): Promise<void> {
+  await Promise.all(Array.from({ length: 7 }, (_, i) => Notifications.cancelScheduledNotificationAsync(`${TAHAJJUD_PREFIX}${i}`).catch(() => {})));
+  const { tahajjudReminder, prayerCityId } = useSettingsStore.getState();
+  const city = findPrayerCity(prayerCityId);
+  if (!tahajjudReminder || !city || !(await areNotificationsEnabled())) return;
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1 + i);
+    const at = getDayDetails(city, day).lastThird;
+    await scheduleAt(`${TAHAJJUD_PREFIX}${i}`, at, 'The last third of the night 🌙', 'A blessed time for Tahajjud and dua.', '/life/sunnah-prayers');
+  }
+}
+
+// ---------- Weekly review ----------
+const WEEKLY_REVIEW_ID = 'weekly-review';
+
+// 8 PM on the last day of your week (the day before it starts again).
+export async function scheduleWeeklyReviewReminder(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(WEEKLY_REVIEW_ID).catch(() => {});
+  const { weeklyReviewReminder, weekStart } = useSettingsStore.getState();
+  if (!weeklyReviewReminder || !(await areNotificationsEnabled())) return;
+  const lastDay = (weekStart + 6) % 7; // 0 = Sunday
+  await Notifications.scheduleNotificationAsync({
+    identifier: WEEKLY_REVIEW_ID,
+    content: { title: 'Your week in review', body: 'Prayers, spending, tasks and habits — see how the week went.', data: { url: '/review' } },
+    // Expo counts weekdays from 1 = Sunday.
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: lastDay + 1, hour: 20, minute: 0, channelId: CHANNEL_ID },
   });
 }

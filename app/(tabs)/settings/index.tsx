@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Share, Alert, TextInput, Switch, Platform, Pres
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
-import { useSettingsStore, type Appearance } from '../../../src/store/settingsStore';
+import { useSettingsStore, type Accent, type Appearance } from '../../../src/store/settingsStore';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useProductivityStore } from '../../../src/store/productivityStore';
 import { useLifeStore } from '../../../src/store/lifeStore';
@@ -19,7 +19,7 @@ import { Sheet } from '../../../src/ui/Sheet';
 import { Button } from '../../../src/ui/Button';
 import { TextField } from '../../../src/ui/TextField';
 import { exportAllData, importAllData, resetAllData } from '../../../src/db/backup';
-import { exportTransactionsCsv } from '../../../src/db/csvExport';
+import { exportTasksCsv, exportTransactionsCsv } from '../../../src/db/csvExport';
 import { DataStatsCard } from '../../../src/features/settings/DataStatsCard';
 import {
   requestNotificationPermission,
@@ -34,12 +34,18 @@ import { formatHijri } from '../../../src/utils/hijri';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { buildMonthlyReport } from '../../../src/utils/monthlyReport';
+import { fetchLiveRates } from '../../../src/utils/liveRates';
+import { palette } from '../../../src/theme/colors';
 
 function FxRateRow({ currency, baseCurrency }: { currency: string; baseCurrency: string }) {
   const { colors, spacing } = useTheme();
   const existing = useFinanceStore((s) => s.fxRates.find((r) => r.currency === currency));
   const setFxRate = useFinanceStore((s) => s.setFxRate);
   const [value, setValue] = useState(existing ? String(existing.rate_to_base) : '');
+  // Picks up rates fetched online.
+  useEffect(() => {
+    if (existing) setValue(String(Number(existing.rate_to_base.toPrecision(6))));
+  }, [existing?.rate_to_base]);
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
@@ -65,7 +71,7 @@ const APPEARANCE_OPTIONS: Appearance[] = ['system', 'light', 'dark'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'KWD', 'QAR', 'BHD', 'OMR', 'JOD', 'EGP', 'MAD', 'TRY', 'INR', 'PKR', 'MYR', 'IDR'];
 
 export default function SettingsScreen() {
-  const { colors, typography, spacing, radius } = useTheme();
+  const { colors, typography, spacing, radius, scheme } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const {
@@ -122,7 +128,20 @@ export default function SettingsScreen() {
     setWeekStart,
     lastBackupAt,
     setLastBackupAt,
+    accent,
+    setAccent,
+    displayName,
+    setDisplayName,
+    quietHours,
+    setQuietHours,
+    monthlyRecapReminder,
+    setMonthlyRecapReminder,
+    tahajjudReminder,
+    setTahajjudReminder,
+    weeklyReviewReminder,
+    setWeeklyReviewReminder,
   } = useSettingsStore();
+  const [nameInput, setNameInput] = useState(displayName);
   const [dailyAlertInput, setDailyAlertInput] = useState(dailySpendAlert > 0 ? String(dailySpendAlert / 100) : '');
 
   const adjustPrayer = async (prayer: string, delta: number) => {
@@ -178,10 +197,30 @@ export default function SettingsScreen() {
   const hydrateLife = useLifeStore((s) => s.hydrate);
   const hydrateHabits = useHabitsStore((s) => s.hydrate);
 
+  const fxRates = useFinanceStore((s) => s.fxRates);
+  const recentTx = useFinanceStore((s) => s.transactions);
+  // Any currency you hold, spend in (e.g. a USD subscription) or have a rate for.
   const foreignCurrencies = useMemo(
-    () => Array.from(new Set(accounts.map((a) => a.currency))).filter((c) => c !== currency),
-    [accounts, currency]
+    () =>
+      Array.from(new Set([...accounts.map((a) => a.currency), ...recentTx.map((t) => t.currency), ...fxRates.map((r) => r.currency)])).filter(
+        (c) => c !== currency
+      ),
+    [accounts, recentTx, fxRates, currency]
   );
+  const [ratesBusy, setRatesBusy] = useState(false);
+  const updateRatesOnline = async () => {
+    setRatesBusy(true);
+    try {
+      const { rates, updated } = await fetchLiveRates(currency, foreignCurrencies);
+      const setFx = useFinanceStore.getState().setFxRate;
+      for (const [c, r] of Object.entries(rates)) await setFx(c, r);
+      Alert.alert('Rates updated', `${Object.keys(rates).length} rate${Object.keys(rates).length === 1 ? '' : 's'} updated${updated ? ` (published ${updated.replace(/ \+0000$/, ' UTC')})` : ''}.`);
+    } catch (e) {
+      Alert.alert('Could not update rates', 'Check your internet connection and try again. You can still type rates by hand.');
+    } finally {
+      setRatesBusy(false);
+    }
+  };
 
   const [importVisible, setImportVisible] = useState(false);
   const [importText, setImportText] = useState('');
@@ -339,6 +378,34 @@ export default function SettingsScreen() {
                 <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Show EGP 1,250 instead of EGP 1,249.50</Text>
               </View>
               <Switch value={wholeMoney} onValueChange={setWholeMoney} />
+            </View>
+            <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>Accent colour</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {(['blue', 'indigo', 'purple', 'pink', 'red', 'orange', 'green', 'teal'] as Accent[]).map((a) => (
+                <Pressable
+                  key={a}
+                  onPress={() => setAccent(a)}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    marginRight: 10,
+                    marginBottom: 8,
+                    backgroundColor: palette[scheme][a],
+                    borderWidth: accent === a ? 3 : 0,
+                    borderColor: colors.label,
+                  }}
+                />
+              ))}
+            </View>
+            <View style={{ marginTop: spacing.sm }}>
+              <TextField
+                label="Your name (for the Home greeting)"
+                placeholder="Optional"
+                value={nameInput}
+                onChangeText={setNameInput}
+                onBlur={() => setDisplayName(nameInput.trim())}
+              />
             </View>
           </Card>
         </View>
@@ -513,6 +580,11 @@ export default function SettingsScreen() {
               {foreignCurrencies.map((c) => (
                 <FxRateRow key={c} currency={c} baseCurrency={currency} />
               ))}
+              <Pressable onPress={updateRatesOnline} disabled={ratesBusy} style={{ marginTop: spacing.xs }}>
+                <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>
+                  {ratesBusy ? 'Updating…' : '↻ Update rates online'}
+                </Text>
+              </Pressable>
             </Card>
           </View>
         ) : null}
@@ -547,6 +619,44 @@ export default function SettingsScreen() {
               leading={<IconCircle name="creditcard.fill" color={colors.purple} size={32} />}
               trailing={<Switch value={cardDueReminders} onValueChange={(v) => toggleWithPermission(v, setCardDueReminders)} />}
             />
+            <ListRow
+              title="Monthly recap"
+              subtitle="10 AM on the 1st: last month in review"
+              leading={<IconCircle name="calendar" color={colors.indigo} size={32} />}
+              trailing={<Switch value={monthlyRecapReminder} onValueChange={(v) => toggleWithPermission(v, setMonthlyRecapReminder)} />}
+            />
+            <ListRow
+              title="Weekly review"
+              subtitle="8 PM on the last day of your week"
+              leading={<IconCircle name="chart.bar.fill" color={colors.purple} size={32} />}
+              trailing={<Switch value={weeklyReviewReminder} onValueChange={(v) => toggleWithPermission(v, setWeeklyReviewReminder)} />}
+            />
+            <ListRow
+              title="Tahajjud"
+              subtitle="At the last third of the night (needs your city)"
+              leading={<IconCircle name="moon.stars.fill" color={colors.indigo} size={32} />}
+              trailing={<Switch value={tahajjudReminder} onValueChange={(v) => toggleWithPermission(v, setTahajjudReminder)} />}
+            />
+            <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+              <Text style={[typography.body, { color: colors.label }]}>Quiet hours</Text>
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginBottom: 6 }]}>
+                Spending and budget alerts that happen at night wait until morning
+              </Text>
+              <ChipSelector
+                options={[
+                  { id: 'off', label: 'Off' },
+                  { id: '22-7', label: '10 PM – 7 AM' },
+                  { id: '23-7', label: '11 PM – 7 AM' },
+                  { id: '0-8', label: '12 AM – 8 AM' },
+                ]}
+                selectedId={quietHours ? `${quietHours.from}-${quietHours.to}` : 'off'}
+                onSelect={(id) => {
+                  if (id === 'off') return setQuietHours(null);
+                  const [from, to] = id.split('-').map(Number);
+                  setQuietHours({ from, to });
+                }}
+              />
+            </View>
             <ListRow
               title="Nightly spending digest"
               subtitle="9:30 PM: what you spent today, and how much on credit"
@@ -644,6 +754,11 @@ export default function SettingsScreen() {
               title="Export transactions (CSV)"
               leading={<IconCircle name="doc.text.fill" color={colors.teal} size={32} />}
               onPress={handleExportCsv}
+            />
+            <ListRow
+              title="Export tasks (CSV)"
+              leading={<IconCircle name="checklist" color={colors.blue} size={32} />}
+              onPress={async () => Share.share({ message: await exportTasksCsv(), title: 'Anchor tasks.csv' })}
             />
             <ListRow
               title="Restore from backup"

@@ -28,6 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
   const preference = useSettingsStore((s) => s.appearance);
   const textScale = useSettingsStore((s) => s.textScale);
+  const accent = useSettingsStore((s) => s.accent);
 
   const scheme: ColorScheme =
     preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
@@ -35,13 +36,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useMemo<Theme>(
     () => ({
       scheme,
-      colors: palette[scheme],
+      // The accent colour (Settings → Appearance) replaces the default blue
+      // used for buttons, links and selection everywhere.
+      colors: accent === 'blue' ? palette[scheme] : { ...palette[scheme], blue: palette[scheme][accent] },
       typography: scaleTypography(textScale),
       spacing,
       radius,
       shadow,
     }),
-    [scheme, textScale]
+    [scheme, textScale, accent]
   );
 
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;

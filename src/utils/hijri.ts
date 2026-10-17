@@ -131,3 +131,12 @@ export function upcomingIslamicDays(from: Date, days: number, offsetDays = 0): {
   }
   return out;
 }
+
+// Days from today until the next given Hijri month/day (0 = today).
+export function daysUntilHijri(month: number, day: number, offsetDays = 0, from: Date = new Date()): number | null {
+  for (let i = 0; i <= 390; i++) {
+    const h = toHijri(new Date(from.getFullYear(), from.getMonth(), from.getDate() + i), offsetDays);
+    if (h.month === month && h.day === day) return i;
+  }
+  return null;
+}

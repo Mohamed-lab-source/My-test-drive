@@ -8,6 +8,7 @@ import {
   cancelTaskReminder,
   scheduleMeetingReminder,
   scheduleTaskReminder,
+  rescheduleDeadlineReminders,
 } from '../notifications/scheduler';
 
 interface ProductivityState {
@@ -64,6 +65,7 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
   refreshSubtaskCounts: async () => set({ subtaskCounts: await repo.getSubtaskCounts() }),
   refreshTasks: async () => {
     set({ tasks: await repo.listTasks() });
+    rescheduleDeadlineReminders(get().tasks).catch(() => {});
     refreshTasksWidget();
   },
   refreshProjects: async () => set({ projects: await repo.listProjects() }),

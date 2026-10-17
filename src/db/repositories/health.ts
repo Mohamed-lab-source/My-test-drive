@@ -1,6 +1,6 @@
 import { newId, nowIso } from '../client';
 import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
-import type { MedLog, Medication, SleepLog, SunnahPrayerKind, SunnahPrayerLog, WaterLog, WeightLog } from '../types';
+import type { MedLog, Medication, SleepLog, SunnahPrayerKind, SunnahPrayerLog, Vital, VitalKind, WaterLog, WeightLog } from '../types';
 
 type DayTable = 'water_logs' | 'sleep_logs' | 'weight_logs';
 
@@ -64,3 +64,11 @@ export async function setMedTaken(date: string, medicationId: string, time: stri
   if (taken && !exists) await insertRow('med_logs', { id, date, medication_id: medicationId, time });
   if (!taken && exists) await deleteRow('med_logs', id);
 }
+
+// ---------- Vitals (blood pressure, sugar, heart rate) ----------
+export const listVitals = (kind: VitalKind, limit = 60) =>
+  whereRows<Vital>('vitals', 'kind = ?', [kind], `date DESC LIMIT ${limit}`);
+export async function addVital(kind: VitalKind, value: number, value2: number | null, note: string | null): Promise<void> {
+  await insertRow('vitals', { id: newId(), date: nowIso(), kind, value, value2, note, created_at: nowIso() });
+}
+export const deleteVital = (id: string) => deleteRow('vitals', id);

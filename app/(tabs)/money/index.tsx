@@ -19,6 +19,7 @@ import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
 import { LastMonthCard } from '../../../src/features/money/LastMonthCard';
 import { CardsSummaryCard } from '../../../src/features/money/CardsSummaryCard';
 import { WeeklyLimitCard } from '../../../src/features/money/WeeklyLimitCard';
+import { SpendingPaceCard } from '../../../src/features/money/SpendingPaceCard';
 import { useSmsStore } from '../../../src/sms/smsStore';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useBalanceFormatter } from '../../../src/ui/useMoney';
@@ -174,6 +175,10 @@ export default function MoneyScreen() {
 
         <View style={{ paddingHorizontal: spacing.lg }}>
           <WeeklyLimitCard />
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <SpendingPaceCard />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

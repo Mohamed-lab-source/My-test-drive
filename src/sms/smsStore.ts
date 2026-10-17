@@ -4,7 +4,7 @@ import { useFinanceStore } from '../store/financeStore';
 import * as repo from '../db/repositories/smsImports';
 import * as rulesRepo from '../db/repositories/merchantRules';
 import * as linksRepo from '../db/repositories/cardLinks';
-import type { Account, CardLink, MerchantRule, SmsImport } from '../db/types';
+import type { Account, CardLink, MerchantRule, RecurringRule, SmsImport } from '../db/types';
 import { parseCardPaymentSms, parseCreditSms, parseDebitSms, parseReportedBalance } from './parser';
 import { convertToBase } from '../db/repositories/fx';
 import { useUndoStore } from '../store/undoStore';
@@ -22,7 +22,8 @@ interface SmsState {
   refresh: () => Promise<void>;
   // days: rescan that far back instead of continuing from the last scan.
   scan: (days?: number) => Promise<number>;
-  add: (item: SmsImport, categoryId: string | null, accountId: string | null, opts?: { silent?: boolean }) => Promise<void>;
+  // ruleId: this charge is a bill's payment — link it and move the bill on.
+  add: (item: SmsImport, categoryId: string | null, accountId: string | null, opts?: { silent?: boolean; ruleId?: string }) => Promise<void>;
   dismiss: (id: string) => Promise<void>;
 }
 
@@ -62,6 +63,24 @@ export function accountForImport(item: SmsImport, accounts: Account[], links: Re
 }
 
 // The credit card a payment SMS is paying off.
+// A due bill (recurring expense) this charge probably pays: amount within 3%
+// and due within a week either side of the message.
+export function billFor(item: SmsImport, rules: RecurringRule[]): RecurringRule | null {
+  if (item.kind === 'credit' || item.kind === 'card_payment') return null;
+  const t = new Date(item.sms_date).getTime();
+  return (
+    rules.find(
+      (r) =>
+        r.is_active &&
+        !r.is_paused &&
+        r.type === 'expense' &&
+        r.currency === item.currency &&
+        Math.abs(r.amount - item.amount) <= r.amount * 0.03 &&
+        Math.abs(new Date(r.next_due_date).getTime() - t) <= 7 * 86400000
+    ) ?? null
+  );
+}
+
 export function creditCardFor(item: SmsImport, accounts: Account[], links: Record<string, CardLink>): Account | null {
   const open = accounts.filter((a) => !a.is_archived && a.type === 'credit');
   if (item.card_last4) {
@@ -170,6 +189,8 @@ export const useSmsStore = create<SmsState>((set, get) => ({
         newest = Math.max(newest, m.date);
         const parsed = parseCardPaymentSms(m.body) ?? parseDebitSms(m.body) ?? (smsReadCredits ? parseCreditSms(m.body) : null);
         if (!parsed) continue;
+        // Merchants you chose to always ignore (e.g. your own transfers).
+        if (parsed.merchant && useSettingsStore.getState().smsIgnored.includes(parsed.merchant.toLowerCase())) continue;
         const row = {
           id: `sms-${m.id}-${m.date}`,
           sms_date: new Date(m.date).toISOString(),
@@ -265,14 +286,15 @@ export const useSmsStore = create<SmsState>((set, get) => ({
       offerUndo(id, 'Income added');
       return;
     }
+    const bill = opts?.ruleId ? finance.recurringRules.find((r) => r.id === opts.ruleId) : undefined;
     const id = await finance.addTransaction({
       type: asTransfer ? 'transfer' : 'expense',
       amount: money.amount,
       currency: money.currency,
       account_id: accountId,
       transfer_to_account_id: asTransfer ? cash!.id : null,
-      category_id: asTransfer ? null : categoryId,
-      recurring_id: null,
+      category_id: asTransfer ? null : bill?.category_id ?? categoryId,
+      recurring_id: bill?.id ?? null,
       note:
         (item.merchant ? get().rules[rulesRepo.ruleKey(item.merchant)]?.display : null) ??
         item.merchant ??
@@ -280,6 +302,8 @@ export const useSmsStore = create<SmsState>((set, get) => ({
       date: item.sms_date,
     });
     await repo.setSmsImportStatus(item.id, 'added');
+    // The bill is paid: move it to its next due date without posting again.
+    if (bill) await finance.skipRecurring(bill);
     // Keep a merchant rule's category in step with what was just chosen.
     const rule = item.merchant ? get().rules[rulesRepo.ruleKey(item.merchant)] : undefined;
     if (rule && categoryId && rule.category_id !== categoryId && !asTransfer) {

@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 import { useFinanceStore } from '../src/store/financeStore';
 import { useProductivityStore } from '../src/store/productivityStore';
@@ -52,6 +53,23 @@ function useProtectedRoute(status: AuthStatus) {
   }, [status, segments]);
 }
 
+// Opens the screen a tapped notification points at (content.data.url).
+function useNotificationLinks(ready: boolean) {
+  const router = useRouter();
+  useEffect(() => {
+    if (!ready) return;
+    const open = (r: Notifications.NotificationResponse | null) => {
+      const url = r?.notification.request.content.data?.url;
+      // Ignore a stale "last response" from long ago on a cold start.
+      if (!r || Date.now() - r.notification.date > 10 * 60000) return;
+      if (typeof url === 'string' && url.startsWith('/')) router.push(url as never);
+    };
+    Notifications.getLastNotificationResponseAsync().then(open).catch(() => {});
+    const sub = Notifications.addNotificationResponseReceivedListener(open);
+    return () => sub.remove();
+  }, [ready]);
+}
+
 function AppShell() {
   const { colors, scheme } = useTheme();
   const { status, user } = useAuth();
@@ -63,6 +81,7 @@ function AppShell() {
   const hydrateHabits = useHabitsStore((s) => s.hydrate);
 
   useProtectedRoute(status);
+  useNotificationLinks(status === 'signedIn' && dataReady);
 
   useEffect(() => {
     initNotifications();

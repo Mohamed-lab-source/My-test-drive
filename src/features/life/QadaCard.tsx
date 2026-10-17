@@ -13,6 +13,7 @@ const LABELS: Record<Prayer, string> = { fajr: 'Fajr', dhuhr: 'Dhuhr', asr: 'Asr
 export function QadaCard() {
   const { colors, typography, spacing } = useTheme();
   const [counts, setCounts] = useState<Record<Prayer, number> | null>(null);
+  const [perDay, setPerDay] = useState(5);
 
   const load = useCallback(() => repo.getQadaCounts().then(setCounts), []);
   useEffect(() => {
@@ -46,6 +47,36 @@ export function QadaCard() {
           </Pressable>
         </View>
       ))}
+      {total > 0 ? (
+        <View style={{ marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6 }]}>Make-up plan · prayers a day</Text>
+          <View style={{ flexDirection: 'row' }}>
+            {[1, 2, 5, 10].map((n) => (
+              <Pressable
+                key={n}
+                onPress={() => setPerDay(n)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 10,
+                  marginRight: 6,
+                  backgroundColor: perDay === n ? colors.green : colors.tertiaryFill,
+                }}
+              >
+                <Text style={{ fontWeight: '600', color: perDay === n ? '#fff' : colors.label }}>{n}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={[typography.subhead, { color: colors.label, marginTop: 6 }]}>
+            {(() => {
+              // Make up one extra prayer alongside each daily one, or more.
+              const days = Math.ceil(total / perDay);
+              const done = new Date(Date.now() + days * 86400000);
+              return `Done in ${days} day${days === 1 ? '' : 's'} — by ${done.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}, in sha Allah.`;
+            })()}
+          </Text>
+        </View>
+      ) : null}
     </Card>
   );
 }

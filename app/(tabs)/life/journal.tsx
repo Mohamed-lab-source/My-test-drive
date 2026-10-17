@@ -14,6 +14,7 @@ import { todayKey } from '../../../src/db/client';
 import type { JournalEntry, JournalMood } from '../../../src/db/types';
 import * as journalRepo from '../../../src/db/repositories/journal';
 import { SegmentedControl } from '../../../src/ui/SegmentedControl';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
 
 const MOODS: { id: JournalMood; emoji: string; label: string }[] = [
   { id: 'great', emoji: '😄', label: 'Great' },
@@ -78,6 +79,24 @@ export default function JournalScreen() {
   };
 
   const pastEntries = journalEntries.filter((e) => e.date !== todayKey());
+  const [search, setSearch] = useState('');
+  const [moodFilter, setMoodFilter] = useState<string>('all');
+  const [allEntries, setAllEntries] = useState<JournalEntry[] | null>(null);
+  const filtering = search.trim().length > 0 || moodFilter !== 'all';
+  // Searching covers the whole journal, not just the recent entries in memory.
+  useEffect(() => {
+    if (filtering) journalRepo.listJournalEntries(2000).then(setAllEntries);
+  }, [filtering, journalEntries]);
+  const shownEntries = filtering
+    ? (allEntries ?? pastEntries).filter((e) => {
+        const q = search.trim().toLowerCase();
+        return (
+          e.date !== todayKey() &&
+          (moodFilter === 'all' || e.mood === moodFilter) &&
+          (!q || (e.note ?? '').toLowerCase().includes(q) || (e.gratitude ?? '').toLowerCase().includes(q))
+        );
+      })
+    : pastEntries;
   const [view, setView] = useState(0);
   const [memories, setMemories] = useState<{ label: string; entry: JournalEntry }[]>([]);
   const [gratitudeWall, setGratitudeWall] = useState<JournalEntry[]>([]);
@@ -276,11 +295,24 @@ export default function JournalScreen() {
         {view === 0 ? (
           <>
             <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Past entries</Text>
-            {pastEntries.length === 0 ? (
-              <EmptyState icon="text.book.closed.fill" title="No past entries" message="Your journal history will show up here." />
+            <TextField placeholder="Search your journal" value={search} onChangeText={setSearch} />
+            <View style={{ marginBottom: spacing.sm, marginTop: -spacing.xs }}>
+              <ChipSelector
+                options={[{ id: 'all', label: 'All moods' }, ...MOODS.map((m) => ({ id: m.id, label: `${m.emoji} ${m.label}` }))]}
+                selectedId={moodFilter}
+                onSelect={setMoodFilter}
+              />
+            </View>
+            {filtering ? (
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginBottom: spacing.xs }]}>
+                {shownEntries.length} entr{shownEntries.length === 1 ? 'y' : 'ies'} found
+              </Text>
+            ) : null}
+            {shownEntries.length === 0 ? (
+              <EmptyState icon="text.book.closed.fill" title={filtering ? 'Nothing found' : 'No past entries'} message={filtering ? 'Try other words or another mood.' : 'Your journal history will show up here.'} />
             ) : (
               <Card padded={false}>
-                {pastEntries.map((entry, i) => {
+                {shownEntries.map((entry, i) => {
                   const moodInfo = MOODS.find((m) => m.id === entry.mood);
                   return (
                     <View
@@ -289,7 +321,7 @@ export default function JournalScreen() {
                         flexDirection: 'row',
                         alignItems: 'center',
                         padding: spacing.md,
-                        borderBottomWidth: i === pastEntries.length - 1 ? 0 : 0.5,
+                        borderBottomWidth: i === shownEntries.length - 1 ? 0 : 0.5,
                         borderBottomColor: colors.separator,
                       }}
                     >

@@ -16,6 +16,10 @@ import {
   scheduleQuranReminder,
   rescheduleCardDueReminders,
   scheduleSpendDigest,
+  scheduleMonthlyRecap,
+  rescheduleDeadlineReminders,
+  scheduleTahajjudReminders,
+  scheduleWeeklyReviewReminder,
 } from './scheduler';
 import { listMedications, medicationTimes } from '../db/repositories/health';
 
@@ -33,4 +37,8 @@ export async function rescheduleExtraReminders(): Promise<void> {
   const { accounts, transactions } = useFinanceStore.getState();
   await rescheduleCardDueReminders(accounts);
   await scheduleSpendDigest(transactions, accounts);
+  await scheduleMonthlyRecap();
+  await rescheduleDeadlineReminders(tasks);
+  await scheduleTahajjudReminders();
+  await scheduleWeeklyReviewReminder();
 }

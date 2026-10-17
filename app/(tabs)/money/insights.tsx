@@ -321,12 +321,20 @@ export default function InsightsScreen() {
 
         <Insight emoji="🔁" title="Where you go regularly">
           {data.habitual.length
-            ? data.habitual.map((m) => sub(`${m.name}: ${m.count} visits, about every ${m.every} day${m.every === 1 ? '' : 's'} · ${money(m.total)}`, undefined, m.name))
+            ? data.habitual.map((m) => (
+                <Pressable key={m.name} onPress={() => router.push({ pathname: '/money/merchant', params: { name: m.name } })}>
+                  {sub(`${m.name}: ${m.count} visits, about every ${m.every} day${m.every === 1 ? '' : 's'} · ${money(m.total)} ›`, colors.blue)}
+                </Pressable>
+              ))
             : sub('Shows up once you have a few repeat visits.')}
         </Insight>
 
         <Insight emoji="🏆" title="Top merchants this year">
-          {data.top.length ? data.top.map((m, i) => sub(`${i + 1}. ${m.name} — ${money(m.total)} (${m.count}×)`, undefined, m.name)) : sub('No merchants yet.')}
+          {data.top.length ? data.top.map((m, i) => (
+                <Pressable key={m.name} onPress={() => router.push({ pathname: '/money/merchant', params: { name: m.name } })}>
+                  {sub(`${i + 1}. ${m.name} — ${money(m.total)} (${m.count}×) ›`, colors.blue)}
+                </Pressable>
+              )) : sub('No merchants yet.')}
         </Insight>
 
         {data.inflation ? (

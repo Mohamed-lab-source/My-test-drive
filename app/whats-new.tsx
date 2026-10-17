@@ -14,6 +14,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Online charges like Uber, Careem and Netflix are now read; Bank SMS shows skipped messages and lets you test any text',
       'Money → Insights: spending calendar, health score, rides, unusual charges, price changes, personal inflation and more',
       'Follow-ups (check later, claim back, refund due), challenges, weekly limit and new calculators in Tools',
+      'Live exchange rates, SMS charges matched to your bills, split a transaction, merchant pages and sums in the amount field',
       'Credit vs debit: SMS charges are tagged 💳 credit or 🏦 debit and land in the right account; card payments become transfers',
       'Tap an account for its statement — credit cards by billing cycle with due date, others by month; share as CSV',
       'Credit limit & utilisation, card due reminders, "Paid with" chart, instalment plans, month-end projection',
@@ -40,6 +41,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Weekly goals, plan tomorrow, swipe a task to snooze it, end-of-day wrap-up',
       'Time estimates with today\'s load, project deadlines and archived projects',
       'Task deadlines, a Waiting tab, task insights, meeting length, copy a meeting to next week and a daily focus goal',
+      'Month calendar in Agenda, paste a list to add many tasks, deadline-day reminders',
     ],
   },
   {
@@ -55,6 +57,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Quranic duas, Friday checklist, prayer-time fine-tuning in Settings, medication taken log',
       'Hifz tracker (Juz \'Amma), edit the last 7 days of prayers, weekly habit grid, journal prompts, Zakat al-Fitr',
       '99 Names, blessed seasons checklists, hifz revision, dhikr goal and Life → Insights',
+      'Vitals (blood pressure, sugar, heart rate), Tahajjud reminder, dhikr phrases, journal search, qada plan',
     ],
   },
   {
@@ -69,6 +72,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Larger text (Settings → Appearance), achievements and a daily recap (tap the rings on Home)',
       'Mood check-in and Ramadan/Eid countdown on Home; 24-hour clock, whole-number amounts, nightly spending digest',
       'Insight of the day, search by amount, monthly report and a backup reminder in Settings',
+      'Accent colour, your name on Home, choose your quick actions, quiet hours, hadith of the day',
     ],
   },
 ];
