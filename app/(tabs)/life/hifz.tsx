@@ -16,10 +16,14 @@ const NEXT: Record<string, Status> = { none: 'learning', learning: 'memorised', 
 export default function HifzScreen() {
   const { colors, typography, spacing } = useTheme();
   const [status, setStatus] = useState<Record<number, HifzEntry['status']>>({});
+  const [rows, setRows] = useState<HifzEntry[]>([]);
   const [filter, setFilter] = useState('all');
 
   const load = useCallback(() => {
-    listHifz().then((rows) => setStatus(Object.fromEntries(rows.map((r) => [r.surah, r.status]))));
+    listHifz().then((list) => {
+      setRows(list);
+      setStatus(Object.fromEntries(list.map((r) => [r.surah, r.status])));
+    });
   }, []);
   useEffect(load, [load]);
 
@@ -65,6 +69,47 @@ export default function HifzScreen() {
             </Text>
           )}
         </Card>
+
+        {(() => {
+          // Revise what you memorised longest ago: up to three surahs a day.
+          const due = rows
+            .filter((r) => r.status === 'memorised')
+            .sort((a, b) => a.updated_at.localeCompare(b.updated_at))
+            .slice(0, 3);
+          if (!due.length) return null;
+          return (
+            <Card style={{ marginBottom: spacing.md }}>
+              <Text style={[typography.headline, { color: colors.label }]}>🔁 Today's revision</Text>
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginBottom: 4 }]}>
+                The memorised surahs you revised longest ago.
+              </Text>
+              {due.map((r) => {
+                const info = HIFZ_SURAHS.find((x) => x.number === r.surah);
+                const days = Math.floor((Date.now() - new Date(r.updated_at).getTime()) / 86400000);
+                return (
+                  <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.body, { color: colors.label }]}>{info?.name ?? `Surah ${r.surah}`}</Text>
+                      <Text style={[typography.caption1, { color: days > 14 ? colors.orange : colors.secondaryLabel }]}>
+                        {days === 0 ? 'Revised today' : `Last revised ${days} day${days === 1 ? '' : 's'} ago`}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={async () => {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        await setHifzStatus(r.surah, 'memorised');
+                        load();
+                      }}
+                      hitSlop={8}
+                    >
+                      <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Revised ✓</Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </Card>
+          );
+        })()}
 
         <View style={{ marginBottom: spacing.sm }}>
           <ChipSelector

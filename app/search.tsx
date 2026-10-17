@@ -42,7 +42,7 @@ export default function SearchScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
         <View style={{ flex: 1 }}>
           <TextField
-            placeholder="Search money, tasks, notes, books…"
+            placeholder="Search money (or an amount), tasks, notes, books…"
             value={query}
             onChangeText={setQuery}
             autoFocus

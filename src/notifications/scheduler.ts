@@ -351,7 +351,9 @@ export async function scheduleMorningBriefing(data: { tasks: Task[]; meetings: M
   if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
   const key = todayKey(target);
 
-  const tasks = data.tasks.filter((t) => t.status !== 'done' && (t.scheduled_date === key || t.status === 'in_progress'));
+  const tasks = data.tasks.filter(
+    (t) => t.status !== 'done' && (t.scheduled_date === key || t.status === 'in_progress' || t.due_date === key)
+  );
   const meetings = data.meetings.filter((m) => localDateKey(m.start_at) === key);
   const bills = data.rules.filter((r) => r.is_active && !r.is_paused && r.type === 'expense' && localDateKey(r.next_due_date) <= key);
   const parts = [

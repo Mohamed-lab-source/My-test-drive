@@ -39,6 +39,7 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
   const [reminder, setReminder] = useState(15);
   const [saving, setSaving] = useState(false);
 
+  const [duration, setDuration] = useState(0);
   useEffect(() => {
     if (!visible) return;
     setTitle(editing?.title ?? '');
@@ -47,6 +48,9 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
     setDate(editing ? todayKey(new Date(editing.start_at)) : todayKey());
     setTime(editing ? timeOf(editing.start_at) : '09:00');
     setReminder(editing?.reminder_minutes_before ?? 15);
+    setDuration(
+      editing?.end_at ? Math.round((new Date(editing.end_at).getTime() - new Date(editing.start_at).getTime()) / 60000) : 0
+    );
   }, [visible, editing?.id]);
 
   const canSave = title.trim().length > 0;
@@ -92,21 +96,38 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
     Alert.alert('Follow-up added', 'A task for tomorrow is in your Tasks list.');
   };
 
+  // Same meeting, same time, seven days later (for weekly meetings).
+  const copyToNextWeek = async () => {
+    if (!editing) return;
+    const shift = (iso: string) => new Date(new Date(iso).getTime() + 7 * 86400000).toISOString();
+    await addMeeting({
+      title: editing.title,
+      location: editing.location,
+      notes: null,
+      start_at: shift(editing.start_at),
+      end_at: editing.end_at ? shift(editing.end_at) : null,
+      reminder_minutes_before: editing.reminder_minutes_before,
+    });
+    Alert.alert('Copied', `"${editing.title}" is also on ${new Date(shift(editing.start_at)).toDateString()}.`);
+  };
+
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
     try {
+      const start = combineDateAndTime(date, time);
       const fields = {
         title: title.trim(),
         location: location || null,
         notes: notes || null,
-        start_at: combineDateAndTime(date, time),
+        start_at: start,
+        end_at: duration ? new Date(new Date(start).getTime() + duration * 60000).toISOString() : null,
         reminder_minutes_before: reminder,
       };
       if (editing) {
         await updateMeeting(editing.id, fields);
       } else {
-        await addMeeting({ ...fields, end_at: null });
+        await addMeeting(fields);
       }
       onClose();
     } finally {
@@ -130,6 +151,14 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
             <TextField label="Time" placeholder="HH:MM" value={time} onChangeText={setTime} />
           </View>
         </View>
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Length</Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector
+            options={[0, 15, 30, 45, 60, 90, 120].map((m) => ({ id: String(m), label: m === 0 ? 'Not set' : m < 60 ? `${m} min` : `${m / 60} h` }))}
+            selectedId={String(duration)}
+            onSelect={(id) => setDuration(Number(id))}
+          />
+        </View>
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Remind me before
         </Text>
@@ -151,7 +180,10 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
           />
         ) : null}
         {editing ? (
-          <Button title="Create follow-up task" variant="secondary" onPress={createFollowUp} style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+          <>
+            <Button title="Create follow-up task" variant="secondary" onPress={createFollowUp} style={{ marginTop: spacing.sm }} />
+            <Button title="Copy to next week" variant="secondary" onPress={copyToNextWeek} style={{ marginTop: spacing.sm, marginBottom: spacing.xl }} />
+          </>
         ) : null}
       </ScrollView>
     </Sheet>

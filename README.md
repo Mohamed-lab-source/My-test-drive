@@ -73,6 +73,13 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - "Credit vs debit" card on Money home and a "Paid with" chart in Analytics (credit card / debit / cash per month)
 - Pay in instalments (3–24 months) from the add-expense sheet; the remaining instalments post themselves and the plan ends on its own
 - Month-end spending projection, spending by weekday, reorder accounts, foreign-currency SMS charges converted with your saved rate, undo after adding from the SMS inbox
+- **Online card charges (Uber, Careem, Netflix…)** — bank SMS worded as "E-Commerce transaction", "online transaction", "authorization", "Trx" or the Arabic "عملية … عبر الإنترنت" are now read, by both the inbox scan and the instant alert. 45+ well-known merchants get clean names (e.g. "UBER *TRIP HELP.UBER.COM" → Uber); Uber Eats goes to Dining. Promo, cancelled and rejected messages are ignored
+- Messages Anchor skipped: bank texts from the last 30 days that weren't imported, with the reason, "Add as expense" and "Share text"; a "Test a message" box shows exactly how any SMS is read; rescan the last 90 days
+- Insights screen: spending calendar, month story, financial health score, rides, delivery vs groceries, unusual charges, price changes, biggest category changes, time of day, weekdays vs weekend, small purchases, regular places, top merchants, personal inflation, no-spend streaks, payday effect, saving streak, income sources, fixed vs flexible, bank fees, ATM, foreign currency, tags, year to date — shareable
+- Follow-ups: flag a transaction to check later, claim back or as a refund due; log the money coming back in one tap
+- All Transactions: period filter (week, month, last month, 3 months, year — reads full history), sort by oldest or largest, minimum amount, and totals for what's shown
+- Weekly spending limit card (with an alert), challenges (no-spend days goal, 52-week savings), net worth by account type, credit card "still to pay" and minimum payment
+- Tools: tip & split, sale price, which-is-cheaper, time to save, savings growth, loan amortisation table
 
 **Tasks**
 - Today / Backlog / All views, with unfinished "Today" tasks rolling into Backlog automatically
@@ -101,6 +108,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Weekly goals, plan tomorrow, swipe-to-snooze, end-of-day wrap-up, time per project, next-meeting chip on Home
 - Time estimates on tasks with a "Today's load" bar (tasks + meetings) and an overload warning over 6 hours
 - Project deadlines (due in N days / overdue) and archiving projects
+- Task deadlines with due/overdue badges, an overdue card ("move all to today"), and tasks due today showing in Today and the morning briefing
+- "Waiting on" someone, with its own Waiting tab
+- Task insights: done vs added, best weekday and hour, typical time to finish, on-time rate, open tasks by priority, meeting hours this week
+- Meeting length, copy a meeting to next week, daily focus goal
 
 **Life**
 - Daily 5-prayer tracker with streaks
@@ -141,6 +152,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Hifz tracker for Al-Fatiha and Juz 'Amma (not started → learning → memorised) with a "next up" suggestion
 - Edit prayers for the last 7 days from Prayer history; weekly habit grid you can tap to fix missed days
 - Journal prompts; Zakat al-Fitr calculator (people × rate) that can log the payment
+- 99 Names of Allah with meanings, a name of the day and a "learnt" tracker
+- Blessed seasons: last ten nights checklist, first ten days of Dhul Hijjah (fasting days + acts) and the six fasts of Shawwal
+- Hifz revision plan (the memorised surahs you revised longest ago), daily dhikr goal in Tasbih
+- Life insights: prayers marked on time, mood by weekday, journal streak and gratitude count, strongest/weakest habit, water, sleep week-on-week, BMI, medication adherence, reading pace and finish dates
 
 **Home**
 - Quick actions: log an expense, add a task, open Tasbih or Quran
@@ -155,6 +170,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Today rings on Home (prayers · tasks · water), pull-to-refresh on Home and Money
 - Settings → Upcoming reminders (every scheduled notification) and What's in Anchor (feature tour)
 - Day recap, achievements, larger text option, and a "Your data" summary
+- Insight of the day, Name of Allah of the day and a "spent today" line (each can be hidden in Customize Home)
+- Search finds transactions by amount too (type 125.50) and shows each amount in the results
 
 **Weekly review**
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood
@@ -163,8 +180,6 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Prayers — today's 5 prayers with streak and the next prayer time, tap a prayer to mark it done right from the widget
 - Today — your tasks scheduled for today; tap the circle to mark a task done, tap + to add one
 - Net worth — current net worth and next upcoming bill; tap + to log an expense, tap Pay to post the bill
-- Card payment due reminders (3 days before and on the due day) and an optional 9:30 PM spending digest
-- 24-hour clock and whole-number amounts (Settings → Appearance); recent searches
 
 **Settings**
 - Light/Dark/System appearance
@@ -172,6 +187,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Local notifications for meeting and bill-due reminders
 - Biometric (Face ID / fingerprint) app lock
 - JSON export/import backup, CSV export, full reset
+- Card payment due reminders (3 days before and on the due day) and an optional 9:30 PM spending digest
+- 24-hour clock and whole-number amounts (Settings → Appearance); recent searches
+- Big-spending-day alert, weekend days (Fri–Sat / Sat–Sun) and the day your week starts
+- Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 
 ## Tech stack
 

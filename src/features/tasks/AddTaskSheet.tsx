@@ -4,7 +4,7 @@ import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChipSelector } from '../../ui/ChipSelector';
-import { ESTIMATE_OPTIONS } from '../../utils/estimate';
+import { DEADLINE_OPTIONS, ESTIMATE_OPTIONS, deadlineFromOption } from '../../utils/estimate';
 import { Button } from '../../ui/Button';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
@@ -36,6 +36,7 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
   const [projectId, setProjectId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [estimate, setEstimate] = useState(0);
+  const [deadline, setDeadline] = useState('none');
 
   const canSave = title.trim().length > 0;
 
@@ -50,7 +51,7 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
         notes: notes || null,
         status,
         priority: PRIORITIES[priorityIndex],
-        due_date: null,
+        due_date: deadlineFromOption(deadline),
         scheduled_date: when === 'today' ? todayKey() : null,
         sort_order: Date.now(),
         repeat_frequency: repeat === 'none' ? null : repeat,
@@ -63,6 +64,7 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
       setWhen('today');
       setRepeat('none');
       setEstimate(0);
+      setDeadline('none');
       onClose();
     } finally {
       setSaving(false);
@@ -79,6 +81,11 @@ export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>When</Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector options={WHEN_OPTIONS} selectedId={when} onSelect={setWhen} />
+        </View>
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Deadline</Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector options={DEADLINE_OPTIONS} selectedId={deadline} onSelect={setDeadline} />
         </View>
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Repeat</Text>

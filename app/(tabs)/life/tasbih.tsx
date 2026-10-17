@@ -9,6 +9,7 @@ import { ChipSelector } from '../../../src/ui/ChipSelector';
 import * as repo from '../../../src/db/repositories/life';
 import { todayKey } from '../../../src/db/client';
 import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 const TARGETS = [33, 99, 100];
 
@@ -40,6 +41,7 @@ const PERSIST_DELAY_MS = 800;
 export default function TasbihScreen() {
   const { colors, typography, spacing } = useTheme();
   const dhikrToday = useLifeStore((s) => s.dhikrToday);
+  const { dhikrGoal, setDhikrGoal } = useSettingsStore();
   const [total, setTotal] = useState(dhikrToday);
   const [target, setTarget] = useState(33);
   const [mode, setMode] = useState<'free' | 'salah'>('free');
@@ -183,9 +185,30 @@ export default function TasbihScreen() {
         <Text style={[typography.body, { color: colors.secondaryLabel, marginTop: spacing.xl }]}>
           {mode === 'salah' ? `${Math.min(salahPos, SALAH_TOTAL)} of ${SALAH_TOTAL}` : `${rounds} round${rounds === 1 ? '' : 's'}`} · {total} today
         </Text>
-        <Pressable onPress={reset} hitSlop={10} style={{ marginTop: spacing.md }}>
-          <Text style={[typography.subhead, { color: colors.red }]}>Reset today</Text>
-        </Pressable>
+        {dhikrGoal > 0 ? (
+          <View style={{ alignSelf: 'stretch', marginTop: spacing.sm }}>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.tertiaryFill, overflow: 'hidden' }}>
+              <View style={{ width: `${Math.min(100, (total / dhikrGoal) * 100)}%`, height: 6, backgroundColor: total >= dhikrGoal ? colors.green : colors.mint }} />
+            </View>
+            <Text style={[typography.caption1, { color: total >= dhikrGoal ? colors.green : colors.secondaryLabel, textAlign: 'center', marginTop: 4 }]}>
+              {total >= dhikrGoal ? `Daily goal of ${dhikrGoal} reached ✓` : `${dhikrGoal - total} to your daily goal of ${dhikrGoal}`}
+            </Text>
+          </View>
+        ) : null}
+        <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
+          <Pressable onPress={reset} hitSlop={10} style={{ marginRight: spacing.lg }}>
+            <Text style={[typography.subhead, { color: colors.red }]}>Reset today</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              const goals = [0, 100, 300, 500, 1000];
+              setDhikrGoal(goals[(goals.indexOf(dhikrGoal) + 1) % goals.length] ?? 0);
+            }}
+            hitSlop={10}
+          >
+            <Text style={[typography.subhead, { color: colors.blue }]}>Daily goal: {dhikrGoal || 'off'}</Text>
+          </Pressable>
+        </View>
         <View style={{ alignSelf: 'stretch', marginTop: spacing.xl }}>
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.xs }]}>Last 7 days</Text>
           <MiniBars

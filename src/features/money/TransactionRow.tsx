@@ -49,6 +49,11 @@ export function TransactionRow({
             {formatMoneySigned(tx.amount, tx.currency, tx.type)}
           </Text>
           {footnote ? <Text style={[typography.caption2, { color: colors.tertiaryLabel }]}>{footnote}</Text> : null}
+          {tx.flag ? (
+            <Text style={[typography.caption2, { color: colors.orange }]}>
+              {tx.flag === 'review' ? '🚩 check' : tx.flag === 'reimburse' ? '💼 claim' : '↩️ refund due'}
+            </Text>
+          ) : null}
           {tx.receipt_uri ? <Icon name="camera.fill" size={12} color={colors.tertiaryLabel} /> : null}
         </View>
       }

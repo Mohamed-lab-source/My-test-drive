@@ -46,8 +46,11 @@ const CUR = `(${CODES}|L\\.E\\.?|LE|E£|جنيه|ج\\.م|جم|درهم|ريال|
 const AMT = '(\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,3})?|\\d+(?:\\.\\d{1,3})?)';
 
 const IGNORE =
-  /\b(otp|one[- ]?time|password|passcode|verification|activation code|code is|declined|failed|unsuccessful|rejected|not (?:been )?completed|insufficient|statement|minimum (?:payment|amount)|payment (?:is )?due|due (?:date|on)|will be (?:debited|deducted|charged))\b|رمز|كلمة (?:ال)?مرور|مرفوض|فشل|لم تتم|غير ناجح|كشف حساب|كشف الحساب|الحد الأدنى|مستحق/i;
+  /\b(otp|one[- ]?time|password|passcode|verification|activation code|code is|declined|failed|unsuccessful|rejected|not (?:been )?completed|insufficient|statement|minimum (?:payment|amount)|payment (?:is )?due|due (?:date|on)|will be (?:debited|deducted|charged)|cancell?ed|voided|promo(?:tion)?|offers?|discount|coupon)\b|\d\s?%\s*off|رمز|كلمة (?:ال)?مرور|مرفوض|رفض|ملغا|إلغاء|الغاء|فشل|لم تتم|غير ناجح|كشف حساب|كشف الحساب|الحد الأدنى|مستحق|عرض|كوبون/i;
 const CREDIT = /\b(credited|deposit(?:ed)?|received|refund(?:ed)?|revers(?:al|ed)|cash ?back|salary)\b|إيداع|ايداع|إضافة|اضافة|استلام|دائن|مرتجع|استرداد/i;
+// Online card charges (Uber, Netflix, app stores) are usually worded as an
+// "e-commerce/online transaction" or an "authorization" rather than a purchase.
+const ONLINE = /\b(e-?commerce|online|internet|authori[sz](?:ed|ation)|pre-?auth(?:ori[sz]ation)?|transactions?|txn|trx)\b|عملية|عمليه|معاملة|الإنترنت|الانترنت/i;
 const DEBIT =
   /\b(debited|debit|purchases?|purchased|used|spent|paid|payment|withdrawn|withdrawal|pos|atm|transferred|transfer|charged|deducted)\b|خصم|سحب|شراء|مشتريات|دفع|مدين|تحويل/i;
 // A preceding word that marks an amount as a balance/limit, not the charge.
@@ -88,14 +91,78 @@ function findAmount(text: string): { amount: number; currency: string } | null {
   return null;
 }
 
+// Well-known merchants, matched anywhere in the message: banks print them
+// as "UBER *TRIP HELP.UBER.COM", "UBR* PENDING.UBER.COM", "NETFLIX.COM"…
+const BRANDS: [RegExp, string, 'merchant-only'?][] = [
+  [/uber\s*\*?\s*eats|ubereats/i, 'Uber Eats'],
+  [/\buber\b|\bubr\s*\*|uber\.com|uber\s*\*|\*\s*uber/i, 'Uber'],
+  [/careem/i, 'Careem'],
+  [/\bswvl\b/i, 'Swvl'],
+  [/indrive|in\s*driver/i, 'inDrive'],
+  [/\bdidi\b/i, 'DiDi'],
+  [/talabat/i, 'Talabat'],
+  [/breadfast/i, 'Breadfast'],
+  [/elmenus/i, 'elmenus'],
+  [/instashop/i, 'InstaShop'],
+  [/netflix/i, 'Netflix'],
+  [/spotify/i, 'Spotify'],
+  [/anghami/i, 'Anghami'],
+  [/shahid/i, 'Shahid'],
+  [/youtube/i, 'YouTube'],
+  [/apple\.com|itunes|\bapple\b/i, 'Apple', 'merchant-only'],
+  [/google\s*\*|google\.com|google play|\bgoogle\b/i, 'Google', 'merchant-only'],
+  [/openai|chatgpt/i, 'OpenAI'],
+  [/anthropic|claude\.ai/i, 'Anthropic'],
+  [/microsoft|xbox/i, 'Microsoft', 'merchant-only'],
+  [/playstation|\bpsn\b|sony/i, 'PlayStation', 'merchant-only'],
+  [/steam(games|powered)|^steam\b/i, 'Steam', 'merchant-only'],
+  [/amazon|amzn/i, 'Amazon'],
+  [/\bnoon\b|noon\.com/i, 'noon', 'merchant-only'],
+  [/jumia/i, 'Jumia'],
+  [/aliexpress/i, 'AliExpress'],
+  [/shein/i, 'SHEIN'],
+  [/\btemu\b/i, 'Temu'],
+  [/paypal/i, 'PayPal'],
+  [/carrefour|كارفور/i, 'Carrefour'],
+  [/spinneys/i, 'Spinneys'],
+  [/seoudi/i, 'Seoudi'],
+  [/starbucks/i, 'Starbucks'],
+  [/costa coffee/i, 'Costa Coffee'],
+  [/mcdonald/i, "McDonald's"],
+  [/\bkfc\b/i, 'KFC'],
+  [/vodafone|فودافون/i, 'Vodafone'],
+  [/orange egypt|\borange\b|اورنج/i, 'Orange', 'merchant-only'],
+  [/etisalat|\be&\b|اتصالات/i, 'e&'],
+  [/telecom egypt|^we\b/i, 'WE', 'merchant-only'],
+  [/ikea/i, 'IKEA'],
+  [/booking\.com/i, 'Booking.com'],
+  [/airbnb/i, 'Airbnb'],
+  [/egyptair/i, 'EgyptAir'],
+];
+
+// With wholeMessage, only distinctive names are matched (so "We have…" or
+// "at noon" don't turn into a merchant).
+export function brandOf(text: string, wholeMessage = false): string | null {
+  for (const [re, name, scope] of BRANDS) {
+    if (wholeMessage && scope === 'merchant-only') continue;
+    if (re.test(text)) return name;
+  }
+  return null;
+}
+
+function merchantWithBrand(text: string): string | null {
+  const m = findMerchant(text);
+  return (m && brandOf(m)) ?? m ?? brandOf(text, true);
+}
+
 function findMerchant(text: string): string | null {
   const stop = '(?=\\s+(?:on|dated|with|using|via|ref|reference|card|for|from|at\\s+\\d)\\b|\\s*[.,;]\\s|\\s*[.,;]?$|\\s+\\d{1,2}[\\/\\-.]\\d|\\s+\\d{1,2}-[A-Za-z]{3})';
   const patterns = [
     // HSBC Egypt: "07OCT26 FAWRY*FRIENDS 2 SUPE Purchase from …"
-    /^(?:From\s+HSBC\s*:\s*)?\d{1,2}[A-Z]{3}\d{2,4}\s+(.{2,40}?)\s+(?:Purchase|Payment|Withdrawal|POS|E-?Commerce|Refund|Reversal|Transfer)\b/i,
+    /^(?:From\s+HSBC\s*:\s*)?\d{1,2}[A-Z]{3}\d{2,4}\s+(.{2,40}?)\s+(?:Purchase|Payment|Withdrawal|POS|E-?Commerce|Online|Internet|Authori[sz]ation|Transaction|Trx|Txn|Refund|Reversal|Transfer)\b/i,
     new RegExp(`(?:\\bat\\s+|@\\s*)(.{2,40}?)${stop}`, 'i'),
     new RegExp(`\\b(?:to|towards)\\s+(.{2,40}?)${stop}`, 'i'),
-    /(?:لدى|عند|في)\s+([^\d،,.]{2,40}?)(?=\s+(?:بتاريخ|يوم|في)|[،,.]|$)/,
+    /(?:لدى|عند|في)\s+([^\d،,.]{2,40}?)(?=\s+(?:بتاريخ|يوم|في|باستخدام|بالبطاقة|ببطاقة|بطاقة|عبر|رقم|من)|[،,.]|$)/,
   ];
   for (const re of patterns) {
     const m = text.match(re);
@@ -120,10 +187,12 @@ function findCard(text: string): string | null {
 export function parseDebitSms(raw: string): ParsedDebit | null {
   const text = normalizeDigits(raw).replace(/\s+/g, ' ').trim();
   if (IGNORE.test(text)) return null;
-  if (!DEBIT.test(text)) return null;
+  const online = ONLINE.test(text);
+  if (!DEBIT.test(text) && !online) return null;
   // "Credit card was used" is a debit; "account credited" is not. Only bail
   // on credit wording when there's no stronger debit verb.
-  if (CREDIT.test(text) && !/\b(debited|purchase|used|spent|withdraw|paid)\b|خصم|سحب|شراء/i.test(text)) return null;
+  if (CREDIT.test(text) && !/\b(debited|purchase|used|spent|withdraw|paid|charged|e-?commerce|authori[sz])/i.test(text) && !/خصم|سحب|شراء/.test(text))
+    return null;
   const money = findAmount(text);
   if (!money) return null;
 
@@ -132,11 +201,11 @@ export function parseDebitSms(raw: string): ParsedDebit | null {
     ? 'withdrawal'
     : /transfer|تحويل/.test(lower)
       ? 'transfer'
-      : /purchase|\bused\b|spent|\bpos\b|شراء|مشتريات/.test(lower)
+      : /purchase|\bused\b|spent|\bpos\b|شراء|مشتريات/.test(lower) || online
         ? 'purchase'
         : 'debit';
 
-  return { ...money, merchant: findMerchant(text), cardLast4: findCard(text), kind, cardType: detectCardType(text) };
+  return { ...money, merchant: merchantWithBrand(text), cardLast4: findCard(text), kind, cardType: detectCardType(text) };
 }
 
 // Paying off a credit card: "Your HSBC credit card payment of EGP 3,000.00
@@ -185,4 +254,24 @@ export function parseReportedBalance(raw: string): { amount: number; currency: s
   const value = Number(amountStr.replace(/,/g, ''));
   if (!(value >= 0)) return null;
   return { amount: Math.round(value * 100), currency: toCode(curStr) };
+}
+
+// Why a bank message wasn't imported, for the "Messages Anchor skipped"
+// list. Mirrors the checks in parseDebitSms/parseCreditSms.
+export function explainSms(raw: string): { reason: string; amount: { amount: number; currency: string } | null } {
+  const text = normalizeDigits(raw).replace(/\s+/g, ' ').trim();
+  const amount = findAmount(text);
+  if (IGNORE.test(text)) return { reason: 'Skipped on purpose: a code, decline, statement, reminder or offer', amount };
+  if (!amount) return { reason: 'No amount with a currency was found', amount };
+  if (CREDIT.test(text)) return { reason: 'Looks like money in — turn on "Read money in too" to import these', amount };
+  if (!DEBIT.test(text) && !ONLINE.test(text)) return { reason: 'No spending wording (purchase, debit, transaction…) was found', amount };
+  return { reason: 'Not recognised', amount };
+}
+
+// Best-effort read of any message for a manual import: amount, merchant.
+export function looseParse(raw: string): ParsedDebit | null {
+  const text = normalizeDigits(raw).replace(/\s+/g, ' ').trim();
+  const money = findAmount(text);
+  if (!money) return null;
+  return { ...money, merchant: merchantWithBrand(text), cardLast4: findCard(text), kind: 'purchase', cardType: detectCardType(text) };
 }

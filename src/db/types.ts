@@ -66,7 +66,12 @@ export interface Transaction {
   date: string;
   created_at: string;
   receipt_uri: string | null;
+  // Something to follow up: check it, claim it back from work, or a refund
+  // the shop owes you. Cleared when resolved.
+  flag?: TransactionFlag | null;
 }
+
+export type TransactionFlag = 'review' | 'reimburse' | 'refund';
 
 export type DebtDirection = 'owed_to_me' | 'i_owe';
 export type DebtStatus = 'open' | 'partially_paid' | 'paid';
@@ -155,6 +160,8 @@ export interface Task {
   repeat_interval: number | null;
   remind_at: string | null;
   estimate_minutes?: number | null;
+  // Who you're waiting on before this can move (a "waiting for" task).
+  waiting_on?: string | null;
 }
 
 export interface Subtask {

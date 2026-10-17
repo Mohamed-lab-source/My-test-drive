@@ -12,7 +12,7 @@ import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
 import { frequentTransactions, type FrequentTemplate } from '../../utils/frequent';
-import type { Transaction, TransactionType } from '../../db/types';
+import type { Transaction, TransactionFlag, TransactionType } from '../../db/types';
 
 interface AddTransactionSheetProps {
   visible: boolean;
@@ -38,6 +38,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [splitWith, setSplitWith] = useState('');
   const [instalments, setInstalments] = useState(1);
+  const [flag, setFlag] = useState<TransactionFlag | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const frequent = useMemo(() => (editing ? [] : frequentTransactions(transactions)), [transactions, editing]);
@@ -77,6 +78,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
     }
     setSplitWith('');
     setInstalments(1);
+    setFlag(editing?.flag ?? null);
   }, [visible, editing?.id]);
 
   const splitNames = splitWith
@@ -111,6 +113,7 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
         category_id: type === 'transfer' ? null : categoryId,
         note: note || null,
         receipt_uri: receiptUri,
+        flag: type === 'transfer' ? null : flag,
       };
       if (editing) {
         await updateTransaction(editing.id, fields);
@@ -276,6 +279,24 @@ export function AddTransactionSheet({ visible, onClose, editing }: AddTransactio
                 Each of {splitNames.join(', ')} will owe you {formatMoney(splitShare, currency)} (added to Debts)
               </Text>
             ) : null}
+          </>
+        ) : null}
+
+        {type !== 'transfer' ? (
+          <>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Follow up</Text>
+            <View style={{ marginBottom: spacing.md }}>
+              <ChipSelector
+                options={[
+                  { id: 'none', label: 'None' },
+                  { id: 'review', label: '🚩 Check later' },
+                  { id: 'reimburse', label: '💼 Claim back' },
+                  { id: 'refund', label: '↩️ Refund due' },
+                ]}
+                selectedId={flag ?? 'none'}
+                onSelect={(id) => setFlag(id === 'none' ? null : (id as TransactionFlag))}
+              />
+            </View>
           </>
         ) : null}
 

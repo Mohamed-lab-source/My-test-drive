@@ -11,6 +11,9 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     emoji: '💰',
     items: [
       'Bank SMS: HSBC debits read automatically, with instant alerts, a review inbox and a balance check',
+      'Online charges like Uber, Careem and Netflix are now read; Bank SMS shows skipped messages and lets you test any text',
+      'Money → Insights: spending calendar, health score, rides, unusual charges, price changes, personal inflation and more',
+      'Follow-ups (check later, claim back, refund due), challenges, weekly limit and new calculators in Tools',
       'Credit vs debit: SMS charges are tagged 💳 credit or 🏦 debit and land in the right account; card payments become transfers',
       'Tap an account for its statement — credit cards by billing cycle with due date, others by month; share as CSV',
       'Credit limit & utilisation, card due reminders, "Paid with" chart, instalment plans, month-end projection',
@@ -36,6 +39,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Stale backlog clean-up and sharing today\'s plan',
       'Weekly goals, plan tomorrow, swipe a task to snooze it, end-of-day wrap-up',
       'Time estimates with today\'s load, project deadlines and archived projects',
+      'Task deadlines, a Waiting tab, task insights, meeting length, copy a meeting to next week and a daily focus goal',
     ],
   },
   {
@@ -50,6 +54,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Reading list, countdowns, notes, occasions and wishlist',
       'Quranic duas, Friday checklist, prayer-time fine-tuning in Settings, medication taken log',
       'Hifz tracker (Juz \'Amma), edit the last 7 days of prayers, weekly habit grid, journal prompts, Zakat al-Fitr',
+      '99 Names, blessed seasons checklists, hifz revision, dhikr goal and Life → Insights',
     ],
   },
   {
@@ -63,6 +68,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Biometric lock with a timeout; everything syncs to your account',
       'Larger text (Settings → Appearance), achievements and a daily recap (tap the rings on Home)',
       'Mood check-in and Ramadan/Eid countdown on Home; 24-hour clock, whole-number amounts, nightly spending digest',
+      'Insight of the day, search by amount, monthly report and a backup reminder in Settings',
     ],
   },
 ];

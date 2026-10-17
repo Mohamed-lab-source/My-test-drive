@@ -191,6 +191,22 @@ export default function AccountDetailScreen() {
               <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
                 Due {period.dueDate.toDateString()} — pay it in full to avoid interest.
               </Text>
+              {statementOwed > 0 ? (
+                <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                  {(() => {
+                    // Payments made since the cycle closed count towards it.
+                    const paidSince = rows
+                      .filter((t) => new Date(t.date) >= period.end && t.type === 'transfer' && t.transfer_to_account_id === account.id)
+                      .reduce((sum, t) => sum + t.amount, 0);
+                    const remaining = Math.max(0, statementOwed - paidSince);
+                    // Typical minimum: 5% of the balance (at least 100), never more than the balance.
+                    const minimum = Math.min(remaining, Math.max(10000, Math.round(remaining * 0.05)));
+                    return remaining === 0
+                      ? '✓ Paid in full — no interest on this statement.'
+                      : `Still to pay: ${formatMoney(remaining, account.currency)}${paidSince > 0 ? ` (paid ${formatMoney(paidSince, account.currency)} so far)` : ''} · minimum about ${formatMoney(minimum, account.currency)}. Paying only the minimum means interest on the rest.`;
+                  })()}
+                </Text>
+              ) : null}
             </View>
           ) : isCredit && period.dueDate ? (
             <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>

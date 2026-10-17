@@ -7,7 +7,7 @@ import { Badge } from '../../ui/Badge';
 import { SwipeableRow } from '../../ui/SwipeableRow';
 import { showUndoDelete } from '../../ui/undo';
 import { useProductivityStore } from '../../store/productivityStore';
-import { formatEstimate } from '../../utils/estimate';
+import { daysToDeadline, deadlineLabel, formatEstimate } from '../../utils/estimate';
 import type { Task } from '../../db/types';
 
 interface TaskRowProps {
@@ -73,12 +73,25 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
             >
               {task.title}
             </Text>
-            {project || subtasks || task.estimate_minutes ? (
+            {project || subtasks || task.estimate_minutes || task.due_date || task.waiting_on ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 {project ? (
                   <Text style={[typography.caption1, { color: project.color, fontWeight: '600', marginRight: spacing.sm }]}>
                     {project.name}
                   </Text>
+                ) : null}
+                {task.due_date && !isDone ? (
+                  <Text
+                    style={[
+                      typography.caption1,
+                      { color: daysToDeadline(task.due_date) < 0 ? colors.red : daysToDeadline(task.due_date) <= 1 ? colors.orange : colors.secondaryLabel, marginRight: spacing.sm, fontWeight: '600' },
+                    ]}
+                  >
+                    📅 {deadlineLabel(task.due_date)}
+                  </Text>
+                ) : null}
+                {task.waiting_on && !isDone ? (
+                  <Text style={[typography.caption1, { color: colors.purple, marginRight: spacing.sm }]}>⏳ {task.waiting_on}</Text>
                 ) : null}
                 {task.estimate_minutes ? (
                   <Text style={[typography.caption1, { color: colors.secondaryLabel, marginRight: spacing.sm }]}>

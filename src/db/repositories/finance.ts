@@ -1,4 +1,4 @@
-import { newId, nowIso } from '../client';
+import { getDb, newId, nowIso } from '../client';
 import { allRows, deleteRow, getRow, insertRow, updateRow, whereRows } from '../helpers';
 import type {
   Account,
@@ -76,6 +76,20 @@ export const listIncomingTransfers = (accountId: string) =>
 
 export const listTransactionsForAccount = (accountId: string) =>
   whereRows<Transaction>('transactions', 'account_id = ?', [accountId], 'date DESC');
+
+// Total spent (expenses in one currency) since a moment — for the weekly
+// limit and daily spending alerts.
+export async function getSpendSince(startIso: string, currency: string): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ total: number | null }>(
+    "SELECT SUM(amount) AS total FROM transactions WHERE type = 'expense' AND date >= ? AND currency = ?",
+    [startIso, currency]
+  );
+  return row?.total ?? 0;
+}
+
+export const listFlaggedTransactions = () =>
+  whereRows<Transaction>('transactions', 'flag IS NOT NULL', [], 'date DESC');
 
 export const listTransactionsForCategory = (categoryId: string) =>
   whereRows<Transaction>('transactions', 'category_id = ?', [categoryId], 'date DESC');

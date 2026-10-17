@@ -105,6 +105,28 @@ interface SettingsState {
   clearRecentSearches: () => void;
   fitr: { people: number; perPerson: number };
   setFitr: (v: { people: number; perPerson: number }) => void;
+  weekendDays: number[];
+  setWeekendDays: (v: number[]) => void;
+  weekStart: number;
+  setWeekStart: (v: number) => void;
+  weeklyLimit: number;
+  setWeeklyLimit: (v: number) => void;
+  dailySpendAlert: number;
+  setDailySpendAlert: (v: number) => void;
+  noSpendChallenge: { month: string; target: number } | null;
+  setNoSpendChallenge: (v: { month: string; target: number } | null) => void;
+  challenge52: { start: string; unit: number; done: number[] } | null;
+  setChallenge52: (v: { start: string; unit: number; done: number[] } | null) => void;
+  heightCm: number;
+  setHeightCm: (v: number) => void;
+  focusGoal: number;
+  setFocusGoal: (v: number) => void;
+  dhikrGoal: number;
+  setDhikrGoal: (v: number) => void;
+  lastBackupAt: string | null;
+  setLastBackupAt: (v: string | null) => void;
+  checklists: Record<string, string[]>;
+  toggleChecklistItem: (key: string, item: string) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -224,6 +246,32 @@ export const useSettingsStore = create<SettingsState>()(
       clearRecentSearches: () => set({ recentSearches: [] }),
       fitr: { people: 1, perPerson: 0 },
       setFitr: (v) => set({ fitr: v }),
+      weekendDays: [5, 6],
+      setWeekendDays: (v) => set({ weekendDays: v }),
+      weekStart: 6,
+      setWeekStart: (v) => set({ weekStart: v }),
+      weeklyLimit: 0,
+      setWeeklyLimit: (v) => set({ weeklyLimit: v }),
+      dailySpendAlert: 0,
+      setDailySpendAlert: (v) => set({ dailySpendAlert: v }),
+      noSpendChallenge: null,
+      setNoSpendChallenge: (v) => set({ noSpendChallenge: v }),
+      challenge52: null,
+      setChallenge52: (v) => set({ challenge52: v }),
+      heightCm: 0,
+      setHeightCm: (v) => set({ heightCm: v }),
+      focusGoal: 0,
+      setFocusGoal: (v) => set({ focusGoal: v }),
+      dhikrGoal: 0,
+      setDhikrGoal: (v) => set({ dhikrGoal: v }),
+      lastBackupAt: null,
+      setLastBackupAt: (v) => set({ lastBackupAt: v }),
+      checklists: {},
+      toggleChecklistItem: (key, item) =>
+        set((s) => {
+          const cur = s.checklists[key] ?? [];
+          return { checklists: { ...s.checklists, [key]: cur.includes(item) ? cur.filter((x) => x !== item) : [...cur, item] } };
+        }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

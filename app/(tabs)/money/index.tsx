@@ -18,6 +18,7 @@ import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
 import { LastMonthCard } from '../../../src/features/money/LastMonthCard';
 import { CardsSummaryCard } from '../../../src/features/money/CardsSummaryCard';
+import { WeeklyLimitCard } from '../../../src/features/money/WeeklyLimitCard';
 import { useSmsStore } from '../../../src/sms/smsStore';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useBalanceFormatter } from '../../../src/ui/useMoney';
@@ -171,6 +172,10 @@ export default function MoneyScreen() {
           <SafeToSpendCard />
         </View>
 
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <WeeklyLimitCard />
+        </View>
+
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <CardsSummaryCard />
         </View>
@@ -195,9 +200,9 @@ export default function MoneyScreen() {
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <QuickLink icon="camera.fill" label="Receipts" color={colors.orange} onPress={() => router.push('/money/receipts')} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
+          <QuickLink icon="lightbulb.fill" label="Insights" color={colors.yellow} onPress={() => router.push('/money/insights')} />
+          <QuickLink icon="flag.fill" label="Follow-ups" color={colors.red} onPress={() => router.push('/money/flagged')} />
+          <QuickLink icon="trophy.fill" label="Challenges" color={colors.green} onPress={() => router.push('/money/challenges')} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}>

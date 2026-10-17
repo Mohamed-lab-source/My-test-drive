@@ -9,6 +9,14 @@ import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { monthlyInstallment } from '../../../src/utils/installment';
 import { CashCounter } from '../../../src/features/money/CashCounter';
+import {
+  AmortisationTable,
+  DiscountCalculator,
+  GrowthCalculator,
+  TimeToSaveCalculator,
+  TipSplitCalculator,
+  UnitPriceCalculator,
+} from '../../../src/features/money/Calculators';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 
 export default function ToolsScreen() {
@@ -66,7 +74,14 @@ export default function ToolsScreen() {
               </Text>
             </View>
           ) : null}
+          <AmortisationTable principal={p} annualRate={Number(rate) || 0} months={n} payment={monthly} currency={currency} />
         </Card>
+
+        <TipSplitCalculator currency={currency} />
+        <DiscountCalculator currency={currency} />
+        <UnitPriceCalculator currency={currency} />
+        <TimeToSaveCalculator currency={currency} />
+        <GrowthCalculator currency={currency} />
 
         <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Currency converter</Text>
         <Card>

@@ -10,6 +10,8 @@ import { localDateKey } from '../../../src/utils/date';
 import type { FocusSession } from '../../../src/db/types';
 import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
+import { useSettingsStore } from '../../../src/store/settingsStore';
 
 const DAYS = 7;
 const CHART_HEIGHT = 100;
@@ -21,6 +23,7 @@ export default function FocusStatsScreen() {
   const tasks = useProductivityStore((s) => s.tasks);
   const projects = useProductivityStore((s) => s.projects);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
+  const { focusGoal, setFocusGoal } = useSettingsStore();
 
   useEffect(() => {
     const since = new Date();
@@ -102,6 +105,29 @@ export default function FocusStatsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Focus" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <Card style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.headline, { color: colors.label }]}>Daily focus goal</Text>
+          {focusGoal > 0 ? (
+            <>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                {fmt(today)} of {fmt(focusGoal)} today{today >= focusGoal ? ' — goal reached 🎉' : ''}
+              </Text>
+              <View style={{ marginTop: 6 }}>
+                <ProgressBar progress={today / focusGoal} color={today >= focusGoal ? colors.green : colors.indigo} />
+              </View>
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                Goal met on {week.filter((d) => d.minutes >= focusGoal).length} of the last 7 days
+              </Text>
+            </>
+          ) : null}
+          <View style={{ marginTop: spacing.sm }}>
+            <ChipSelector
+              options={[0, 30, 60, 90, 120, 180, 240].map((m) => ({ id: String(m), label: m === 0 ? 'Off' : fmt(m) }))}
+              selectedId={String(focusGoal)}
+              onSelect={(id) => setFocusGoal(Number(id))}
+            />
+          </View>
+        </Card>
         <View style={{ flexDirection: 'row', marginHorizontal: -4, marginBottom: spacing.md }}>
           {[
             { label: 'Today', value: fmt(today) },

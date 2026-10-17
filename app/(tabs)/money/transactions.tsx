@@ -17,10 +17,45 @@ import { useRouter } from 'expo-router';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { useUndoStore } from '../../../src/store/undoStore';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import { convertToBase } from '../../../src/db/repositories/fx';
+import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 import type { Transaction, TransactionType } from '../../../src/db/types';
 
 const TYPE_FILTERS: (TransactionType | 'all')[] = ['all', 'expense', 'income', 'transfer'];
 const ALL = 'all';
+
+const PERIODS = [
+  { id: ALL, label: 'Recent' },
+  { id: 'week', label: 'This week' },
+  { id: 'month', label: 'This month' },
+  { id: 'last', label: 'Last month' },
+  { id: '3m', label: '3 months' },
+  { id: 'year', label: 'This year' },
+];
+
+function periodRange(id: string, weekStart: number): [Date, Date] | null {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const end = new Date(y, m, now.getDate() + 1);
+  switch (id) {
+    case 'week': {
+      const back = (now.getDay() - weekStart + 7) % 7;
+      return [new Date(y, m, now.getDate() - back), end];
+    }
+    case 'month':
+      return [new Date(y, m, 1), end];
+    case 'last':
+      return [new Date(y, m - 1, 1), new Date(y, m, 1)];
+    case '3m':
+      return [new Date(y, m - 2, 1), end];
+    case 'year':
+      return [new Date(y, 0, 1), end];
+    default:
+      return null;
+  }
+}
 
 export default function TransactionsScreen() {
   const { colors, spacing } = useTheme();
@@ -34,6 +69,21 @@ export default function TransactionsScreen() {
   const [tagFilter, setTagFilter] = useState<string>(ALL);
   const router = useRouter();
   const [dupesOnly, setDupesOnly] = useState(false);
+  const [period, setPeriod] = useState(ALL);
+  const [periodRows, setPeriodRows] = useState<Transaction[] | null>(null);
+  const [sort, setSort] = useState('new');
+  const [minAmount, setMinAmount] = useState(0);
+  const currency = useSettingsStore((s) => s.currency);
+  const weekStart = useSettingsStore((s) => s.weekStart);
+  const fxRates = useFinanceStore((s) => s.fxRates);
+
+  // A period reads straight from the database, so it isn't limited to the
+  // recent transactions kept in memory.
+  useEffect(() => {
+    const range = periodRange(period, weekStart);
+    if (!range) return setPeriodRows(null);
+    financeRepo.listTransactionsInRange(range[0].toISOString(), range[1].toISOString()).then(setPeriodRows);
+  }, [period, transactions, weekStart]);
   const duplicates = useMemo(() => findDuplicateIds(transactions), [transactions]);
   const uncategorized = transactions.filter((t) => t.type !== 'transfer' && !t.category_id).length;
   const tags = useMemo(() => allTags(transactions.map((t) => t.note)), [transactions]);
@@ -59,15 +109,32 @@ export default function TransactionsScreen() {
 
   const filtered = useMemo(() => {
     const typeFilter = TYPE_FILTERS[typeIndex];
-    return (searchResults ?? transactions).filter(
+    const range = periodRange(period, weekStart);
+    const list = (searchResults ?? periodRows ?? transactions).filter(
       (t) =>
+        (!range || (new Date(t.date) >= range[0] && new Date(t.date) < range[1])) &&
+        (minAmount === 0 || t.amount >= toMinorUnits(minAmount)) &&
         (typeFilter === 'all' || t.type === typeFilter) &&
         (accountFilter === ALL || t.account_id === accountFilter || t.transfer_to_account_id === accountFilter) &&
         (categoryFilter === ALL || t.category_id === categoryFilter) &&
         (tagFilter === ALL || extractTags(t.note).includes(tagFilter)) &&
         (!dupesOnly || duplicates.has(t.id))
     );
-  }, [transactions, searchResults, typeIndex, accountFilter, categoryFilter, tagFilter, dupesOnly, duplicates]);
+    if (sort === 'old') return [...list].sort((a, b) => a.date.localeCompare(b.date));
+    if (sort === 'big') return [...list].sort((a, b) => b.amount - a.amount);
+    return [...list].sort((a, b) => b.date.localeCompare(a.date));
+  }, [transactions, searchResults, periodRows, period, weekStart, minAmount, sort, typeIndex, accountFilter, categoryFilter, tagFilter, dupesOnly, duplicates]);
+
+  const totals = useMemo(() => {
+    let out = 0;
+    let inn = 0;
+    for (const t of filtered) {
+      const v = convertToBase(t.amount, t.currency, currency, fxRates);
+      if (t.type === 'expense') out += v;
+      else if (t.type === 'income') inn += v;
+    }
+    return { out, inn };
+  }, [filtered, currency, fxRates]);
 
   const withoutIdentity = (tx: Transaction) => {
     const { id, created_at, ...rest } = tx;
@@ -137,6 +204,30 @@ export default function TransactionsScreen() {
             onSelect={setCategoryFilter}
           />
         </View>
+
+        <View style={{ marginBottom: spacing.xs }}>
+          <ChipSelector options={PERIODS} selectedId={period} onSelect={setPeriod} />
+        </View>
+        <View style={{ marginBottom: spacing.xs }}>
+          <ChipSelector
+            options={[
+              { id: 'new', label: 'Newest' },
+              { id: 'old', label: 'Oldest' },
+              { id: 'big', label: 'Largest' },
+              { id: 'min0', label: 'Any amount' },
+              { id: 'min100', label: '100+' },
+              { id: 'min500', label: '500+' },
+              { id: 'min1000', label: '1,000+' },
+            ]}
+            selectedId={null}
+            onSelect={(id) => (id.startsWith('min') ? setMinAmount(Number(id.slice(3))) : setSort(id))}
+          />
+        </View>
+        <Text style={{ color: colors.secondaryLabel, marginBottom: spacing.sm, fontSize: 13 }}>
+          {filtered.length} transaction{filtered.length === 1 ? '' : 's'}
+          {sort !== 'new' ? ` · ${sort === 'old' ? 'oldest' : 'largest'} first` : ''}
+          {minAmount ? ` · ${minAmount}+` : ''} · out {formatMoney(totals.out, currency)} · in {formatMoney(totals.inn, currency)}
+        </Text>
 
         {filtered.length === 0 ? (
           <EmptyState icon="banknote" title="No transactions" message="Nothing matches these filters." />

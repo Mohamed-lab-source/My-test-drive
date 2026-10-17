@@ -20,7 +20,8 @@ interface SmsState {
   loadLinks: () => Promise<void>;
   scanning: boolean;
   refresh: () => Promise<void>;
-  scan: () => Promise<number>;
+  // days: rescan that far back instead of continuing from the last scan.
+  scan: (days?: number) => Promise<number>;
   add: (item: SmsImport, categoryId: string | null, accountId: string | null, opts?: { silent?: boolean }) => Promise<void>;
   dismiss: (id: string) => Promise<void>;
 }
@@ -154,14 +155,14 @@ export const useSmsStore = create<SmsState>((set, get) => ({
   },
 
   // Reads new bank SMS since the last scan and queues any debits for review.
-  scan: async () => {
+  scan: async (days) => {
     const { smsImportEnabled, smsSenders, smsLastScan, setSmsLastScan, smsReadCredits, smsAutoAddKnown } =
       useSettingsStore.getState();
     await get().loadRules();
     if (!smsImportEnabled || !isSmsReadingAvailable() || get().scanning) return 0;
     set({ scanning: true });
     try {
-      const since = smsLastScan || Date.now() - FIRST_SCAN_DAYS * 86400000;
+      const since = days ? Date.now() - days * 86400000 : smsLastScan || Date.now() - FIRST_SCAN_DAYS * 86400000;
       const messages = await readBankSms(since, smsSenders);
       let added = 0;
       let newest = since;
@@ -195,7 +196,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
           await get().add(item, known, account?.id ?? null, { silent: true });
         }
       }
-      setSmsLastScan(newest);
+      setSmsLastScan(Math.max(newest, useSettingsStore.getState().smsLastScan));
       await get().refresh();
       return added;
     } finally {

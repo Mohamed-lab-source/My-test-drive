@@ -87,11 +87,11 @@ class SmsDebitReceiver : BroadcastReceiver() {
       RegexOption.IGNORE_CASE
     )
     private val DEBIT = Regex(
-      "debited|purchase|used|spent|paid|withdraw|charged|deducted|خصم|سحب|شراء",
+      "debited|purchase|used|spent|paid|withdraw|charged|deducted|e-?commerce|online|authori[sz]|transaction|\\btxn\\b|\\btrx\\b|خصم|سحب|شراء|عملية|الإنترنت",
       RegexOption.IGNORE_CASE
     )
     private val IGNORE = Regex(
-      "otp|one[- ]?time|password|passcode|verification|declined|failed|unsuccessful|statement|will be (debited|charged)|credited|رمز|كلمة المرور|مرفوض",
+      "otp|one[- ]?time|password|passcode|verification|declined|failed|unsuccessful|statement|will be (debited|charged)|credited|reversal|refund|cancell?ed|promo|offer|discount|رمز|كلمة المرور|مرفوض|رفض|إلغاء|استرداد",
       RegexOption.IGNORE_CASE
     )
   }

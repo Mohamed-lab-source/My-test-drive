@@ -14,6 +14,8 @@ import { Icon } from '../../src/ui/Icon';
 import { PrayerTracker } from '../../src/features/life/PrayerTracker';
 import { SeasonCountdownCard } from '../../src/features/home/SeasonCountdownCard';
 import { MoodCheckinCard } from '../../src/features/home/MoodCheckinCard';
+import { NameOfDayCard } from '../../src/features/home/NameOfDayCard';
+import { InsightOfDayCard, SpentTodayLine } from '../../src/features/home/InsightOfDayCard';
 import { RamadanCard } from '../../src/features/home/RamadanCard';
 import { VerseCard } from '../../src/features/home/VerseCard';
 import { CountdownCard } from '../../src/features/home/CountdownCard';
@@ -160,6 +162,7 @@ export default function HomeScreen() {
           <QuickAction icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
           <QuickAction icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
         </View>
+        {show('spent') ? <SpentTodayLine /> : null}
 
         <View style={{ paddingHorizontal: spacing.lg }}>
           <GettingStartedCard />
@@ -170,6 +173,8 @@ export default function HomeScreen() {
           {show('countdown') ? <CountdownCard /> : null}
           {show('mood') ? <MoodCheckinCard /> : null}
           {show('verse') ? <VerseCard /> : null}
+          {show('names') ? <NameOfDayCard /> : null}
+          {show('insight') ? <InsightOfDayCard /> : null}
           {show('water') ? <WaterCard /> : null}
         </View>
 

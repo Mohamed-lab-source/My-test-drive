@@ -33,6 +33,7 @@ import { PRAYER_CITIES } from '../../../src/utils/prayerTimes';
 import { formatHijri } from '../../../src/utils/hijri';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
 import { useAuth } from '../../../src/auth/AuthProvider';
+import { buildMonthlyReport } from '../../../src/utils/monthlyReport';
 
 function FxRateRow({ currency, baseCurrency }: { currency: string; baseCurrency: string }) {
   const { colors, spacing } = useTheme();
@@ -113,7 +114,16 @@ export default function SettingsScreen() {
     setCardDueReminders,
     spendDigest,
     setSpendDigest,
+    dailySpendAlert,
+    setDailySpendAlert,
+    weekendDays,
+    setWeekendDays,
+    weekStart,
+    setWeekStart,
+    lastBackupAt,
+    setLastBackupAt,
   } = useSettingsStore();
+  const [dailyAlertInput, setDailyAlertInput] = useState(dailySpendAlert > 0 ? String(dailySpendAlert / 100) : '');
 
   const adjustPrayer = async (prayer: string, delta: number) => {
     const next = { ...prayerAdjust, [prayer]: Math.max(-30, Math.min(30, (prayerAdjust[prayer] ?? 0) + delta)) };
@@ -188,8 +198,11 @@ export default function SettingsScreen() {
 
   const handleExport = async () => {
     const json = await exportAllData();
-    await Share.share({ message: json, title: 'Anchor backup' });
+    const result = await Share.share({ message: json, title: 'Anchor backup' });
+    if (result.action !== Share.dismissedAction) setLastBackupAt(new Date().toISOString());
   };
+
+  const backupDays = lastBackupAt ? Math.floor((Date.now() - new Date(lastBackupAt).getTime()) / 86400000) : null;
 
   const handleExportCsv = async () => {
     const csv = await exportTransactionsCsv();
@@ -451,6 +464,39 @@ export default function SettingsScreen() {
               <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: -spacing.sm }]}>
                 Get a notification when an account drops below this after a transaction.
               </Text>
+              <View style={{ marginTop: spacing.md }}>
+                <TextField
+                  label={`Big spending day alert (${currency})`}
+                  placeholder="Off — e.g. 2000"
+                  keyboardType="decimal-pad"
+                  value={dailyAlertInput}
+                  onChangeText={setDailyAlertInput}
+                  onBlur={() => setDailySpendAlert(Math.round((Number(dailyAlertInput) || 0) * 100))}
+                />
+                <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: -spacing.sm }]}>
+                  A notification when today's spending passes this amount.
+                </Text>
+              </View>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>Weekend</Text>
+              <ChipSelector
+                options={[
+                  { id: '5,6', label: 'Fri – Sat' },
+                  { id: '6,0', label: 'Sat – Sun' },
+                  { id: '5', label: 'Friday only' },
+                ]}
+                selectedId={weekendDays.join(',')}
+                onSelect={(id) => setWeekendDays(id.split(',').map(Number))}
+              />
+              <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>Week starts on</Text>
+              <ChipSelector
+                options={[
+                  { id: '6', label: 'Saturday' },
+                  { id: '0', label: 'Sunday' },
+                  { id: '1', label: 'Monday' },
+                ]}
+                selectedId={String(weekStart)}
+                onSelect={(id) => setWeekStart(Number(id))}
+              />
             </View>
           </Card>
         </View>
@@ -578,8 +624,21 @@ export default function SettingsScreen() {
           <Card padded={false}>
             <ListRow
               title="Export backup"
-              leading={<IconCircle name="square.and.arrow.up" color={colors.green} size={32} />}
+              subtitle={
+                backupDays === null
+                  ? 'Never backed up — export one and keep it somewhere safe'
+                  : backupDays === 0
+                    ? 'Last backup today'
+                    : `Last backup ${backupDays} day${backupDays === 1 ? '' : 's'} ago${backupDays > 30 ? ' — time for a new one' : ''}`
+              }
+              leading={<IconCircle name="square.and.arrow.up" color={backupDays === null || backupDays > 30 ? colors.orange : colors.green} size={32} />}
               onPress={handleExport}
+            />
+            <ListRow
+              title="Share monthly report"
+              subtitle="Money, tasks, prayers, habits and mood this month"
+              leading={<IconCircle name="chart.bar.fill" color={colors.indigo} size={32} />}
+              onPress={async () => Share.share({ message: await buildMonthlyReport() })}
             />
             <ListRow
               title="Export transactions (CSV)"

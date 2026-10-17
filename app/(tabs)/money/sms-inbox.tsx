@@ -19,6 +19,7 @@ import { formatRelativeDay, formatTime, localDateKey } from '../../../src/utils/
 import type { SmsImport } from '../../../src/db/types';
 import { latestReportedBalance } from '../../../src/db/repositories/smsImports';
 import * as rulesRepo from '../../../src/db/repositories/merchantRules';
+import { SkippedMessagesCard, TestMessageCard } from '../../../src/features/money/SmsTools';
 
 export default function SmsInboxScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -28,7 +29,6 @@ export default function SmsInboxScreen() {
     setSmsImportEnabled,
     smsSenders,
     setSmsSenders,
-    setSmsLastScan,
     setSmsAccountId,
     smsInstantAlerts,
     setSmsInstantAlerts,
@@ -298,13 +298,12 @@ export default function SmsInboxScreen() {
                 <Pressable
                   onPress={async () => {
                     saveSenders();
-                    setSmsLastScan(0);
-                    const found = await scan();
-                    Alert.alert('Rescanned', found ? `Found ${found} new debit${found === 1 ? '' : 's'}.` : 'No new debits in the last 30 days.');
+                    const found = await scan(90);
+                    Alert.alert('Rescanned', found ? `Found ${found} new debit${found === 1 ? '' : 's'}.` : 'No new debits in the last 90 days.');
                   }}
                   disabled={scanning}
                 >
-                  <Text style={[typography.subhead, { color: colors.blue }]}>Rescan last 30 days</Text>
+                  <Text style={[typography.subhead, { color: colors.blue }]}>Rescan last 90 days</Text>
                 </Pressable>
               </View>
             </>
@@ -520,6 +519,9 @@ export default function SmsInboxScreen() {
             )}
           </>
         ) : null}
+        {active ? <SkippedMessagesCard /> : null}
+        <TestMessageCard />
+
         {active && Object.keys(rules).length > 0 ? (
           <>
             <Text style={[typography.title3, { color: colors.label, marginTop: spacing.lg, marginBottom: spacing.sm }]}>Merchant rules</Text>

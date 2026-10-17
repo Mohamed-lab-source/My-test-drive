@@ -25,6 +25,9 @@ export default function LifeLayout() {
       <Stack.Screen name="medications" />
       <Stack.Screen name="duas" />
       <Stack.Screen name="hifz" />
+      <Stack.Screen name="names" />
+      <Stack.Screen name="seasons" />
+      <Stack.Screen name="insights" />
     </Stack>
   );
 }

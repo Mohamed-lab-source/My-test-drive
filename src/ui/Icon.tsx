@@ -92,6 +92,8 @@ const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   'book.closed.fill': 'library',
   'face.smiling': 'happy-outline',
   'arrow.clockwise': 'refresh',
+  'trophy.fill': 'trophy',
+  'chart.xyaxis.line': 'analytics',
   'safari.fill': 'compass',
   'sunrise.fill': 'partly-sunny',
   'checklist': 'checkbox',

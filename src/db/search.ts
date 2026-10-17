@@ -1,5 +1,6 @@
 import { getDb } from './client';
 import { formatDateShort } from '../utils/date';
+import { formatMoney } from '../utils/money';
 import type { Book, Countdown, Meeting, Note, ShoppingItem, Task, Transaction, WishlistItem } from './types';
 
 export type SearchResultType = 'transaction' | 'task' | 'meeting' | 'wishlist' | 'note' | 'book' | 'shopping' | 'countdown';
@@ -16,8 +17,14 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   const db = await getDb();
   const like = `%${trimmed}%`;
 
+  // A number like "125.50" or "1,250" also finds transactions of that
+  // amount (to the unit), so a bank charge can be found by its price.
+  const amount = /^[\d,.]+$/.test(trimmed) ? Number(trimmed.replace(/,/g, '')) : NaN;
+  const amountClause = amount > 0 ? ' OR (amount >= ? AND amount < ?)' : '';
+  const amountArgs = amount > 0 ? [Math.floor(amount) * 100, (Math.floor(amount) + 1) * 100] : [];
+
   const [transactions, tasks, meetings, wishlist, notes, books, shopping, countdowns] = await Promise.all([
-    db.getAllAsync<Transaction>('SELECT * FROM transactions WHERE note LIKE ? ORDER BY date DESC LIMIT 20', [like]),
+    db.getAllAsync<Transaction>(`SELECT * FROM transactions WHERE note LIKE ?${amountClause} ORDER BY date DESC LIMIT 20`, [like, ...amountArgs]),
     db.getAllAsync<Task>(
       'SELECT * FROM tasks WHERE title LIKE ? OR notes LIKE ? ORDER BY created_at DESC LIMIT 20',
       [like, like]
@@ -37,7 +44,12 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   ]);
 
   return [
-    ...transactions.map((t) => ({ type: 'transaction' as const, id: t.id, title: t.note || 'Transaction', subtitle: formatDateShort(t.date) })),
+    ...transactions.map((t) => ({
+      type: 'transaction' as const,
+      id: t.id,
+      title: t.note || 'Transaction',
+      subtitle: `${formatMoney(t.amount, t.currency)} · ${formatDateShort(t.date)}`,
+    })),
     ...tasks.map((t) => ({ type: 'task' as const, id: t.id, title: t.title, subtitle: t.status })),
     ...meetings.map((m) => ({ type: 'meeting' as const, id: m.id, title: m.title, subtitle: m.location ?? undefined })),
     ...wishlist.map((w) => ({ type: 'wishlist' as const, id: w.id, title: w.title })),

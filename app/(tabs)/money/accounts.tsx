@@ -10,11 +10,14 @@ import { FAB } from '../../../src/ui/FAB';
 import { Icon } from '../../../src/ui/Icon';
 import { formatMoney } from '../../../src/utils/money';
 import { AccountSheet } from '../../../src/features/money/AccountSheet';
-import type { Account } from '../../../src/db/types';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import { convertToBase } from '../../../src/db/repositories/fx';
+import type { Account, AccountType } from '../../../src/db/types';
 
 export default function AccountsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, updateAccount } = useFinanceStore();
+  const { accounts, updateAccount, fxRates } = useFinanceStore();
+  const currency = useSettingsStore((s) => s.currency);
   const [reordering, setReordering] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
@@ -84,6 +87,43 @@ export default function AccountsScreen() {
         }
       />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        {(() => {
+          // Net worth split by kind of account, in your main currency.
+          const kinds: { type: AccountType; label: string }[] = [
+            { type: 'cash', label: 'Cash' },
+            { type: 'wallet', label: 'Wallets' },
+            { type: 'bank', label: 'Bank' },
+            { type: 'savings', label: 'Savings' },
+            { type: 'credit', label: 'Credit cards' },
+          ];
+          const rows = kinds
+            .map((k) => ({ ...k, total: accounts.filter((a) => a.type === k.type).reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0) }))
+            .filter((k) => k.total !== 0);
+          const net = rows.reduce((sum, k) => sum + k.total, 0);
+          const assets = rows.filter((k) => k.total > 0).reduce((sum, k) => sum + k.total, 0);
+          if (rows.length === 0) return null;
+          return (
+            <Card style={{ marginBottom: spacing.md }}>
+              <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Net worth</Text>
+              <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.xs }]}>{formatMoney(net, currency)}</Text>
+              {rows.map((k) => (
+                <View key={k.type} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <Text style={[typography.subhead, { color: colors.label, width: 100 }]}>{k.label}</Text>
+                  <View style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.tertiaryFill, marginRight: spacing.sm, overflow: 'hidden' }}>
+                    <View
+                      style={{
+                        width: `${Math.min(100, (Math.abs(k.total) / Math.max(1, assets)) * 100)}%`,
+                        height: 6,
+                        backgroundColor: k.total < 0 ? colors.red : colors.green,
+                      }}
+                    />
+                  </View>
+                  <Text style={[typography.subhead, { color: k.total < 0 ? colors.red : colors.label }]}>{formatMoney(k.total, currency)}</Text>
+                </View>
+              ))}
+            </Card>
+          );
+        })()}
         {renderList(active)}
         {archived.length > 0 ? (
           <>

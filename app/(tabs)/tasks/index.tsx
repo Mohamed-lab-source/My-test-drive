@@ -30,9 +30,9 @@ import type { Task } from '../../../src/db/types';
 import { insertRow } from '../../../src/db/helpers';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useUndoStore } from '../../../src/store/undoStore';
-import { DAILY_CAPACITY_MINUTES, formatEstimate, plannedMinutes } from '../../../src/utils/estimate';
+import { DAILY_CAPACITY_MINUTES, daysToDeadline, formatEstimate, plannedMinutes } from '../../../src/utils/estimate';
 
-const SEGMENTS = ['Today', 'Backlog', 'All', 'Done'];
+const SEGMENTS = ['Today', 'Backlog', 'All', 'Done', 'Waiting'];
 
 export default function TasksScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -91,12 +91,18 @@ export default function TasksScreen() {
   const todaysMeetingMinutes = meetings
     .filter((m) => new Date(m.start_at).toDateString() === new Date().toDateString())
     .reduce((sum, m) => sum + (m.end_at ? Math.max(0, (new Date(m.end_at).getTime() - new Date(m.start_at).getTime()) / 60000) : 30), 0);
+  const overdue = useMemo(
+    () => tasks.filter((t) => t.status !== 'done' && t.due_date && daysToDeadline(t.due_date) < 0 && t.scheduled_date !== todayStr),
+    [tasks, todayStr]
+  );
   const bySegment = useMemo(() => {
     if (segment === 0) {
       return tasks.filter(
-        (t) => t.status !== 'done' && (t.scheduled_date === todayStr || t.status === 'in_progress')
+        // Tasks due today show up here even if they weren't scheduled.
+        (t) => t.status !== 'done' && (t.scheduled_date === todayStr || t.status === 'in_progress' || t.due_date === todayStr)
       );
     }
+    if (segment === 4) return tasks.filter((t) => t.status !== 'done' && !!t.waiting_on);
     if (segment === 1) return tasks.filter((t) => t.status === 'backlog');
     if (segment === 3) {
       return tasks
@@ -240,6 +246,12 @@ export default function TasksScreen() {
               <Icon name="magnifyingglass" size={16} color={colors.blue} />
               <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>{searching ? 'Close search' : 'Search'}</Text>
             </Pressable>
+            {segment === 2 || segment === 3 ? (
+              <Pressable onPress={() => router.push('/tasks/insights')} style={{ flexDirection: 'row', alignItems: 'center', marginRight: spacing.md }}>
+                <Icon name="chart.bar.fill" size={16} color={colors.teal} />
+                <Text style={[typography.subhead, { color: colors.blue, marginLeft: 4 }]}>Insights</Text>
+              </Pressable>
+            ) : null}
             {segment === 2 ? (
               <Pressable onPress={() => router.push('/tasks/matrix')} style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Icon name="flag.fill" size={16} color={colors.red} />
@@ -259,6 +271,29 @@ export default function TasksScreen() {
               </Pressable>
             ) : null}
           </View>
+          {segment === 0 && !query && overdue.length > 0 ? (
+            <Card style={{ marginBottom: spacing.sm, backgroundColor: colors.red + '14' }}>
+              <Text style={[typography.headline, { color: colors.red }]}>
+                {overdue.length} task{overdue.length === 1 ? '' : 's'} past {overdue.length === 1 ? 'its' : 'their'} deadline
+              </Text>
+              <Text style={[typography.footnote, { color: colors.secondaryLabel }]} numberOfLines={2}>
+                {overdue.map((t) => t.title).join(' · ')}
+              </Text>
+              <Pressable
+                onPress={async () => {
+                  for (const t of overdue) await rescheduleTask(t.id, 'today');
+                }}
+                style={{ marginTop: spacing.xs }}
+              >
+                <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Move all to today</Text>
+              </Pressable>
+            </Card>
+          ) : null}
+          {segment === 4 && !query ? (
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
+              Tasks waiting on someone else. Set "Waiting on" in a task to add it here.
+            </Text>
+          ) : null}
           {segment === 0 && !query ? <WeeklyGoalsCard /> : null}
           {segment === 0 && !query && (plannedMinutes(bySegment) > 0 || todaysMeetingMinutes > 0) ? (
             <Card style={{ marginBottom: spacing.sm }}>

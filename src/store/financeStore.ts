@@ -179,6 +179,27 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       }
     }
 
+    // Weekly limit and daily spending alerts: fire once, when this expense
+    // takes the total over the line.
+    const { weeklyLimit, dailySpendAlert, weekStart, currency: base } = useSettingsStore.getState();
+    if (input.type === 'expense' && input.currency === base && (weeklyLimit > 0 || dailySpendAlert > 0)) {
+      const d = new Date();
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const weekStartDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() - weekStart + 7) % 7));
+      if (weeklyLimit > 0) {
+        const after = await repo.getSpendSince(weekStartDate.toISOString(), base);
+        if (after - input.amount < weeklyLimit && after >= weeklyLimit) {
+          notifyNow('Weekly limit reached', `${formatMoney(after, base)} spent this week — your limit is ${formatMoney(weeklyLimit, base)}.`);
+        }
+      }
+      if (dailySpendAlert > 0) {
+        const after = await repo.getSpendSince(dayStart.toISOString(), base);
+        if (after - input.amount < dailySpendAlert && after >= dailySpendAlert) {
+          notifyNow('Big spending day', `You've spent ${formatMoney(after, base)} today.`);
+        }
+      }
+    }
+
     if (budget && budget.monthly_limit > 0) {
       const after = before + input.amount;
       const name = get().categories.find((c) => c.id === budget.category_id)?.name ?? 'A category';

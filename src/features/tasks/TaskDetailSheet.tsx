@@ -5,7 +5,7 @@ import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChipSelector } from '../../ui/ChipSelector';
-import { ESTIMATE_OPTIONS } from '../../utils/estimate';
+import { DEADLINE_OPTIONS, ESTIMATE_OPTIONS, deadlineFromOption, deadlineLabel } from '../../utils/estimate';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -82,6 +82,8 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
   const [newSubtask, setNewSubtask] = useState('');
   const [saving, setSaving] = useState(false);
   const [estimate, setEstimate] = useState(0);
+  const [deadline, setDeadline] = useState<string | null>(null);
+  const [waitingOn, setWaitingOn] = useState('');
 
   useEffect(() => {
     if (!task) return;
@@ -90,6 +92,8 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
     setPriorityIndex(PRIORITIES.indexOf(task.priority));
     setRepeat(task.repeat_frequency ?? 'none');
     setEstimate(task.estimate_minutes ?? 0);
+    setDeadline(task.due_date);
+    setWaitingOn(task.waiting_on ?? '');
     repo.listSubtasks(task.id).then(setSubtasks);
   }, [task?.id]);
 
@@ -118,6 +122,8 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
         repeat_frequency: repeat === 'none' ? null : repeat,
         repeat_interval: repeat === 'none' ? null : 1,
         estimate_minutes: estimate || null,
+        due_date: deadline,
+        waiting_on: waitingOn.trim() || null,
       });
       onClose();
     } finally {
@@ -159,6 +165,15 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
             }}
           />
         </View>
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+          Deadline · {deadline ? `${formatDateKey(deadline)} (${deadlineLabel(deadline)})` : 'None'}
+        </Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <ChipSelector options={DEADLINE_OPTIONS} selectedId={null} onSelect={(id) => setDeadline(deadlineFromOption(id))} />
+        </View>
+
+        <TextField label="Waiting on" placeholder="Someone you're waiting for (optional)" value={waitingOn} onChangeText={setWaitingOn} />
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Remind me ·{' '}
