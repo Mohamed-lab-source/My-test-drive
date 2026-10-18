@@ -22,6 +22,7 @@ import { useCookStreak } from "../context/CookStreakContext";
 import { useRecentlyRated } from "../context/RecentlyRatedContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useHomeLayout } from "../context/HomeLayoutContext";
+import { localDayKey, useFoodDiary } from "../context/FoodDiaryContext";
 import { daysUntil, useLeftovers } from "../context/LeftoversContext";
 import { useToast } from "../context/ToastContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -84,6 +85,9 @@ export function HomeScreen({ navigation }: Props) {
   const { recentlyRated } = useRecentlyRated();
   const { favoriteRecipes } = useFavorites();
   const { isVisible: isSectionVisible } = useHomeLayout();
+  const { targets: diaryTargets, totalsFor: diaryTotalsFor, waterFor } = useFoodDiary();
+  const diaryToday = diaryTotalsFor(localDayKey());
+  const diaryRemaining = diaryTargets.calories - diaryToday.calories;
   const { leftovers, removeLeftover, restoreLeftover, remindersEnabled: leftoverRemindersEnabled, setRemindersEnabled: setLeftoverRemindersEnabled } =
     useLeftovers();
   const { showToast } = useToast();
@@ -141,6 +145,12 @@ export function HomeScreen({ navigation }: Props) {
         servings: activeCookSession.servings,
         myRating: detail.myRating,
         initialStepIndex: Math.min(activeCookSession.stepIndex, detail.steps.length - 1),
+        nutrition: {
+          calories: detail.nutritionPerServing.calories,
+          protein: detail.nutritionPerServing.proteinGrams,
+          fat: detail.nutritionPerServing.fatGrams,
+          carbs: detail.nutritionPerServing.carbsGrams,
+        },
       });
     } catch {
       // Recipe may have changed or be unavailable; nothing to recover into.
@@ -220,6 +230,12 @@ export function HomeScreen({ navigation }: Props) {
         ingredients: detail.ingredients,
         servings: detail.baseServings,
         myRating: detail.myRating,
+        nutrition: {
+          calories: detail.nutritionPerServing.calories,
+          protein: detail.nutritionPerServing.proteinGrams,
+          fat: detail.nutritionPerServing.fatGrams,
+          carbs: detail.nutritionPerServing.carbsGrams,
+        },
       });
     } catch (error) {
       Alert.alert(t("home.cookAgainError"), apiErrorMessage(error));
@@ -386,6 +402,46 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.searchIcon}>🔍</Text>
               <Text style={styles.searchPlaceholder}>{t("search.placeholder")}</Text>
             </AnimatedPressable>
+
+            {isSectionVisible("nutrition") ? (
+              <AnimatedPressable
+                style={styles.nutritionCard}
+                pressScale={0.98}
+                onPress={() => navigation.navigate("FoodDiary")}
+                accessibilityRole="button"
+                accessibilityLabel={t("diary.title")}
+              >
+                <View style={styles.nutritionHeader}>
+                  <Text style={styles.nutritionTitle}>
+                    {t("home.nutritionToday", { eaten: diaryToday.calories, target: diaryTargets.calories })}
+                  </Text>
+                  <Text style={[styles.nutritionRemaining, diaryRemaining < 0 && styles.nutritionOver]}>
+                    {diaryRemaining >= 0
+                      ? t("diary.remaining", { count: diaryRemaining })
+                      : t("diary.over", { count: -diaryRemaining })}
+                  </Text>
+                </View>
+                <View style={styles.nutritionTrack}>
+                  <View
+                    style={[
+                      styles.nutritionFill,
+                      {
+                        width: `${Math.min(100, (diaryToday.calories / diaryTargets.calories) * 100)}%`,
+                        backgroundColor: diaryRemaining < 0 ? colors.danger : colors.primary,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.nutritionMeta}>
+                  {t("home.nutritionMeta", {
+                    protein: diaryToday.protein,
+                    proteinTarget: diaryTargets.protein,
+                    water: waterFor(localDayKey()),
+                    waterTarget: diaryTargets.water,
+                  })}
+                </Text>
+              </AnimatedPressable>
+            ) : null}
 
             <Text style={styles.sectionTitle}>{t("home.moodTitle")}</Text>
             <View style={styles.moodRow}>
@@ -618,6 +674,11 @@ export function HomeScreen({ navigation }: Props) {
                   key: "leanMuscle",
                   label: t("home.leanMuscle"),
                   onPress: () => navigation.navigate("LeanMuscleMode"),
+                },
+                {
+                  key: "foodDiary",
+                  label: t("home.foodDiary"),
+                  onPress: () => navigation.navigate("FoodDiary"),
                 },
                 {
                   key: "mealPrep",
@@ -926,6 +987,21 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: spacing(1),
     },
     searchIcon: { fontSize: 15, marginEnd: spacing(1) },
+    nutritionCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing(1.75),
+      marginTop: spacing(2),
+    },
+    nutritionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    nutritionTitle: { fontSize: 14, fontWeight: "800", color: colors.text, flexShrink: 1 },
+    nutritionRemaining: { fontSize: 12, fontWeight: "700", color: colors.success, marginStart: spacing(1) },
+    nutritionOver: { color: colors.danger },
+    nutritionTrack: { height: 8, borderRadius: 4, backgroundColor: colors.chipBackground, overflow: "hidden", marginTop: spacing(1) },
+    nutritionFill: { height: "100%", borderRadius: 4 },
+    nutritionMeta: { fontSize: 12, color: colors.textMuted, marginTop: spacing(0.75) },
     searchPlaceholder: { color: colors.textMuted, fontSize: 14 },
     sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
     moodRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1) },

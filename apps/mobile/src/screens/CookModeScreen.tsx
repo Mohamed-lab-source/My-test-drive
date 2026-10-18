@@ -14,6 +14,8 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useUnits } from "../context/UnitsContext";
 import { useCookStreak } from "../context/CookStreakContext";
+import { useToast } from "../context/ToastContext";
+import { useFoodDiary } from "../context/FoodDiaryContext";
 import { useLeftovers } from "../context/LeftoversContext";
 import { useTextSize } from "../context/TextSizeContext";
 import { formatQuantity } from "../utils/units";
@@ -28,13 +30,15 @@ const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 200, 365];
 
 export function CookModeScreen({ route, navigation }: Props) {
   useKeepAwake();
-  const { slug, title, cuisineSlug, steps, ingredients, servings, myRating, initialStepIndex } = route.params;
+  const { slug, title, cuisineSlug, steps, ingredients, servings, myRating, initialStepIndex, nutrition } = route.params;
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
   const myAllergies = useMyAllergies();
   const { recordCooked } = useCookStreak();
   const { addLeftover } = useLeftovers();
+  const { addEntry: addDiaryEntry } = useFoodDiary();
+  const { showToast } = useToast();
   const { scale: textScale } = useTextSize();
   const styles = useMemo(() => createStyles(colors, textScale), [colors, textScale]);
   const [index, setIndex] = useState(initialStepIndex ?? 0);
@@ -100,6 +104,31 @@ export function CookModeScreen({ route, navigation }: Props) {
     ]);
   };
 
+  /**
+   * Offered after the "done" alert closes rather than alongside it: Android
+   * alerts cap at 3 buttons (already used), and a toast shown under the
+   * modal alert would expire unseen.
+   */
+  const offerDiaryLog = () => {
+    if (!nutrition) return;
+    showToast(t("diary.logAfterCooking"), {
+      actionLabel: t("diary.logAction"),
+      onAction: () => {
+        addDiaryEntry({
+          title,
+          slug,
+          cuisineSlug,
+          servings: 1,
+          calories: Math.round(nutrition.calories),
+          protein: Math.round(nutrition.protein),
+          fat: Math.round(nutrition.fat),
+          carbs: Math.round(nutrition.carbs),
+        });
+        showToast(t("diary.logged"));
+      },
+    });
+  };
+
   const showDoneAlert = (streak: number) => {
     const message = streak > 1 ? t("cookMode.doneMessageStreak", { streak }) : t("cookMode.doneMessage");
     const buttons = [
@@ -108,16 +137,26 @@ export function CookModeScreen({ route, navigation }: Props) {
         onPress: () => {
           addLeftover({ slug, title, cuisineSlug }, servings);
           navigation.goBack();
+          offerDiaryLog();
         },
       },
     ];
     if (!myRating) {
       buttons.push({
         text: t("cookMode.rateNow"),
-        onPress: () => navigation.navigate("RecipeDetail", { slug, focusRating: true }),
+        onPress: () => {
+          navigation.navigate("RecipeDetail", { slug, focusRating: true });
+          offerDiaryLog();
+        },
       });
     }
-    buttons.push({ text: t("cookMode.doneButton"), onPress: () => navigation.goBack() });
+    buttons.push({
+      text: t("cookMode.doneButton"),
+      onPress: () => {
+        navigation.goBack();
+        offerDiaryLog();
+      },
+    });
     Alert.alert(t("cookMode.doneTitle"), message, buttons);
   };
 

@@ -13,6 +13,7 @@ import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useToast } from "../context/ToastContext";
+import { useFoodDiary } from "../context/FoodDiaryContext";
 import { useUnits } from "../context/UnitsContext";
 import {
   ACTIVITY_LEVELS,
@@ -126,6 +127,7 @@ export function MealPrepScreen({ navigation }: Props) {
   const { favoriteRecipes } = useFavorites();
   const { setPlan } = useMealPlan();
   const { showToast } = useToast();
+  const { setTargets: setDiaryTargets } = useFoodDiary();
   const { unitSystem } = useUnits();
   const myAllergies = useMyAllergies();
 
@@ -184,6 +186,15 @@ export function MealPrepScreen({ navigation }: Props) {
   const dailyTarget = dailyTargetCalories(maintenance, settings.sex, settings.deficit);
   const weeklyBudget = parseInRange(settings.budget, 1, 1_000_000);
   const slots = slotsFor(settings.mealsPerDay, settings.includeSnack);
+
+  // Keep the food diary's targets in step with this calculator (unless the user overrode them by hand).
+  useEffect(() => {
+    if (!settingsLoaded || weight == null || !hasBodyStats) return;
+    setDiaryTargets(
+      { calories: dailyTarget, protein: Math.round(weight * (settings.deficit ? 1.6 : 1.2)) },
+      "auto"
+    );
+  }, [settingsLoaded, hasBodyStats, dailyTarget, weight, settings.deficit, setDiaryTargets]);
 
   const dayLabel = (startDateKey: string, index: number) => {
     const dateKey = addDays(startDateKey, index);

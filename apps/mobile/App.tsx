@@ -20,6 +20,7 @@ import { PantryCheckProvider } from "./src/context/PantryCheckContext";
 import { WhatsNewProvider } from "./src/context/WhatsNewContext";
 import { CollectionsProvider } from "./src/context/CollectionsContext";
 import { BadgesProvider } from "./src/context/BadgesContext";
+import { FoodDiaryProvider } from "./src/context/FoodDiaryContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -58,7 +59,9 @@ export default function App() {
                                           <WhatsNewProvider>
                                             <CollectionsProvider>
                                               <BadgesProvider>
-                                                <AppShell />
+                                                <FoodDiaryProvider>
+                                                  <AppShell />
+                                                </FoodDiaryProvider>
                                               </BadgesProvider>
                                             </CollectionsProvider>
                                           </WhatsNewProvider>

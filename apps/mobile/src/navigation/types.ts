@@ -35,6 +35,8 @@ export type RootStackParamList = {
     servings: number;
     myRating?: number | null;
     initialStepIndex?: number;
+    /** Per-serving values, used to offer logging the meal to the food diary when cooking finishes. */
+    nutrition?: { calories: number; protein: number; fat: number; carbs: number };
   };
   MiseEnPlace: {
     slug: string;
@@ -64,6 +66,7 @@ export type RootStackParamList = {
   WeeklyRecap: undefined;
   LeanMuscleMode: undefined;
   MealPrep: undefined;
+  FoodDiary: undefined;
   WhatsNew: undefined;
 };
 

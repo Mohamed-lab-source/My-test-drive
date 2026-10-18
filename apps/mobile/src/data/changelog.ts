@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-food-diary",
+    date: "2026-10-18",
+    title: { en: "Food diary & nutrition tracking", ar: "يوميات الطعام ومتابعة التغذية" },
+    body: {
+      en: "Log what you eat from any recipe or after Cook Mode, quick-add anything else, track water and protein, and see a weekly report against your Meal Prep calorie target. Today's numbers now show on Home.",
+      ar: "سجّلي ما تأكلينه من أي وصفة أو بعد وضع الطبخ، وأضيفي سريعاً أي شيء آخر، وتابعي الماء والبروتين، وشاهدي تقريراً أسبوعياً مقارنة بهدف السعرات من تحضير الوجبات. أرقام اليوم تظهر الآن في الرئيسية.",
+    },
+  },
+  {
     id: "2026-10-meal-prep",
     date: "2026-10-13",
     title: { en: "Meal Prep Planner", ar: "مخطط تحضير الوجبات" },

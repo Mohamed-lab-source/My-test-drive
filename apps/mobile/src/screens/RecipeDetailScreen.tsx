@@ -33,6 +33,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useToast } from "../context/ToastContext";
+import { useFoodDiary } from "../context/FoodDiaryContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
@@ -81,6 +82,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { addRecent } = useRecentlyViewed();
   const { addRated } = useRecentlyRated();
   const { plan, setPlan } = useMealPlan();
+  const { addEntry: addDiaryEntry, removeEntry: removeDiaryEntry } = useFoodDiary();
   const { cookCountFor } = useCookStreak();
   const { getNote, setNote } = useNotes();
   const [noteText, setNoteText] = useState("");
@@ -600,6 +602,32 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             })}
           </View>
 
+          <Text style={[styles.sectionTitle, { textAlign }]}>{t("diary.ateThisTitle")}</Text>
+          <View style={styles.mealPlanDayRow}>
+            {[0.5, 1, 1.5, 2].map((portion) => (
+              <Chip
+                key={portion}
+                label={t("diary.ateServings", { count: portion })}
+                onPress={() => {
+                  const entry = addDiaryEntry({
+                    title: recipe.title,
+                    slug: recipe.slug,
+                    cuisineSlug: recipe.cuisine.slug,
+                    servings: portion,
+                    calories: Math.round(recipe.nutritionPerServing.calories * portion),
+                    protein: Math.round(recipe.nutritionPerServing.proteinGrams * portion),
+                    fat: Math.round(recipe.nutritionPerServing.fatGrams * portion),
+                    carbs: Math.round(recipe.nutritionPerServing.carbsGrams * portion),
+                  });
+                  showToast(t("diary.loggedRecipe", { calories: entry.calories }), {
+                    actionLabel: t("home.undo"),
+                    onAction: () => removeDiaryEntry(entry.id),
+                  });
+                }}
+              />
+            ))}
+          </View>
+
           <View onLayout={(e) => (ratingSectionY.current = e.nativeEvent.layout.y)}>
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.rateThis")}</Text>
           {isAuthenticated ? (
@@ -704,6 +732,12 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               ingredients: scaledIngredients,
               servings,
               myRating,
+              nutrition: {
+                calories: recipe.nutritionPerServing.calories,
+                protein: recipe.nutritionPerServing.proteinGrams,
+                fat: recipe.nutritionPerServing.fatGrams,
+                carbs: recipe.nutritionPerServing.carbsGrams,
+              },
             })
           }
         />

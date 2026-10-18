@@ -28,6 +28,7 @@ const FEATURE_TOUR_STEPS: { icon: string; titleKey: TranslationKey; bodyKey: Tra
   { icon: "❤️", titleKey: "featureTour.saved.title", bodyKey: "featureTour.saved.body" },
   { icon: "📅", titleKey: "featureTour.mealPlan.title", bodyKey: "featureTour.mealPlan.body" },
   { icon: "🥡", titleKey: "featureTour.mealPrep.title", bodyKey: "featureTour.mealPrep.body" },
+  { icon: "📒", titleKey: "featureTour.diary.title", bodyKey: "featureTour.diary.body" },
   { icon: "🛒", titleKey: "featureTour.shopping.title", bodyKey: "featureTour.shopping.body" },
   { icon: "⚠️", titleKey: "featureTour.safety.title", bodyKey: "featureTour.safety.body" },
   { icon: "🔥", titleKey: "featureTour.streaks.title", bodyKey: "featureTour.streaks.body" },

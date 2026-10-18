@@ -5,6 +5,7 @@ const STORAGE_KEY = "cookmate.homeLayout.hiddenSections";
 
 export type HomeSectionKey =
   | "cookTonight"
+  | "nutrition"
   | "recipeOfDay"
   | "browseByMealType"
   | "browseByOccasion"
@@ -16,6 +17,7 @@ export type HomeSectionKey =
 
 export const HOME_SECTION_KEYS: HomeSectionKey[] = [
   "cookTonight",
+  "nutrition",
   "recipeOfDay",
   "browseByMealType",
   "browseByOccasion",
