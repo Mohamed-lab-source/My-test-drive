@@ -19,7 +19,9 @@ import '../../widgets/common.dart';
 import '../auth/username_sheet.dart';
 import 'safety_screens.dart' show deleteMyAccount;
 import 'theme_sheet.dart';
-import '../fun/badges_screen.dart' show BadgesSummaryCard;
+import '../fun/badges_screen.dart' show BadgesSummaryCard, funPrefsProvider;
+import '../fun/place_of_day.dart' show syncDailyIdeas;
+import '../../app/reminders.dart';
 import '../../widgets/launchers.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -57,6 +59,7 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               children: [
                 for (final (icon, title, sub, path) in [
+                  (Icons.auto_stories_outlined, tr('My timeline'), tr('Every place you\'ve been, by date'), '/timeline'),
                   (Icons.celebration_outlined, tr('My recap'), tr('Your month or year on Khroga, and your outing personality'), '/recap'),
                   (Icons.grid_view, tr('Monthly bingo'), tr('9 kinds of places to try this month'), '/bingo'),
                   (Icons.leaderboard_outlined, tr('Friends leaderboard'), tr('Who has the most guide points'), '/leaderboard'),
@@ -466,6 +469,25 @@ class _AppSettingsCard extends ConsumerWidget {
               onSelectionChanged: (v) => n.setLanguage(v.first),
             ),
           ),
+          if (Reminders.available) ...[
+            const Divider(),
+            SwitchListTile(
+              secondary: const Icon(Icons.wb_sunny_outlined),
+              title: Text(tr('Daily place idea')),
+              subtitle: Text(tr('A notification at 10:00 with the place of the day')),
+              value: ref.watch(funPrefsProvider)['dailyIdea'] == '1',
+              onChanged: (v) async {
+                if (v && !await Reminders.askPermission()) {
+                  if (context.mounted) {
+                    showMessage(context, tr('Notifications are off for Khroga. Turn them on in your phone settings.'));
+                  }
+                  return;
+                }
+                ref.read(funPrefsProvider.notifier).set('dailyIdea', v ? '1' : null);
+                await syncDailyIdeas(ref, force: true);
+              },
+            ),
+          ],
           const Divider(),
           SwitchListTile(
             secondary: const Icon(Icons.dark_mode_outlined),

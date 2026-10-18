@@ -261,4 +261,34 @@ void _hoursAndSwapTests() {
     expect(swapped.single.placeId, 'near');
     expect(swapped.single.startTime, '18:00', reason: 'timing kept');
   });
+
+  test('indoor backups: real indoor places near outdoor stops, nearest first', () {
+    const park = Place(id: 'park', name: 'Test Park', category: 'park', city: 'cairo', lat: 30.0, lng: 31.0);
+    const cafeNear = Place(id: 'c1', name: 'Test Cafe Near', category: 'cafe', city: 'cairo', lat: 30.001, lng: 31.0);
+    const cafeFar = Place(id: 'c2', name: 'Test Cafe Far', category: 'cafe', city: 'cairo', lat: 30.1, lng: 31.0);
+    const museum = Place(id: 'm1', name: 'Test Museum', category: 'museum', city: 'cairo', lat: 30.005, lng: 31.0);
+    const otherPark = Place(id: 'p2', name: 'Test Park 2', category: 'park', city: 'cairo', lat: 30.002, lng: 31.0);
+    final plan = OutingPlan(
+      id: 'x',
+      title: 'Test',
+      summary: '',
+      stops: const [
+        PlanStop(placeId: 'park', name: 'Test Park', category: 'park', lat: 30.0, lng: 31.0, startTime: '18:00'),
+        PlanStop(placeId: 'c1', name: 'Test Cafe Near', category: 'cafe', lat: 30.001, lng: 31.0),
+      ],
+      request: const PlanRequest(city: 'cairo', groupSize: 2, vibes: ['chill'], timeOfDay: 'evening', stops: 2),
+      tips: const [],
+    );
+    final all = [park, cafeNear, cafeFar, museum, otherPark];
+    expect(outdoorStops(plan, {for (final p in all) p.id: p}), [0]);
+    expect(indoorBackups(plan, 0, all).map((p) => p.id), ['m1'], reason: 'not the cafe already in the plan, not parks, not far');
+  });
+
+  test('leave by: a rough time before the first stop', () {
+    expect(leaveBy('18:00', 0), (time: '17:50', minutes: 10));
+    expect(leaveBy('18:00', 10), (time: '17:16', minutes: 44));
+    expect(leaveBy('00:10', 5), (time: '23:43', minutes: 27));
+    expect(leaveBy(null, 3), isNull);
+    expect(leaveBy('bad', 3), isNull);
+  });
 }

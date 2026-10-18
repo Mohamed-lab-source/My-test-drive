@@ -167,3 +167,73 @@ Future<WikiSummary?> fetchWikiSummary(String wikidataId, String lang, {http.Clie
   }
   return null;
 }
+
+// ----------------------------------------------------------- around here
+
+typedef WikiNearby = ({String title, int pageId, int meters});
+
+/// Wikipedia geosearch answer → articles about things near a spot.
+List<WikiNearby> parseGeoSearch(Map<String, dynamic> json) => [
+      for (final g in ((json['query'] as Map?)?['geosearch'] as List?) ?? const [])
+        if (g is Map && g['title'] is String && g['pageid'] is num)
+          (title: g['title'] as String, pageId: (g['pageid'] as num).toInt(), meters: ((g['dist'] as num?) ?? 0).round()),
+    ];
+
+/// Wikipedia articles within 1 km of a real spot ([lang] = 'ar' or 'en').
+Future<List<WikiNearby>> fetchWikiNearby(double lat, double lng, String lang, {http.Client? client}) async {
+  final json = await _getJson(
+      Uri.https('$lang.wikipedia.org', '/w/api.php', {
+        'action': 'query',
+        'list': 'geosearch',
+        'gscoord': '$lat|$lng',
+        'gsradius': '1000',
+        'gslimit': '12',
+        'format': 'json',
+      }),
+      client: client);
+  return json == null ? const [] : parseGeoSearch(json);
+}
+
+typedef CommonsPhoto = ({String thumb, String page, String author, String license});
+
+String _plain(String? html) => (html ?? '').replaceAll(RegExp(r'<[^>]*>'), '').replaceAll('&amp;', '&').trim();
+
+/// Wikimedia Commons answer → photos taken near a spot, with credits.
+List<CommonsPhoto> parseCommonsPhotos(Map<String, dynamic> json) {
+  final pages = ((json['query'] as Map?)?['pages'] as Map?)?.values ?? const [];
+  final out = <CommonsPhoto>[];
+  for (final p in pages) {
+    final info = ((p as Map?)?['imageinfo'] as List?)?.firstOrNull as Map?;
+    final thumb = info?['thumburl'];
+    final page = info?['descriptionurl'];
+    if (thumb is! String || page is! String) continue;
+    if (!RegExp(r'\.(jpe?g|png|webp)$', caseSensitive: false).hasMatch(thumb)) continue;
+    final meta = info?['extmetadata'] as Map?;
+    out.add((
+      thumb: thumb,
+      page: page,
+      author: _plain((meta?['Artist'] as Map?)?['value'] as String?),
+      license: _plain((meta?['LicenseShortName'] as Map?)?['value'] as String?),
+    ));
+  }
+  return out;
+}
+
+/// Photos people took within 300 m of a real spot (Wikimedia Commons).
+Future<List<CommonsPhoto>> fetchCommonsNearby(double lat, double lng, {http.Client? client}) async {
+  final json = await _getJson(
+      Uri.https('commons.wikimedia.org', '/w/api.php', {
+        'action': 'query',
+        'generator': 'geosearch',
+        'ggsnamespace': '6',
+        'ggscoord': '$lat|$lng',
+        'ggsradius': '300',
+        'ggslimit': '12',
+        'prop': 'imageinfo',
+        'iiprop': 'url|extmetadata',
+        'iiurlwidth': '320',
+        'format': 'json',
+      }),
+      client: client);
+  return json == null ? const [] : parseCommonsPhotos(json);
+}

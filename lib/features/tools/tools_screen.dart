@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/extras.dart';
-import '../../app/fun.dart' show makeTeams, conversationStarters;
+import '../../app/fun.dart' show makeTeams, conversationStarters, emergencyNumbers, phrasebook;
+import '../../widgets/launchers.dart' show callPhone;
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import '../../widgets/common.dart' show showMessage;
 import '../../app/helpers.dart' show billTotal, walkingMinutes, tapFeedback;
 import '../../app/i18n.dart';
 import '../../app/local_prefs.dart';
@@ -27,6 +30,7 @@ class ToolsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: const [
+          _EmergencyCard(),
           _CountdownCard(),
           _DecideCard(),
           _CoinCard(),
@@ -34,6 +38,7 @@ class ToolsScreen extends StatelessWidget {
           _TeamsCard(),
           _DiceCard(),
           _StarterCard(),
+          _PhrasebookCard(),
           _SplitCard(),
           _WalkCard(),
           _WeekCard(),
@@ -215,6 +220,67 @@ class _CoinCardState extends ConsumerState<_CoinCard> {
             ),
         ]),
       );
+}
+
+/// Egypt's emergency numbers, one tap to call.
+class _EmergencyCard extends StatelessWidget {
+  const _EmergencyCard();
+
+  @override
+  Widget build(BuildContext context) => _ToolCard(
+        emoji: '🆘',
+        title: tr('Emergency numbers'),
+        child: Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+          for (final (emoji, name, number) in emergencyNumbers)
+            ActionChip(
+              avatar: Text(emoji),
+              label: Text('${tr(name)} · $number'),
+              onPressed: () => callPhone(number),
+            ),
+        ]),
+      );
+}
+
+/// Everyday Egyptian Arabic for visitors, with how to say it.
+class _PhrasebookCard extends StatefulWidget {
+  const _PhrasebookCard();
+
+  @override
+  State<_PhrasebookCard> createState() => _PhrasebookCardState();
+}
+
+class _PhrasebookCardState extends State<_PhrasebookCard> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return _ToolCard(
+      emoji: '🗣️',
+      title: tr('Egyptian Arabic phrases'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final (en, ar, say) in _open ? phrasebook : phrasebook.take(4))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(ar, style: text.titleMedium),
+            subtitle: Text('$en · $say'),
+            trailing: IconButton(
+              tooltip: tr('Copy'),
+              icon: const Icon(Icons.copy, size: 18),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: ar));
+                showMessage(context, tr('Copied'));
+              },
+            ),
+          ),
+        TextButton(
+          onPressed: () => setState(() => _open = !_open),
+          child: Text(_open ? tr('Show less') : trf('Show all {n}', {'n': phrasebook.length})),
+        ),
+      ]),
+    );
+  }
 }
 
 /// Split friends into teams for games (bowling, quizzes, football…).

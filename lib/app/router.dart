@@ -22,6 +22,8 @@ import '../features/fun/collections_screen.dart';
 import '../features/fun/leaderboard_screen.dart';
 import '../features/fun/mystery_screen.dart';
 import '../features/fun/recap_screen.dart';
+import '../features/fun/timeline_screen.dart';
+import '../features/friends/person_screen.dart';
 import '../features/explore/lists_screen.dart';
 import '../features/explore/malls_screen.dart';
 import '../features/explore/place_details_screen.dart';
@@ -157,6 +159,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/tools', builder: (_, _) => const ToolsScreen()),
       GoRoute(path: '/badges', builder: (_, _) => const BadgesScreen()),
       GoRoute(path: '/help', builder: (_, _) => const HelpScreen()),
+      GoRoute(path: '/timeline', builder: (_, _) => const TimelineScreen()),
+      GoRoute(path: '/person/:uid', builder: (_, s) => PersonScreen(uid: s.pathParameters['uid']!)),
       GoRoute(path: '/recap', builder: (_, _) => const RecapScreen()),
       GoRoute(path: '/bingo', builder: (_, _) => const BingoScreen()),
       GoRoute(path: '/leaderboard', builder: (_, _) => const LeaderboardScreen()),

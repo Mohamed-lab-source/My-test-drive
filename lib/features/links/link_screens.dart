@@ -31,11 +31,9 @@ class JoinLinkScreen extends ConsumerWidget {
           children: [
             const Text('🎉', style: TextStyle(fontSize: 56), textAlign: TextAlign.center),
             const SizedBox(height: KSpace.md),
-            Text(tr("You're invited to a Khroga group"),
-                style: text.headlineSmall, textAlign: TextAlign.center),
+            Text(tr("You're invited to a Khroga group"), style: text.headlineSmall, textAlign: TextAlign.center),
             const SizedBox(height: KSpace.sm),
-            Text(trf('Invite code: {code}', {'code': code}),
-                style: text.bodyLarge, textAlign: TextAlign.center),
+            Text(trf('Invite code: {code}', {'code': code}), style: text.bodyLarge, textAlign: TextAlign.center),
             const SizedBox(height: KSpace.lg),
             BusyButton(
               label: tr('Join the group'),
@@ -89,8 +87,7 @@ class AddFriendLinkScreen extends ConsumerWidget {
                 Center(child: Avatar(profile: p, size: 88)),
                 const SizedBox(height: KSpace.md),
                 Text(p.displayName, style: text.headlineSmall, textAlign: TextAlign.center),
-                if (p.username != null)
-                  Text('@${p.username}', textAlign: TextAlign.center, style: text.bodyMedium),
+                if (p.username != null) Text('@${p.username}', textAlign: TextAlign.center, style: text.bodyMedium),
                 const SizedBox(height: KSpace.lg),
                 if (me == uid)
                   Text(tr("That's your own code 🙂"), textAlign: TextAlign.center)
@@ -123,24 +120,36 @@ class AddFriendLinkScreen extends ConsumerWidget {
 
 /// Opened from a shared plan link. Places come from our own data; ids we
 /// don't know are left out.
-class SharedPlanScreen extends ConsumerWidget {
+class SharedPlanScreen extends ConsumerStatefulWidget {
   const SharedPlanScreen({super.key, required this.uri});
 
   final Uri uri;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SharedPlanScreen> createState() => _SharedPlanScreenState();
+}
+
+class _SharedPlanScreenState extends ConsumerState<SharedPlanScreen> {
+  /// How many stops are revealed (a mystery link starts with none).
+  late int _shown = isMysteryLink(widget.uri) ? 0 : 99;
+
+  @override
+  Widget build(BuildContext context) {
+    final uri = widget.uri;
     final shared = parsePlanLink(Uri(path: '/s', query: uri.query));
     final all = ref.watch(allPlacesProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(tr('A plan for you'))),
+      appBar: AppBar(title: Text(_shown == 0 ? tr('🎁 A surprise outing') : tr('A plan for you'))),
       body: shared == null
           ? EmptyState(emoji: '🔗', title: tr("This link doesn't work"))
           : AsyncView<List<Place>>(
               value: all,
               builder: (places) {
                 final byId = {for (final p in places) p.id: p};
-                final found = [for (final s in shared.stops) if (byId[s.placeId] != null) (s, byId[s.placeId]!)];
+                final found = [
+                  for (final s in shared.stops)
+                    if (byId[s.placeId] != null) (s, byId[s.placeId]!),
+                ];
                 final missing = shared.stops.length - found.length;
                 if (found.isEmpty) {
                   return EmptyState(
@@ -173,21 +182,44 @@ class SharedPlanScreen extends ConsumerWidget {
                     if (shared.date != null && DateTime.tryParse(shared.date!) != null)
                       Text('📅 ${DateFormat('EEEE d MMM').format(DateTime.parse(shared.date!))}'),
                     const SizedBox(height: KSpace.sm),
-                    for (var i = 0; i < stops.length; i++)
-                      Card(
-                        child: ListTile(
-                          leading: CircleAvatar(child: Text('${i + 1}')),
-                          title: Text('${Categories.emoji(stops[i].category)} ${found[i].$2.shownName}'),
-                          subtitle: Text([?stops[i].startTime, ?stops[i].area].join(' · ')),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/place/${stops[i].placeId}'),
-                        ),
+                    if (_shown < stops.length)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: KSpace.sm),
+                        child: Text(tr('Someone planned this for you. Tap the gift to reveal each stop.')),
                       ),
+                    for (var i = 0; i < stops.length; i++)
+                      if (i >= _shown)
+                        Card(
+                          color: i == _shown ? context.k.accent : null,
+                          child: ListTile(
+                            leading: Text(i == _shown ? '🎁' : '🔒', style: const TextStyle(fontSize: 26)),
+                            title: Text(
+                              trf('Stop {n}', {'n': i + 1}),
+                              style: TextStyle(color: i == _shown ? context.k.onAccent : null),
+                            ),
+                            subtitle: Text(
+                              [?stops[i].startTime, tr('Tap to reveal')].join(' · '),
+                              style: TextStyle(color: i == _shown ? context.k.onAccent : null),
+                            ),
+                            onTap: i == _shown ? () => setState(() => _shown++) : null,
+                          ),
+                        )
+                      else
+                        Card(
+                          child: ListTile(
+                            leading: CircleAvatar(child: Text('${i + 1}')),
+                            title: Text('${Categories.emoji(stops[i].category)} ${found[i].$2.shownName}'),
+                            subtitle: Text([?stops[i].startTime, ?stops[i].area].join(' · ')),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => context.push('/place/${stops[i].placeId}'),
+                          ),
+                        ),
                     if (missing > 0)
                       Padding(
                         padding: const EdgeInsets.only(top: KSpace.sm),
-                        child: Text(trf('{n} stops are not in your version of Khroga, so we left them out.',
-                            {'n': missing})),
+                        child: Text(
+                          trf('{n} stops are not in your version of Khroga, so we left them out.', {'n': missing}),
+                        ),
                       ),
                     const SizedBox(height: KSpace.md),
                     BusyButton(
@@ -197,7 +229,9 @@ class SharedPlanScreen extends ConsumerWidget {
                         final uid = ref.read(uidProvider);
                         if (uid == null) return;
                         try {
-                          final id = await ref.read(plansRepositoryProvider).saveShared(
+                          final id = await ref
+                              .read(plansRepositoryProvider)
+                              .saveShared(
                                 uid,
                                 OutingPlan(
                                   id: '',

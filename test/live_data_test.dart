@@ -55,4 +55,43 @@ void main() {
     expect(parseWikiSummary({'title': 'X', 'extract': 'y', 'type': 'disambiguation', 'content_urls': {'mobile': {'page': 'u'}}}, 'en'), isNull);
     expect(parseWikiSummary({'title': 'X'}, 'en'), isNull);
   });
+
+  test('nearby Wikipedia articles and Commons photos', () {
+    final near = parseGeoSearch({
+      'query': {
+        'geosearch': [
+          {'pageid': 12, 'title': 'Test Square', 'dist': 120.4},
+          {'title': 'broken'},
+        ]
+      }
+    });
+    expect(near, [(title: 'Test Square', pageId: 12, meters: 120)]);
+    expect(parseGeoSearch(const {}), isEmpty);
+    final photos = parseCommonsPhotos({
+      'query': {
+        'pages': {
+          '1': {
+            'imageinfo': [
+              {
+                'thumburl': 'https://upload.test/a.jpg',
+                'descriptionurl': 'https://commons.test/File:A.jpg',
+                'extmetadata': {
+                  'Artist': {'value': '<a href="x">Test Person</a>'},
+                  'LicenseShortName': {'value': 'CC BY-SA 4.0'},
+                },
+              }
+            ]
+          },
+          '2': {
+            'imageinfo': [
+              {'thumburl': 'https://upload.test/b.pdf', 'descriptionurl': 'https://commons.test/File:B.pdf'}
+            ]
+          },
+        }
+      }
+    });
+    expect(photos.length, 1);
+    expect(photos.first.author, 'Test Person');
+    expect(photos.first.license, 'CC BY-SA 4.0');
+  });
 }

@@ -54,4 +54,12 @@ void main() {
     expect(shouldAskForReview(moments: 5, lastAsked: now.subtract(const Duration(days: 30)), now: now), isFalse);
     expect(shouldAskForReview(moments: 5, lastAsked: now.subtract(const Duration(days: 91)), now: now), isTrue);
   });
+
+  test('mystery plan links keep the mark', () {
+    const plan = (city: 'cairo', title: 'Test', date: null, stops: [(placeId: 'p1', time: '18:00', minutes: 60)]);
+    expect(isMysteryLink(planLink(host, plan, mystery: true)), isTrue);
+    expect(isMysteryLink(planLink(host, plan)), isFalse);
+    expect(parsePlanLink(planLink(host, plan, mystery: true))!.stops.length, 1);
+    expect(appRouteFor(planLink(host, plan, mystery: true)), contains('m=1'));
+  });
 }

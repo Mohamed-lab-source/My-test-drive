@@ -486,6 +486,51 @@ List<Place> alternativesFor(OutingPlan plan, int index, List<Place> places, {int
   return (sameKind.length >= 3 ? sameKind : pool).take(limit).toList();
 }
 
+/// Kinds of places that make a good plan B when it rains or is very hot.
+const indoorBackupKinds = {'cafe', 'restaurant', 'museum', 'mall', 'cinema', 'entertainment', 'escape_room'};
+
+/// The stops that are outside (parks, open sights), by index.
+List<int> outdoorStops(OutingPlan plan, Map<String, Place> byId) => [
+      for (final (i, s) in plan.stops.indexed)
+        if (byId[s.placeId] case final p? when !isIndoor(p) || p.category == 'park') i,
+    ];
+
+/// Real indoor places within [maxKm] of stop [index], nearest first: a plan
+/// B for rain or heat. Never places already in the plan.
+List<Place> indoorBackups(OutingPlan plan, int index, List<Place> places, {double maxKm = 2, int limit = 3}) {
+  final stop = plan.stops[index];
+  if (!stop.hasLocation) return const [];
+  final used = {for (final s in plan.stops) s.placeId};
+  final near = <(Place, double)>[
+    for (final p in places)
+      if (!used.contains(p.id) &&
+          p.hasLocation &&
+          p.city == plan.request.city &&
+          indoorBackupKinds.contains(p.category) &&
+          isIndoor(p))
+        if (haversineKm(stop.lat!, stop.lng!, p.lat!, p.lng!) case final km when km <= maxKm) (p, km),
+  ]..sort((a, b) {
+      final d = a.$2.compareTo(b.$2);
+      return d != 0 ? d : b.$1.quality.compareTo(a.$1.quality);
+    });
+  return [for (final (p, _) in near.take(limit)) p];
+}
+
+/// A rough "leave by" time: straight-line km × 1.4 for roads, at 25 km/h in
+/// city traffic, plus 10 minutes. Always shown as a rough guess.
+({String time, int minutes})? leaveBy(String? firstStart, double km) {
+  final p = (firstStart ?? '').split(':');
+  final h = p.length == 2 ? int.tryParse(p[0]) : null;
+  final m = p.length == 2 ? int.tryParse(p[1]) : null;
+  if (h == null || m == null) return null;
+  final travel = (km * 1.4 / 25 * 60).ceil() + 10;
+  final at = ((h * 60 + m - travel) % 1440 + 1440) % 1440;
+  return (
+    time: '${(at ~/ 60).toString().padLeft(2, '0')}:${(at % 60).toString().padLeft(2, '0')}',
+    minutes: travel,
+  );
+}
+
 /// The plan's stops with stop [index] replaced by [place]; keeps the timing.
 List<PlanStop> swapStop(OutingPlan plan, int index, Place place) {
   final old = plan.stops[index];

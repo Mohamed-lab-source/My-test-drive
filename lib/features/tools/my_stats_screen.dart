@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/extras.dart';
+import '../../app/fun.dart' show activityDays;
+import '../fun/timeline_screen.dart' show ActivityGrid;
 import '../../app/i18n.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -121,6 +123,11 @@ class MyStatsScreen extends ConsumerWidget {
             tile('⭐', '${ratings.length}', tr('Places you rated')),
             tile('📋', '${lists.length}', tr('Your lists')),
           ]),
+          SectionTitle(tr('Last 12 weeks')),
+          ActivityGrid(days: activityDays([
+            ...?ref.watch(visitedDatedProvider).value?.map((v) => v.$2).whereType<DateTime>(),
+            ...plans.map((p) => p.createdAt).whereType<DateTime>(),
+          ], now)),
           if (stopsPlanned > 0)
             Padding(
               padding: const EdgeInsets.only(top: KSpace.sm),

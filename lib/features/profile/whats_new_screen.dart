@@ -9,6 +9,19 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🎁', 'Send a surprise', 'Share a plan as a mystery: your friend reveals it stop by stop.'),
+    ('☔', 'Indoor backup', 'Rain or heat? Swap outdoor stops for real indoor places nearby.'),
+    ('🚗', 'When should I leave?', 'A rough leave-by time from where you are to the first stop.'),
+    ('🛟', 'Share with someone I trust', 'Send your plan and when you\'ll be done, for peace of mind.'),
+    ('🧭', 'Around here', 'Wikipedia articles and photos people took near a place.'),
+    ('📔', 'My timeline', 'Every place you\'ve been, by date, with a 12-week activity grid.'),
+    ('📸', 'Memories', '"A month ago today you were at…" on the Plan tab.'),
+    ('👤', 'Profiles', 'Tap a friend or a reviewer to see their level and newest reviews.'),
+    ('⭐', 'Sort reviews', 'Newest, highest or lowest, or only reviews with words.'),
+    ('✨', 'Daily place idea', 'An optional 10:00 notification with the place of the day.'),
+    ('🆘', 'Emergency numbers', 'Police, ambulance, fire and tourist police, one tap away in Tools.'),
+    ('🗣️', 'Arabic phrases', 'Everyday Egyptian Arabic for visitors, in Tools.'),
+    ('📱', 'App shortcuts', 'Press and hold the Khroga icon for a new plan, Explore and more.'),
     ('⏰', 'Outing reminders', 'Tap the bell on a plan or group outing and your phone reminds you before it starts.'),
     ('👥', 'How busy is it now?', 'People at a place say Quiet, Normal or Busy, so you know before you go.'),
     ('💵', 'Real prices from people', 'Reviews can say what you spent per person. Place pages show what most people spent.'),

@@ -35,8 +35,9 @@ typedef SharedPlan = ({String city, String title, String? date, List<SharedStop>
 final _time = RegExp(r'^([01]?\d|2[0-3]):[0-5]\d$');
 final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
 
-/// A link that recreates a plan on a friend's phone.
-Uri planLink(String host, SharedPlan plan) => Uri(
+/// A link that recreates a plan on a friend's phone. A [mystery] link
+/// hides the stops until the friend reveals them one by one.
+Uri planLink(String host, SharedPlan plan, {bool mystery = false}) => Uri(
       scheme: 'https',
       host: host,
       path: '/s',
@@ -48,8 +49,12 @@ Uri planLink(String host, SharedPlan plan) => Uri(
             .take(5)
             .map((s) => [s.placeId, s.time ?? '', s.minutes?.toString() ?? ''].join('~'))
             .join('|'),
+        if (mystery) 'm': '1',
       },
     );
+
+/// Whether a shared plan link is a mystery (stops hidden until revealed).
+bool isMysteryLink(Uri uri) => uri.queryParameters['m'] == '1';
 
 /// Reads a shared plan link. Anything odd is dropped, never trusted:
 /// at most 5 stops, times must look like HH:mm, minutes 10–600.

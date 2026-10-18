@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:ui' show PlatformDispatcher;
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:quick_actions/quick_actions.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -65,6 +67,7 @@ class KhrogaApp extends ConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(routerProvider).push(route));
     }
     final lang = ref.watch(appSettingsProvider.select((s) => s.lang));
+    _setUpShortcuts(ref, lang);
     return MaterialApp.router(
       key: ValueKey(lang), // rebuild every screen in the new language
       locale: Locale(lang),
@@ -95,6 +98,31 @@ class KhrogaApp extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+String? _shortcutsLang;
+
+/// Long-press the app icon: jump straight to a new plan, Explore, saved
+/// plans or the QR scanner.
+void _setUpShortcuts(WidgetRef ref, String lang) {
+  if (_shortcutsLang == lang || defaultTargetPlatform != TargetPlatform.android) return;
+  _shortcutsLang = lang;
+  const routes = {'plan': '/plan', 'explore': '/explore', 'saved': '/saved', 'scan': '/scan'};
+  try {
+    const actions = QuickActions();
+    actions.initialize((type) {
+      final route = routes[type];
+      if (route != null) ref.read(routerProvider).push(route);
+    });
+    actions.setShortcutItems([
+      ShortcutItem(type: 'plan', localizedTitle: tr('New plan')),
+      ShortcutItem(type: 'explore', localizedTitle: tr('Explore')),
+      ShortcutItem(type: 'saved', localizedTitle: tr('Saved plans')),
+      ShortcutItem(type: 'scan', localizedTitle: tr('Scan a QR code')),
+    ]);
+  } catch (_) {
+    // Shortcuts are a nice extra; the app works without them.
   }
 }
 

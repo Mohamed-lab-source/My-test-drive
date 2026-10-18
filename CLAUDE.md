@@ -256,6 +256,17 @@ How the code enforces it (keep it this way):
   min, Google accounts only); a new window starts when `since` is 2 h old.
   Real prices = the optional review question `spend` (`spendOptions`,
   `typicalSpend`, needs 2+ answers). Help screen `/help`.
+- 1.1 extras: mystery share links (`planLink(..., mystery: true)` adds
+  `m=1`; `SharedPlanScreen` reveals stops one by one), indoor backups +
+  rough leave-by (`indoorBackups`, `outdoorStops`, `leaveBy` in planner.dart;
+  `features/plan/plan_extras.dart`), trusted-person share text, "Around
+  here" (Wikipedia geosearch + Commons photos within 300 m, tap-to-load,
+  credited; `live_data.dart`), timeline `/timeline` + `ActivityGrid` +
+  `onThisDay` memories (fun.dart), person profiles `/person/:uid` (public
+  reviewerStats + their newest 10 reviews), review sort/filter, optional
+  daily place-of-the-day notification (`syncDailyIdeas`, phone pref
+  `fun.dailyIdea`), emergency numbers + phrasebook in Tools, app shortcuts
+  (quick_actions).
 
 ## Setup (browser only, see SETUP.md)
 

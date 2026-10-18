@@ -24,6 +24,7 @@ import '../../widgets/khroga_map.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/launchers.dart';
 import '../groups/create_group_sheet.dart';
+import 'plan_extras.dart';
 import 'plan_form_screen.dart';
 
 class PlanResultScreen extends ConsumerWidget {
@@ -65,6 +66,9 @@ class PlanResultScreen extends ConsumerWidget {
               onSelected: (v) => _menu(context, ref, loaded, v),
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'mystery', child: Text(tr('🎁 Mystery mode: reveal stop by stop'))),
+                PopupMenuItem(value: 'mysterySend', child: Text(tr('🎁 Send as a surprise to a friend'))),
+                PopupMenuItem(value: 'backup', child: Text(tr('☔ Indoor backup ideas'))),
+                PopupMenuItem(value: 'safety', child: Text(tr('🛟 Share with someone I trust'))),
                 PopupMenuItem(value: 'copy', child: Text(tr('Copy plan as text'))),
                 PopupMenuItem(value: 'calendar', child: Text(tr('Add to Google Calendar'))),
                 PopupMenuItem(value: 'duplicate', child: Text(tr('Make a copy'))),
@@ -92,6 +96,12 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
   switch (action) {
     case 'mystery':
       context.push('/mystery/${plan.id}');
+    case 'mysterySend':
+      await SharePlus.instance.share(ShareParams(text: mysteryPlanText(plan)));
+    case 'backup':
+      await showIndoorBackups(context, ref, plan);
+    case 'safety':
+      await SharePlus.instance.share(ShareParams(text: safetyShareText(plan, planShareText(plan))));
     case 'copy':
       await Clipboard.setData(ClipboardData(text: planShareText(plan)));
       if (context.mounted) showMessage(context, tr('Plan copied. Paste it anywhere.'));
@@ -256,6 +266,7 @@ class _PlanBody extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           _InfoBanner(icon: Icons.wb_twilight, text: facts),
         ],
+        LeaveByCard(plan: plan),
         if (plan.source == 'fallback') ...[
           const SizedBox(height: KSpace.md),
           _InfoBanner(

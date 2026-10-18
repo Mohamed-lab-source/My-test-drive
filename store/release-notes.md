@@ -2,6 +2,26 @@
 
 Keep each under 500 characters.
 
+## 1.1.0
+
+<en-US>
+• Send a plan as a surprise: friends reveal it stop by stop
+• Indoor backup for rain or heat, and "when should I leave?"
+• Share your outing with someone you trust
+• Around here: Wikipedia and photos near a place
+• My timeline, memories and friends' profiles
+• Emergency numbers, Arabic phrases, app shortcuts
+</en-US>
+
+<ar>
+• ابعت خطة مفاجأة: صحابك يكشفوها محطة محطة
+• بديل مقفول للمطر أو الحر، و"أتحرك امتى؟"
+• شارك خروجتك مع حد بتثق فيه
+• حوالين المكان: ويكيبيديا وصور قريبة
+• يومياتي، ذكريات، وصفحات صحابك
+• أرقام الطوارئ، جمل مصرية، واختصارات التطبيق
+</ar>
+
 ## 1.0.0 (first public version)
 
 <en-US>

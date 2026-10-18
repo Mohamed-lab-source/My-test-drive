@@ -499,6 +499,17 @@ void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendshi
           const SizedBox(height: KSpace.sm),
           Center(child: Text(p.displayName, style: text.titleLarge)),
           if (p.username != null) Center(child: Text('@${p.username}', style: text.bodyMedium)),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                final router = GoRouter.of(sheetContext);
+                Navigator.pop(sheetContext);
+                router.push('/person/${p.uid}');
+              },
+              icon: const Icon(Icons.badge_outlined),
+              label: Text(tr('See level and reviews')),
+            ),
+          ),
           if (checkIn != null)
             ListTile(
               leading: const Text('📍', style: TextStyle(fontSize: 22)),

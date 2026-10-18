@@ -10,6 +10,7 @@ import 'package:khroga/features/explore/explore_screen.dart';
 import 'package:khroga/features/fun/badges_screen.dart';
 import 'package:khroga/features/fun/bingo_screen.dart';
 import 'package:khroga/features/fun/recap_screen.dart';
+import 'package:khroga/features/fun/timeline_screen.dart';
 import 'package:khroga/features/profile/about_screen.dart';
 import 'package:khroga/features/profile/help_screen.dart';
 import 'package:khroga/features/profile/welcome_screen.dart';
@@ -62,7 +63,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('Outing reminders'), findsOneWidget);
+    expect(find.text('Send a surprise'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -75,6 +76,9 @@ void main() {
     await tester.pumpWidget(_app(const ToolsScreen()));
     await tester.pump();
     expect(find.text('Decide for us'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Flip'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Flip'));
+    await tester.pump();
     await tester.tap(find.text('Flip'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.textContaining(RegExp('Heads|Tails')), findsOneWidget);
@@ -107,13 +111,17 @@ void main() {
 
   testWidgets('badges, bingo, recap and mystery screens fit when empty', (tester) async {
     Widget signedOut(Widget child) => ProviderScope(
-          overrides: [uidProvider.overrideWith((_) => null)],
+          overrides: [
+            uidProvider.overrideWith((_) => null),
+            visitedDatedProvider.overrideWith((_) async => const []),
+          ],
           child: _router(child),
         );
     for (final (screen, expected) in [
       (const BadgesScreen(), 'Closest next'),
       (const BingoScreen(), 'My goal this month'),
       (const RecapScreen(), 'Your outing personality'),
+      (const TimelineScreen(), 'Your timeline is empty'),
     ]) {
       await tester.pumpWidget(signedOut(screen));
       await tester.pump();

@@ -8,7 +8,8 @@ import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../widgets/common.dart';
-import 'badges_screen.dart' show badgesProvider;
+import '../../app/reminders.dart';
+import 'badges_screen.dart' show badgesProvider, funPrefsProvider;
 import 'bingo_screen.dart' show visitedThisMonth;
 
 /// "Place of the day": one well-documented real place in your city, the
@@ -22,6 +23,7 @@ class PlaceOfDayCard extends ConsumerWidget {
     final city = ref.watch(cityProvider);
     final all = ref.watch(allPlacesProvider).value;
     if (all == null) return const SizedBox.shrink();
+    if (Reminders.available) syncDailyIdeas(ref);
     final now = DateTime.now();
     final place = placeOfTheDay(all.where((p) => p.city == city).toList(), now);
     final visited = ref.watch(visitedDatedProvider).value ?? const <(Place, DateTime?)>[];
@@ -97,6 +99,37 @@ class PlaceOfDayCard extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+bool _ideasSynced = false;
+
+/// Daily "place of the day" notification at 10:00 for the next week (phone
+/// only, opt-in in Profile). Scheduled again each time the app opens.
+Future<void> syncDailyIdeas(WidgetRef ref, {bool force = false}) async {
+  if (_ideasSynced && !force) return;
+  _ideasSynced = true;
+  final now = DateTime.now();
+  final on = ref.read(funPrefsProvider)['dailyIdea'] == '1';
+  for (var i = 0; i < 8; i++) {
+    final d = DateTime(now.year, now.month, now.day + i);
+    await Reminders.cancel('idea:${d.year}-${d.month}-${d.day}');
+  }
+  if (!on) return;
+  final city = ref.read(cityProvider);
+  final all = (await ref.read(allPlacesProvider.future)).where((p) => p.city == city).toList();
+  for (var i = 0; i < 7; i++) {
+    final at = DateTime(now.year, now.month, now.day + i, 10);
+    if (!at.isAfter(now)) continue;
+    final p = placeOfTheDay(all, at);
+    if (p == null) continue;
+    await Reminders.schedule(
+      key: 'idea:${at.year}-${at.month}-${at.day}',
+      at: at,
+      title: trf('✨ Place of the day: {place}', {'place': p.shownName}),
+      body: [p.kindLabel ?? Categories.label(p.category), if (p.area != null) p.area!, tr('Tap to see it.')].join(' · '),
+      route: '/place/${p.id}',
     );
   }
 }

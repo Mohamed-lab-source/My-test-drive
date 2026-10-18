@@ -74,6 +74,7 @@ class PrivacyScreen extends StatelessWidget {
         ('Reviews', 'Reviews you write (stars, your answers to the quick questions, including what you spent if you say, and your words) are public: any signed-in Khroga user can see them with your display name and guide level. You can edit or delete them any time.'),
         ('How busy is it now', 'When you tap Quiet, Normal or Busy on a place, only the count goes into that place\'s public numbers, with no name. A private note of when you last reported that place is kept under your account (so one person can\'t report it again and again); deleting your account deletes it.'),
         ('Reminders', 'Outing reminders are set and shown by your phone itself. Nothing about them is sent to us.'),
+        ('Around here', 'When you open "Around here" on a place, only that place\'s map coordinates are sent to Wikipedia and Wikimedia Commons to find articles and photos nearby. The optional daily place idea is a notification set on your phone.'),
         ('Location', 'Your location is used only when you tap "Near me", "How far?", "Send my location" or "Check in". We never track you in the background.'),
         ('Camera', 'The camera is used only to scan Khroga QR codes, on your phone. No photos are taken or uploaded.'),
         ('AI', 'When you ask the AI to write a plan, the plan request and a list of real places are sent to Google Gemini. Your name and messages are never sent.'),

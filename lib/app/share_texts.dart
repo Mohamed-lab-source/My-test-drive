@@ -16,8 +16,8 @@ String _line(String label, Uri Function(String host) link) {
 String placeLinkLine(String placeId) =>
     _line(tr('Open in Khroga'), (h) => placeLink(h, placeId));
 
-String planLinkLine(OutingPlan plan) => _line(
-    tr('Open this plan in Khroga'),
+String planLinkLine(OutingPlan plan, {bool mystery = false}) => _line(
+    mystery ? tr('Tap to reveal it') : tr('Open this plan in Khroga'),
     (h) => planLink(h, (
           city: plan.request.city,
           title: plan.title,
@@ -26,7 +26,12 @@ String planLinkLine(OutingPlan plan) => _line(
             for (final s in plan.stops)
               (placeId: s.placeId, time: s.startTime, minutes: s.durationMinutes),
           ],
-        )));
+        ), mystery: mystery));
+
+/// "I planned a surprise outing for you" + a mystery link.
+String mysteryPlanText(OutingPlan plan) =>
+    tr('🎁 I planned a surprise outing for you! Open it and reveal it stop by stop.') +
+    planLinkLine(plan, mystery: true);
 
 String groupInviteText(String name, String code) =>
     trf('Join "{name}" on Khroga with code {code}', {'name': name, 'code': code}) +

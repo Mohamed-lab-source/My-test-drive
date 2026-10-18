@@ -154,4 +154,18 @@ void main() {
       DateTime(2026, 11, 1),
     ]);
   });
+
+  test('on this day and the activity grid', () {
+    final now = DateTime(2026, 10, 18, 12);
+    final a = _p('a', 'cafe');
+    final b = _p('b', 'park');
+    expect(onThisDay([(a, DateTime(2026, 9, 18, 20)), (b, DateTime(2025, 10, 18))], now), (a, 1));
+    expect(onThisDay([(b, DateTime(2025, 10, 18, 9))], now), (b, 12));
+    expect(onThisDay([(b, DateTime(2026, 10, 17))], now), isNull);
+    expect(onThisDay([(b, null)], now), isNull);
+    final days = activityDays([now, now, DateTime(2026, 10, 17), DateTime(2026, 1, 1)], now, days: 7);
+    expect(days, [0, 0, 0, 0, 0, 1, 2]);
+    expect(emergencyNumbers.map((e) => e.$3), containsAll(['122', '123', '180']));
+    expect(phrasebook.every((p) => p.$1.isNotEmpty && p.$2.isNotEmpty && p.$3.isNotEmpty), isTrue);
+  });
 }

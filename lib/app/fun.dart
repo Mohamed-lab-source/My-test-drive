@@ -495,3 +495,62 @@ const conversationStarters = [
 List<DateTime> nextDays(DateTime now, {int count = 7}) => [
   for (var i = 0; i < count; i++) DateTime(now.year, now.month, now.day + i),
 ];
+
+// ------------------------------------------------------------- memories
+
+/// A place you marked "Been there" on this day of the month 1–12 months ago
+/// (newest first): (place, months ago). Null when there is none.
+(Place, int)? onThisDay(List<(Place, DateTime?)> visited, DateTime now) {
+  for (var months = 1; months <= 12; months++) {
+    final then = DateTime(now.year, now.month - months, now.day);
+    if (then.day != now.day) continue; // e.g. no 31st that month
+    for (final (p, t) in visited) {
+      if (t != null && t.year == then.year && t.month == then.month && t.day == then.day) return (p, months);
+    }
+  }
+  return null;
+}
+
+/// How many things you did each day (plans made + places marked), for the
+/// last [days] days ending today: index 0 = the oldest day.
+List<int> activityDays(Iterable<DateTime> moments, DateTime now, {int days = 84}) {
+  final today = DateTime(now.year, now.month, now.day);
+  final out = List.filled(days, 0);
+  for (final m in moments) {
+    final d = today.difference(DateTime(m.year, m.month, m.day)).inDays;
+    if (d >= 0 && d < days) out[days - 1 - d]++;
+  }
+  return out;
+}
+
+/// Emergency numbers in Egypt (public, nationwide).
+const emergencyNumbers = [
+  ('🚓', 'Police', '122'),
+  ('🚑', 'Ambulance', '123'),
+  ('🚒', 'Fire', '180'),
+  ('🧳', 'Tourist police', '126'),
+];
+
+/// Useful Egyptian Arabic for visitors: (English, Arabic, how to say it).
+const phrasebook = [
+  ('Hello', 'أهلاً', 'ahlan'),
+  ('Thank you', 'شكراً', 'shukran'),
+  ('Please', 'لو سمحت', 'law samaht'),
+  ('Yes / No', 'أيوه / لأ', 'aywa / la'),
+  ('How much is this?', 'بكام ده؟', 'bikam da?'),
+  ('The bill, please', 'الحساب لو سمحت', 'el-hesab law samaht'),
+  ('Where is…?', 'فين…؟', 'fein…?'),
+  ('Take me to…', 'وديني…', 'waddini…'),
+  ('Stop here, please', 'على جنب هنا لو سمحت', "'ala ganb hena law samaht"),
+  ('Water', 'مية', 'mayya'),
+  ('Coffee / Tea', 'قهوة / شاي', "'ahwa / shai"),
+  ('No sugar', 'من غير سكر', 'men gheir sokkar'),
+  ('Delicious!', 'حلو أوي!', 'helw awi!'),
+  ('Where is the toilet?', 'الحمام فين؟', 'el-hammam fein?'),
+  ('I don\'t understand', 'مش فاهم', 'mesh fahem'),
+  ('Do you speak English?', 'بتتكلم إنجليزي؟', 'betetkallem engelizi?'),
+  ('Excuse me', 'لو سمحت', 'law samaht'),
+  ('Good morning', 'صباح الخير', 'sabah el-kheir'),
+  ('Good night', 'تصبح على خير', 'tesbah \'ala kheir'),
+  ('Help!', 'الحقوني!', 'el-ha\'uni!'),
+];

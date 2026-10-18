@@ -22,6 +22,7 @@ import '../../widgets/khroga_map.dart';
 import '../../widgets/share_card.dart';
 import '../reviews/review_screens.dart' show PlaceReviewsSection;
 import '../../widgets/launchers.dart';
+import 'around_card.dart';
 import 'crowd_card.dart';
 import 'explore_screen.dart';
 
@@ -394,6 +395,7 @@ class _Details extends ConsumerWidget {
         ],
         const SizedBox(height: KSpace.md),
         CrowdCard(place: place),
+        AroundCard(place: place),
         _CheckInCard(place: place),
         _VisitedAndNote(place: place),
         _MyRating(place: place),
