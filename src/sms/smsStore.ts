@@ -9,6 +9,8 @@ import { parseCardPaymentSms, parseCreditSms, parseDebitSms, parseReportedBalanc
 import { convertToBase } from '../db/repositories/fx';
 import { useUndoStore } from '../store/undoStore';
 import { configureSmsAlerts, isSmsReadingAvailable, readBankSms } from './native';
+import { bankName, cardLabel } from './banks';
+import { notifyNow } from '../notifications/scheduler';
 
 const FIRST_SCAN_DAYS = 30;
 
@@ -49,9 +51,15 @@ export function accountForImport(item: SmsImport, accounts: Account[], links: Re
   if (item.kind !== 'card_payment' && item.card_last4) {
     const linked = open.find((a) => a.id === links[item.card_last4!]?.account_id);
     if (linked) return linked;
+    // An account named with the card's digits ("CIB Credit Card ••4521").
+    const named = open.find((a) => a.name.includes(item.card_last4!));
+    if (named) return named;
   }
   if (item.kind !== 'card_payment' && item.card_type === 'credit') {
-    const card = open.find((a) => a.type === 'credit');
+    // Prefer a credit card account from the same bank over any credit card.
+    const bank = bankName(item.sender, item.body)?.toLowerCase();
+    const sameBank = bank ? open.find((a) => a.type === 'credit' && a.name.toLowerCase().includes(bank)) : undefined;
+    const card = sameBank ?? open.find((a) => a.type === 'credit');
     if (card) return card;
   }
   if (item.card_type === 'debit' || item.kind === 'card_payment') {
@@ -86,8 +94,11 @@ export function creditCardFor(item: SmsImport, accounts: Account[], links: Recor
   if (item.card_last4) {
     const linked = open.find((a) => a.id === links[item.card_last4!]?.account_id);
     if (linked) return linked;
+    const named = open.find((a) => a.name.includes(item.card_last4!));
+    if (named) return named;
   }
-  return open[0] ?? null;
+  const bank = bankName(item.sender, item.body)?.toLowerCase();
+  return (bank ? open.find((a) => a.name.toLowerCase().includes(bank)) : undefined) ?? open[0] ?? null;
 }
 
 // A foreign-currency charge converted into the account's currency with your
@@ -185,6 +196,7 @@ export const useSmsStore = create<SmsState>((set, get) => ({
       const messages = await readBankSms(since, smsSenders);
       let added = 0;
       let newest = since;
+      const newCards = new Map<string, string>();
       for (const m of messages) {
         newest = Math.max(newest, m.date);
         const parsed = parseCardPaymentSms(m.body) ?? parseDebitSms(m.body) ?? (smsReadCredits ? parseCreditSms(m.body) : null);
@@ -205,6 +217,10 @@ export const useSmsStore = create<SmsState>((set, get) => ({
           balance: parseReportedBalance(m.body)?.amount ?? null,
           balance_currency: parseReportedBalance(m.body)?.currency ?? null,
         };
+        // A card number Anchor has never seen: worth telling you about.
+        if (parsed.cardLast4 && !get().links[parsed.cardLast4] && !newCards.has(parsed.cardLast4) && !(await repo.hasSeenCard(parsed.cardLast4))) {
+          newCards.set(parsed.cardLast4, cardLabel(bankName(m.address, m.body), parsed.cardLast4));
+        }
         const isNew = await repo.insertSmsImport(row);
         if (!isNew) continue;
         added++;
@@ -218,6 +234,14 @@ export const useSmsStore = create<SmsState>((set, get) => ({
         }
       }
       setSmsLastScan(Math.max(newest, useSettingsStore.getState().smsLastScan));
+      if (newCards.size) {
+        const names = [...newCards.values()];
+        notifyNow(
+          newCards.size === 1 ? `New card spotted: ${names[0]}` : `${newCards.size} new cards spotted`,
+          `${newCards.size === 1 ? '' : names.join(', ') + '. '}Tap to see its spending and link it to an account.`,
+          '/money/cards'
+        ).catch(() => {});
+      }
       await get().refresh();
       return added;
     } finally {

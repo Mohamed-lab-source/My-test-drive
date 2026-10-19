@@ -73,3 +73,16 @@ export async function clearHandledSmsText(): Promise<number> {
   const result = await db.runAsync("UPDATE sms_imports SET body = '' WHERE status != 'pending' AND body != ''");
   return result.changes;
 }
+
+// Every bank alert read in the last `days`, for the Cards screen.
+export async function listSmsImportsSince(days: number): Promise<SmsImport[]> {
+  const db = await getDb();
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  return db.getAllAsync<SmsImport>('SELECT * FROM sms_imports WHERE sms_date >= ? ORDER BY sms_date DESC', [since]);
+}
+
+export async function hasSeenCard(last4: string): Promise<boolean> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM sms_imports WHERE card_last4 = ?', [last4]);
+  return (row?.n ?? 0) > 0;
+}

@@ -10,6 +10,8 @@ import { TextField } from '../../../src/ui/TextField';
 import { EmptyState } from '../../../src/ui/EmptyState';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
+import { bankName, cardLabel } from '../../../src/sms/banks';
+import { discoverBankSenders, type FoundSender } from '../../../src/sms/discover';
 import { useSmsStore, smsTargetAccount, syncSmsAlertConfig, accountForImport, creditCardFor, billFor } from '../../../src/sms/smsStore';
 import * as linksRepo from '../../../src/db/repositories/cardLinks';
 import { guessCategory } from '../../../src/sms/categorize';
@@ -53,21 +55,45 @@ export default function SmsInboxScreen() {
   // One tap to set up a credit card account the first time a credit-card
   // charge or payment shows up, linked to the card's digits.
   const createCardAccount = async (p: SmsImport) => {
+    const accountName = `${bankName(p.sender, p.body) ?? 'My'} Credit Card${p.card_last4 ? ` ••${p.card_last4}` : ''}`;
     await addAccount({
-      name: `HSBC Credit Card${p.card_last4 ? ` ••${p.card_last4}` : ''}`,
+      name: accountName,
       type: 'credit',
       currency: p.currency,
       icon: 'creditcard.fill',
       color: '#AF52DE',
       sort_order: accounts.length,
     });
-    const created = useFinanceStore.getState().accounts.find((a) => a.type === 'credit' && a.name.startsWith('HSBC Credit Card'));
+    const created = useFinanceStore.getState().accounts.find((a) => a.type === 'credit' && a.name === accountName);
     if (created && p.card_last4) await linksRepo.setCardLink(p.card_last4, created.id, 'credit');
     await loadLinks();
   };
   const [renaming, setRenaming] = useState<{ id: string; merchant: string; text: string } | null>(null);
   const ruleFor = (merchant: string | null) => (merchant ? rules[rulesRepo.ruleKey(merchant)] : undefined);
   const [sendersInput, setSendersInput] = useState(smsSenders.join(', '));
+  const [found, setFound] = useState<FoundSender[] | null>(null);
+  const [finding, setFinding] = useState(false);
+
+  // Adds senders to the list and re-reads 90 days so their past charges and
+  // cards show up straight away.
+  const addSenders = async (names: string[]) => {
+    const current = sendersInput.split(',').map((x) => x.trim()).filter(Boolean);
+    const next = [...current, ...names.filter((n) => !current.some((c) => c.toLowerCase() === n.toLowerCase()))];
+    setSendersInput(next.join(', '));
+    setSmsSenders(next);
+    syncSmsAlertConfig();
+    setFound((f) => (f ? f.filter((x) => !names.includes(x.sender)) : f));
+    const n = await scan(90);
+    Alert.alert('Added', `${names.join(', ')} added. ${n ? `Found ${n} new alert${n === 1 ? '' : 's'} from the last 90 days.` : 'No new alerts in the last 90 days.'}`);
+  };
+  const findBanks = async () => {
+    setFinding(true);
+    try {
+      setFound(await discoverBankSenders(sendersInput.split(',').map((x) => x.trim()).filter(Boolean)));
+    } finally {
+      setFinding(false);
+    }
+  };
   const [picked, setPicked] = useState<Record<string, string | null>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [permission, setPermission] = useState(hasSmsPermission());
@@ -207,7 +233,7 @@ export default function SmsInboxScreen() {
             Comma-separated; matches any SMS sender containing the text (e.g. HSBC, HSBCEG).
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm }}>
-            {['CIB', 'NBE', 'BanqueMisr', 'QNB', 'AAIB', 'ADIB', 'Emirates NBD', 'InstaPay'].map((bank) => {
+            {['CIB', 'NBE', 'BanqueMisr', 'QNB', 'AAIB', 'AlexBank', 'BDC', 'CAE', 'Telda', 'valU', 'ADIB', 'ADCB', 'FAB', 'ENBD', 'Mashreq', 'AlRajhi', 'SNB', 'InstaPay'].map((bank) => {
               const has = sendersInput.toLowerCase().split(',').some((x) => x.trim() === bank.toLowerCase());
               return (
                 <Pressable
@@ -236,6 +262,44 @@ export default function SmsInboxScreen() {
               );
             })}
           </View>
+          {active ? (
+            <View style={{ marginBottom: spacing.md }}>
+              <Button title={finding ? 'Looking…' : 'Find my other banks & cards'} variant="secondary" onPress={findBanks} disabled={finding} />
+              <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 4 }]}>
+                Checks the last 4 months of messages on this phone for card and account alerts from senders you haven't added. Nothing is saved until you add one.
+              </Text>
+              {found ? (
+                found.length === 0 ? (
+                  <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>No other banks found — every card alert already comes from a sender on your list.</Text>
+                ) : (
+                  <View style={{ marginTop: spacing.sm }}>
+                    {found.map((f) => (
+                      <View key={f.sender} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[typography.body, { color: colors.label }]}>
+                            {f.bank && f.bank !== f.sender ? `${f.bank} (${f.sender})` : f.sender}
+                          </Text>
+                          <Text style={[typography.caption1, { color: colors.secondaryLabel }]} numberOfLines={1}>
+                            {f.alerts} alert{f.alerts === 1 ? '' : 's'}
+                            {f.cards.length ? ` · card${f.cards.length === 1 ? '' : 's'} ${f.cards.map((c) => `••${c}`).join(', ')}` : ''}
+                            {f.example ? ` · e.g. ${f.example}` : ''}
+                          </Text>
+                        </View>
+                        <Pressable onPress={() => addSenders([f.sender])} hitSlop={8}>
+                          <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Add</Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                    {found.length > 1 ? (
+                      <Pressable onPress={() => addSenders(found.map((f) => f.sender))} style={{ marginTop: 6 }}>
+                        <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Add all {found.length}</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                )
+              ) : null}
+            </View>
+          ) : null}
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Post to</Text>
           <ChipSelector
             options={accounts.filter((a) => !a.is_archived).map((a) => ({ id: a.id, label: a.name, color: a.color }))}
@@ -460,7 +524,7 @@ export default function SmsInboxScreen() {
                                 : p.card_type === 'debit'
                                   ? '🏦 Debit / account'
                                   : '❔ Card type not stated'}
-                            {p.card_last4 ? ` ••${p.card_last4}` : ''}
+                            {` · ${cardLabel(bankName(p.sender, p.body), p.card_last4)}`}
                           </Text>
                         </View>
                       </View>

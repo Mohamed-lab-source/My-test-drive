@@ -192,11 +192,11 @@ export function quietUntil(now: Date, quiet: { from: number; to: number } | null
 
 // Spending/budget/savings alerts. During quiet hours they're held until
 // quiet hours end instead of buzzing at night.
-export async function notifyNow(title: string, body: string): Promise<void> {
+export async function notifyNow(title: string, body: string, url?: string): Promise<void> {
   if (!(await areNotificationsEnabled())) return;
   const until = quietUntil(new Date(), useSettingsStore.getState().quietHours);
   await Notifications.scheduleNotificationAsync({
-    content: { title, body },
+    content: { title, body, ...(url ? { data: { url } } : null) },
     trigger: until ? { type: Notifications.SchedulableTriggerInputTypes.DATE, date: until, channelId: CHANNEL_ID } : null,
   });
 }

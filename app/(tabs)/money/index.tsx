@@ -246,15 +246,19 @@ export default function MoneyScreen() {
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <QuickLink icon="banknote.fill" label="Bank SMS" color={colors.red} badge={smsPending} onPress={() => router.push('/money/sms-inbox')} />
+          <QuickLink icon="creditcard.fill" label="Cards" color={colors.purple} onPress={() => router.push('/money/cards')} />
           <QuickLink icon="cart.badge.plus" label="Shopping" color={colors.green} onPress={() => router.push('/money/shopping')} />
           <QuickLink icon="function" label="Tools" color={colors.gray} onPress={() => router.push('/money/tools')} />
-          <QuickLink icon="chart.line.uptrend.xyaxis" label="Year" color={colors.indigo} onPress={() => router.push('/money/year')} />
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <QuickLink icon="camera.fill" label="Receipts" color={colors.orange} onPress={() => router.push('/money/receipts')} />
           <QuickLink icon="lightbulb.fill" label="Insights" color={colors.yellow} onPress={() => router.push('/money/insights')} />
           <QuickLink icon="flag.fill" label="Follow-ups" color={colors.red} badge={flaggedCount} onPress={() => router.push('/money/flagged')} />
           <QuickLink icon="trophy.fill" label="Challenges" color={colors.green} onPress={() => router.push('/money/challenges')} />
+        </View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md, marginTop: -spacing.sm }}>
+          <QuickLink icon="chart.line.uptrend.xyaxis" label="Year" color={colors.indigo} onPress={() => router.push('/money/year')} />
+          <View style={{ flex: 3, marginHorizontal: 12 }} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}>

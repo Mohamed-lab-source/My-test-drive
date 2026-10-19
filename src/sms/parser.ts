@@ -20,8 +20,8 @@ export type CardType = 'credit' | 'debit';
 // alert can also say "account".
 export function detectCardType(raw: string): CardType | null {
   const text = normalizeDigits(raw);
-  if (/credit\s*card|\bcc\b|card\s*credit|بطاقة\s*(?:ال)?ائتمان|الائتمانية|available\s+(?:credit\s+)?limit|الحد\s+المتاح/i.test(text)) return 'credit';
-  if (/debit\s*card|prepaid|meeza|ميزة|\baccount\b|\bacct\b|a\/c\b|حساب|available\s+balance|الرصيد|\d{3}-\d{3}\*+-\d{3}/i.test(text)) return 'debit';
+  if (/credit\s*card|\bcc\b|card\s*credit|بطاقة\s*(?:ال)?ائتمان|الائتمانية|av(?:ai)?l(?:able)?\.?\s+(?:credit\s+|cr\.?\s*)?limit|الحد\s+المتاح/i.test(text)) return 'credit';
+  if (/debit\s*card|prepaid|meeza|ميزة|\bmada\b|مدى|\baccount\b|\bacct\b|a\/c\b|حساب|available\s+balance|الرصيد|\d{3}-\d{3}\*+-\d{3}/i.test(text)) return 'debit';
   return null;
 }
 
@@ -156,13 +156,14 @@ function merchantWithBrand(text: string): string | null {
 }
 
 function findMerchant(text: string): string | null {
-  const stop = '(?=\\s+(?:on|dated|with|using|via|ref|reference|card|for|from|at\\s+\\d)\\b|\\s*[.,;]\\s|\\s*[.,;]?$|\\s+\\d{1,2}[\\/\\-.]\\d|\\s+\\d{1,2}-[A-Za-z]{3})';
+  const stop = '(?=\\s+(?:on|dated|date|time|with|using|via|ref|reference|card|for|from|has|have|was|is|at\\s+\\d)\\b|\\s+(?:في|بتاريخ)[:\\s]|\\s*[.,;]\\s|\\s*[.,;]?$|\\s+\\d{1,2}[\\/\\-.]\\d|\\s+\\d{1,2}-[A-Za-z]{3})';
   const patterns = [
     // HSBC Egypt: "07OCT26 FAWRY*FRIENDS 2 SUPE Purchase from …"
     /^(?:From\s+HSBC\s*:\s*)?\d{1,2}[A-Z]{3}\d{2,4}\s+(.{2,40}?)\s+(?:Purchase|Payment|Withdrawal|POS|E-?Commerce|Online|Internet|Authori[sz]ation|Transaction|Trx|Txn|Refund|Reversal|Transfer)\b/i,
-    new RegExp(`(?:\\bat\\s+|@\\s*)(.{2,40}?)${stop}`, 'i'),
+    new RegExp(`(?:\\bat:?\\s+|@\\s*)(.{2,40}?)${stop}`, 'i'),
+    new RegExp(`\\b(?:charged|billed|debited|paid)\\s+(?:by|to)\\s+(.{2,40}?)${stop}`, 'i'),
     new RegExp(`\\b(?:to|towards)\\s+(.{2,40}?)${stop}`, 'i'),
-    /(?:لدى|عند|في)\s+([^\d،,.]{2,40}?)(?=\s+(?:بتاريخ|يوم|في|باستخدام|بالبطاقة|ببطاقة|بطاقة|عبر|رقم|من)|[،,.]|$)/,
+    /(?:لدى|عند|في):?\s+([^\d،,.]{2,40}?)(?=\s+(?:بتاريخ|يوم|في|باستخدام|بالبطاقة|ببطاقة|بطاقة|عبر|رقم|من)|[،,.]|$)/,
   ];
   for (const re of patterns) {
     const m = text.match(re);
@@ -175,9 +176,13 @@ function findMerchant(text: string): string | null {
   return null;
 }
 
+// The card's last digits. Card wording wins over account numbers, so "from
+// account XXXX1122 using Debit Card ending 3456" gives 3456.
 function findCard(text: string): string | null {
   const m =
-    text.match(/(?:ending(?:\s+(?:with|in))?|ends? with|no\.?|number|\*{2,}|x{2,}|\.{3}|\b(?:card|acct|account))\s*:?\s*(\d{4})\b/i) ??
+    text.match(/\bcard\b[^.;\d]{0,30}?(?:ending(?:\s+(?:with|in))?|ends?\s+with|no\.?|number|#|:)?\s*[*xX•.]*\s*(?:\d{4,6}[*xX•]+)?(\d{4})\b/i) ??
+    text.match(/(?:ending(?:\s+(?:with|in))?|ends? with|no\.?|number|#|\*{2,}|x{2,}|•{2,}|\.{3}|\b(?:acct|account))\s*:?\s*(\d{4})\b/i) ??
+    text.match(/بطاق\S*\s*(?:رقم)?\s*:?\s*\*{0,}(\d{4})\b/) ??
     text.match(/(?:المنتهية|المنتهي|تنتهي|رقم)\s*(?:ب|بـ|في)?\s*\*{0,}(\d{4})\b/) ??
     // Masked numbers like "005-375***-013": keep the visible tail.
     text.match(/[*xX]{2,}[-\s]?(\d{3,4})\b/);
@@ -201,11 +206,13 @@ export function parseDebitSms(raw: string): ParsedDebit | null {
     ? 'withdrawal'
     : /transfer|تحويل/.test(lower)
       ? 'transfer'
-      : /purchase|\bused\b|spent|\bpos\b|شراء|مشتريات/.test(lower) || online
+      : /purchase|\bused\b|spent|charged|\bpos\b|شراء|مشتريات/.test(lower) || online
         ? 'purchase'
         : 'debit';
+  const merchant = merchantWithBrand(text);
 
-  return { ...money, merchant: merchantWithBrand(text), cardLast4: findCard(text), kind, cardType: detectCardType(text) };
+  // A card debit "at" a shop is a purchase too.
+  return { ...money, merchant, cardLast4: findCard(text), kind: kind === 'debit' && merchant ? 'purchase' : kind, cardType: detectCardType(text) };
 }
 
 // Paying off a credit card: "Your HSBC credit card payment of EGP 3,000.00

@@ -202,6 +202,13 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
+**Cards from every bank**
+- Bank SMS reads alerts from any bank you add (CIB, NBE, Banque Misr, QNB, AAIB, AlexBank, Emirates NBD, ADCB, FAB, Mashreq, Al Rajhi, SNB, Telda, valU and more), in English or Arabic, including line-by-line formats like "Card: *7766 / At: JARIR"
+- "Find my other banks & cards" checks the last 4 months of messages on the phone for card alerts from senders you haven't added, and adds them in one tap (then re-reads 90 days)
+- Money → Cards lists every card number seen in your alerts with its bank, network (Visa, Mastercard, mada, Meeza), credit/debit, this month's and last month's spending, a 6-month chart, top merchants and every purchase, added or not
+- Link a card to an account, or create a credit card / bank account for it in one tap, and give it a nickname; a notification tells you when a new card number shows up
+- Charges from an unlinked card go to the account named with its digits or from the same bank, instead of whichever credit card happens to be first
+
 **Latest additions**
 - Money: date chips and "save & add another" when logging, note and category suggestions, turn a transaction into a monthly bill, transactions grouped by day with daily totals, exclude accounts from net worth, net-worth change vs last month, "Pay X now" on cards, VAT and salary calculators, SMS inbox sort / dismiss all / show original message, Zakat "mark as paid" logs the payment
 - Tasks: long-press a task for a quick menu, sort by priority / deadline / newest, quick add understands "at 5pm", "every week" and "by friday", reschedule to the weekend, carry over last week's goals, routines that start automatically every morning, upcoming/past meetings with overlap warnings

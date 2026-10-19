@@ -32,6 +32,7 @@ export default function MoneyLayout() {
       <Stack.Screen name="flagged" options={{ presentation: 'card' }} />
       <Stack.Screen name="challenges" options={{ presentation: 'card' }} />
       <Stack.Screen name="merchant" options={{ presentation: 'card' }} />
+      <Stack.Screen name="cards" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

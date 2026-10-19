@@ -35,6 +35,9 @@ interface SettingsState {
   setSadaqahGoal: (v: number) => void;
   waterGoal: number;
   sleepGoal: number;
+  // Your own names for cards, keyed by their last digits ("Wife's card").
+  cardNicknames: Record<string, string>;
+  setCardNickname: (last4: string, name: string) => void;
   startTab: 'home' | 'money' | 'tasks' | 'life';
   setStartTab: (v: 'home' | 'money' | 'tasks' | 'life') => void;
   softDark: boolean;
@@ -206,6 +209,14 @@ export const useSettingsStore = create<SettingsState>()(
       waterGoal: 8,
       setWaterGoal: (v) => set({ waterGoal: v }),
       sleepGoal: 8,
+      cardNicknames: {},
+      setCardNickname: (last4, name) =>
+        set((st) => {
+          const next = { ...st.cardNicknames };
+          if (name.trim()) next[last4] = name.trim();
+          else delete next[last4];
+          return { cardNicknames: next };
+        }),
       startTab: 'home',
       setStartTab: (v) => set({ startTab: v }),
       softDark: false,

@@ -28,6 +28,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Merchant rules rename bank merchants and remember their category; cash counter in Tools',
       'Duplicate finder and "needs a category" fixer in All Transactions; pay bills from Home',
       'Date chips, save & add another, make a transaction a monthly bill, exclude accounts from net worth, VAT and salary calculators, Zakat "mark as paid"',
+      'Money → Cards: every card from every bank in your SMS, its spending and purchases; Bank SMS → "Find my other banks & cards"',
     ],
   },
   {
