@@ -166,6 +166,7 @@ export const extraIngredients: IngredientSeed[] = [
 
   // Pantry: nuts, seeds, dried fruit
   x("Raisins", "زبيب", "g", 0.12, "pantry", [299, 3.1, 0.5, 79], [], ["chopped dates", "تمر مقطع"]),
+  x("Barberries", "زرشك", "g", 0.5, "pantry", [316, 4, 0.5, 75], [], ["dried cranberries or pomegranate seeds", "توت بري مجفف أو حب رمان"]),
   x("Hazelnuts", "بندق", "g", 0.6, "pantry", [628, 15, 61, 17], [NUTS], ["almonds", "لوز"]),
   x("Chia Seeds", "بذور شيا", "g", 0.4, "pantry", [486, 16.5, 30.7, 42], [], ["ground flaxseed", "بذور كتان مطحونة"]),
   x("Flaxseeds", "بذور كتان", "g", 0.1, "pantry", [534, 18, 42, 29], [], ["chia seeds", "بذور شيا"]),

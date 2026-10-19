@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-maghreb-turkish-persian",
+    date: "2026-10-19",
+    title: { en: "235 Moroccan, Tunisian, Turkish and Persian recipes", ar: "235 وصفة مغربية وتونسية وتركية وإيرانية" },
+    body: {
+      en: "Now 926 recipes. Moroccan tagines, couscous, pastilla, chebakia and gazelle horns; Tunisian lablabi, brik, ojja and makroudh; Turkish kebabs, mantı, pilafs, meze, künefe and Turkish coffee; and Persian ghormeh sabzi, fesenjan, tahdig, jewelled rice, kababs and saffron sweets.",
+      ar: "أصبح لدينا 926 وصفة. طواجن وكسكس وبسطيلة وشباكية وكعب الغزال من المغرب؛ ولبلابي وبريك وعجة ومقروض من تونس؛ وكباب ومانتي وبيلاف ومزات وكنافة وقهوة تركية من تركيا؛ وقورمه سبزي وفسنجان وته‌ديگ والرز المرصع والكباب وحلويات الزعفران من إيران.",
+    },
+  },
+  {
     id: "2026-10-arab-world-recipes",
     date: "2026-10-19",
     title: { en: "286 recipes from across the Arab world", ar: "286 وصفة من كل العالم العربي" },

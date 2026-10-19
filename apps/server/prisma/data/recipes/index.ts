@@ -12,7 +12,13 @@ import { iraqi } from "./iraqi";
 import { levantine1 } from "./levantine1";
 import { levantine2 } from "./levantine2";
 import { levantine3 } from "./levantine3";
+import { moroccan1 } from "./moroccan1";
+import { moroccan2 } from "./moroccan2";
+import { persian } from "./persian";
 import { sudanese } from "./sudanese";
+import { tunisian } from "./tunisian";
+import { turkish1 } from "./turkish1";
+import { turkish2 } from "./turkish2";
 import { yemeni } from "./yemeni";
 
 /** Every recipe the seed loads; add new cuisine files here. */
@@ -30,6 +36,12 @@ export const allRecipes: RecipeSeed[] = [
   ...levantine1,
   ...levantine2,
   ...levantine3,
+  ...moroccan1,
+  ...moroccan2,
+  ...persian,
   ...sudanese,
+  ...tunisian,
+  ...turkish1,
+  ...turkish2,
   ...yemeni,
 ];
