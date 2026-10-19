@@ -44,6 +44,12 @@ async function main() {
   });
   const refsBySlug = new Map(recipeRows.map((r) => [r.slug, r.ingredients]));
 
+  // Index of each ingredient in the exported table; recipes refer to it by
+  // position (see PackedCatalog in apps/mobile/src/api/localCatalog.ts).
+  const indexById = new Map(ingredientRows.map((row, i) => [row.id, i]));
+  const unitById = new Map(ingredientRows.map((row) => [row.id, row.unit]));
+  const nonEmpty = <T,>(xs: T[] | undefined) => (xs && xs.length ? xs : undefined);
+
   const recipes = [];
   for (const en of summariesEn) {
     const ar = arBySlug.get(en.slug);
@@ -60,6 +66,7 @@ async function main() {
       if (i < 0) throw new Error(`no DB ingredient "${name}" for ${en.slug}`);
       return unused.splice(i, 1)[0].ingredientId;
     };
+    const photoBase = String(en.heroImageUrl).split("?")[0];
     recipes.push({
       slug: en.slug,
       title: { en: en.title, ar: ar?.title ?? en.title },
@@ -71,41 +78,45 @@ async function main() {
       prepMinutes: en.prepMinutes,
       cookMinutes: en.cookMinutes,
       difficulty: en.difficulty,
-      tags: en.tags,
-      occasions: en.occasions,
+      tags: nonEmpty(en.tags),
+      occasions: nonEmpty(en.occasions),
       costPerServing: en.costPerServing,
-      ingredientCount: en.ingredientCount,
-      allergens: en.allergens,
-      caloriesPerServing: en.caloriesPerServing,
-      proteinPerServing: en.proteinPerServing,
-      fatPerServing: en.fatPerServing,
+      allergens: nonEmpty(en.allergens),
       nutritionPerServing: detailEn.nutritionPerServing,
-      equipment: detailEn.equipment ?? [],
+      equipment: nonEmpty(detailEn.equipment),
       // Ingredient order and quantities match the detail response; names,
-      // substitutes, categories and allergens come from the ingredient table.
-      ingredients: detailEn.ingredients.map((ing: any) => ({
-        id: idFor(ing.name, ing.quantity),
-        quantity: ing.quantity,
-        unit: ing.unit,
-        note: ing.note,
-      })),
-      steps: detailEn.steps.map((s: any, i: number) => ({
-        order: s.order,
-        timerMinutes: s.timerMinutes ?? null,
-        imageUrl: s.imageUrl ?? null,
-        instruction: { en: s.instruction, ar: detailAr.steps[i]?.instruction ?? s.instruction },
-      })),
+      // units, substitutes, categories and allergens come from the
+      // ingredient table.
+      ingredients: detailEn.ingredients.map((ing: any) => {
+        const id = idFor(ing.name, ing.quantity);
+        if (ing.unit !== unitById.get(id)) throw new Error(`${en.slug}: ${ing.name} unit ${ing.unit} != ${unitById.get(id)}`);
+        return ing.note ? [indexById.get(id), ing.quantity, ing.note] : [indexById.get(id), ing.quantity];
+      }),
+      steps: detailEn.steps.map((s: any, i: number) => {
+        // The app rebuilds step photos from the hero URL; make sure it can.
+        if (s.order !== i + 1) throw new Error(`${en.slug}: step order ${s.order} at position ${i}`);
+        if (s.imageUrl && !String(s.imageUrl).startsWith(`${photoBase}?lock=`)) throw new Error(`${en.slug}: step photo URL differs from hero`);
+        const arText = detailAr.steps[i]?.instruction ?? s.instruction;
+        return s.timerMinutes ? [s.instruction, arText, s.timerMinutes] : [s.instruction, arText];
+      }),
     });
+    // Same derived values the app recomputes; fail loudly if they ever drift.
+    const n = detailEn.nutritionPerServing;
+    if (en.caloriesPerServing !== n.calories || en.proteinPerServing !== n.proteinGrams || en.fatPerServing !== n.fatGrams) {
+      throw new Error(`${en.slug}: summary nutrition differs from detail`);
+    }
   }
 
   const cuisineAr = new Map(cuisinesAr.map((c) => [c.slug, c.name]));
   const catalog = {
+    version: 2,
     generatedAt: new Date().toISOString(),
     cuisines: cuisinesEn.map((c) => ({ slug: c.slug, name: { en: c.name, ar: cuisineAr.get(c.slug) ?? c.name } })),
     ingredients: ingredientRows.map((i) => ({
       id: i.id,
       name: { en: i.name, ar: i.nameAr ?? i.name },
       category: i.category,
+      unit: i.unit,
       substitute: { en: i.substituteEn ?? null, ar: i.substituteAr ?? i.substituteEn ?? null },
       allergens: i.allergens,
       pricePerUnit: i.pricePerUnit,

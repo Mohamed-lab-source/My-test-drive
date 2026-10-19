@@ -33,16 +33,17 @@ function x(
 // Added for the expanded (2000-recipe) catalog. Prices are approximate Cairo
 // retail figures; nutrition is standard database estimates.
 export const extraIngredients: IngredientSeed[] = [
-  // Meat & poultry
+  // Meat & poultry. Bone-in cuts (whole chicken, chops, oxtail) use
+  // as-purchased nutrition, since recipes weigh them with the bone.
   x("Lamb Shoulder", "كتف ضأن", "g", 0.38, "meat", [250, 17, 20, 0], [], ["beef chuck", "لحم بقري من الكتف"]),
   x("Lamb Leg", "فخذ ضأن", "g", 0.42, "meat", [230, 18, 17, 0], [], ["lamb shoulder", "كتف ضأن"]),
-  x("Lamb Chops", "ريش ضأن", "g", 0.5, "meat", [282, 17, 23, 0], [], ["beef steak", "ستيك بقري"]),
+  x("Lamb Chops", "ريش ضأن", "g", 0.5, "meat", [200, 12.5, 16, 0], [], ["beef steak", "ستيك بقري"]),
   x("Beef Cubes", "لحم بقري مكعبات", "g", 0.26, "meat", [220, 26, 12, 0], [], ["lamb cubes", "لحم ضأن مكعبات"]),
   x("Beef Shank", "موزة بقري", "g", 0.27, "meat", [201, 34, 6, 0], [], ["beef cubes", "لحم بقري مكعبات"]),
-  x("Oxtail", "ذيل عجل", "g", 0.24, "meat", [262, 30, 14, 0], [], ["beef shank", "موزة بقري"]),
+  x("Oxtail", "ذيل عجل", "g", 0.24, "meat", [150, 17, 8, 0], [], ["beef shank", "موزة بقري"]),
   x("Beef Liver", "كبدة بقري", "g", 0.2, "meat", [135, 20, 3.6, 3.9], [], ["chicken liver", "كبدة فراخ"]),
   x("Chicken Liver", "كبدة فراخ", "g", 0.1, "meat", [119, 17, 4.8, 0.7], [], ["beef liver", "كبدة بقري"]),
-  x("Whole Chicken", "فرخة كاملة", "g", 0.12, "meat", [215, 18.6, 15, 0], [], ["chicken thighs and breasts", "أفخاذ وصدور دجاج"]),
+  x("Whole Chicken", "فرخة كاملة", "g", 0.12, "meat", [150, 13, 10.5, 0], [], ["chicken thighs and breasts", "أفخاذ وصدور دجاج"]),
   x("Chicken Wings", "أجنحة دجاج", "g", 0.12, "meat", [203, 18, 14, 0], [], ["chicken drumsticks", "دبابيس دجاج"]),
   x("Ground Chicken", "دجاج مفروم", "g", 0.17, "meat", [143, 17, 8, 0], [], ["ground turkey", "ديك رومي مفروم"]),
   x("Beef Sausage", "سجق بقري", "g", 0.25, "meat", [300, 13, 26, 3], [], ["spiced ground beef", "لحم مفروم متبل"]),

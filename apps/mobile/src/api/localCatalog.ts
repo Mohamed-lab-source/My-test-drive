@@ -68,7 +68,78 @@ type Catalog = {
   recipes: CatalogRecipe[];
 };
 
-const catalog = catalogJson as unknown as Catalog;
+/**
+ * On-disk form written by exportCatalog.ts. With thousands of recipes the
+ * plain shape above is several MB, so fields that can be rebuilt are left
+ * out: ingredient lines are [ingredient index, quantity, note?] (the unit is
+ * the ingredient's own), steps are [en, ar, timer?], derived numbers come
+ * from nutritionPerServing, empty lists are omitted, and step photo URLs are
+ * rebuilt from the hero URL the same way the server makes them.
+ */
+type PackedRecipe = Omit<
+  CatalogRecipe,
+  | "ingredients"
+  | "steps"
+  | "ingredientCount"
+  | "caloriesPerServing"
+  | "proteinPerServing"
+  | "fatPerServing"
+  | "tags"
+  | "occasions"
+  | "allergens"
+  | "equipment"
+> & {
+  tags?: DishTag[];
+  occasions?: Occasion[];
+  allergens?: Allergen[];
+  equipment?: string[];
+  ingredients: [index: number, quantity: number, note?: string][];
+  steps: [en: string, ar: string, timerMinutes?: number][];
+};
+
+type PackedCatalog = Omit<Catalog, "recipes" | "ingredients"> & {
+  ingredients: (CatalogIngredient & { unit: string })[];
+  recipes: PackedRecipe[];
+};
+
+/** Same hash the server uses to pin a photo per seed (prisma/data/types.ts). */
+function photoLock(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return h % 100000;
+}
+
+export function unpackCatalog(packed: PackedCatalog): Catalog {
+  return {
+    ...packed,
+    recipes: packed.recipes.map((r) => {
+      const photoBase = r.heroImageUrl.split("?")[0];
+      return {
+        ...r,
+        tags: r.tags ?? [],
+        occasions: r.occasions ?? [],
+        allergens: r.allergens ?? [],
+        equipment: r.equipment ?? [],
+        ingredientCount: r.ingredients.length,
+        caloriesPerServing: r.nutritionPerServing.calories,
+        proteinPerServing: r.nutritionPerServing.proteinGrams,
+        fatPerServing: r.nutritionPerServing.fatGrams,
+        ingredients: r.ingredients.map(([index, quantity, note]) => {
+          const ing = packed.ingredients[index];
+          return { id: ing.id, quantity, unit: ing.unit, note: note ?? null };
+        }),
+        steps: r.steps.map(([en, ar, timerMinutes], i) => ({
+          order: i + 1,
+          timerMinutes: timerMinutes ?? null,
+          imageUrl: `${photoBase}?lock=${photoLock(`${r.slug}-step-${i + 1}`)}`,
+          instruction: { en, ar },
+        })),
+      };
+    }),
+  };
+}
+
+const catalog = unpackCatalog(catalogJson as unknown as PackedCatalog);
 const ingredientById = new Map(catalog.ingredients.map((i) => [i.id, i]));
 const cuisineBySlug = new Map(catalog.cuisines.map((c) => [c.slug, c]));
 // The server lists recipes by (English) title.

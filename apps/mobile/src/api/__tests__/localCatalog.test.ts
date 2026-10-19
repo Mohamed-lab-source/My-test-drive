@@ -10,6 +10,7 @@ import {
   randomRecipe,
   recipeDetail,
   shoppingList,
+  unpackCatalog,
 } from "../localCatalog";
 import type { RecipeDetail, RecipeSummary } from "../types";
 
@@ -98,5 +99,58 @@ describe("bundled catalog", () => {
     expect(answerLocally("post", "/recipes/koshari/ratings", {}, "{}")).toBeUndefined();
     expect(answerLocally("get", "/auth/me", {}, undefined)).toBeUndefined();
     expect(answerLocally("get", "/recipes/no-such-recipe", {}, undefined)).toBeUndefined();
+  });
+
+  it("unpacks the compact on-disk format", () => {
+    const hero = "https://loremflickr.com/900/600/soup?lock=1";
+    const unpacked = unpackCatalog({
+      generatedAt: "",
+      cuisines: [],
+      deliveryPartners: [],
+      ingredients: [
+        { id: "a", name: { en: "Rice", ar: "أرز" }, category: "pantry", unit: "g", substitute: { en: null, ar: null }, allergens: [], pricePerUnit: 0.05 },
+        { id: "b", name: { en: "Egg", ar: "بيض" }, category: "dairy", unit: "pcs", substitute: { en: null, ar: null }, allergens: ["EGGS"], pricePerUnit: 6 },
+      ],
+      recipes: [
+        {
+          slug: "test-soup",
+          title: { en: "Soup", ar: "شوربة" },
+          description: { en: "", ar: "" },
+          cuisineSlug: "egyptian",
+          dishType: "Soup",
+          heroImageUrl: hero,
+          baseServings: 2,
+          prepMinutes: 5,
+          cookMinutes: 10,
+          difficulty: "EASY",
+          costPerServing: 10,
+          nutritionPerServing: { calories: 300, proteinGrams: 12, fatGrams: 5, carbsGrams: 40 },
+          ingredients: [[1, 2], [0, 150, "washed"]],
+          steps: [["Boil.", "اغلي.", 10], ["Serve.", "قدّمي."]],
+        },
+      ],
+    });
+    const r = unpacked.recipes[0];
+    expect(r.ingredients).toEqual([
+      { id: "b", quantity: 2, unit: "pcs", note: null },
+      { id: "a", quantity: 150, unit: "g", note: "washed" },
+    ]);
+    expect(r.steps.map((s) => [s.order, s.timerMinutes, s.instruction.ar])).toEqual([[1, 10, "اغلي."], [2, null, "قدّمي."]]);
+    expect(r.steps[0].imageUrl).toMatch(/^https:\/\/loremflickr\.com\/900\/600\/soup\?lock=\d+$/);
+    expect(r.steps[0].imageUrl).not.toBe(r.steps[1].imageUrl);
+    expect([r.ingredientCount, r.caloriesPerServing, r.proteinPerServing, r.fatPerServing]).toEqual([2, 300, 12, 5]);
+    expect([r.tags, r.occasions, r.allergens, r.equipment]).toEqual([[], [], [], []]);
+  });
+
+  it("covers every cuisine in the bundle with full bilingual steps", () => {
+    for (const c of listCuisines("en")) {
+      const [first] = listRecipes({ cuisine: c.slug, lang: "en" });
+      expect(first, c.slug).toBeTruthy();
+      const en = recipeDetail(first.slug, "en")!;
+      const ar = recipeDetail(first.slug, "ar")!;
+      expect(en.steps.length).toBeGreaterThan(1);
+      expect(ar.steps.every((s) => /[\u0600-\u06FF]/.test(s.instruction))).toBe(true);
+      expect(en.ingredients.every((i) => i.name && ["g", "ml", "pcs"].includes(i.unit))).toBe(true);
+    }
   });
 });

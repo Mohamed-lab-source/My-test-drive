@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-arab-world-recipes",
+    date: "2026-10-19",
+    title: { en: "286 recipes from across the Arab world", ar: "286 وصفة من كل العالم العربي" },
+    body: {
+      en: "Now 691 recipes and four new cuisines. Levantine: kibbeh of every kind, mansaf, musakhan, fatteh, ma'amoul and knafeh-shop sweets. Gulf: kabsa, machboos, mandi, harees, luqaimat and Arabic coffee. Plus Iraqi (masgouf, dolma, kleicha), Yemeni (saltah, fahsa, bint al sahn) and Sudanese (ful, mullah, dakwa) kitchens. The built-in catalog is also 40% smaller, so the app stays quick.",
+      ar: "أصبح لدينا 691 وصفة وأربعة مطابخ جديدة. الشامي: الكبة بكل أنواعها والمنسف والمسخن والفتة والمعمول وحلويات الكنافة. الخليجي: الكبسة والمجبوس والمندي والهريس واللقيمات والقهوة العربية. ومعها المطبخ العراقي (المسكوف والدولمة والكليجة) واليمني (السلتة والفحسة وبنت الصحن) والسوداني (الفول والملاح والدكوة). كما صار الكتالوج المدمج أصغر بنسبة 40% ليبقى التطبيق سريعاً.",
+    },
+  },
+  {
     id: "2026-10-egyptian-recipes",
     date: "2026-10-19",
     title: { en: "185 new Egyptian recipes", ar: "185 وصفة مصرية جديدة" },
