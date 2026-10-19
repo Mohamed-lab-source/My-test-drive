@@ -8,6 +8,10 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
+import { DENSITIES } from "../data/densities";
+import { convertWithDensity, type DensityUnit } from "../utils/densityConvert";
+
+const DENSITY_UNITS: DensityUnit[] = ["cup", "tbsp", "tsp", "g"];
 
 type Props = NativeStackScreenProps<RootStackParamList, "UnitConverter">;
 
@@ -48,10 +52,16 @@ function round2(n: number): string {
 }
 
 export function UnitConverterScreen({}: Props) {
-  const { t, isRTL } = useLocale();
+  const { t, locale, isRTL } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const textAlign = isRTL ? "right" : "left";
+
+  const [densityAmount, setDensityAmount] = useState("1");
+  const [densityUnit, setDensityUnit] = useState<DensityUnit>("cup");
+  const [densityKey, setDensityKey] = useState(DENSITIES[0].key);
+  const densityIngredient = DENSITIES.find((d) => d.key === densityKey) ?? DENSITIES[0];
+  const densityResult = convertWithDensity(parseFloat(densityAmount), densityUnit, densityIngredient.gramsPerCup);
 
   const [amount, setAmount] = useState("1");
   const [fromUnit, setFromUnit] = useState<WeightVolumeUnit>("cup");
@@ -141,6 +151,53 @@ export function UnitConverterScreen({}: Props) {
           </Text>
         </View>
 
+        <Text style={[styles.sectionTitle, { textAlign }]}>{t("converter.densityTitle")}</Text>
+        <Text style={[styles.label, { textAlign }]}>{t("converter.densityHint")}</Text>
+        <TextInput
+          style={[styles.amountInput, { textAlign }]}
+          value={densityAmount}
+          onChangeText={setDensityAmount}
+          keyboardType="decimal-pad"
+          placeholder="1"
+          placeholderTextColor={colors.textMuted}
+        />
+        <View style={[styles.unitRow, styles.densityGap]}>
+          {DENSITY_UNITS.map((u) => (
+            <UnitChip key={u} unit={u} selected={densityUnit === u} onPress={() => setDensityUnit(u)} />
+          ))}
+        </View>
+        <View style={styles.unitRow}>
+          {DENSITIES.map((d) => (
+            <AnimatedPressable
+              key={d.key}
+              style={[styles.unitChip, densityKey === d.key && styles.unitChipSelected]}
+              pressScale={0.94}
+              onPress={() => setDensityKey(d.key)}
+            >
+              <Text style={[styles.unitChipText, densityKey === d.key && styles.unitChipTextSelected]}>{d[locale]}</Text>
+            </AnimatedPressable>
+          ))}
+        </View>
+        <View style={styles.resultCard}>
+          <Text style={styles.resultText}>
+            {densityResult
+              ? densityUnit === "g"
+                ? t("converter.densityToCups", {
+                    grams: densityResult.grams,
+                    name: densityIngredient[locale],
+                    cups: densityResult.cups,
+                    tbsp: densityResult.tbsp,
+                  })
+                : t("converter.densityToGrams", {
+                    amount: densityAmount,
+                    unit: t(UNIT_LABEL_KEYS[densityUnit]),
+                    name: densityIngredient[locale],
+                    grams: densityResult.grams,
+                  })
+              : t("converter.invalidNumber")}
+          </Text>
+        </View>
+
         <Text style={[styles.sectionTitle, { textAlign }]}>{t("converter.ovenTitle")}</Text>
         <TextInput
           style={[styles.amountInput, { textAlign }]}
@@ -196,6 +253,7 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: "700",
     },
     unitRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing(1), marginBottom: spacing(0.5) },
+    densityGap: { marginTop: spacing(1.5), marginBottom: spacing(1) },
     unitChip: {
       backgroundColor: colors.chipBackground,
       borderRadius: radius.pill,

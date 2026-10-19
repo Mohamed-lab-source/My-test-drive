@@ -37,6 +37,7 @@ const FEATURE_TOUR_STEPS: { icon: string; titleKey: TranslationKey; bodyKey: Tra
   { icon: "🔥", titleKey: "featureTour.streaks.title", bodyKey: "featureTour.streaks.body" },
   { icon: "🎨", titleKey: "featureTour.personalize.title", bodyKey: "featureTour.personalize.body" },
   { icon: "📖", titleKey: "featureTour.glossary.title", bodyKey: "featureTour.glossary.body" },
+  { icon: "📚", titleKey: "featureTour.kitchenGuides.title", bodyKey: "featureTour.kitchenGuides.body" },
 ];
 
 export function FeatureTourScreen({ navigation, route }: Props) {

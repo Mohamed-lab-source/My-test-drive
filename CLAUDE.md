@@ -37,7 +37,8 @@ this file was created.
   `nohup npx tsx watch src/index.ts > /tmp/server.log 2>&1 & disown` from
   `apps/server`, then `sleep 4 && curl http://localhost:4000/api/health`.
 - Verify changes with `npx tsc --noEmit` in both `apps/mobile` and
-  `apps/server`, and `npm run test` in `apps/server`, before committing.
+  `apps/server`, and `npm run test` in both (mobile tests cover the pure
+  helpers under `apps/mobile/src/utils`), before committing.
 - The Android build workflow triggers automatically on push to
   `claude/senior-app-developer-0b9qqe` touching `apps/mobile/**` and
   publishes to a rolling GitHub Release (`android-preview-latest`,

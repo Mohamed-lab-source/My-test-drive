@@ -1,10 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { frequentFoods as pickFrequentFoods } from "../utils/diaryHelpers";
 
 const ENTRIES_KEY = "cookmate.diary.entries";
 const WATER_KEY = "cookmate.diary.water";
 const TARGETS_KEY = "cookmate.diary.targets";
 const RETENTION_DAYS = 90;
+const FREQUENT_WINDOW_DAYS = 30;
 
 export type DiaryEntry = {
   id: string;
@@ -67,6 +69,10 @@ type FoodDiaryContextValue = {
   resetTargetsToAuto: () => void;
   /** Consecutive days with at least one entry, counting back from today (or yesterday if today is still empty). */
   loggingStreak: number;
+  /** What you log most often over the last 30 days, as the latest entry of each food. */
+  frequentFoods: DiaryEntry[];
+  /** Copies every entry from one day onto another; returns how many were copied. */
+  copyDay: (fromDay: string, toDay: string) => number;
 };
 
 const FoodDiaryContext = createContext<FoodDiaryContextValue | undefined>(undefined);
@@ -182,6 +188,28 @@ export function FoodDiaryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const frequentFoods = useMemo(
+    () => pickFrequentFoods(entries, shiftDayKey(localDayKey(), -FREQUENT_WINDOW_DAYS)),
+    [entries]
+  );
+
+  const copyDay = useCallback(
+    (fromDay: string, toDay: string) => {
+      const source = entries.filter((e) => e.date === fromDay);
+      if (source.length === 0) return 0;
+      const now = Date.now();
+      const copies = source.map((e, i) => ({
+        ...e,
+        date: toDay,
+        id: `${now}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        createdAt: now + i,
+      }));
+      persistEntries((prev) => prune([...prev, ...copies]));
+      return copies.length;
+    },
+    [entries, persistEntries]
+  );
+
   const loggingStreak = useMemo(() => {
     const days = new Set(entries.map((e) => e.date));
     let cursor = localDayKey();
@@ -209,6 +237,8 @@ export function FoodDiaryProvider({ children }: { children: React.ReactNode }) {
       setTargets,
       resetTargetsToAuto,
       loggingStreak,
+      frequentFoods,
+      copyDay,
     }),
     [
       isLoading,
@@ -224,6 +254,8 @@ export function FoodDiaryProvider({ children }: { children: React.ReactNode }) {
       setTargets,
       resetTargetsToAuto,
       loggingStreak,
+      frequentFoods,
+      copyDay,
     ]
   );
 

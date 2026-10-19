@@ -49,6 +49,8 @@ import { CuisinePassportScreen } from "../screens/CuisinePassportScreen";
 import { MonthlyRecapScreen } from "../screens/MonthlyRecapScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
 import { AboutScreen } from "../screens/AboutScreen";
+import { KitchenGuidesScreen } from "../screens/KitchenGuidesScreen";
+import { FastingScreen } from "../screens/FastingScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -209,6 +211,8 @@ export function RootNavigator() {
         <Stack.Screen name="MonthlyRecap" component={MonthlyRecapScreen} options={{ title: t("monthlyRecap.title") }} />
         <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t("settings.title") }} />
         <Stack.Screen name="About" component={AboutScreen} options={{ title: t("about.title") }} />
+        <Stack.Screen name="KitchenGuides" component={KitchenGuidesScreen} options={{ title: t("guides.title") }} />
+        <Stack.Screen name="Fasting" component={FastingScreen} options={{ title: t("fasting.title") }} />
         <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>

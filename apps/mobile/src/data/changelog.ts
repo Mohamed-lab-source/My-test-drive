@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-guides-fasting",
+    date: "2026-10-19",
+    title: { en: "Kitchen guides & fasting tracker", ar: "أدلة المطبخ ومتابعة الصيام" },
+    body: {
+      en: "Cooking basics, a food storage guide and spice blends in Kitchen Guides; cups-to-grams in the Unit Converter; a fasting tracker for intermittent and Ramadan fasts; and in the food diary, one-tap re-logging, copy the day before, and a shareable weekly report.",
+      ar: "أساسيات الطبخ ودليل حفظ الطعام وخلطات التوابل في أدلة المطبخ؛ تحويل الأكواب إلى جرامات في محوّل الوحدات؛ متابعة الصيام المتقطع وصيام رمضان؛ وفي يوميات الطعام إعادة التسجيل بضغطة ونسخ اليوم السابق وتقرير أسبوعي قابل للمشاركة.",
+    },
+  },
+  {
     id: "2026-10-reports",
     date: "2026-10-19",
     title: { en: "Report a recipe problem & cuisine averages", ar: "الإبلاغ عن مشكلة ومتوسطات المطابخ" },

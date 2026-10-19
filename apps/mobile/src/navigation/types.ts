@@ -84,6 +84,8 @@ export type RootStackParamList = {
   MonthlyRecap: undefined;
   Settings: undefined;
   About: undefined;
+  KitchenGuides: undefined;
+  Fasting: undefined;
   WhatsNew: undefined;
 };
 

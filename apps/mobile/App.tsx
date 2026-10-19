@@ -27,6 +27,7 @@ import { HiddenRecipesProvider } from "./src/context/HiddenRecipesContext";
 import { KitchenTimersProvider } from "./src/context/KitchenTimersContext";
 import { CookingJournalProvider } from "./src/context/CookingJournalContext";
 import { GoalsProvider } from "./src/context/GoalsContext";
+import { FastingProvider } from "./src/context/FastingContext";
 import { AppSettingsProvider } from "./src/context/AppSettingsContext";
 import { OfflineBanner } from "./src/components/OfflineBanner";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
@@ -76,7 +77,9 @@ export default function App() {
                                                           <CookingJournalProvider>
                                                             <GoalsProvider>
                                                               <BadgesProvider>
-                                                                <AppShell />
+                                                                <FastingProvider>
+                                                                  <AppShell />
+                                                                </FastingProvider>
                                                               </BadgesProvider>
                                                             </GoalsProvider>
                                                           </CookingJournalProvider>

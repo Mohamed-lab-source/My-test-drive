@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { EmptyState } from "../components/EmptyState";
 import { FadeSlideIn } from "../components/FadeSlideIn";
+import { Chip } from "../components/Chip";
 import { useFoodDiary, localDayKey, shiftDayKey } from "../context/FoodDiaryContext";
 import { useToast } from "../context/ToastContext";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
@@ -31,7 +32,7 @@ export function FoodDiaryScreen({ navigation }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const textAlign = isRTL ? "right" : "left";
   const { showToast } = useToast();
-  const { targets, entriesFor, totalsFor, waterFor, setWater, addEntry, removeEntry, restoreEntry, setTargets, resetTargetsToAuto, loggingStreak } =
+  const { targets, entriesFor, totalsFor, waterFor, setWater, addEntry, removeEntry, restoreEntry, setTargets, resetTargetsToAuto, loggingStreak, frequentFoods, copyDay } =
     useFoodDiary();
 
   const today = localDayKey();
@@ -95,6 +96,51 @@ export function FoodDiaryScreen({ navigation }: Props) {
     setQuickCalories("");
     setQuickProtein("");
     showToast(t("diary.logged"));
+  };
+
+  const previousDay = shiftDayKey(day, -1);
+  const previousDayCount = entriesFor(previousDay).length;
+
+  const copyPreviousDay = () => {
+    const count = copyDay(previousDay, day);
+    if (count > 0) showToast(t("diary.copied", { count }));
+  };
+
+  const relog = (entry: (typeof frequentFoods)[number]) => {
+    addEntry({
+      date: day,
+      title: entry.title,
+      slug: entry.slug,
+      cuisineSlug: entry.cuisineSlug,
+      servings: entry.servings,
+      calories: entry.calories,
+      protein: entry.protein,
+      fat: entry.fat,
+      carbs: entry.carbs,
+    });
+    showToast(t("diary.loggedRecipe", { calories: entry.calories }));
+  };
+
+  const shareWeek = () => {
+    const lines = weekTotals.map(
+      (d) => `${dayLabel(d.day)}: ${d.count > 0 ? t("diary.shareDayLine", { calories: d.calories, protein: d.protein }) : "—"}`
+    );
+    Share.share({
+      message: [
+        t("diary.shareTitle"),
+        "",
+        ...lines,
+        "",
+        t("diary.shareSummary", {
+          avg: weekAvgCalories,
+          protein: weekAvgProtein,
+          onTarget: daysOnTarget,
+          logged: loggedDays.length,
+          target: targets.calories,
+        }),
+        t("share.branding"),
+      ].join("\n"),
+    }).catch(() => {});
   };
 
   const deleteEntry = (id: string) => {
@@ -223,7 +269,14 @@ export function FoodDiaryScreen({ navigation }: Props) {
 
         <Text style={[styles.sectionTitle, { textAlign }]}>{t("diary.eaten")}</Text>
         {dayEntries.length === 0 ? (
-          <EmptyState icon="🍽️" message={t("diary.empty")} />
+          <>
+            <EmptyState icon="🍽️" message={t("diary.empty")} />
+            {previousDayCount > 0 ? (
+              <AnimatedPressable style={styles.fullWidth} pressScale={0.97} onPress={copyPreviousDay}>
+                <Text style={[styles.link, { textAlign }]}>{t("diary.copyPrevious", { count: previousDayCount })}</Text>
+              </AnimatedPressable>
+            ) : null}
+          </>
         ) : (
           dayEntries.map((entry, i) => (
             <FadeSlideIn key={entry.id} index={i} style={styles.fullWidth}>
@@ -260,6 +313,17 @@ export function FoodDiaryScreen({ navigation }: Props) {
           ))
         )}
         <Text style={[styles.muted, styles.fullWidth, { textAlign }]}>{t("diary.logHint")}</Text>
+
+        {frequentFoods.length > 0 ? (
+          <>
+            <Text style={[styles.sectionTitle, { textAlign }]}>{t("diary.frequentTitle")}</Text>
+            <View style={[styles.chipWrap, styles.fullWidth]}>
+              {frequentFoods.map((f) => (
+                <Chip key={f.id} label={t("diary.frequentChip", { title: f.title, calories: f.calories })} onPress={() => relog(f)} />
+              ))}
+            </View>
+          </>
+        ) : null}
 
         <Text style={[styles.sectionTitle, { textAlign }]}>{t("diary.quickAdd")}</Text>
         <TextInput
@@ -342,6 +406,11 @@ export function FoodDiaryScreen({ navigation }: Props) {
               <Text style={styles.muted}>{t("diary.daysOnTarget")}</Text>
             </View>
           </View>
+          {loggedDays.length > 0 ? (
+            <AnimatedPressable pressScale={0.97} onPress={shareWeek}>
+              <Text style={[styles.link, styles.topGap, { textAlign }]}>{t("diary.shareWeek")}</Text>
+            </AnimatedPressable>
+          ) : null}
         </View>
 
         <View style={[styles.rowBetween, styles.fullWidth, styles.topGap]}>
@@ -407,6 +476,7 @@ const createStyles = (colors: ThemeColors) =>
     safe: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing(3), paddingBottom: spacing(6), alignItems: "center" },
     fullWidth: { width: "100%" },
+    chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing(1) },
     flex1: { flex: 1 },
     dayNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" },
     navButton: {
