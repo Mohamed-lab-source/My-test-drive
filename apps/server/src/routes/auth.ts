@@ -1,12 +1,12 @@
-import { Router } from "express";
 import { z } from "zod";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../db";
 import { hashPassword, signToken, verifyPassword } from "../utils/auth";
 import { requireAuth } from "../middleware/auth";
 import { env } from "../env";
+import { createRouter } from "../utils/asyncRouter";
 
-export const authRouter = Router();
+export const authRouter = createRouter();
 
 const googleClient = env.googleClientId ? new OAuth2Client(env.googleClientId) : null;
 

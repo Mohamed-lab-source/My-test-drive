@@ -1,8 +1,8 @@
-import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
+import { createRouter } from "../utils/asyncRouter";
 
-export const deliveryRouter = Router();
+export const deliveryRouter = createRouter();
 
 deliveryRouter.get("/delivery-partners", async (_req, res) => {
   const partners = await prisma.deliveryPartner.findMany({ orderBy: { name: "asc" } });

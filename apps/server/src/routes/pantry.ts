@@ -1,9 +1,9 @@
-import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { parseLang, recipeSummarySelect, localizeSummary } from "./recipes";
+import { createRouter } from "../utils/asyncRouter";
 
-export const pantryRouter = Router();
+export const pantryRouter = createRouter();
 
 pantryRouter.get("/ingredients", async (req, res) => {
   const lang = parseLang(req.query.lang);

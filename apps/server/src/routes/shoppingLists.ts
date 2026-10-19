@@ -1,10 +1,10 @@
-import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { optionalAuth, requireAuth } from "../middleware/auth";
 import { computeShoppingList } from "../utils/shoppingListMath";
+import { createRouter } from "../utils/asyncRouter";
 
-export const shoppingListsRouter = Router();
+export const shoppingListsRouter = createRouter();
 
 const generateSchema = z.object({
   servings: z.number().int().min(1).max(50),

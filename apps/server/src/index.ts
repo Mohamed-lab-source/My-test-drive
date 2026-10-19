@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { env } from "./env";
+import { prisma } from "./db";
 import { authRouter } from "./routes/auth";
 import { recipesRouter } from "./routes/recipes";
 import { shoppingListsRouter } from "./routes/shoppingLists";
@@ -32,6 +33,19 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// Deeper check than /api/health (which stays dependency-free for platform
+// healthchecks): confirms the database answers, to tell "server down" apart
+// from "database down" when the app reports it can't load anything.
+app.get("/api/status", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", database: "ok" });
+  } catch (error) {
+    console.error("Database check failed:", error);
+    res.status(503).json({ status: "degraded", database: "unreachable" });
+  }
+});
+
 // Some PaaS platforms (Railway included) default their deploy healthcheck
 // to "/" rather than a configured path -- keep this cheap and dependency-free
 // so it can't itself become a source of failed healthchecks.
@@ -56,6 +70,12 @@ app.use((_req, res) => {
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
+});
+
+// Last-resort safety net: log instead of letting Node exit on a stray
+// rejection, so one bad request can never take the API down for everyone.
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
 });
 
 app.listen(env.port, () => {

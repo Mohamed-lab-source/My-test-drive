@@ -22,4 +22,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package.json ./package.json
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Migrate, then start serving right away while the (idempotent, ~6s) seed
+# brings the recipe catalog up to date in the background -- so new recipes
+# ship with each deploy without delaying healthchecks, and a seed problem
+# never stops the API from starting.
+CMD ["sh", "-c", "npx prisma migrate deploy && { (npx tsx prisma/seed.ts || echo 'Seed failed; serving existing data') & exec node dist/index.js; }"]

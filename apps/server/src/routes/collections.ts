@@ -1,10 +1,10 @@
-import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { localizeSummary, parseLang, recipeSummarySelect } from "./recipes";
+import { createRouter } from "../utils/asyncRouter";
 
-export const collectionsRouter = Router();
+export const collectionsRouter = createRouter();
 
 function serializeCollection(c: { id: string; name: string; createdAt: Date; recipes: { recipe: any }[] }, lang: "en" | "ar") {
   return {

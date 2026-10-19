@@ -1,10 +1,10 @@
-import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { localizeSummary, parseLang, recipeSummarySelect } from "./recipes";
+import { createRouter } from "../utils/asyncRouter";
 
-export const ratingsRouter = Router();
+export const ratingsRouter = createRouter();
 
 ratingsRouter.get("/ratings/mine", requireAuth, async (req, res) => {
   const lang = parseLang(req.query.lang);

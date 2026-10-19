@@ -1,9 +1,9 @@
-import { Router } from "express";
 import { prisma } from "../db";
 import { requireAuth } from "../middleware/auth";
 import { localizeSummary, parseLang, recipeSummarySelect } from "./recipes";
+import { createRouter } from "../utils/asyncRouter";
 
-export const favoritesRouter = Router();
+export const favoritesRouter = createRouter();
 
 favoritesRouter.get("/favorites", requireAuth, async (req, res) => {
   const lang = parseLang(req.query.lang);

@@ -54,6 +54,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
 import type { Cuisine, RecipeSummary } from "../api/types";
+import { isOnline } from "../utils/connectivity";
 
 const HOME_CACHE_KEY = "cookmate.homeCache";
 
@@ -366,7 +367,11 @@ export function HomeScreen({ navigation }: Props) {
 
             {showingOfflineCache ? (
               <View style={styles.offlineBanner}>
-                <Text style={styles.offlineBannerText}>{t("home.offlineBanner")}</Text>
+                <Text style={styles.offlineBannerText}>
+                  {/* The API client tracks whether any response came back: none means no
+                      connection; a response with an error means the server itself is struggling. */}
+                  {isOnline() ? t("home.serverIssueBanner") : t("home.offlineBanner")}
+                </Text>
               </View>
             ) : null}
 

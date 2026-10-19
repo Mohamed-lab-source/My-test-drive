@@ -1167,6 +1167,7 @@ const en = {
   "fasting.disclaimer": "This tracker is for your own planning, not medical advice. If you're pregnant, diabetic, on medication or unsure, talk to a doctor before fasting.",
   "featureTour.kitchenGuides.title": "Kitchen know-how",
   "featureTour.kitchenGuides.body": "Kitchen Guides on Home covers the basics -- Egyptian rice, pasta, eggs, lentils, ful and chickpeas, couscous and bulgur -- plus how long food keeps in the fridge and freezer, and classic spice blends like baharat, dukkah and za'atar. The Unit Converter now turns cups into grams for flour, sugar, rice and more. The Fasting tracker times intermittent or Ramadan fasts, alerts you at your goal, and keeps your history.",
+  "home.serverIssueBanner": "⚠️ Cookmate's server isn't responding -- showing saved content. Pull down to retry.",
 };
 
 const ar: Record<keyof typeof en, string> = {
@@ -2333,6 +2334,7 @@ const ar: Record<keyof typeof en, string> = {
   "fasting.disclaimer": "هذه الأداة لتنظيمك الشخصي وليست نصيحة طبية. إذا كنتِ حاملاً أو مصابة بالسكري أو تتناولين أدوية أو غير متأكدة، استشيري طبيباً قبل الصيام.",
   "featureTour.kitchenGuides.title": "خبرة المطبخ",
   "featureTour.kitchenGuides.body": "تغطي أدلة المطبخ في الرئيسية الأساسيات -- الأرز المصري، المكرونة، البيض، العدس، الفول والحمص، الكسكسي والبرغل -- بالإضافة إلى مدة حفظ الطعام في الثلاجة والفريزر، وخلطات التوابل الكلاسيكية مثل البهارات المصرية والدقة والزعتر. محوّل الوحدات يحوّل الآن الأكواب إلى جرامات للدقيق والسكر والأرز وغيرها. ومتابعة الصيام تقيس صيامك المتقطع أو صيام رمضان، وتنبّهك عند الهدف، وتحفظ سجلك.",
+  "home.serverIssueBanner": "⚠️ خادم Cookmate لا يستجيب -- نعرض المحتوى المحفوظ. اسحبي للأسفل لإعادة المحاولة.",
 };
 
 export const translations: Record<Locale, Record<string, string>> = { en, ar };

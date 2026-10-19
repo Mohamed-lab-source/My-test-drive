@@ -1,4 +1,3 @@
-import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { optionalAuth } from "../middleware/auth";
@@ -6,8 +5,9 @@ import type { DietGoal, DishTag, Occasion } from "@prisma/client";
 import rateLimit from "express-rate-limit";
 import { detectEquipment } from "../utils/equipment";
 import { applyNumericFilters, computeCuisineStats, SORT_KEYS, sortSummaries } from "../utils/recipeFilters";
+import { createRouter } from "../utils/asyncRouter";
 
-export const recipesRouter = Router();
+export const recipesRouter = createRouter();
 
 export type Lang = "en" | "ar";
 
