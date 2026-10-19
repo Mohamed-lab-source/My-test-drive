@@ -24,6 +24,8 @@ import { FoodDiaryProvider } from "./src/context/FoodDiaryContext";
 import { ShoppingExtrasProvider } from "./src/context/ShoppingExtrasContext";
 import { HouseholdProvider } from "./src/context/HouseholdContext";
 import { HiddenRecipesProvider } from "./src/context/HiddenRecipesContext";
+import { KitchenTimersProvider } from "./src/context/KitchenTimersContext";
+import { CookingJournalProvider } from "./src/context/CookingJournalContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -66,7 +68,11 @@ export default function App() {
                                                   <ShoppingExtrasProvider>
                                                     <HouseholdProvider>
                                                       <HiddenRecipesProvider>
-                                                        <AppShell />
+                                                        <KitchenTimersProvider>
+                                                          <CookingJournalProvider>
+                                                            <AppShell />
+                                                          </CookingJournalProvider>
+                                                        </KitchenTimersProvider>
                                                       </HiddenRecipesProvider>
                                                     </HouseholdProvider>
                                                   </ShoppingExtrasProvider>

@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-cook-mode",
+    date: "2026-10-19",
+    title: { en: "Cook Mode upgrades & cooking journal", ar: "تحسينات وضع الطبخ ودفتر الطبخ" },
+    body: {
+      en: "Multiple timers that keep running (with notifications), a standalone kitchen timer, bigger text, swipe between steps, a done-by estimate, oven preheat reminders, servings scaling, step notes, and a cooking journal you can export.",
+      ar: "مؤقتات متعددة تستمر بالعمل (مع إشعارات)، ومؤقت مطبخ مستقل، ونص أكبر، والتنقل بالسحب بين الخطوات، وتقدير موعد الانتهاء، وتذكير بتسخين الفرن، وتغيير المقادير، وملاحظات للخطوات، ودفتر طبخ يمكن تصديره.",
+    },
+  },
+  {
     id: "2026-10-discover",
     date: "2026-10-19",
     title: { en: "Discover", ar: "اكتشفي" },

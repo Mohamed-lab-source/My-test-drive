@@ -41,6 +41,8 @@ import { CompareRecipesScreen } from "../screens/CompareRecipesScreen";
 import { DiscoverScreen } from "../screens/DiscoverScreen";
 import { CuisineExplorerScreen } from "../screens/CuisineExplorerScreen";
 import { HiddenRecipesScreen } from "../screens/HiddenRecipesScreen";
+import { KitchenTimerScreen } from "../screens/KitchenTimerScreen";
+import { CookingJournalScreen } from "../screens/CookingJournalScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -193,6 +195,8 @@ export function RootNavigator() {
         <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: t("discover.title") }} />
         <Stack.Screen name="CuisineExplorer" component={CuisineExplorerScreen} options={{ title: t("cuisineExplorer.title") }} />
         <Stack.Screen name="HiddenRecipes" component={HiddenRecipesScreen} options={{ title: t("hidden.title") }} />
+        <Stack.Screen name="KitchenTimer" component={KitchenTimerScreen} options={{ title: t("timers.title") }} />
+        <Stack.Screen name="CookingJournal" component={CookingJournalScreen} options={{ title: t("journal.title") }} />
         <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>

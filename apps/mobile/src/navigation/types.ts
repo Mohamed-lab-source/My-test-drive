@@ -76,6 +76,8 @@ export type RootStackParamList = {
   Discover: undefined;
   CuisineExplorer: undefined;
   HiddenRecipes: undefined;
+  KitchenTimer: undefined;
+  CookingJournal: undefined;
   WhatsNew: undefined;
 };
 

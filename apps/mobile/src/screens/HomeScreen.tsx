@@ -719,6 +719,16 @@ export function HomeScreen({ navigation }: Props) {
                   onPress: () => navigation.navigate("LeanMuscleMode"),
                 },
                 {
+                  key: "kitchenTimer",
+                  label: t("home.kitchenTimer"),
+                  onPress: () => navigation.navigate("KitchenTimer"),
+                },
+                {
+                  key: "cookingJournal",
+                  label: t("home.cookingJournal"),
+                  onPress: () => navigation.navigate("CookingJournal"),
+                },
+                {
                   key: "discover",
                   label: t("home.discover"),
                   onPress: () => navigation.navigate("Discover"),

@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Modal, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useKeepAwake } from "expo-keep-awake";
 import * as Speech from "expo-speech";
@@ -7,7 +8,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
-import { StepTimer } from "../components/StepTimer";
+import { TimerTray } from "../components/TimerTray";
 import { StreakCelebration } from "../components/StreakCelebration";
 import { classifyStepType, STEP_TYPE_EMOJI } from "../utils/stepType";
 import { useLocale } from "../i18n/LocaleContext";
@@ -18,6 +19,9 @@ import { useToast } from "../context/ToastContext";
 import { useFoodDiary } from "../context/FoodDiaryContext";
 import { useLeftovers } from "../context/LeftoversContext";
 import { useTextSize } from "../context/TextSizeContext";
+import { useKitchenTimers } from "../context/KitchenTimersContext";
+import { useCookingJournal } from "../context/CookingJournalContext";
+import { formatClock } from "../utils/recipeBadges";
 import { formatQuantity } from "../utils/units";
 import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { clearActiveCookSession, saveActiveCookSession } from "../utils/activeCookSession";
@@ -27,15 +31,30 @@ import type { TranslationKey } from "../i18n/translations";
 type Props = NativeStackScreenProps<RootStackParamList, "CookMode">;
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 200, 365];
+const TEXT_BOOST_KEY = "cookmate.cookMode.textBoost";
+const TEXT_BOOSTS = [1, 1.25, 1.5];
+const STEP_NOTES_PREFIX = "cookmate.stepNotes.";
+/** Rough time for a step with no timer, used for the "done by" estimate. */
+const MINUTES_PER_UNTIMED_STEP = 3;
+const SWIPE_THRESHOLD = 60;
+const OVEN_PATTERN = /\boven\b|\bbake|\broast|\bbroil|فرن|اخبز/i;
 
 export function CookModeScreen({ route, navigation }: Props) {
   useKeepAwake();
   const { slug, title, cuisineSlug, steps, ingredients, servings, myRating, initialStepIndex, nutrition } = route.params;
-  const { t, isRTL } = useLocale();
+  const { t, locale, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
   const myAllergies = useMyAllergies();
   const { recordCooked } = useCookStreak();
+  const { timers, start: startTimer, lastFinished } = useKitchenTimers();
+  const { addEntry: addJournalEntry } = useCookingJournal();
+  const startedAtRef = useRef(Date.now());
+  const [textBoost, setTextBoost] = useState(1);
+  const [cookServings, setCookServings] = useState(servings);
+  const [stepNotes, setStepNotes] = useState<Record<number, string>>({});
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
+  const [preheatDismissed, setPreheatDismissed] = useState(false);
   const { addLeftover } = useLeftovers();
   const { addEntry: addDiaryEntry } = useFoodDiary();
   const { showToast } = useToast();
@@ -59,6 +78,47 @@ export function CookModeScreen({ route, navigation }: Props) {
   };
 
   useEffect(() => {
+    Promise.all([AsyncStorage.getItem(TEXT_BOOST_KEY), AsyncStorage.getItem(`${STEP_NOTES_PREFIX}${slug}`)])
+      .then(([boost, notes]) => {
+        if (boost && TEXT_BOOSTS.includes(Number(boost))) setTextBoost(Number(boost));
+        if (notes) setStepNotes(JSON.parse(notes));
+      })
+      .catch(() => {});
+  }, [slug]);
+
+  const cycleTextBoost = () => {
+    const next = TEXT_BOOSTS[(TEXT_BOOSTS.indexOf(textBoost) + 1) % TEXT_BOOSTS.length];
+    setTextBoost(next);
+    AsyncStorage.setItem(TEXT_BOOST_KEY, String(next)).catch(() => {});
+  };
+
+  // Speak and announce timers that finish while cooking (ignoring ones that ended before we opened).
+  useEffect(() => {
+    if (!lastFinished || lastFinished.at < startedAtRef.current) return;
+    showToast(t("timers.doneToast", { label: lastFinished.label }));
+    if (voiceEnabled) {
+      Speech.stop();
+      Speech.speak(`${t("cookMode.timeUp")} ${lastFinished.label}`, { language: isRTL ? "ar" : "en-US" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastFinished?.at]);
+
+  useEffect(() => {
+    setNoteDraft(null);
+  }, [index]);
+
+  const saveStepNote = (order: number, text: string) => {
+    setStepNotes((prev) => {
+      const next = { ...prev };
+      if (text.trim()) next[order] = text.trim();
+      else delete next[order];
+      AsyncStorage.setItem(`${STEP_NOTES_PREFIX}${slug}`, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+    setNoteDraft(null);
+  };
+
+  useEffect(() => {
     saveActiveCookSession({ slug, title, cuisineSlug, stepIndex: index, totalSteps: steps.length, servings });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
@@ -67,6 +127,15 @@ export function CookModeScreen({ route, navigation }: Props) {
   const isLast = index === steps.length - 1;
   const progress = (index + 1) / steps.length;
   const textAlign = isRTL ? "right" : "left";
+  const remainingMinutes = steps
+    .slice(index)
+    .reduce((sum, s) => sum + (s.timerMinutes ?? MINUTES_PER_UNTIMED_STEP), 0);
+  const doneBy = formatClock(new Date(Date.now() + remainingMinutes * 60000), locale);
+  const ovenStepIndex = useMemo(() => steps.findIndex((s) => OVEN_PATTERN.test(s.instruction)), [steps]);
+  const showPreheat = !preheatDismissed && ovenStepIndex > 0 && index < ovenStepIndex;
+  const stepTimerTag = `${slug}:${step.order}`;
+  const stepTimerRunning = timers.some((tm) => tm.tag === stepTimerTag && !tm.done);
+  const servingsScale = cookServings / servings;
 
   useEffect(() => {
     if (!voiceEnabled) return;
@@ -163,6 +232,14 @@ export function CookModeScreen({ route, navigation }: Props) {
   const goNext = () => {
     if (isLast) {
       clearActiveCookSession();
+      addJournalEntry({
+        slug,
+        title,
+        cuisineSlug,
+        finishedAt: new Date().toISOString(),
+        durationMin: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 60000)),
+        servings: cookServings,
+      });
       const streak = recordCooked({ slug, title, cuisineSlug });
       if (STREAK_MILESTONES.includes(streak)) {
         setCelebrationStreak(streak);
@@ -175,6 +252,28 @@ export function CookModeScreen({ route, navigation }: Props) {
   };
 
   const goBack = () => setIndex((i) => Math.max(0, i - 1));
+
+  // Swipe between steps; the last step still needs an explicit tap on Finish.
+  const swipeRef = useRef({ next: () => {}, prev: () => {} });
+  swipeRef.current = {
+    next: () => {
+      if (!isLast) setIndex((i) => Math.min(steps.length - 1, i + 1));
+    },
+    prev: goBack,
+  };
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 20 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+        onPanResponderRelease: (_, g) => {
+          if (Math.abs(g.dx) < SWIPE_THRESHOLD) return;
+          const forward = isRTL ? g.dx > 0 : g.dx < 0;
+          if (forward) swipeRef.current.next();
+          else swipeRef.current.prev();
+        },
+      }),
+    [isRTL]
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -228,24 +327,92 @@ export function CookModeScreen({ route, navigation }: Props) {
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.toolbar}>
+        <Text style={[styles.eta, { textAlign }]} numberOfLines={1}>
+          {t("cookMode.eta", { minutes: remainingMinutes, time: doneBy })}
+        </Text>
+        <AnimatedPressable
+          style={[styles.toolButton, textBoost > 1 && styles.iconButtonActive]}
+          pressScale={0.9}
+          onPress={cycleTextBoost}
+          accessibilityLabel={t("cookMode.textSize")}
+        >
+          <Text style={styles.toolButtonText}>Aa{textBoost > 1 ? ` ${Math.round(textBoost * 100)}%` : ""}</Text>
+        </AnimatedPressable>
+        <AnimatedPressable
+          style={styles.toolButton}
+          pressScale={0.9}
+          onPress={() => navigation.navigate("KitchenTimer")}
+          accessibilityLabel={t("timers.title")}
+        >
+          <Text style={styles.toolButtonText}>⏲️ +</Text>
+        </AnimatedPressable>
+      </View>
+      <TimerTray compact />
+      {showPreheat ? (
+        <View style={styles.preheatBanner}>
+          <Text style={[styles.preheatText, { textAlign }]}>
+            {t("cookMode.preheat", { step: ovenStepIndex + 1 })}
+          </Text>
+          <AnimatedPressable pressScale={0.9} onPress={() => setPreheatDismissed(true)} accessibilityLabel={t("cookMode.close")}>
+            <Text style={styles.preheatClose}>✕</Text>
+          </AnimatedPressable>
+        </View>
+      ) : null}
+
+      <ScrollView contentContainerStyle={styles.content} {...panResponder.panHandlers}>
         <FadeSlideIn key={step.order} style={styles.stepContent}>
           <Text style={styles.emoji}>{STEP_TYPE_EMOJI[classifyStepType(step.instruction)]}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{step.order}</Text>
           </View>
-          <Text style={[styles.instruction, { textAlign }]}>{step.instruction}</Text>
+          <Text
+            style={[
+              styles.instruction,
+              { textAlign, fontSize: 22 * textScale * textBoost, lineHeight: 32 * textScale * textBoost },
+            ]}
+          >
+            {step.instruction}
+          </Text>
           {step.timerMinutes ? (
-            <StepTimer
-              minutes={step.timerMinutes}
-              onFinish={() => {
-                if (voiceEnabled) {
-                  Speech.stop();
-                  Speech.speak(t("cookMode.timeUp"), { language: isRTL ? "ar" : "en-US" });
+            stepTimerRunning ? (
+              <Text style={styles.timerHint}>{t("timers.runningAbove")}</Text>
+            ) : (
+              <AnimatedPressable
+                style={styles.timerButton}
+                pressScale={0.94}
+                onPress={() =>
+                  startTimer(t("timers.stepLabel", { step: step.order, title }), step.timerMinutes as number, stepTimerTag)
                 }
-              }}
-            />
+              >
+                <Text style={styles.timerButtonText}>{t("timers.startStep", { minutes: step.timerMinutes })}</Text>
+              </AnimatedPressable>
+            )
           ) : null}
+          {noteDraft !== null ? (
+            <View style={styles.noteEditor}>
+              <TextInput
+                style={[styles.noteInput, { textAlign }]}
+                value={noteDraft}
+                onChangeText={setNoteDraft}
+                placeholder={t("cookMode.stepNotePlaceholder")}
+                placeholderTextColor={colors.textMuted}
+                multiline
+                autoFocus
+              />
+              <AnimatedPressable pressScale={0.95} onPress={() => saveStepNote(step.order, noteDraft)}>
+                <Text style={styles.noteAction}>{t("cookMode.saveStepNote")}</Text>
+              </AnimatedPressable>
+            </View>
+          ) : stepNotes[step.order] ? (
+            <AnimatedPressable pressScale={0.98} onPress={() => setNoteDraft(stepNotes[step.order])}>
+              <Text style={[styles.stepNote, { textAlign }]}>📝 {stepNotes[step.order]}</Text>
+            </AnimatedPressable>
+          ) : (
+            <AnimatedPressable pressScale={0.95} onPress={() => setNoteDraft("")}>
+              <Text style={styles.noteAction}>{t("cookMode.addStepNote")}</Text>
+            </AnimatedPressable>
+          )}
         </FadeSlideIn>
       </ScrollView>
 
@@ -267,9 +434,29 @@ export function CookModeScreen({ route, navigation }: Props) {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <Text style={[styles.modalTitle, { textAlign }]}>{title}</Text>
-            <Text style={[styles.modalSubtitle, { textAlign }]}>
-              {t("cookMode.ingredients")} · {servings}
-            </Text>
+            <View style={styles.modalServingsRow}>
+              <Text style={[styles.modalSubtitle, { textAlign }]}>
+                {t("cookMode.ingredientsForServings", { count: cookServings })}
+              </Text>
+              <View style={styles.modalStepper}>
+                <AnimatedPressable
+                  style={styles.modalStepperButton}
+                  pressScale={0.88}
+                  onPress={() => setCookServings((s) => Math.max(1, s - 1))}
+                  accessibilityLabel={t("recipeDetail.fewerPeople")}
+                >
+                  <Text style={styles.modalStepperText}>−</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={styles.modalStepperButton}
+                  pressScale={0.88}
+                  onPress={() => setCookServings((s) => Math.min(50, s + 1))}
+                  accessibilityLabel={t("recipeDetail.morePeople")}
+                >
+                  <Text style={styles.modalStepperText}>+</Text>
+                </AnimatedPressable>
+              </View>
+            </View>
             <ScrollView style={styles.modalList}>
               {ingredients.map((ing) => {
                 const ingredientConflicts = intersectAllergens(ing.allergens, myAllergies);
@@ -299,7 +486,7 @@ export function CookModeScreen({ route, navigation }: Props) {
                       </Text>
                     </View>
                     <Text style={[styles.modalRowQty, isGathered && styles.modalRowNameGathered]}>
-                      {formatQuantity(ing.quantity, ing.unit, unitSystem)}
+                      {formatQuantity(Math.round(ing.quantity * servingsScale * 100) / 100, ing.unit, unitSystem)}
                     </Text>
                   </View>
                   {ingredientConflicts.length > 0 ? (
@@ -402,6 +589,78 @@ const createStyles = (colors: ThemeColors, textScale: number) =>
       overflow: "hidden",
     },
     progressFill: { height: "100%", backgroundColor: colors.primary },
+    toolbar: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing(1),
+      paddingHorizontal: spacing(2),
+      paddingTop: spacing(1),
+    },
+    eta: { flex: 1, fontSize: 12, fontWeight: "700", color: colors.textMuted },
+    toolButton: {
+      height: 32,
+      paddingHorizontal: spacing(1.25),
+      borderRadius: radius.pill,
+      backgroundColor: colors.chipBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    toolButtonText: { fontSize: 13, fontWeight: "800", color: colors.text },
+    preheatBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.chipBackground,
+      borderColor: colors.primary,
+      borderWidth: 1,
+      borderRadius: radius.md,
+      marginHorizontal: spacing(2),
+      marginTop: spacing(1),
+      padding: spacing(1.25),
+    },
+    preheatText: { flex: 1, fontSize: 13, fontWeight: "700", color: colors.primaryDark },
+    preheatClose: { fontSize: 14, color: colors.textMuted, paddingHorizontal: spacing(1) },
+    timerButton: {
+      marginTop: spacing(2),
+      backgroundColor: colors.primary,
+      borderRadius: radius.pill,
+      paddingVertical: spacing(1.25),
+      paddingHorizontal: spacing(3),
+    },
+    timerButtonText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+    timerHint: { marginTop: spacing(2), fontSize: 13, fontWeight: "700", color: colors.success },
+    noteEditor: { width: "100%", marginTop: spacing(2) },
+    noteInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      padding: spacing(1.25),
+      minHeight: 60,
+      fontSize: 14,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      textAlignVertical: "top",
+    },
+    noteAction: { marginTop: spacing(1.5), fontSize: 13, fontWeight: "800", color: colors.primary },
+    stepNote: {
+      marginTop: spacing(2),
+      fontSize: 14,
+      color: colors.text,
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.sm,
+      padding: spacing(1.25),
+      width: "100%",
+    },
+    modalServingsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    modalStepper: { flexDirection: "row", gap: spacing(1) },
+    modalStepperButton: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.sm,
+      backgroundColor: colors.chipBackground,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalStepperText: { fontSize: 18, fontWeight: "800", color: colors.primaryDark },
     content: { flexGrow: 1, alignItems: "center", padding: spacing(3), paddingTop: spacing(4) },
     stepContent: { width: "100%", alignItems: "center" },
     emoji: { fontSize: 56, marginBottom: spacing(2) },
