@@ -27,6 +27,7 @@ import { PopOnChange } from "../components/PopOnChange";
 import { SkeletonBlock } from "../components/Skeleton";
 import { ShareableRecipeCard } from "../components/ShareableRecipeCard";
 import { AddToCollectionModal } from "../components/AddToCollectionModal";
+import { ReportRecipeModal } from "../components/ReportRecipeModal";
 import { useCollections } from "../context/CollectionsContext";
 import { StarRating } from "../components/StarRating";
 import { useLocale } from "../i18n/LocaleContext";
@@ -102,6 +103,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const [servings, setServings] = useState(1);
   const [sharing, setSharing] = useState(false);
   const [collectionModalVisible, setCollectionModalVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
   const { collectionsContaining } = useCollections();
   const [myRating, setMyRating] = useState<number | null>(null);
   const [rating, setRating] = useState(false);
@@ -897,6 +899,15 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             onBlur={() => setNote(slug, noteText)}
             multiline
           />
+
+          <AnimatedPressable
+            style={styles.reportLink}
+            pressScale={0.97}
+            onPress={() => setReportVisible(true)}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.compareLink, styles.mutedLink, { textAlign }]}>{t("report.link")}</Text>
+          </AnimatedPressable>
         </View>
       </ScrollView>
       <View style={styles.offScreen} pointerEvents="none">
@@ -994,6 +1005,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           </View>
         ) : null}
       </View>
+
+      <ReportRecipeModal visible={reportVisible} slug={recipe.slug} onClose={() => setReportVisible(false)} />
 
       <AddToCollectionModal
         visible={collectionModalVisible}
@@ -1222,6 +1235,7 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
   infoLine: { marginTop: spacing(0.75) },
   compareLink: { fontSize: 13, fontWeight: "700", color: colors.primary, marginTop: spacing(0.75) },
   mutedLink: { color: colors.textMuted },
+  reportLink: { marginTop: spacing(2) },
   checklistBar: {
     flexDirection: "row",
     justifyContent: "space-between",

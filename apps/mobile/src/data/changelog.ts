@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-reports",
+    date: "2026-10-19",
+    title: { en: "Report a recipe problem & cuisine averages", ar: "الإبلاغ عن مشكلة ومتوسطات المطابخ" },
+    body: {
+      en: "Flag wrong amounts, unclear steps or translation slips from any recipe page. The cuisine explorer now shows each cuisine's average cost, calories and cooking time.",
+      ar: "أبلغي عن المقادير الخاطئة أو الخطوات غير الواضحة أو أخطاء الترجمة من أي صفحة وصفة. ويعرض مستكشف المطابخ الآن متوسط التكلفة والسعرات ووقت الطهي لكل مطبخ.",
+    },
+  },
+  {
     id: "2026-10-settings",
     date: "2026-10-19",
     title: { en: "Settings, backup & quiet hours", ar: "الإعدادات والنسخ الاحتياطي وساعات الهدوء" },

@@ -2,6 +2,7 @@ import { api } from "./client";
 import type {
   Collection,
   Cuisine,
+  CuisineStats,
   DeliveryPartner,
   DietGoal,
   MyDataExport,
@@ -14,6 +15,7 @@ import type {
   RatingResult,
   RecipeDetail,
   RecipeSummary,
+  ReportReason,
   ShoppingListResult,
   User,
 } from "./types";
@@ -80,8 +82,23 @@ export async function fetchRecipes(params: {
   occasion?: string;
   ingredients?: string;
   q?: string;
+  maxCalories?: number;
+  minProtein?: number;
+  maxCost?: number;
+  maxMinutes?: number;
+  sort?: "title" | "cost" | "calories" | "protein" | "time" | "rating";
 }) {
   const { data } = await api.get<RecipeSummary[]>("/recipes", { params });
+  return data;
+}
+
+export async function fetchCuisineStats() {
+  const { data } = await api.get<CuisineStats[]>("/cuisines/stats");
+  return data;
+}
+
+export async function reportRecipe(slug: string, reason: ReportReason, details?: string) {
+  const { data } = await api.post<{ id: string }>(`/recipes/${slug}/report`, { reason, details: details || undefined });
   return data;
 }
 
@@ -100,6 +117,9 @@ export async function fetchRandomRecipe(params?: {
   tag?: string;
   dishType?: string;
   seed?: string;
+  maxCost?: number;
+  maxMinutes?: number;
+  maxCalories?: number;
 }) {
   const { data } = await api.get<{ slug: string }>("/recipes/random", { params });
   return data;

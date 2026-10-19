@@ -51,18 +51,19 @@ enum Allergen {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
+  id            String              @id @default(cuid())
+  email         String              @unique
   passwordHash  String?
-  googleId      String?        @unique
+  googleId      String?             @unique
   name          String
-  createdAt     DateTime       @default(now())
+  createdAt     DateTime            @default(now())
   preference    Preference?
   shoppingLists ShoppingList[]
   favorites     Favorite[]
   ratings       Rating[]
   collections   Collection[]
   helpfulVotes  RatingHelpfulVote[]
+  recipeReports RecipeReport[]
 }
 
 model Preference {
@@ -106,35 +107,36 @@ model Recipe {
   favoritedBy   Favorite[]
   ratings       Rating[]
   collections   CollectionRecipe[]
+  reports       RecipeReport[]
   createdAt     DateTime           @default(now())
 }
 
 model Ingredient {
-  id               String             @id @default(cuid())
-  name             String             @unique
-  nameAr           String?
-  unit             String
-  pricePerUnit     Float
-  category         String
+  id              String             @id @default(cuid())
+  name            String             @unique
+  nameAr          String?
+  unit            String
+  pricePerUnit    Float
+  category        String
   // Nutrition per single unit of `unit` (per gram, per millilitre, or per
   // piece), matching pricePerUnit's convention so recipe totals are computed
   // the same way as cost: quantity * caloriesPerUnit, etc.
-  caloriesPerUnit  Float              @default(0)
-  proteinPerUnit   Float              @default(0)
-  fatPerUnit       Float              @default(0)
-  carbsPerUnit     Float              @default(0)
+  caloriesPerUnit Float              @default(0)
+  proteinPerUnit  Float              @default(0)
+  fatPerUnit      Float              @default(0)
+  carbsPerUnit    Float              @default(0)
   // Short "use instead" suggestion for a home cook missing this ingredient, e.g.
   // "1:1 plain yogurt". Null when there's no good common substitute (water, salt).
-  substituteEn     String?
-  substituteAr     String?
-  allergens        Allergen[]         @default([])
+  substituteEn    String?
+  substituteAr    String?
+  allergens       Allergen[]         @default([])
   // Diet-goal-driven swap, e.g. { "LOSE_WEIGHT": "Oatmeal Flour" }. The value
   // is another Ingredient's `name`, looked up at request time so its own
   // nutrition/price feed the recalculated totals. Keys are DietGoal values;
   // stored as loose JSON (not a relation) so recipes.ts can look several up
   // in one query without a self-join.
-  goalSubstitutes  Json?
-  recipeUses       RecipeIngredient[]
+  goalSubstitutes Json?
+  recipeUses      RecipeIngredient[]
 }
 
 model RecipeIngredient {
@@ -151,30 +153,30 @@ model RecipeIngredient {
 }
 
 model RecipeStep {
-  id           String  @id @default(cuid())
-  recipeId     String
-  recipe       Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  order        Int
-  instruction  String
+  id            String  @id @default(cuid())
+  recipeId      String
+  recipe        Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  order         Int
+  instruction   String
   instructionAr String?
-  imageUrl     String
-  timerMinutes Int?
+  imageUrl      String
+  timerMinutes  Int?
 
   @@index([recipeId])
 }
 
 model ShoppingList {
-  id                  String             @id @default(cuid())
-  userId              String?
-  user                User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipeId            String
-  recipe              Recipe             @relation(fields: [recipeId], references: [id])
-  servings            Int
-  budget              Float?
-  totalEstimatedCost  Float
-  withinBudget        Boolean
-  createdAt           DateTime           @default(now())
-  items               ShoppingListItem[]
+  id                 String             @id @default(cuid())
+  userId             String?
+  user               User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId           String
+  recipe             Recipe             @relation(fields: [recipeId], references: [id])
+  servings           Int
+  budget             Float?
+  totalEstimatedCost Float
+  withinBudget       Boolean
+  createdAt          DateTime           @default(now())
+  items              ShoppingListItem[]
 }
 
 model ShoppingListItem {
@@ -260,4 +262,26 @@ model DeliveryPartner {
   name       String
   websiteUrl String
   logoEmoji  String
+}
+
+enum ReportReason {
+  WRONG_INGREDIENTS
+  WRONG_STEPS
+  WRONG_NUTRITION
+  TRANSLATION
+  OTHER
+}
+
+/// A user flagging a problem with a recipe (anonymous reports allowed).
+model RecipeReport {
+  id        String       @id @default(cuid())
+  recipeId  String
+  recipe    Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reason    ReportReason
+  details   String?
+  createdAt DateTime     @default(now())
+
+  @@index([recipeId])
 }

@@ -3,7 +3,9 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { optionalAuth } from "../middleware/auth";
 import type { DietGoal, DishTag, Occasion } from "@prisma/client";
+import rateLimit from "express-rate-limit";
 import { detectEquipment } from "../utils/equipment";
+import { applyNumericFilters, computeCuisineStats, SORT_KEYS, sortSummaries } from "../utils/recipeFilters";
 
 export const recipesRouter = Router();
 
@@ -27,6 +29,13 @@ recipesRouter.get("/cuisines", async (req, res) => {
       recipeCount: c._count.recipes,
     }))
   );
+});
+
+/** Per-cuisine averages (cost, calories, time, rating) for the cuisine explorer. */
+recipesRouter.get("/cuisines/stats", async (req, res) => {
+  const lang = parseLang(req.query.lang);
+  const recipes = await prisma.recipe.findMany({ select: recipeSummarySelect() });
+  res.json(computeCuisineStats(recipes.map((r) => localizeSummary(r, lang))));
 });
 
 export function recipeSummarySelect() {
@@ -146,6 +155,12 @@ const listQuerySchema = z.object({
   ingredients: z.string().optional(),
   q: z.string().optional(),
   lang: z.string().optional(),
+  // Bounds on derived per-serving values (applied after nutrition/cost are computed).
+  maxCalories: z.coerce.number().positive().optional(),
+  minProtein: z.coerce.number().nonnegative().optional(),
+  maxCost: z.coerce.number().positive().optional(),
+  maxMinutes: z.coerce.number().int().positive().optional(),
+  sort: z.enum(SORT_KEYS).optional(),
 });
 
 recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
@@ -154,7 +169,8 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { cuisine, tag, dishType, occasion, ingredients, q } = parsed.data;
+  const { cuisine, tag, dishType, occasion, ingredients, q, maxCalories, minProtein, maxCost, maxMinutes, sort } =
+    parsed.data;
   const lang = parseLang(parsed.data.lang);
   const ingredientIds = ingredients ? ingredients.split(",").filter(Boolean) : [];
 
@@ -177,7 +193,11 @@ recipesRouter.get("/recipes", optionalAuth, async (req, res) => {
     select: recipeSummarySelect(),
     orderBy: { title: "asc" },
   });
-  res.json(recipes.map((r) => localizeSummary(r, lang)));
+  const filtered = applyNumericFilters(
+    recipes.map((r) => localizeSummary(r, lang)),
+    { maxCalories, minProtein, maxCost, maxMinutes }
+  );
+  res.json(sort ? sortSummaries(filtered, sort) : filtered);
 });
 
 /**
@@ -304,6 +324,9 @@ const randomQuerySchema = z.object({
   // seed (e.g. today's date) always yields the same recipe, for a stable
   // "recipe of the day" pick rather than a fresh one on every call.
   seed: z.string().optional(),
+  maxCost: z.coerce.number().positive().optional(),
+  maxMinutes: z.coerce.number().int().positive().optional(),
+  maxCalories: z.coerce.number().positive().optional(),
 });
 
 /** Simple, fast string hash (djb2) -- good enough to spread seeds evenly across a candidate list, not for anything security-sensitive. */
@@ -322,18 +345,22 @@ recipesRouter.get("/recipes/random", async (req, res) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const { cuisine, tag, dishType, occasion, seed } = parsed.data;
+  const { cuisine, tag, dishType, occasion, seed, maxCost, maxMinutes, maxCalories } = parsed.data;
 
-  const candidates = await prisma.recipe.findMany({
+  const rows = await prisma.recipe.findMany({
     where: {
       cuisine: cuisine ? { slug: cuisine } : undefined,
       dishType: dishType ? { equals: dishType, mode: "insensitive" } : undefined,
       tags: tag ? { has: tag.toUpperCase() as DishTag } : undefined,
       occasions: occasion ? { has: occasion.toUpperCase() as Occasion } : undefined,
     },
-    select: { slug: true },
+    select: recipeSummarySelect(),
     orderBy: { slug: "asc" },
   });
+  const candidates = applyNumericFilters(
+    rows.map((r) => localizeSummary(r, "en")),
+    { maxCost, maxMinutes, maxCalories }
+  );
   if (candidates.length === 0) {
     res.status(404).json({ error: "No recipes match" });
     return;
@@ -493,4 +520,38 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
       timerMinutes: s.timerMinutes,
     })),
   });
+});
+
+export const REPORT_REASONS = ["WRONG_INGREDIENTS", "WRONG_STEPS", "WRONG_NUTRITION", "TRANSLATION", "OTHER"] as const;
+
+export const reportBodySchema = z.object({
+  reason: z.enum(REPORT_REASONS),
+  details: z.string().trim().max(500).optional(),
+});
+
+// Reports are open to guests, so keep one phone from flooding the table.
+const reportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+
+/** Flags a problem with a recipe (wrong amounts, unclear steps, bad translation...). */
+recipesRouter.post("/recipes/:slug/report", reportLimiter, optionalAuth, async (req, res) => {
+  const parsed = reportBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const recipe = await prisma.recipe.findUnique({ where: { slug: req.params.slug }, select: { id: true } });
+  if (!recipe) {
+    res.status(404).json({ error: "Recipe not found" });
+    return;
+  }
+  const report = await prisma.recipeReport.create({
+    data: {
+      recipeId: recipe.id,
+      userId: req.userId ?? null,
+      reason: parsed.data.reason,
+      details: parsed.data.details || null,
+    },
+    select: { id: true, createdAt: true },
+  });
+  res.status(201).json(report);
 });

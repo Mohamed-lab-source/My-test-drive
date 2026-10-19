@@ -39,6 +39,20 @@ export type MyDataExport = {
   }[];
 };
 
+export type CuisineStats = {
+  slug: string;
+  name: string;
+  recipeCount: number;
+  avgCostPerServing: number;
+  avgCalories: number;
+  avgMinutes: number;
+  avgRating: number | null;
+  quickCount: number;
+  vegetarianCount: number;
+};
+
+export type ReportReason = "WRONG_INGREDIENTS" | "WRONG_STEPS" | "WRONG_NUTRITION" | "TRANSLATION" | "OTHER";
+
 export type Cuisine = {
   id: string;
   slug: string;

@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-nativ
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { fetchCuisines } from "../api/endpoints";
+import { fetchCuisineStats, fetchCuisines } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
 import { useCookStreak } from "../context/CookStreakContext";
@@ -11,7 +11,7 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { radius, spacing, type ThemeColors } from "../theme";
-import type { Cuisine } from "../api/types";
+import type { Cuisine, CuisineStats } from "../api/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CuisineExplorer">;
 
@@ -22,12 +22,16 @@ export function CuisineExplorerScreen({ navigation }: Props) {
   const { cuisinesCooked } = useCookStreak();
   const [cuisines, setCuisines] = useState<Cuisine[] | null>(null);
   const [untriedOnly, setUntriedOnly] = useState(false);
+  const [stats, setStats] = useState<Record<string, CuisineStats>>({});
   const textAlign = isRTL ? "right" : "left";
 
   useEffect(() => {
     fetchCuisines()
       .then(setCuisines)
       .catch(() => setCuisines([]));
+    fetchCuisineStats()
+      .then((list) => setStats(Object.fromEntries(list.map((s) => [s.slug, s]))))
+      .catch(() => {});
   }, [locale]);
 
   if (cuisines === null) {
@@ -81,6 +85,15 @@ export function CuisineExplorerScreen({ navigation }: Props) {
                 {item.name}
               </Text>
               <Text style={styles.meta}>{t("cuisineExplorer.recipeCount", { count: item.recipeCount })}</Text>
+              {stats[item.slug] ? (
+                <Text style={styles.meta}>
+                  {t("cuisineExplorer.averages", {
+                    cost: Math.round(stats[item.slug].avgCostPerServing),
+                    kcal: stats[item.slug].avgCalories,
+                    minutes: stats[item.slug].avgMinutes,
+                  })}
+                </Text>
+              ) : null}
               {tried ? <Text style={styles.triedBadge}>{t("cuisineExplorer.tried")}</Text> : null}
             </AnimatedPressable>
           );
