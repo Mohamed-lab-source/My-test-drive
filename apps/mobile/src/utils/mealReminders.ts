@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { MealPlanMap } from "../context/MealPlanContext";
+import { isInQuietHours, moveOutOfQuietHours } from "./quietHours";
 
 const SCHEDULED_IDS_KEY = "cookmate.mealReminderIds";
 
@@ -14,7 +15,8 @@ export function configureNotificationHandler() {
     handleNotification: async () => ({
       shouldShowBanner: true,
       shouldShowList: true,
-      shouldPlaySound: true,
+      // Stay silent during quiet hours (kitchen timers excepted -- they're never scheduled into them).
+      shouldPlaySound: !isInQuietHours(new Date()),
       shouldSetBadge: false,
     }),
   });
@@ -55,7 +57,7 @@ export async function rescheduleMealReminders(
   const newIds: string[] = [];
   for (const [dateKey, recipe] of Object.entries(plan)) {
     const [year, month, day] = dateKey.split("-").map(Number);
-    const trigger = new Date(year, month - 1, day, time.hour, time.minute, 0, 0);
+    const trigger = moveOutOfQuietHours(new Date(year, month - 1, day, time.hour, time.minute, 0, 0));
     if (trigger.getTime() <= now) continue;
     const { title, body } = contentFor(recipe.title);
     const id = await Notifications.scheduleNotificationAsync({

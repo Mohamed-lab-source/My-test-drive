@@ -1,6 +1,7 @@
 import axios from "axios";
 import { Platform } from "react-native";
 import { getCurrentLocale } from "../i18n/LocaleContext";
+import { reportConnectivity } from "../utils/connectivity";
 
 function defaultApiUrl(): string {
   if (Platform.OS === "android") return "http://10.0.2.2:4000/api";
@@ -25,6 +26,18 @@ api.interceptors.request.use((config) => {
   config.params = { ...(config.params ?? {}), lang: getCurrentLocale() };
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => {
+    reportConnectivity(true);
+    return response;
+  },
+  (error) => {
+    // A server reply (even 4xx/5xx) proves the network works; only a missing response means offline.
+    if (axios.isAxiosError(error)) reportConnectivity(!!error.response);
+    return Promise.reject(error);
+  }
+);
 
 export function apiErrorMessage(error: unknown, fallback = "Something went wrong"): string {
   if (axios.isAxiosError(error)) {

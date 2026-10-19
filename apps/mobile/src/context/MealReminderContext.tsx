@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAppSettings } from "./AppSettingsContext";
 import { useMealPlan } from "./MealPlanContext";
 import { useLocale } from "../i18n/LocaleContext";
 import {
@@ -30,6 +31,7 @@ const MealReminderContext = createContext<MealReminderContextValue | undefined>(
 export function MealReminderProvider({ children }: { children: React.ReactNode }) {
   const { plan, isLoading: planLoading } = useMealPlan();
   const { t } = useLocale();
+  const { quietHours } = useAppSettings();
   const [enabled, setEnabledState] = useState(false);
   const [time, setTimeState] = useState<ReminderTime>(DEFAULT_TIME);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +58,8 @@ export function MealReminderProvider({ children }: { children: React.ReactNode }
       title: t("mealReminder.notificationTitle"),
       body: t("mealReminder.notificationBody", { title: recipeTitle }),
     })).catch(() => {});
-  }, [plan, enabled, time, isLoading, planLoading, t]);
+    // quietHours: reschedule so reminders move out of a newly set quiet window.
+  }, [plan, enabled, time, isLoading, planLoading, t, quietHours]);
 
   const setEnabled = useCallback(async (value: boolean) => {
     if (value) {

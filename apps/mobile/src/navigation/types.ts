@@ -82,6 +82,8 @@ export type RootStackParamList = {
   Goals: undefined;
   CuisinePassport: undefined;
   MonthlyRecap: undefined;
+  Settings: undefined;
+  About: undefined;
   WhatsNew: undefined;
 };
 

@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-settings",
+    date: "2026-10-19",
+    title: { en: "Settings, backup & quiet hours", ar: "الإعدادات والنسخ الاحتياطي وساعات الهدوء" },
+    body: {
+      en: "A new Settings page: every reminder in one place with a test notification, quiet hours, high contrast, Arabic-Indic numerals, your choice of start tab, backup and restore, cache clearing, feedback and an About page. Plus an offline banner.",
+      ar: "صفحة إعدادات جديدة: كل التذكيرات في مكان واحد مع إشعار تجريبي، وساعات الهدوء، والتباين العالي، والأرقام العربية الهندية، واختيار تبويب البداية، والنسخ الاحتياطي والاستعادة، ومسح الذاكرة المؤقتة، والملاحظات، وصفحة عن التطبيق. بالإضافة إلى شريط عدم الاتصال.",
+    },
+  },
+  {
     id: "2026-10-goals",
     date: "2026-10-19",
     title: { en: "Goals, passport & more badges", ar: "الأهداف والجواز وشارات أكثر" },

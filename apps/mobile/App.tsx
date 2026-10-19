@@ -27,6 +27,8 @@ import { HiddenRecipesProvider } from "./src/context/HiddenRecipesContext";
 import { KitchenTimersProvider } from "./src/context/KitchenTimersContext";
 import { CookingJournalProvider } from "./src/context/CookingJournalContext";
 import { GoalsProvider } from "./src/context/GoalsContext";
+import { AppSettingsProvider } from "./src/context/AppSettingsContext";
+import { OfflineBanner } from "./src/components/OfflineBanner";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -36,6 +38,7 @@ function AppShell() {
   return (
     <>
       <RootNavigator />
+      <OfflineBanner />
       <StatusBar style={isDark ? "light" : "dark"} />
     </>
   );
@@ -46,59 +49,61 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <LocaleProvider>
-          <UnitsProvider>
-            <LocalPreferenceProvider>
-              <AuthProvider>
-                <FavoritesProvider>
-                  <RecentlyViewedProvider>
-                    <RecentlyRatedProvider>
-                      <NotesProvider>
-                        <MealPlanProvider>
-                          <MealReminderProvider>
-                            <CookStreakProvider>
-                              <LeftoversProvider>
-                                <HomeLayoutProvider>
-                                  <TextSizeProvider>
-                                    <AccessibilityPrefsProvider>
-                                      <ToastProvider>
-                                        <PantryCheckProvider>
-                                          <WhatsNewProvider>
-                                            <CollectionsProvider>
-                                              <FoodDiaryProvider>
-                                                <ShoppingExtrasProvider>
-                                                  <HouseholdProvider>
-                                                    <HiddenRecipesProvider>
-                                                      <KitchenTimersProvider>
-                                                        <CookingJournalProvider>
-                                                          <GoalsProvider>
-                                                            <BadgesProvider>
-                                                              <AppShell />
-                                                            </BadgesProvider>
-                                                          </GoalsProvider>
-                                                        </CookingJournalProvider>
-                                                      </KitchenTimersProvider>
-                                                    </HiddenRecipesProvider>
-                                                  </HouseholdProvider>
-                                                </ShoppingExtrasProvider>
-                                              </FoodDiaryProvider>
-                                            </CollectionsProvider>
-                                          </WhatsNewProvider>
-                                        </PantryCheckProvider>
-                                      </ToastProvider>
-                                    </AccessibilityPrefsProvider>
-                                  </TextSizeProvider>
-                                </HomeLayoutProvider>
-                              </LeftoversProvider>
-                            </CookStreakProvider>
-                          </MealReminderProvider>
-                        </MealPlanProvider>
-                      </NotesProvider>
-                    </RecentlyRatedProvider>
-                  </RecentlyViewedProvider>
-                </FavoritesProvider>
-              </AuthProvider>
-            </LocalPreferenceProvider>
-          </UnitsProvider>
+          <AppSettingsProvider>
+            <UnitsProvider>
+              <LocalPreferenceProvider>
+                <AuthProvider>
+                  <FavoritesProvider>
+                    <RecentlyViewedProvider>
+                      <RecentlyRatedProvider>
+                        <NotesProvider>
+                          <MealPlanProvider>
+                            <MealReminderProvider>
+                              <CookStreakProvider>
+                                <LeftoversProvider>
+                                  <HomeLayoutProvider>
+                                    <TextSizeProvider>
+                                      <AccessibilityPrefsProvider>
+                                        <ToastProvider>
+                                          <PantryCheckProvider>
+                                            <WhatsNewProvider>
+                                              <CollectionsProvider>
+                                                <FoodDiaryProvider>
+                                                  <ShoppingExtrasProvider>
+                                                    <HouseholdProvider>
+                                                      <HiddenRecipesProvider>
+                                                        <KitchenTimersProvider>
+                                                          <CookingJournalProvider>
+                                                            <GoalsProvider>
+                                                              <BadgesProvider>
+                                                                <AppShell />
+                                                              </BadgesProvider>
+                                                            </GoalsProvider>
+                                                          </CookingJournalProvider>
+                                                        </KitchenTimersProvider>
+                                                      </HiddenRecipesProvider>
+                                                    </HouseholdProvider>
+                                                  </ShoppingExtrasProvider>
+                                                </FoodDiaryProvider>
+                                              </CollectionsProvider>
+                                            </WhatsNewProvider>
+                                          </PantryCheckProvider>
+                                        </ToastProvider>
+                                      </AccessibilityPrefsProvider>
+                                    </TextSizeProvider>
+                                  </HomeLayoutProvider>
+                                </LeftoversProvider>
+                              </CookStreakProvider>
+                            </MealReminderProvider>
+                          </MealPlanProvider>
+                        </NotesProvider>
+                      </RecentlyRatedProvider>
+                    </RecentlyViewedProvider>
+                  </FavoritesProvider>
+                </AuthProvider>
+              </LocalPreferenceProvider>
+            </UnitsProvider>
+          </AppSettingsProvider>
         </LocaleProvider>
       </ThemeProvider>
     </SafeAreaProvider>

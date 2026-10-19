@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { hasReminderPermission } from "./mealReminders";
+import { quietAdjustedTime } from "./quietHours";
 
 const SCHEDULED_ID_KEY = "cookmate.shoppingReminderId";
 const REMINDER_HOUR = 18;
@@ -28,13 +29,14 @@ export async function rescheduleShoppingReminder(
 
   if (!enabled || !(await hasReminderPermission())) return;
 
+  const at = quietAdjustedTime(REMINDER_HOUR, REMINDER_MINUTE);
   const id = await Notifications.scheduleNotificationAsync({
     content,
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
       weekday: jsWeekday + 1,
-      hour: REMINDER_HOUR,
-      minute: REMINDER_MINUTE,
+      hour: at.hour,
+      minute: at.minute,
     },
   }).catch(() => null);
   if (id) await AsyncStorage.setItem(SCHEDULED_ID_KEY, id);

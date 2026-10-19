@@ -14,6 +14,7 @@ import { useToast } from "../context/ToastContext";
 import { deleteShoppingList, fetchShoppingListHistory } from "../api/endpoints";
 import { hasReminderPermission, requestReminderPermission } from "../utils/mealReminders";
 import { rescheduleShoppingReminder } from "../utils/shoppingReminders";
+import { useAppSettings } from "../context/AppSettingsContext";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { AnimatedPressable } from "../components/AnimatedPressable";
 import { Chip } from "../components/Chip";
@@ -62,6 +63,7 @@ export function ListsScreen({ navigation }: Props) {
   const [shoppingReminderEnabled, setShoppingReminderEnabledState] = useState(false);
   const [shoppingReminderDay, setShoppingReminderDayState] = useState(DEFAULT_SHOPPING_REMINDER_DAY);
   const [shoppingReminderLoading, setShoppingReminderLoading] = useState(true);
+  const { quietHours } = useAppSettings();
 
   useEffect(() => {
     (async () => {
@@ -84,7 +86,8 @@ export function ListsScreen({ navigation }: Props) {
       title: t("shoppingReminder.notificationTitle"),
       body: t("shoppingReminder.notificationBody"),
     }).catch(() => {});
-  }, [shoppingReminderEnabled, shoppingReminderDay, shoppingReminderLoading, t]);
+    // quietHours: reschedule so the reminder moves out of a newly set quiet window.
+  }, [shoppingReminderEnabled, shoppingReminderDay, shoppingReminderLoading, t, quietHours]);
 
   const setShoppingReminderEnabled = async (value: boolean) => {
     if (value) {

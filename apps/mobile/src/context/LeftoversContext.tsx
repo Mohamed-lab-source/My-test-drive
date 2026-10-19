@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocale } from "../i18n/LocaleContext";
 import { hasReminderPermission, requestReminderPermission } from "../utils/mealReminders";
 import { rescheduleLeftoverReminders } from "../utils/leftoverReminders";
+import { useAppSettings } from "./AppSettingsContext";
 
 const STORAGE_KEY = "cookmate.leftovers";
 const REMINDERS_ENABLED_KEY = "cookmate.leftoverReminders.enabled";
@@ -54,6 +55,7 @@ const LeftoversContext = createContext<LeftoversContextValue | undefined>(undefi
 
 export function LeftoversProvider({ children }: { children: React.ReactNode }) {
   const { t } = useLocale();
+  const { quietHours } = useAppSettings();
   const [leftovers, setLeftovers] = useState<LeftoverEntry[]>([]);
   const [remindersEnabled, setRemindersEnabledState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,7 +81,8 @@ export function LeftoversProvider({ children }: { children: React.ReactNode }) {
       title: t("leftoverReminder.notificationTitle"),
       body: t("leftoverReminder.notificationBody", { title }),
     })).catch(() => {});
-  }, [leftovers, remindersEnabled, isLoading, t]);
+    // quietHours: reschedule so reminders move out of a newly set quiet window.
+  }, [leftovers, remindersEnabled, isLoading, t, quietHours]);
 
   const setRemindersEnabled = useCallback(async (value: boolean) => {
     if (value) {

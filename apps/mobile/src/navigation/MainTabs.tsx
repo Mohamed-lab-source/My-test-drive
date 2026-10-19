@@ -9,6 +9,7 @@ import { ProfileScreen } from "../screens/ProfileScreen";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { useAccessibilityPrefs } from "../context/AccessibilityPrefsContext";
+import { useAppSettings } from "../context/AppSettingsContext";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -44,8 +45,10 @@ export function MainTabs() {
   const { t } = useLocale();
   const { colors } = useTheme();
   const { hapticsEnabled } = useAccessibilityPrefs();
+  const { startTab } = useAppSettings();
   return (
     <Tab.Navigator
+      initialRouteName={startTab}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,

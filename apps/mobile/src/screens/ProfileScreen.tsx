@@ -213,6 +213,9 @@ export function ProfileScreen({ navigation }: Props) {
               onPress={() => navigation.navigate("CustomizeHome")}
             />
           </View>
+          <View style={styles.buttonSpacing}>
+            <PrimaryButton label={t("settings.title")} variant="outline" onPress={() => navigation.navigate("Settings")} />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -443,6 +446,9 @@ export function ProfileScreen({ navigation }: Props) {
             variant="outline"
             onPress={() => navigation.navigate("CustomizeHome")}
           />
+        </View>
+        <View style={styles.buttonSpacing}>
+          <PrimaryButton label={t("settings.title")} variant="outline" onPress={() => navigation.navigate("Settings")} />
         </View>
         <View style={styles.buttonSpacing}>
           <PrimaryButton

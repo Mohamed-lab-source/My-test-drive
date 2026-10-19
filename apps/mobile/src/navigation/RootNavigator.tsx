@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "./types";
 import { MainTabs } from "./MainTabs";
 import { OnboardingScreen } from "../screens/OnboardingScreen";
+import { useAppSettings } from "../context/AppSettingsContext";
 import { FeatureTourScreen } from "../screens/FeatureTourScreen";
 import { RecipeListScreen } from "../screens/RecipeListScreen";
 import { RecipeDetailScreen } from "../screens/RecipeDetailScreen";
@@ -46,6 +47,8 @@ import { CookingJournalScreen } from "../screens/CookingJournalScreen";
 import { GoalsScreen } from "../screens/GoalsScreen";
 import { CuisinePassportScreen } from "../screens/CuisinePassportScreen";
 import { MonthlyRecapScreen } from "../screens/MonthlyRecapScreen";
+import { SettingsScreen } from "../screens/SettingsScreen";
+import { AboutScreen } from "../screens/AboutScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -58,8 +61,9 @@ export function RootNavigator() {
   const { preference, isLoading } = useLocalPreference();
   const { isLoading: isLocaleLoading, t } = useLocale();
   const { colors, isDark, isLoading: isThemeLoading } = useTheme();
+  const { isLoading: isSettingsLoading } = useAppSettings();
 
-  if (isLoading || isLocaleLoading || isThemeLoading) {
+  if (isLoading || isLocaleLoading || isThemeLoading || isSettingsLoading) {
     return (
       <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
         <ActivityIndicator color={colors.primary} size="large" />
@@ -203,6 +207,8 @@ export function RootNavigator() {
         <Stack.Screen name="Goals" component={GoalsScreen} options={{ title: t("goals.title") }} />
         <Stack.Screen name="CuisinePassport" component={CuisinePassportScreen} options={{ title: t("passport.title") }} />
         <Stack.Screen name="MonthlyRecap" component={MonthlyRecapScreen} options={{ title: t("monthlyRecap.title") }} />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t("settings.title") }} />
+        <Stack.Screen name="About" component={AboutScreen} options={{ title: t("about.title") }} />
         <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>

@@ -4,6 +4,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { translations, type Locale, type TranslationKey } from "./translations";
 
 const STORAGE_KEY = "cookmate.locale";
+const NUMERALS_KEY = "cookmate.arabicNumerals";
+const ARABIC_INDIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+
+function toArabicIndic(text: string): string {
+  return text.replace(/[0-9]/g, (d) => ARABIC_INDIC_DIGITS[Number(d)]);
+}
 
 // Module-level mirror of the current locale so non-React code (the axios
 // client) can read it without needing a hook. Kept in sync by the provider.
@@ -18,23 +24,34 @@ type LocaleContextValue = {
   isLoading: boolean;
   setLocale: (locale: Locale) => Promise<void>;
   t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+  /** Show numbers as ٠١٢٣ in Arabic (only affects text built with t()). */
+  arabicNumerals: boolean;
+  setArabicNumerals: (on: boolean) => void;
 };
 
 const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
 
-function format(template: string, vars?: Record<string, string | number>): string {
+function format(template: string, vars?: Record<string, string | number>, arabicDigits = false): string {
   if (!vars) return template;
-  return Object.keys(vars).reduce((acc, key) => acc.replace(`{${key}}`, String(vars[key])), template);
+  return Object.keys(vars).reduce((acc, key) => {
+    const value = String(vars[key]);
+    return acc.replace(`{${key}}`, arabicDigits ? toArabicIndic(value) : value);
+  }, template);
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
   const [isLoading, setIsLoading] = useState(true);
+  const [arabicNumerals, setArabicNumeralsState] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        const [stored, storedNumerals] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY),
+          AsyncStorage.getItem(NUMERALS_KEY),
+        ]);
+        setArabicNumeralsState(storedNumerals === "true");
         const initial: Locale = stored === "ar" ? "ar" : "en";
         currentLocale = initial;
         setLocaleState(initial);
@@ -67,14 +84,20 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const setArabicNumerals = useCallback((on: boolean) => {
+    setArabicNumeralsState(on);
+    AsyncStorage.setItem(NUMERALS_KEY, String(on)).catch(() => {});
+  }, []);
+
   const t = useCallback(
-    (key: TranslationKey, vars?: Record<string, string | number>) => format(translations[locale][key], vars),
-    [locale]
+    (key: TranslationKey, vars?: Record<string, string | number>) =>
+      format(translations[locale][key], vars, locale === "ar" && arabicNumerals),
+    [locale, arabicNumerals]
   );
 
   const value = useMemo(
-    () => ({ locale, isRTL: locale === "ar", isLoading, setLocale, t }),
-    [locale, isLoading, setLocale, t]
+    () => ({ locale, isRTL: locale === "ar", isLoading, setLocale, t, arabicNumerals, setArabicNumerals }),
+    [locale, isLoading, setLocale, t, arabicNumerals, setArabicNumerals]
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

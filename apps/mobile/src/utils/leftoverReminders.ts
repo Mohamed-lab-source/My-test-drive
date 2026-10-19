@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { LeftoverEntry } from "../context/LeftoversContext";
 import { hasReminderPermission } from "./mealReminders";
+import { moveOutOfQuietHours } from "./quietHours";
 
 const SCHEDULED_IDS_KEY = "cookmate.leftoverReminderIds";
 const REMINDER_HOUR = 10;
@@ -30,7 +31,7 @@ export async function rescheduleLeftoverReminders(
   const newIds: string[] = [];
   for (const entry of leftovers) {
     const [year, month, day] = entry.useByDate.split("-").map(Number);
-    const trigger = new Date(year, month - 1, day, REMINDER_HOUR, REMINDER_MINUTE, 0, 0);
+    const trigger = moveOutOfQuietHours(new Date(year, month - 1, day, REMINDER_HOUR, REMINDER_MINUTE, 0, 0));
     if (trigger.getTime() <= now) continue;
     const { title, body } = contentFor(entry.title);
     const id = await Notifications.scheduleNotificationAsync({
