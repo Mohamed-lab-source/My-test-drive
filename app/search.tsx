@@ -10,6 +10,19 @@ import { Icon } from '../src/ui/Icon';
 import { EmptyState } from '../src/ui/EmptyState';
 import { searchAll, type SearchResult, type SearchResultType } from '../src/db/search';
 import { useSettingsStore } from '../src/store/settingsStore';
+import { ChipSelector } from '../src/ui/ChipSelector';
+
+const TYPE_LABEL: Record<SearchResultType, string> = {
+  transaction: 'Money',
+  task: 'Tasks',
+  meeting: 'Meetings',
+  wishlist: 'Wishlist',
+  note: 'Notes',
+  book: 'Books',
+  shopping: 'Shopping',
+  countdown: 'Countdowns',
+  journal: 'Journal',
+};
 
 const TYPE_META: Record<SearchResultType, { icon: string; color: string; route: string }> = {
   transaction: { icon: 'banknote.fill', color: '#34C759', route: '/money/transactions' },
@@ -29,6 +42,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [typeFilter, setTypeFilter] = useState<SearchResultType | 'all'>('all');
   const { recentSearches, addRecentSearch, clearRecentSearches } = useSettingsStore();
 
   useEffect(() => {
@@ -93,8 +107,26 @@ export default function SearchScreen() {
         ) : results.length === 0 ? (
           <EmptyState icon="magnifyingglass" title="No results" message="Try a different search term." />
         ) : (
+          <>
+          {new Set(results.map((r) => r.type)).size > 1 ? (
+            <View style={{ marginBottom: spacing.sm }}>
+              <ChipSelector
+                options={[
+                  { id: 'all', label: `All ${results.length}` },
+                  ...Array.from(new Set(results.map((r) => r.type))).map((t) => ({
+                    id: t,
+                    label: `${TYPE_LABEL[t]} ${results.filter((r) => r.type === t).length}`,
+                  })),
+                ]}
+                selectedId={results.some((r) => r.type === typeFilter) ? typeFilter : 'all'}
+                onSelect={(id) => setTypeFilter(id as SearchResultType | 'all')}
+              />
+            </View>
+          ) : null}
           <Card padded={false}>
-            {results.map((r, i) => {
+            {(() => {
+              const shown = results.some((r) => r.type === typeFilter) ? results.filter((r) => r.type === typeFilter) : results;
+              return shown.map((r, i) => {
               const meta = TYPE_META[r.type];
               return (
                 <Pressable
@@ -107,7 +139,7 @@ export default function SearchScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     padding: spacing.md,
-                    borderBottomWidth: i === results.length - 1 ? 0 : 0.5,
+                    borderBottomWidth: i === shown.length - 1 ? 0 : 0.5,
                     borderBottomColor: colors.separator,
                   }}
                 >
@@ -125,8 +157,10 @@ export default function SearchScreen() {
                   <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
                 </Pressable>
               );
-            })}
+              });
+            })()}
           </Card>
+          </>
         )}
       </ScrollView>
     </View>

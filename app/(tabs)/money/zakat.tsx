@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Switch } from 'react-native';
+import { View, Text, ScrollView, Switch, Alert } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -11,6 +11,8 @@ import { convertToBase } from '../../../src/db/repositories/fx';
 import { SadaqahCard } from '../../../src/features/money/SadaqahCard';
 import { HawlCard } from '../../../src/features/money/HawlCard';
 import { FitrCard } from '../../../src/features/money/FitrCard';
+import { Button } from '../../../src/ui/Button';
+import { todayKey } from '../../../src/db/client';
 
 const ZAKAT_RATE = 0.025;
 
@@ -28,8 +30,8 @@ const NISAB_GOLD_GRAMS = 85;
 
 export default function ZakatScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, debts, fxRates } = useFinanceStore();
-  const { currency, zakatNisab, setZakatNisab, goldPricePerGram, setGoldPricePerGram } = useSettingsStore();
+  const { accounts, debts, fxRates, categories, addTransaction } = useFinanceStore();
+  const { currency, zakatNisab, setZakatNisab, goldPricePerGram, setGoldPricePerGram, defaultAccountId, zakatPaidOn, setZakatPaidOn } = useSettingsStore();
   const [goldInput, setGoldInput] = useState(goldPricePerGram > 0 ? String(goldPricePerGram) : '');
 
   const [nisabInput, setNisabInput] = useState(zakatNisab > 0 ? String(zakatNisab) : '');
@@ -63,6 +65,37 @@ export default function ZakatScreen() {
   const due = nisab > 0 && net >= nisab;
   const zakat = due ? Math.round(net * ZAKAT_RATE) : 0;
 
+  // Logs the payment as an expense (in a giving category when there is one)
+  // so it shows in spending and the Sadaqah card.
+  const markPaid = () => {
+    const account = accounts.find((a) => a.id === defaultAccountId) ?? accounts.find((a) => a.type !== 'credit') ?? accounts[0];
+    if (!account) {
+      Alert.alert('No account', 'Add an account in Money first.');
+      return;
+    }
+    const category = categories.find((c) => c.kind !== 'income' && /zakat/i.test(c.name)) ?? categories.find((c) => c.kind !== 'income' && /sadaq|charit|giving|donat/i.test(c.name));
+    Alert.alert('Mark zakat as paid?', `Logs ${formatMoney(zakat, currency)} as an expense from ${account.name}.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log payment',
+        onPress: async () => {
+          await addTransaction({
+            type: 'expense',
+            amount: zakat,
+            currency,
+            account_id: account.id,
+            transfer_to_account_id: null,
+            category_id: category?.id ?? null,
+            recurring_id: null,
+            note: 'Zakat',
+            date: new Date().toISOString(),
+          });
+          setZakatPaidOn(todayKey());
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Zakat" />
@@ -79,6 +112,12 @@ export default function ZakatScreen() {
                 ? '2.5% of your zakatable wealth'
                 : `Below nisab (${formatMoney(nisab, currency)}) — no zakat due`}
           </Text>
+          {zakatPaidOn ? (
+            <Text style={[typography.caption1, { color: colors.green, marginTop: 4 }]}>
+              Last paid {new Date(zakatPaidOn + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+            </Text>
+          ) : null}
+          {due && zakat > 0 ? <Button title="Mark as paid" variant="secondary" onPress={markPaid} style={{ marginTop: spacing.sm, alignSelf: 'stretch' }} /> : null}
         </Card>
 
         <Card style={{ marginBottom: spacing.md }}>

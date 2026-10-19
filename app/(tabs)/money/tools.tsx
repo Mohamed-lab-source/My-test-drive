@@ -13,6 +13,8 @@ import {
   AmortisationTable,
   DiscountCalculator,
   GrowthCalculator,
+  SalaryCalculator,
+  VatCalculator,
   TimeToSaveCalculator,
   TipSplitCalculator,
   UnitPriceCalculator,
@@ -77,6 +79,8 @@ export default function ToolsScreen() {
           <AmortisationTable principal={p} annualRate={Number(rate) || 0} months={n} payment={monthly} currency={currency} />
         </Card>
 
+        <VatCalculator currency={currency} />
+        <SalaryCalculator currency={currency} />
         <TipSplitCalculator currency={currency} />
         <DiscountCalculator currency={currency} />
         <UnitPriceCalculator currency={currency} />

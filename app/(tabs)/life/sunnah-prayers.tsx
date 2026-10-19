@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -78,6 +78,18 @@ export default function SunnahPrayersScreen() {
         <Card>
           <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Last 7 days</Text>
           <MiniBars data={week.map((d) => ({ ...d, value: logs.filter((l) => l.date === d.key).length }))} color={colors.green} max={PRAYERS.length} />
+          {(() => {
+            const ranked = PRAYERS.map((p) => ({ p, n: logs.filter((l) => l.kind === p.kind).length }))
+              .filter((x) => x.n > 0)
+              .sort((a, b) => b.n - a.n);
+            if (!ranked.length) return null;
+            return (
+              <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>
+                Most consistent: {ranked[0].p.label} ({ranked[0].n} of 7 days)
+                {ranked.length < PRAYERS.length ? ` · not yet this week: ${PRAYERS.filter((p) => !ranked.some((r) => r.p.kind === p.kind)).map((p) => p.label).join(', ')}` : ''}
+              </Text>
+            );
+          })()}
         </Card>
       </ScrollView>
     </View>

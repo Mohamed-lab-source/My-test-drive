@@ -34,6 +34,23 @@ interface SettingsState {
   sadaqahGoal: number;
   setSadaqahGoal: (v: number) => void;
   waterGoal: number;
+  sleepGoal: number;
+  startTab: 'home' | 'money' | 'tasks' | 'life';
+  setStartTab: (v: 'home' | 'money' | 'tasks' | 'life') => void;
+  softDark: boolean;
+  setSoftDark: (v: boolean) => void;
+  // Prayers that get an adhan alert, and minutes-before reminders (0 = off).
+  adhanPrayers: string[];
+  setAdhanPrayers: (v: string[]) => void;
+  prePrayerMinutes: number;
+  setPrePrayerMinutes: (v: number) => void;
+  asrMadhab: 'auto' | 'shafi' | 'hanafi';
+  setAsrMadhab: (v: 'auto' | 'shafi' | 'hanafi') => void;
+  hapticsEnabled: boolean;
+  setHapticsEnabled: (v: boolean) => void;
+  zakatPaidOn: string | null;
+  setZakatPaidOn: (v: string | null) => void;
+  setSleepGoal: (v: number) => void;
   setWaterGoal: (v: number) => void;
   waterReminders: boolean;
   setWaterReminders: (v: boolean) => void;
@@ -144,6 +161,11 @@ interface SettingsState {
   setHomeQuickActions: (v: string[]) => void;
   weeklyReviewReminder: boolean;
   setWeeklyReviewReminder: (v: boolean) => void;
+  excludedAccounts: string[];
+  setExcludedAccounts: (v: string[]) => void;
+  // Routines added to Today automatically, and the day each last ran.
+  autoRoutines: Record<string, string>;
+  setAutoRoutines: (v: Record<string, string>) => void;
   setAppearance: (a: Appearance) => void;
   setCurrency: (c: string) => void;
   setHasOnboarded: (v: boolean) => void;
@@ -183,6 +205,22 @@ export const useSettingsStore = create<SettingsState>()(
       setSadaqahGoal: (v) => set({ sadaqahGoal: v }),
       waterGoal: 8,
       setWaterGoal: (v) => set({ waterGoal: v }),
+      sleepGoal: 8,
+      startTab: 'home',
+      setStartTab: (v) => set({ startTab: v }),
+      softDark: false,
+      setSoftDark: (v) => set({ softDark: v }),
+      adhanPrayers: ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'],
+      setAdhanPrayers: (v) => set({ adhanPrayers: v }),
+      prePrayerMinutes: 0,
+      setPrePrayerMinutes: (v) => set({ prePrayerMinutes: v }),
+      asrMadhab: 'auto',
+      setAsrMadhab: (v) => set({ asrMadhab: v }),
+      hapticsEnabled: true,
+      setHapticsEnabled: (v) => set({ hapticsEnabled: v }),
+      zakatPaidOn: null,
+      setZakatPaidOn: (v) => set({ zakatPaidOn: v }),
+      setSleepGoal: (v) => set({ sleepGoal: v }),
       waterReminders: false,
       setWaterReminders: (v) => set({ waterReminders: v }),
       hiddenHomeCards: [],
@@ -305,6 +343,10 @@ export const useSettingsStore = create<SettingsState>()(
       setHomeQuickActions: (v) => set({ homeQuickActions: v }),
       weeklyReviewReminder: false,
       setWeeklyReviewReminder: (v) => set({ weeklyReviewReminder: v }),
+      excludedAccounts: [],
+      setExcludedAccounts: (v) => set({ excludedAccounts: v }),
+      autoRoutines: {},
+      setAutoRoutines: (v) => set({ autoRoutines: v }),
       setAppearance: (a) => set({ appearance: a }),
       setCurrency: (c) => set({ currency: c }),
       setHasOnboarded: (v) => set({ hasOnboarded: v }),

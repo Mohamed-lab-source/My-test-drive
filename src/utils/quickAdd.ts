@@ -10,6 +10,12 @@ export interface ParsedTask {
   backlog: boolean;
   projectId: string | null;
   projectName: string | null;
+  // "at 5pm" / "at 17:30": a reminder time (HH:MM, 24h) on the scheduled day.
+  remindTime: string | null;
+  // "every day/week/month" or "daily/weekly/monthly".
+  repeat: 'daily' | 'weekly' | 'monthly' | null;
+  // "by friday" / "by tomorrow" / "due next week": a deadline (YYYY-MM-DD).
+  deadline: string | null;
 }
 
 const PRIORITY_TOKENS: Record<string, QuickPriority> = {
@@ -55,6 +61,20 @@ export function parseQuickTask(
   let backlog = false;
   let projectId: string | null = null;
   let projectName: string | null = null;
+  let remindTime: string | null = null;
+  let repeat: ParsedTask['repeat'] = null;
+  let deadline: string | null = null;
+
+  // A day word, as used after "by"/"due": today, tomorrow, a weekday, "next week".
+  const dayFrom = (w: string | undefined, w2: string | undefined): { key: string; used: number } | null => {
+    if (!w) return null;
+    if (w === 'today' || w === 'tonight') return { key: dateKey(now), used: 1 };
+    if (w === 'tomorrow' || w === 'tmrw' || w === 'tmr') return { key: dateKey(addDays(now, 1)), used: 1 };
+    if (w === 'next' && w2 === 'week') return { key: dateKey(addDays(now, 7)), used: 2 };
+    const d = WEEKDAYS[w];
+    if (d !== undefined) return { key: dateKey(addDays(now, (d - now.getDay() + 7) % 7 || 7)), used: 1 };
+    return null;
+  };
 
   for (let i = 0; i < words.length; i++) {
     const raw = words[i];
@@ -71,6 +91,38 @@ export function parseQuickTask(
       if (match) {
         projectId = match.id;
         projectName = match.name;
+        continue;
+      }
+    }
+    // "at 5", "at 5pm", "at 5:30pm", "at 17:30"
+    if (word === 'at' && next && /^\d{1,2}(:\d{2})?(am|pm)?$/.test(next)) {
+      const m = next.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)?$/)!;
+      let h = Number(m[1]);
+      const min = Number(m[2] ?? 0);
+      if (m[3] === 'pm' && h < 12) h += 12;
+      if (m[3] === 'am' && h === 12) h = 0;
+      // A bare "at 5" in the afternoon/evening range means 5 PM.
+      if (!m[3] && h >= 1 && h <= 7) h += 12;
+      if (h < 24 && min < 60) {
+        remindTime = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+        i++;
+        continue;
+      }
+    }
+    if (word === 'every' && (next === 'day' || next === 'week' || next === 'month')) {
+      repeat = next === 'day' ? 'daily' : next === 'week' ? 'weekly' : 'monthly';
+      i++;
+      continue;
+    }
+    if (word === 'daily' || word === 'weekly' || word === 'monthly') {
+      repeat = word;
+      continue;
+    }
+    if (word === 'by' || word === 'due') {
+      const d = dayFrom(next, words[i + 2]?.toLowerCase());
+      if (d) {
+        deadline = d.key;
+        i += d.used;
         continue;
       }
     }
@@ -105,5 +157,5 @@ export function parseQuickTask(
     titleWords.push(raw);
   }
 
-  return { title: titleWords.join(' '), priority, scheduledDate, backlog, projectId, projectName };
+  return { title: titleWords.join(' '), priority, scheduledDate, backlog, projectId, projectName, remindTime, repeat, deadline };
 }

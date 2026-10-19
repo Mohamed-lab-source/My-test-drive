@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -19,7 +19,17 @@ import { showUndoDelete } from '../../../src/ui/undo';
 import * as financeRepo from '../../../src/db/repositories/finance';
 import type { SavingsGoal } from '../../../src/db/types';
 
-function SavingsGoalCard({ goal, onContribute, onDelete }: { goal: SavingsGoal; onContribute: () => void; onDelete: () => void }) {
+function SavingsGoalCard({
+  goal,
+  onContribute,
+  onQuick,
+  onDelete,
+}: {
+  goal: SavingsGoal;
+  onContribute: () => void;
+  onQuick: (amount: number) => void;
+  onDelete: () => void;
+}) {
   const { colors, typography, spacing } = useTheme();
   const [completionDate, setCompletionDate] = useState<string | null>(null);
 
@@ -64,12 +74,20 @@ function SavingsGoalCard({ goal, onContribute, onDelete }: { goal: SavingsGoal; 
               : `Save ${formatMoney(perMonth, goal.currency)}/month to reach it by ${formatDateShort(goal.target_date)}`}
           </Text>
         ) : null}
-        <Button
-          title="Add funds"
-          variant="secondary"
-          onPress={onContribute}
-          style={{ marginTop: spacing.sm, alignSelf: 'flex-start', paddingHorizontal: spacing.md }}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+          <Button title="Add funds" variant="secondary" onPress={onContribute} style={{ paddingHorizontal: spacing.md, marginRight: spacing.sm }} />
+          {!goal.is_completed
+            ? [100, 500, 1000].map((n) => (
+                <Pressable
+                  key={n}
+                  onPress={() => onQuick(n * 100)}
+                  style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, marginRight: 6, backgroundColor: goal.color + '22' }}
+                >
+                  <Text style={{ color: goal.color, fontWeight: '700' }}>+{n.toLocaleString()}</Text>
+                </Pressable>
+              ))
+            : null}
+        </View>
       </Card>
     </SwipeableRow>
   );
@@ -99,6 +117,7 @@ export default function SavingsScreen() {
               key={goal.id}
               goal={goal}
               onContribute={() => setContributingGoal(goal)}
+              onQuick={(amount) => contributeToGoal(goal.id, amount, 'Quick add')}
               onDelete={() => handleDelete(goal)}
             />
           ))

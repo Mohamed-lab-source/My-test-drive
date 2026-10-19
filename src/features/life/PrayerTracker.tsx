@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
 import { Icon } from '../../ui/Icon';
@@ -39,6 +39,8 @@ export function PrayerTracker() {
   const nextIsToday = next ? next.time.toDateString() === now.toDateString() : false;
 
   const completedCount = PRAYERS.filter((p) => isPrayerDone(p)).length;
+  // Prayers whose time has come (all five when no city is set) not yet marked.
+  const dueUnmarked = PRAYERS.filter((p) => !isPrayerDone(p) && (!schedule || schedule[p].getTime() <= now.getTime()));
 
   return (
     <Card>
@@ -96,6 +98,20 @@ export function PrayerTracker() {
           );
         })}
       </View>
+      {dueUnmarked.length > 1 ? (
+        <Pressable
+          onPress={async () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            for (const p of dueUnmarked) await togglePrayer(p, true);
+          }}
+          style={{ marginTop: spacing.sm, alignSelf: 'center' }}
+          hitSlop={6}
+        >
+          <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>
+            ✓ Mark {dueUnmarked.length === 5 ? 'all five' : `the ${dueUnmarked.length} so far`} as prayed
+          </Text>
+        </Pressable>
+      ) : null}
       {!city ? (
         <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: spacing.sm }]}>
           Pick your city in Settings to see prayer times.

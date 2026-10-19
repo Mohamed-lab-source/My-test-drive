@@ -27,7 +27,7 @@ import { TextField } from '../../../src/ui/TextField';
 import { Icon } from '../../../src/ui/Icon';
 import type { Transaction } from '../../../src/db/types';
 
-function QuickLink({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
+function QuickLink({ icon, label, color, onPress, badge }: { icon: string; label: string; color: string; onPress: () => void; badge?: number }) {
   const { colors, typography, spacing, radius } = useTheme();
   return (
     <Pressable
@@ -41,7 +41,27 @@ function QuickLink({ icon, label, color, onPress }: { icon: string; label: strin
         marginHorizontal: 4,
       }}
     >
-      <IconCircle name={icon} color={color} size={40} />
+      <View>
+        <IconCircle name={icon} color={color} size={40} />
+        {badge ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: -4,
+              right: -8,
+              minWidth: 18,
+              height: 18,
+              borderRadius: 9,
+              paddingHorizontal: 4,
+              backgroundColor: colors.red,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        ) : null}
+      </View>
       <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>{label}</Text>
     </Pressable>
   );
@@ -61,6 +81,8 @@ export default function MoneyScreen() {
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const smsPending = useSmsStore((s) => s.pending.length);
+  const flaggedCount = useFinanceStore((s) => s.transactions.filter((t) => !!t.flag).length);
+  const netWorthHistory = useFinanceStore((s) => s.netWorthHistory);
   const refreshSms = useSmsStore((s) => s.refresh);
   useEffect(() => {
     refreshSms();
@@ -72,7 +94,8 @@ export default function MoneyScreen() {
     if (action === 'add-expense') setAddVisible(true);
   }, [action]);
 
-  const netWorth = accounts.reduce(
+  const excluded = useSettingsStore((s) => s.excludedAccounts);
+  const netWorth = accounts.filter((a) => !excluded.includes(a.id)).reduce(
     (sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates),
     0
   );
@@ -96,6 +119,19 @@ export default function MoneyScreen() {
             <Text style={[typography.largeTitle, { color: colors.label, marginTop: 4 }]}>
               {balance(netWorth, currency)}
             </Text>
+            {(() => {
+              // Change since the snapshot closest to a month ago.
+              const target = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+              const past = [...netWorthHistory].filter((h) => h.id <= target && h.currency === currency).sort((a, b) => b.id.localeCompare(a.id))[0];
+              if (!past || hideBalances) return null;
+              const diff = netWorth - past.amount;
+              if (diff === 0) return null;
+              return (
+                <Text style={[typography.footnote, { color: diff > 0 ? colors.green : colors.red }]}>
+                  {diff > 0 ? '▲' : '▼'} {formatMoney(Math.abs(diff), currency)} in the last month
+                </Text>
+              );
+            })()}
             {editingGoal ? (
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: spacing.sm }}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
@@ -146,7 +182,18 @@ export default function MoneyScreen() {
                 >
                   <IconCircle name={a.icon} color={a.color} size={28} />
                   <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 8 }]}>{a.name}</Text>
-                  <Text style={[typography.headline, { color: colors.label }]}>{balance(a.balance, a.currency)}</Text>
+                  {a.type === 'credit' ? (
+                    <>
+                      <Text style={[typography.headline, { color: a.balance < 0 ? colors.red : colors.label }]}>
+                        {balance(Math.max(0, -a.balance), a.currency)}
+                      </Text>
+                      <Text style={[typography.caption2, { color: colors.secondaryLabel }]}>
+                        owed{a.credit_limit ? ` · ${Math.round((Math.max(0, -a.balance) / a.credit_limit) * 100)}% of limit` : ''}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={[typography.headline, { color: colors.label }]}>{balance(a.balance, a.currency)}</Text>
+                  )}
                 </Pressable>
               ))}
             </ScrollView>
@@ -198,7 +245,7 @@ export default function MoneyScreen() {
           <QuickLink icon="hands.sparkles.fill" label="Zakat" color={colors.mint} onPress={() => router.push('/money/zakat')} />
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <QuickLink icon="banknote.fill" label="Bank SMS" color={colors.red} onPress={() => router.push('/money/sms-inbox')} />
+          <QuickLink icon="banknote.fill" label="Bank SMS" color={colors.red} badge={smsPending} onPress={() => router.push('/money/sms-inbox')} />
           <QuickLink icon="cart.badge.plus" label="Shopping" color={colors.green} onPress={() => router.push('/money/shopping')} />
           <QuickLink icon="function" label="Tools" color={colors.gray} onPress={() => router.push('/money/tools')} />
           <QuickLink icon="chart.line.uptrend.xyaxis" label="Year" color={colors.indigo} onPress={() => router.push('/money/year')} />
@@ -206,7 +253,7 @@ export default function MoneyScreen() {
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <QuickLink icon="camera.fill" label="Receipts" color={colors.orange} onPress={() => router.push('/money/receipts')} />
           <QuickLink icon="lightbulb.fill" label="Insights" color={colors.yellow} onPress={() => router.push('/money/insights')} />
-          <QuickLink icon="flag.fill" label="Follow-ups" color={colors.red} onPress={() => router.push('/money/flagged')} />
+          <QuickLink icon="flag.fill" label="Follow-ups" color={colors.red} badge={flaggedCount} onPress={() => router.push('/money/flagged')} />
           <QuickLink icon="trophy.fill" label="Challenges" color={colors.green} onPress={() => router.push('/money/challenges')} />
         </View>
 

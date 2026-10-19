@@ -7,14 +7,21 @@ import { Icon } from '../../../src/ui/Icon';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { DUAS } from '../../../src/content/duas';
+import { TextField } from '../../../src/ui/TextField';
 
 export default function DuasScreen() {
   const { colors, typography, spacing } = useTheme();
   const { favoriteDuas, toggleFavoriteDua } = useSettingsStore();
   const themes = ['All', 'Favorites', ...Array.from(new Set(DUAS.map((d) => d.theme)))];
   const [theme, setTheme] = useState('All');
+  const [query, setQuery] = useState('');
 
-  const shown = DUAS.filter((d) => (theme === 'All' ? true : theme === 'Favorites' ? favoriteDuas.includes(d.id) : d.theme === theme)).sort(
+  const q = query.trim().toLowerCase();
+  const shown = DUAS.filter(
+    (d) =>
+      (theme === 'All' ? true : theme === 'Favorites' ? favoriteDuas.includes(d.id) : d.theme === theme) &&
+      (!q || d.meaning.toLowerCase().includes(q) || d.ref.toLowerCase().includes(q) || d.arabic.includes(query.trim()) || d.theme.toLowerCase().includes(q))
+  ).sort(
     (a, b) => Number(favoriteDuas.includes(b.id)) - Number(favoriteDuas.includes(a.id))
   );
 
@@ -22,6 +29,7 @@ export default function DuasScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Duas" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <TextField placeholder="Search duas (e.g. forgiveness, parents)" value={query} onChangeText={setQuery} />
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector options={themes.map((t) => ({ id: t, label: t }))} selectedId={theme} onSelect={setTheme} />
         </View>

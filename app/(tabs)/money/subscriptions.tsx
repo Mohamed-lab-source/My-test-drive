@@ -9,6 +9,7 @@ import { EmptyState } from '../../../src/ui/EmptyState';
 import { FAB } from '../../../src/ui/FAB';
 import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { Button } from '../../../src/ui/Button';
+import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { formatMoney } from '../../../src/utils/money';
 import { formatRelativeDay, isOverdue } from '../../../src/utils/date';
 import { AddRecurringSheet } from '../../../src/features/money/AddRecurringSheet';
@@ -42,6 +43,12 @@ export default function SubscriptionsScreen() {
   );
   const currency = useSettingsStore((s) => s.currency);
   const [addVisible, setAddVisible] = useState(false);
+  const [order, setOrder] = useState('due');
+  const yearly = (r: (typeof recurringRules)[number]) => convertToBase(r.amount, r.currency, currency, fxRates) * PER_YEAR[r.frequency];
+  // Ended plans (e.g. finished instalments) go last.
+  const sortedRules = [...recurringRules].sort(
+    (a, b) => b.is_active - a.is_active || (order === 'cost' ? yearly(b) - yearly(a) : a.next_due_date.localeCompare(b.next_due_date))
+  );
 
   const handleDelete = async (rule: (typeof recurringRules)[number]) => {
     await removeRecurringRule(rule.id);
@@ -126,7 +133,18 @@ export default function SubscriptionsScreen() {
         {recurringRules.length === 0 ? (
           <EmptyState icon="repeat" title="No recurring items" message="Track subscriptions, rent, salary, or any repeating expense." />
         ) : (
-          recurringRules.map((rule) => (
+          <>
+          <View style={{ marginBottom: spacing.sm }}>
+            <ChipSelector
+              options={[
+                { id: 'due', label: 'Next due' },
+                { id: 'cost', label: 'Most expensive' },
+              ]}
+              selectedId={order}
+              onSelect={setOrder}
+            />
+          </View>
+          {sortedRules.map((rule) => (
             <SwipeableRow key={rule.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(rule) }]}>
               <Card style={{ marginBottom: spacing.sm, opacity: rule.is_paused ? 0.5 : 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -144,9 +162,15 @@ export default function SubscriptionsScreen() {
                       {rule.frequency} · next {formatRelativeDay(rule.next_due_date)}
                     </Text>
                   </View>
-                  <Text style={[typography.headline, { color: rule.type === 'income' ? colors.green : colors.label }]}>
-                    {formatMoney(rule.amount, rule.currency)}
-                  </Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[typography.headline, { color: rule.type === 'income' ? colors.green : colors.label }]}>
+                      {formatMoney(rule.amount, rule.currency)}
+                    </Text>
+                    {rule.frequency !== 'yearly' ? (
+                      <Text style={[typography.caption2, { color: colors.secondaryLabel }]}>{formatMoney(Math.round(yearly(rule)), currency)}/yr</Text>
+                    ) : null}
+                    {!rule.is_active ? <Text style={[typography.caption2, { color: colors.secondaryLabel }]}>Ended</Text> : null}
+                  </View>
                 </View>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm, gap: spacing.sm }}>
                   <Button
@@ -176,7 +200,8 @@ export default function SubscriptionsScreen() {
                 </View>
               </Card>
             </SwipeableRow>
-          ))
+          ))}
+          </>
         )}
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Image, Modal, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, Modal, Share, useWindowDimensions } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { EmptyState } from '../../../src/ui/EmptyState';
@@ -50,6 +50,12 @@ export default function ReceiptsScreen() {
               <Text style={[typography.body, { color: '#fff', textAlign: 'center', marginTop: spacing.md }]}>
                 {open.note ? `${open.note} · ` : ''}
                 {formatMoney(open.amount, open.currency)} · {formatDateShort(open.date)}
+              </Text>
+              <Text
+                onPress={() => Share.share({ url: open.receipt_uri!, message: `${open.note ?? 'Receipt'} — ${formatMoney(open.amount, open.currency)}` })}
+                style={[typography.headline, { color: '#fff', textAlign: 'center', marginTop: spacing.sm, textDecorationLine: 'underline' }]}
+              >
+                Share receipt
               </Text>
             </>
           ) : null}

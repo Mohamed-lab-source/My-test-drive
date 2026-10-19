@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ScrollView, Pressable, Alert, Share } from 'react-native';
+import * as Haptics from '../../utils/haptics';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
@@ -20,6 +20,7 @@ const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high'];
 const SCHEDULE_OPTIONS: { id: repo.RescheduleTarget; label: string }[] = [
   { id: 'today', label: 'Today' },
   { id: 'tomorrow', label: 'Tomorrow' },
+  { id: 'weekend', label: 'Weekend' },
   { id: 'next_week', label: 'Next week' },
   { id: 'backlog', label: 'Backlog' },
 ];
@@ -32,14 +33,18 @@ function scheduleLabel(task: Task): string {
 }
 
 const REMIND_OPTIONS = [
+  { id: 'min20', label: 'In 20 min' },
   { id: 'hour', label: 'In 1 hour' },
+  { id: 'hours3', label: 'In 3 hours' },
   { id: 'evening', label: 'This evening' },
   { id: 'tomorrow', label: 'Tomorrow 9 AM' },
   { id: 'clear', label: 'No reminder' },
 ];
 
 function reminderTime(option: string, now: Date = new Date()): string | null {
+  if (option === 'min20') return new Date(now.getTime() + 20 * 60000).toISOString();
   if (option === 'hour') return new Date(now.getTime() + 3600000).toISOString();
+  if (option === 'hours3') return new Date(now.getTime() + 3 * 3600000).toISOString();
   if (option === 'evening') {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0);
     if (d <= now) d.setDate(d.getDate() + 1);
@@ -239,6 +244,30 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
               >
                 {sub.title}
               </Text>
+              {!sub.is_done ? (
+                <Pressable
+                  onPress={async () => {
+                    // A step that grew into its own job: make it a task in the
+                    // same project and drop it from this checklist.
+                    await useProductivityStore.getState().addTask({
+                      project_id: task.project_id,
+                      title: sub.title,
+                      notes: `From: ${task.title}`,
+                      status: 'todo',
+                      priority: task.priority,
+                      due_date: null,
+                      scheduled_date: task.scheduled_date,
+                      sort_order: Date.now(),
+                    });
+                    await repo.deleteSubtask(sub.id);
+                    await refreshSubtasks();
+                  }}
+                  hitSlop={8}
+                  style={{ marginRight: spacing.md }}
+                >
+                  <Icon name="arrow.up.right" size={16} color={colors.blue} />
+                </Pressable>
+              ) : null}
               <Pressable onPress={() => repo.deleteSubtask(sub.id).then(refreshSubtasks)} hitSlop={8}>
                 <Icon name="xmark" size={16} color={colors.tertiaryLabel} />
               </Pressable>
@@ -258,6 +287,34 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
           </View>
         </View>
 
+        <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginBottom: spacing.sm }]}>
+          Added {formatRelativeDay(task.created_at)}
+          {task.completed_at ? ` · done ${formatRelativeDay(task.completed_at)} at ${formatTime(task.completed_at)}` : ''}
+          {subtasks.length ? ` · tap ↗ on a step to make it its own task` : ''}
+        </Text>
+        <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
+          <Pressable
+            onPress={() =>
+              Share.share({
+                message: [`☐ ${task.title}`, task.due_date ? `Due ${formatDateKey(task.due_date)}` : null, task.notes, ...subtasks.map((st) => `  ${st.is_done ? '☑' : '☐'} ${st.title}`)]
+                  .filter(Boolean)
+                  .join('\n'),
+              })
+            }
+            hitSlop={8}
+            style={{ marginRight: spacing.lg }}
+          >
+            <Text style={[typography.subhead, { color: colors.blue }]}>Share task</Text>
+          </Pressable>
+          {task.waiting_on ? (
+            <Pressable
+              onPress={() => Share.share({ message: `Hi ${task.waiting_on}, any update on "${task.title}"? Thanks!` })}
+              hitSlop={8}
+            >
+              <Text style={[typography.subhead, { color: colors.blue }]}>Nudge {task.waiting_on}</Text>
+            </Pressable>
+          ) : null}
+        </View>
         <Button title="Save" onPress={handleSave} loading={saving} style={{ marginBottom: spacing.sm }} />
         <Button
           title="Start focus timer"

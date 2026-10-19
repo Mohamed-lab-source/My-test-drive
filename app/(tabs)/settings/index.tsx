@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Share, Alert, TextInput, Switch, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useSettingsStore, type Accent, type Appearance } from '../../../src/store/settingsStore';
@@ -26,9 +27,12 @@ import {
   reschedulePrayerAlerts,
   rescheduleAllReminders,
   rescheduleOccasionReminders,
+  sendTestNotification,
 } from '../../../src/notifications/scheduler';
+import { lockNow } from '../../../src/auth/BiometricLockGate';
+import { clearHandledSmsText } from '../../../src/db/repositories/smsImports';
 import { rescheduleExtraReminders } from '../../../src/notifications/extras';
-import { setPrayerAdjustments } from '../../../src/utils/prayerTimes';
+import { setAsrMadhab as applyAsrMadhab, setPrayerAdjustments } from '../../../src/utils/prayerTimes';
 import { PRAYER_CITIES } from '../../../src/utils/prayerTimes';
 import { formatHijri } from '../../../src/utils/hijri';
 import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
@@ -140,7 +144,21 @@ export default function SettingsScreen() {
     setTahajjudReminder,
     weeklyReviewReminder,
     setWeeklyReviewReminder,
+    hapticsEnabled,
+    setHapticsEnabled,
+    softDark,
+    setSoftDark,
+    startTab,
+    setStartTab,
+    asrMadhab,
+    setAsrMadhab,
+    adhanPrayers,
+    setAdhanPrayers,
+    prePrayerMinutes,
+    setPrePrayerMinutes,
   } = useSettingsStore();
+  const [resetVisible, setResetVisible] = useState(false);
+  const [resetText, setResetText] = useState('');
   const [nameInput, setNameInput] = useState(displayName);
   const [dailyAlertInput, setDailyAlertInput] = useState(dailySpendAlert > 0 ? String(dailySpendAlert / 100) : '');
 
@@ -287,18 +305,15 @@ export default function SettingsScreen() {
     setBiometricOn(value);
   };
 
+  // Typing RESET guards against a stray tap wiping everything.
   const handleReset = () => {
-    Alert.alert('Reset all data', 'This permanently deletes everything in the app. This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reset',
-        style: 'destructive',
-        onPress: async () => {
-          await resetAllData();
-          await Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()]);
-        },
-      },
-    ]);
+    setResetText('');
+    setResetVisible(true);
+  };
+  const confirmReset = async () => {
+    setResetVisible(false);
+    await resetAllData();
+    await Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()]);
   };
 
   return (
@@ -361,9 +376,9 @@ export default function SettingsScreen() {
               Text size
             </Text>
             <SegmentedControl
-              options={['Default', 'Large', 'Larger']}
-              selectedIndex={[1, 1.15, 1.3].indexOf(textScale) === -1 ? 0 : [1, 1.15, 1.3].indexOf(textScale)}
-              onChange={(i) => setTextScale([1, 1.15, 1.3][i])}
+              options={['Default', 'Large', 'Larger', 'Largest']}
+              selectedIndex={Math.max(0, [1, 1.15, 1.3, 1.45].indexOf(textScale))}
+              onChange={(i) => setTextScale([1, 1.15, 1.3, 1.45][i])}
             />
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
               <View style={{ flex: 1 }}>
@@ -379,6 +394,31 @@ export default function SettingsScreen() {
               </View>
               <Switch value={wholeMoney} onValueChange={setWholeMoney} />
             </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Soft dark mode</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Charcoal instead of pure black in dark mode</Text>
+              </View>
+              <Switch value={softDark} onValueChange={setSoftDark} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.body, { color: colors.label }]}>Vibration</Text>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Haptic taps when you tick, count and save</Text>
+              </View>
+              <Switch value={hapticsEnabled} onValueChange={setHapticsEnabled} />
+            </View>
+            <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>Open the app on</Text>
+            <ChipSelector
+              options={[
+                { id: 'home', label: 'Home' },
+                { id: 'money', label: 'Money' },
+                { id: 'tasks', label: 'Tasks' },
+                { id: 'life', label: 'Life' },
+              ]}
+              selectedId={startTab}
+              onSelect={(id) => setStartTab(id as typeof startTab)}
+            />
             <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>Accent colour</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {(['blue', 'indigo', 'purple', 'pink', 'red', 'orange', 'green', 'teal'] as Accent[]).map((a) => (
@@ -444,6 +484,64 @@ export default function SettingsScreen() {
               </View>
               <Switch value={prayerAlerts} disabled={!prayerCityId} onValueChange={handleTogglePrayerAlerts} />
             </View>
+            {prayerAlerts && prayerCityId ? (
+              <>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm, marginBottom: 6 }]}>Alert me for</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const).map((p) => {
+                    const on = (adhanPrayers ?? []).includes(p);
+                    return (
+                      <Pressable
+                        key={p}
+                        onPress={async () => {
+                          setAdhanPrayers(on ? adhanPrayers.filter((x) => x !== p) : [...adhanPrayers, p]);
+                          await reschedulePrayerAlerts();
+                        }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 14,
+                          marginRight: 6,
+                          marginBottom: 6,
+                          backgroundColor: on ? colors.blue : colors.tertiaryFill,
+                        }}
+                      >
+                        <Text style={[typography.subhead, { color: on ? '#fff' : colors.label, textTransform: 'capitalize' }]}>{p}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm, marginBottom: 6 }]}>
+                  Get-ready reminder before each of those
+                </Text>
+                <ChipSelector
+                  options={[0, 10, 15, 20, 30].map((m) => ({ id: String(m), label: m ? `${m} min` : 'Off' }))}
+                  selectedId={String(prePrayerMinutes)}
+                  onSelect={async (id) => {
+                    setPrePrayerMinutes(Number(id));
+                    await reschedulePrayerAlerts();
+                  }}
+                />
+              </>
+            ) : null}
+            {prayerCityId ? (
+              <>
+                <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>Asr time</Text>
+                <ChipSelector
+                  options={[
+                    { id: 'auto', label: 'City default' },
+                    { id: 'shafi', label: "Shafi'i / Maliki / Hanbali" },
+                    { id: 'hanafi', label: 'Hanafi (later)' },
+                  ]}
+                  selectedId={asrMadhab}
+                  onSelect={async (id) => {
+                    setAsrMadhab(id as typeof asrMadhab);
+                    applyAsrMadhab(id as typeof asrMadhab);
+                    await reschedulePrayerAlerts();
+                  }}
+                />
+              </>
+            ) : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.md }}>
               <View style={{ flex: 1 }}>
                 <Text style={[typography.body, { color: colors.label }]}>Jumu'ah reminder</Text>
@@ -601,6 +699,14 @@ export default function SettingsScreen() {
               trailing={<Switch value={notificationsEnabled} onValueChange={handleToggleNotifications} />}
             />
             <ListRow
+              title="Send a test notification"
+              subtitle="Check that alerts reach you"
+              leading={<IconCircle name="bell.fill" color={colors.orange} size={32} />}
+              onPress={async () => {
+                if (!(await sendTestNotification())) Alert.alert('Notifications are off', 'Turn on Reminders above and allow notifications for Anchor.');
+              }}
+            />
+            <ListRow
               title="Upcoming reminders"
               subtitle="Everything Anchor has scheduled"
               leading={<IconCircle name="clock.fill" color={colors.blue} size={32} />}
@@ -707,6 +813,9 @@ export default function SettingsScreen() {
                   selectedId={String(lockTimeoutMinutes)}
                   onSelect={(id) => setLockTimeoutMinutes(Number(id))}
                 />
+                <Pressable onPress={lockNow} style={{ marginTop: spacing.sm }}>
+                  <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>🔒 Lock now</Text>
+                </Pressable>
               </View>
             ) : null}
           </Card>
@@ -765,6 +874,26 @@ export default function SettingsScreen() {
               leading={<IconCircle name="square.and.arrow.down" color={colors.orange} size={32} />}
               onPress={() => setImportVisible(true)}
             />
+            {Platform.OS === 'android' ? (
+              <ListRow
+                title="Clear bank SMS text"
+                subtitle="Erase the stored text of messages you've already handled"
+                leading={<IconCircle name="banknote.fill" color={colors.gray} size={32} />}
+                onPress={() =>
+                  Alert.alert('Clear SMS text?', 'Messages waiting for review are kept. Handled ones keep their amount and merchant but lose the original text.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Clear',
+                      style: 'destructive',
+                      onPress: async () => {
+                        const n = await clearHandledSmsText();
+                        Alert.alert('Done', `Cleared ${n} message${n === 1 ? '' : 's'}.`);
+                      },
+                    },
+                  ])
+                }
+              />
+            ) : null}
             <ListRow
               title="Reset all data"
               destructive
@@ -777,10 +906,21 @@ export default function SettingsScreen() {
 
         <View style={{ paddingHorizontal: spacing.lg }}>
           <Text style={[typography.caption1, { color: colors.tertiaryLabel, textAlign: 'center' }]}>
-            Anchor · everything stays on this device
+            Anchor {Constants.expoConfig?.version ?? ''} · everything stays on this device
           </Text>
         </View>
       </ScrollView>
+
+      <Sheet visible={resetVisible} onClose={() => setResetVisible(false)}>
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <Text style={[typography.title2, { color: colors.red, marginBottom: spacing.sm }]}>Reset all data</Text>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.md }]}>
+            This permanently deletes everything in the app and can't be undone. Export a backup first. Type RESET to confirm.
+          </Text>
+          <TextField placeholder="RESET" value={resetText} onChangeText={setResetText} autoCapitalize="characters" autoCorrect={false} />
+          <Button title="Delete everything" variant="destructive" onPress={confirmReset} disabled={resetText.trim() !== 'RESET'} />
+        </View>
+      </Sheet>
 
       <Sheet visible={importVisible} onClose={() => setImportVisible(false)}>
         <View style={{ paddingHorizontal: spacing.lg }}>

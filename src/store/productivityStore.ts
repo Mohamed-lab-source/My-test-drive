@@ -3,6 +3,7 @@ import type { Meeting, Project, Task } from '../db/types';
 import * as repo from '../db/repositories/productivity';
 import { todayKey } from '../db/client';
 import { refreshTasksWidget } from '../widgets/refresh';
+import { useSettingsStore } from './settingsStore';
 import {
   cancelMeetingReminder,
   cancelTaskReminder,
@@ -24,7 +25,7 @@ interface ProductivityState {
   refreshProjects: () => Promise<void>;
   refreshMeetings: () => Promise<void>;
 
-  addTask: (input: Parameters<typeof repo.createTask>[0]) => Promise<void>;
+  addTask: (input: Parameters<typeof repo.createTask>[0]) => Promise<string>;
   updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
   toggleTaskDone: (id: string, isDone: boolean) => Promise<void>;
   removeTask: (id: string) => Promise<void>;
@@ -72,8 +73,12 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
   refreshMeetings: async () => set({ meetings: await repo.listMeetings() }),
 
   addTask: async (input) => {
-    await repo.createTask(input);
+    const id = await repo.createTask(input);
     await get().refreshTasks();
+    // Quick add can set a reminder time straight away.
+    const task = get().tasks.find((t) => t.id === id);
+    if (task?.remind_at) scheduleTaskReminder(task);
+    return id;
   },
   updateTask: async (id, patch) => {
     await repo.updateTask(id, patch);
@@ -102,7 +107,7 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
     if (task) scheduleTaskReminder(task);
   },
   rescheduleTask: async (id, target) => {
-    await repo.rescheduleTask(id, target);
+    await repo.rescheduleTask(id, target, useSettingsStore.getState().weekendDays);
     await get().refreshTasks();
   },
   clearCompleted: async () => {

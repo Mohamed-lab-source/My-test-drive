@@ -20,5 +20,11 @@ export function describeCountdown(days: number): string {
   if (days === 0) return 'Today';
   if (days === 1) return 'Tomorrow';
   if (days < 0) return `${-days} day${days === -1 ? '' : 's'} ago`;
+  // Far-off dates read better in weeks: "5 weeks 2 days".
+  if (days >= 14) {
+    const w = Math.floor(days / 7);
+    const d = days % 7;
+    return `${w} weeks${d ? ` ${d} day${d === 1 ? '' : 's'}` : ''}`;
+  }
   return `${days} days`;
 }

@@ -145,15 +145,20 @@ export async function rolloverStaleTasks(todayStr: string): Promise<void> {
   }
 }
 
-export type RescheduleTarget = 'today' | 'tomorrow' | 'next_week' | 'backlog';
+// 'weekend': the next weekend day (Settings → weekend days), passed in by the caller.
+export type RescheduleTarget = 'today' | 'tomorrow' | 'next_week' | 'backlog' | 'weekend';
 
-export async function rescheduleTask(id: string, target: RescheduleTarget): Promise<void> {
+export async function rescheduleTask(id: string, target: RescheduleTarget, weekendDays: number[] = [5, 6]): Promise<void> {
   if (target === 'backlog') {
     await updateTask(id, { status: 'backlog', scheduled_date: null });
     return;
   }
   const d = new Date();
-  d.setDate(d.getDate() + (target === 'today' ? 0 : target === 'tomorrow' ? 1 : 7));
+  if (target === 'weekend') {
+    // The next weekend day after today.
+    do d.setDate(d.getDate() + 1);
+    while (!weekendDays.includes(d.getDay()));
+  } else d.setDate(d.getDate() + (target === 'today' ? 0 : target === 'tomorrow' ? 1 : 7));
   await updateTask(id, { status: 'todo', scheduled_date: todayKey(d) });
 }
 

@@ -2,7 +2,9 @@ import { newId, nowIso, todayKey } from '../client';
 import { allRows, deleteRow, insertRow, updateRow, whereRows } from '../helpers';
 import type { Habit, HabitLog } from '../types';
 
-export const listHabits = () => allRows<Habit>('habits', 'sort_order ASC, created_at ASC');
+// Archived habits are kept (with their history) but hidden everywhere else.
+export const listHabits = () => whereRows<Habit>('habits', 'is_archived = 0', [], 'sort_order ASC, created_at ASC');
+export const listArchivedHabits = () => whereRows<Habit>('habits', 'is_archived = 1', [], 'name ASC');
 
 export async function createHabit(input: Omit<Habit, 'id' | 'is_archived' | 'created_at'>): Promise<string> {
   const id = newId();

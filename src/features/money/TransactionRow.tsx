@@ -6,7 +6,7 @@ import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
 import { formatMoneySigned } from '../../utils/money';
-import { formatRelativeDay } from '../../utils/date';
+import { formatRelativeDay, formatTime } from '../../utils/date';
 import type { Transaction } from '../../db/types';
 
 export function TransactionRow({
@@ -41,7 +41,7 @@ export function TransactionRow({
       isLast={isLast}
       leading={<IconCircle name={icon} color={color} />}
       title={title}
-      subtitle={`${account?.name ?? ''} · ${formatRelativeDay(tx.date)}`}
+      subtitle={`${account?.name ?? ''} · ${formatRelativeDay(tx.date)} ${formatTime(tx.date)}`}
       onPress={onPress}
       trailing={
         <View style={{ alignItems: 'flex-end' }}>

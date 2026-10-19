@@ -214,7 +214,7 @@ export async function reschedulePrayerAlerts(): Promise<void> {
       .filter((n) => n.identifier.startsWith(PRAYER_PREFIX))
       .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
   );
-  const { prayerAlerts, jumuahReminder, prayerCityId } = useSettingsStore.getState();
+  const { prayerAlerts, jumuahReminder, prayerCityId, adhanPrayers, prePrayerMinutes } = useSettingsStore.getState();
   const city = findPrayerCity(prayerCityId);
   if (!city || !(await areNotificationsEnabled())) return;
 
@@ -225,10 +225,21 @@ export async function reschedulePrayerAlerts(): Promise<void> {
     const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     const schedule = getPrayerSchedule(city, day);
     for (const [prayer, time] of Object.entries(schedule)) {
+      if (!(adhanPrayers ?? []).includes(prayer)) continue;
+      if (prePrayerMinutes > 0) {
+        const early = new Date(time.getTime() - prePrayerMinutes * 60000);
+        if (early.getTime() > now.getTime()) {
+          await Notifications.scheduleNotificationAsync({
+            identifier: `${PRAYER_PREFIX}${time.toISOString()}-${prayer}-early`,
+            content: { title: `${PRAYER_NAMES[prayer]} in ${prePrayerMinutes} minutes`, body: 'Time to make wudu and get ready', data: { url: '/life/prayer-times' } },
+            trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: early, channelId: CHANNEL_ID },
+          });
+        }
+      }
       if (time.getTime() <= now.getTime()) continue;
       await Notifications.scheduleNotificationAsync({
         identifier: `${PRAYER_PREFIX}${time.toISOString()}-${prayer}`,
-        content: { title: `${PRAYER_NAMES[prayer]} time`, body: `It's time for ${PRAYER_NAMES[prayer]} in ${city.name}` },
+        content: { title: `${PRAYER_NAMES[prayer]} time`, body: `It's time for ${PRAYER_NAMES[prayer]} in ${city.name}`, data: { url: '/life/prayer-times' } },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: time, channelId: CHANNEL_ID },
       });
     }
@@ -680,4 +691,14 @@ export async function scheduleWeeklyReviewReminder(): Promise<void> {
     // Expo counts weekdays from 1 = Sunday.
     trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: lastDay + 1, hour: 20, minute: 0, channelId: CHANNEL_ID },
   });
+}
+
+// Fires straight away (ignoring quiet hours) so you can check sound and banners.
+export async function sendTestNotification(): Promise<boolean> {
+  if (!(await areNotificationsEnabled())) return false;
+  await Notifications.scheduleNotificationAsync({
+    content: { title: 'Anchor test', body: 'Notifications are working 👍' },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 2, channelId: CHANNEL_ID },
+  });
+  return true;
 }

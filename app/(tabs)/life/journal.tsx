@@ -195,6 +195,11 @@ export default function JournalScreen() {
             </Pressable>
           </View>
           <TextField placeholder="Anything on your mind? (optional)" value={note} onChangeText={setNote} multiline />
+          {note.trim() ? (
+            <Text style={[typography.caption2, { color: colors.tertiaryLabel, textAlign: 'right', marginTop: -spacing.sm, marginBottom: spacing.sm }]}>
+              {note.trim().split(/\s+/).length} words
+            </Text>
+          ) : null}
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
             Three things I'm grateful for
           </Text>

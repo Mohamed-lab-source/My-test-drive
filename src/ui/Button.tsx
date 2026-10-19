@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, Pressable, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../utils/haptics';
 import { useTheme } from '../theme/ThemeProvider';
 
 type Variant = 'primary' | 'secondary' | 'plain' | 'destructive';

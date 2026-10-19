@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Image, Pressable, Modal } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, Modal, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Sheet } from '../../ui/Sheet';
@@ -13,6 +13,8 @@ import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { evalAmount, formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
 import { frequentTransactions, type FrequentTemplate } from '../../utils/frequent';
+import { guessCategory } from '../../sms/categorize';
+import { todayKey } from '../../db/client';
 import type { Transaction, TransactionFlag, TransactionType } from '../../db/types';
 
 interface AddTransactionSheetProps {
@@ -23,11 +25,13 @@ interface AddTransactionSheetProps {
   initialType?: TransactionType;
   initialAccountId?: string;
   initialToAccountId?: string;
+  initialAmount?: number; // minor units
+  initialNote?: string;
 }
 
 const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
-export function AddTransactionSheet({ visible, onClose, editing, initialType, initialAccountId, initialToAccountId }: AddTransactionSheetProps) {
+export function AddTransactionSheet({ visible, onClose, editing, initialType, initialAccountId, initialToAccountId, initialAmount, initialNote }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
   const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt, addRecurringRule } = useFinanceStore();
@@ -48,6 +52,9 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
   const [splitCat, setSplitCat] = useState<string | null>(null);
   const [splitAmount, setSplitAmount] = useState('');
   const [previewVisible, setPreviewVisible] = useState(false);
+  // YYYY-MM-DD; today by default. Kept separate from the time of day.
+  const [dateKey, setDateKey] = useState(todayKey());
+  const [dateInput, setDateInput] = useState('');
   const [saving, setSaving] = useState(false);
   const frequent = useMemo(() => (editing ? [] : frequentTransactions(transactions)), [transactions, editing]);
 
@@ -75,9 +82,11 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
       setCategoryId(editing.category_id);
       setNote(editing.note ?? '');
       setReceiptUri(editing.receipt_uri);
+      setDateKey(todayKey(new Date(editing.date)));
     } else {
       setTypeIndex(initialType ? TYPES.indexOf(initialType) : 0);
-      setAmount('');
+      setAmount(initialAmount ? String(fromMinorUnits(initialAmount)) : '');
+      setDateKey(todayKey());
       const from =
         activeAccounts.find((a) => a.id === initialAccountId)?.id ??
         activeAccounts.find((a) => a.id === defaultAccountId)?.id ??
@@ -86,9 +95,10 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
       setAccountId(from);
       setToAccountId(activeAccounts.find((a) => a.id === initialToAccountId && a.id !== from)?.id ?? activeAccounts.find((a) => a.id !== from)?.id ?? from);
       setCategoryId(null);
-      setNote('');
+      setNote(initialNote ?? '');
       setReceiptUri(null);
     }
+    setDateInput('');
     setSplitWith('');
     setInstalments(1);
     setFlag(editing?.flag ?? null);
@@ -119,7 +129,40 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
 
   const canSave = amount.length > 0 && !isNaN(amountValue) && amountValue > 0 && accountId;
 
-  const handleSave = async () => {
+  // The chosen day, keeping the time of day: now for a new entry dated
+  // today, noon for other days, the original time when editing.
+  const dateIso = () => {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const base = editing ? new Date(editing.date) : new Date();
+    if (!editing && dateKey === todayKey()) return base.toISOString();
+    return new Date(y, m - 1, d, editing ? base.getHours() : 12, editing ? base.getMinutes() : 0).toISOString();
+  };
+
+  // Past notes that match what's being typed, newest first.
+  const noteSuggestions = useMemo(() => {
+    const q = note.trim().toLowerCase();
+    if (editing || q.length < 2) return [];
+    const seen = new Set<string>();
+    const out: Transaction[] = [];
+    for (const t of transactions) {
+      const n = t.note?.trim();
+      if (!n || t.type !== type || n.toLowerCase() === q || !n.toLowerCase().includes(q) || seen.has(n.toLowerCase())) continue;
+      seen.add(n.toLowerCase());
+      out.push(t);
+      if (out.length >= 4) break;
+    }
+    return out;
+  }, [note, transactions, type, editing]);
+
+  // A category guess from the note (your history first, then known merchants).
+  const suggestedCategory = useMemo(() => {
+    if (categoryId || type !== 'expense' || note.trim().length < 3) return null;
+    const id = guessCategory(note.trim(), categories, transactions);
+    const cat = categories.find((c) => c.id === id);
+    return cat && !/^other$/i.test(cat.name) ? cat : null;
+  }, [categoryId, type, note, categories, transactions]);
+
+  const handleSave = async (keepOpen = false) => {
     if (!canSave || !accountId) return;
     setSaving(true);
     try {
@@ -129,12 +172,17 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
         account_id: accountId,
         transfer_to_account_id: type === 'transfer' ? toAccountId : null,
         category_id: type === 'transfer' ? null : categoryId,
-        note: note || null,
+        // An unnamed transfer gets a readable note, e.g. "Bank → Cash".
+        note:
+          note ||
+          (type === 'transfer'
+            ? `${accounts.find((a) => a.id === accountId)?.name ?? 'Account'} → ${accounts.find((a) => a.id === toAccountId)?.name ?? 'Account'}`
+            : null),
         receipt_uri: receiptUri,
         flag: type === 'transfer' ? null : flag,
       };
       if (editing) {
-        await updateTransaction(editing.id, fields);
+        await updateTransaction(editing.id, { ...fields, date: dateIso() });
       } else {
         if (type === 'expense' && instalments > 1) {
           // Pay in instalments: the first one now, the rest posted
@@ -169,7 +217,7 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
           onClose();
           return;
         }
-        await addTransaction({ ...fields, currency, recurring_id: null, date: new Date().toISOString() });
+        await addTransaction({ ...fields, currency, recurring_id: null, date: dateIso() });
         // You paid the whole bill; each person now owes you an equal share.
         if (type === 'expense') {
           const label = note || categories.find((c) => c.id === categoryId)?.name || 'a shared bill';
@@ -185,10 +233,47 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
           }
         }
       }
+      if (keepOpen && !editing) {
+        // Ready for the next one: same account, type and date.
+        setAmount('');
+        setNote('');
+        setCategoryId(null);
+        setReceiptUri(null);
+        setSplitWith('');
+        return;
+      }
       onClose();
     } finally {
       setSaving(false);
     }
+  };
+
+  // A one-off that's really a regular bill or income: turn it into a
+  // monthly recurring item, next due a month after this one.
+  const makeRecurring = async () => {
+    if (!editing || editing.type === 'transfer') return;
+    const d = new Date(editing.date);
+    const next = new Date(d.getFullYear(), d.getMonth() + 1, d.getDate(), 9);
+    const cat = categories.find((c) => c.id === editing.category_id);
+    await addRecurringRule({
+      name: editing.note || cat?.name || (editing.type === 'income' ? 'Income' : 'Bill'),
+      type: editing.type,
+      amount: editing.amount,
+      currency: editing.currency,
+      category_id: editing.category_id,
+      account_id: editing.account_id,
+      frequency: 'monthly',
+      interval_count: 1,
+      start_date: next.toISOString(),
+      next_due_date: next.toISOString(),
+      end_date: null,
+      is_subscription: 0,
+      icon: cat?.icon ?? 'repeat',
+      color: cat?.color ?? colors.purple,
+      reminder_days_before: 1,
+      notes: null,
+    });
+    Alert.alert('Now recurring', `Next due ${next.toDateString()}. Manage it in Subscriptions & bills.`);
   };
 
   const accountOptions = activeAccounts.map((a) => ({ id: a.id, label: a.name, color: a.color, icon: a.icon }));
@@ -254,6 +339,41 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
         </View>
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
+          Date · {dateKey === todayKey() ? 'Today' : new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(5, 7)) - 1, Number(dateKey.slice(8))).toDateString()}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.sm }}>
+          {[0, 1, 2].map((n) => {
+            const key = todayKey(new Date(Date.now() - n * 86400000));
+            return (
+              <Pressable
+                key={n}
+                onPress={() => setDateKey(key)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 14,
+                  marginRight: 6,
+                  backgroundColor: dateKey === key ? colors.blue : colors.tertiaryFill,
+                }}
+              >
+                <Text style={{ color: dateKey === key ? '#fff' : colors.label, fontWeight: '600' }}>{n === 0 ? 'Today' : n === 1 ? 'Yesterday' : '2 days ago'}</Text>
+              </Pressable>
+            );
+          })}
+          <View style={{ flex: 1 }}>
+            <TextField
+              placeholder="YYYY-MM-DD"
+              value={dateInput}
+              onChangeText={(v) => {
+                setDateInput(v);
+                if (/^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(new Date(v).getTime())) setDateKey(v);
+              }}
+              style={{ height: 34, marginBottom: 0 }}
+            />
+          </View>
+        </View>
+
+        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           {type === 'transfer' ? 'From account' : 'Account'}
         </Text>
         <View style={{ marginBottom: spacing.md }}>
@@ -285,6 +405,30 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
         )}
 
         <TextField label="Note" placeholder="Optional — add #tags like #travel" value={note} onChangeText={setNote} />
+        {noteSuggestions.length || suggestedCategory ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: -spacing.sm, marginBottom: spacing.sm }}>
+            {noteSuggestions.map((t) => (
+              <Pressable
+                key={t.id}
+                onPress={() => {
+                  setNote(t.note ?? '');
+                  if (!categoryId && t.category_id) setCategoryId(t.category_id);
+                }}
+                style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginRight: 6, marginBottom: 6, backgroundColor: colors.tertiaryFill }}
+              >
+                <Text style={[typography.footnote, { color: colors.label }]}>{t.note}</Text>
+              </Pressable>
+            ))}
+            {suggestedCategory ? (
+              <Pressable
+                onPress={() => setCategoryId(suggestedCategory.id)}
+                style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginRight: 6, marginBottom: 6, backgroundColor: suggestedCategory.color + '22' }}
+              >
+                <Text style={[typography.footnote, { color: suggestedCategory.color, fontWeight: '600' }]}>Category: {suggestedCategory.name}?</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
         {editing && editing.type === 'expense' && editing.note ? (
           <Pressable
             onPress={() => {
@@ -425,7 +569,15 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
           </View>
         ) : null}
 
-        <Button title="Save" onPress={handleSave} disabled={!canSave} loading={saving} style={{ marginTop: spacing.sm }} />
+        {editing && editing.type !== 'transfer' && !editing.recurring_id ? (
+          <Pressable onPress={makeRecurring} style={{ marginBottom: spacing.sm }}>
+            <Text style={[typography.subhead, { color: colors.blue }]}>↻ Make this a monthly {editing.type === 'income' ? 'income' : 'bill'}</Text>
+          </Pressable>
+        ) : null}
+        <Button title="Save" onPress={() => handleSave()} disabled={!canSave} loading={saving} style={{ marginTop: spacing.sm }} />
+        {!editing && instalments === 1 ? (
+          <Button title="Save & add another" variant="secondary" onPress={() => handleSave(true)} disabled={!canSave || saving} style={{ marginTop: spacing.sm }} />
+        ) : null}
       </ScrollView>
 
       {receiptUri ? (

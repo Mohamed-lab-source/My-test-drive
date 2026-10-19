@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ScrollView, Pressable, Share } from 'react-native';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -46,7 +46,23 @@ export default function HifzScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <NavHeader title="Hifz tracker" />
+      <NavHeader
+        title="Hifz tracker"
+        right={
+          <Pressable
+            onPress={() =>
+              Share.share({
+                message: `My hifz: ${memorised.length} of ${HIFZ_SURAHS.length} surahs memorised (${memorisedAyahs} ayahs) — Al-Fatiha & Juz 'Amma${
+                  memorised.length ? `\n✓ ${memorised.map((m) => m.name).join(', ')}` : ''
+                }`,
+              })
+            }
+            hitSlop={8}
+          >
+            <Text style={[typography.subhead, { color: colors.blue }]}>Share</Text>
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Al-Fatiha + Juz &apos;Amma</Text>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ScrollView, Pressable, Alert, Share } from 'react-native';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -108,7 +108,16 @@ export default function ShoppingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <NavHeader title="Shopping list" />
+      <NavHeader
+        title="Shopping list"
+        right={
+          open.length ? (
+            <Pressable onPress={() => Share.share({ message: ['🛒 Shopping list', ...open.map((i) => `☐ ${i.title}`)].join('\n') })} hitSlop={8}>
+              <Text style={[typography.subhead, { color: colors.blue }]}>Share</Text>
+            </Pressable>
+          ) : null
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row' }}>
           <View style={{ flex: 2, marginRight: spacing.sm }}>

@@ -5,7 +5,8 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
 import { Icon } from '../../../src/ui/Icon';
 import { useSettingsStore } from '../../../src/store/settingsStore';
-import { HIJRI_MONTHS, getHijriMonthDays, islamicDay, upcomingIslamicDays } from '../../../src/utils/hijri';
+import { HIJRI_MONTHS, getHijriMonthDays, islamicDay, toHijri, upcomingIslamicDays } from '../../../src/utils/hijri';
+import { TextField } from '../../../src/ui/TextField';
 import { formatDateShort } from '../../../src/utils/date';
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -123,7 +124,73 @@ export default function HijriCalendarScreen() {
             Dates follow the Umm al-Qura calendar with your Hijri adjustment from Settings; local moon sighting may differ by a day.
           </Text>
         </Card>
+        <DateConverter />
       </ScrollView>
     </View>
+  );
+}
+
+
+// Gregorian ↔ Hijri for any date (uses the same calendar and day
+// adjustment as the rest of the app).
+function DateConverter() {
+  const { colors, typography, spacing } = useTheme();
+  const hijriOffset = useSettingsStore((s) => s.hijriOffset);
+  const [greg, setGreg] = useState('');
+  const [hDay, setHDay] = useState('');
+  const [hMonth, setHMonth] = useState('');
+  const [hYear, setHYear] = useState('');
+
+  const gDate = /^\d{4}-\d{1,2}-\d{1,2}$/.test(greg.trim())
+    ? (() => {
+        const [y, m, d] = greg.trim().split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        return isNaN(dt.getTime()) ? null : dt;
+      })()
+    : null;
+  const gToH = gDate ? toHijri(gDate, hijriOffset) : null;
+
+  const hToG = useMemo(() => {
+    const d = Number(hDay);
+    const m = Number(hMonth);
+    const y = Number(hYear);
+    if (!(d >= 1 && d <= 30 && m >= 1 && m <= 12 && y > 1300 && y < 1600)) return null;
+    // Start near the right Gregorian year and scan day by day.
+    const approx = Math.round(y * 0.970224 + 621.5774);
+    const start = new Date(approx - 1, 0, 1);
+    for (let i = 0; i < 800; i++) {
+      const dt = new Date(start.getFullYear(), 0, 1 + i);
+      const h = toHijri(dt, hijriOffset);
+      if (h.year === y && h.month === m && h.day === d) return dt;
+    }
+    return null;
+  }, [hDay, hMonth, hYear, hijriOffset]);
+
+  return (
+    <Card style={{ marginTop: spacing.md }}>
+      <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Convert a date</Text>
+      <TextField label="Gregorian date" placeholder="YYYY-MM-DD" value={greg} onChangeText={setGreg} />
+      {gToH ? (
+        <Text style={[typography.subhead, { color: colors.green, marginTop: -spacing.sm, marginBottom: spacing.sm }]}>
+          = {gToH.day} {HIJRI_MONTHS[gToH.month - 1]} {gToH.year} AH
+        </Text>
+      ) : null}
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 1, marginRight: spacing.sm }}>
+          <TextField label="Hijri day" keyboardType="number-pad" value={hDay} onChangeText={setHDay} />
+        </View>
+        <View style={{ flex: 1, marginRight: spacing.sm }}>
+          <TextField label="Month (1–12)" keyboardType="number-pad" value={hMonth} onChangeText={setHMonth} />
+        </View>
+        <View style={{ flex: 1.3 }}>
+          <TextField label="Year" placeholder="1448" keyboardType="number-pad" value={hYear} onChangeText={setHYear} />
+        </View>
+      </View>
+      {hToG ? (
+        <Text style={[typography.subhead, { color: colors.green, marginTop: -spacing.sm }]}>
+          = {hToG.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </Text>
+      ) : null}
+    </Card>
   );
 }

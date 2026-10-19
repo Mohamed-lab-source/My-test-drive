@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Text, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -17,10 +17,11 @@ export function InsightOfDayCard() {
   const { transactions, fxRates, categories } = useFinanceStore();
   const currency = useSettingsStore((s) => s.currency);
 
-  const text = useMemo(() => {
+  const [shift, setShift] = useState(0);
+  const all = useMemo(() => {
     const now = new Date();
     const sp = I.toSpends(transactions, (a, c) => convertToBase(a, c, currency, fxRates));
-    if (sp.length < 5) return null;
+    if (sp.length < 5) return [];
     const m = I.monthKeyOf(now);
     const pm = I.monthKeyOf(new Date(now.getFullYear(), now.getMonth() - 1, 1));
     const money = (n: number) => formatMoney(Math.round(n), currency);
@@ -42,20 +43,25 @@ export function InsightOfDayCard() {
     if (top) out.push(`🏆 Your top place this month is ${top.name}: ${money(top.total)} over ${top.count} visit${top.count === 1 ? '' : 's'}.`);
     const late = I.lateNight(sp, m);
     if (late.count >= 2) out.push(`🌙 ${late.count} late-night purchases this month (${money(late.total)}).`);
-    if (!out.length) return null;
-    const day = Math.floor(now.getTime() / 86400000);
-    return out[day % out.length];
+    return out;
   }, [transactions, fxRates, currency, categories]);
 
-  if (!text) return null;
+  if (!all || !all.length) return null;
+  // Today's pick first; tapping the card steps through the others.
+  const day = Math.floor(Date.now() / 86400000);
+  const text = all[(day + shift) % all.length];
   return (
-    <Pressable onPress={() => router.push('/money/insights')} style={{ marginBottom: spacing.md }}>
+    <Pressable onPress={() => setShift((n) => n + 1)} style={{ marginBottom: spacing.md }}>
       <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flex: 1 }}>
-          <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Insight of the day</Text>
+          <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
+            Insight of the day{all.length > 1 ? ` · ${((day + shift) % all.length) + 1}/${all.length}, tap for another` : ''}
+          </Text>
           <Text style={[typography.subhead, { color: colors.label, marginTop: 2 }]}>{text}</Text>
         </View>
-        <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
+        <Pressable onPress={() => router.push('/money/insights')} hitSlop={12}>
+          <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
+        </Pressable>
       </Card>
     </Pressable>
   );

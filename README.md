@@ -202,6 +202,12 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
+**Latest additions**
+- Money: date chips and "save & add another" when logging, note and category suggestions, turn a transaction into a monthly bill, transactions grouped by day with daily totals, exclude accounts from net worth, net-worth change vs last month, "Pay X now" on cards, VAT and salary calculators, SMS inbox sort / dismiss all / show original message, Zakat "mark as paid" logs the payment
+- Tasks: long-press a task for a quick menu, sort by priority / deadline / newest, quick add understands "at 5pm", "every week" and "by friday", reschedule to the weekend, carry over last week's goals, routines that start automatically every morning, upcoming/past meetings with overlap warnings
+- Life: archive and edit habits, book ratings, checklist notes, occasion years ("turns 30"), Gregorian ↔ Hijri converter, Ashura in Blessed seasons, Mon/Thu and this-Hijri-year fast counts, most consistent sunnah prayer, all-time dhikr total, take all medications for a time in one tap, water +2, sleep goal, weekly mood strip on Home, journal word count, shareable Life insights
+- Everywhere: vibration on/off, soft dark mode, a "Largest" text size, choose the tab the app opens on, Asr (Hanafi) setting, pick which prayers get an adhan plus a get-ready reminder, test notification, lock now, cancel a scheduled reminder, search filters by type, Jumu'ah / Ramadan / Eid greetings on Home, tap the Hijri date for the calendar, tap the insight of the day for another, notes export, clear stored bank SMS text, typed confirmation before a reset, app version in Settings
+
 ## Tech stack
 
 - Expo SDK 57 (React Native 0.86, React 19), TypeScript, Expo Router

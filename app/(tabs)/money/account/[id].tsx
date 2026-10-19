@@ -28,6 +28,8 @@ export default function AccountDetailScreen() {
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [periodKey, setPeriodKey] = useState<string | null>(null);
   const [adding, setAdding] = useState<'expense' | 'income' | 'transfer' | null>(null);
+  const [payAmount, setPayAmount] = useState<number | undefined>(undefined);
+  const [direction, setDirection] = useState('all');
   const balance = useBalanceFormatter();
 
   useEffect(() => {
@@ -63,6 +65,16 @@ export default function AccountDetailScreen() {
   const closedCycle = isCredit && account.statement_day && period.key !== periods[0].key;
   const statementOwed = Math.max(0, -statement.closing);
   const shown = (n: number) => formatMoney(isCredit ? -n : n, account.currency);
+  // What's still due on a closed statement after payments made since.
+  const statementLeft = closedCycle
+    ? Math.max(
+        0,
+        statementOwed -
+          rows
+            .filter((t) => new Date(t.date) >= period.end && t.type === 'transfer' && t.transfer_to_account_id === account.id)
+            .reduce((sum, t) => sum + t.amount, 0)
+      )
+    : 0;
 
   const shareStatement = (csv: boolean) => {
     const catName = (cid: string | null) => categories.find((c) => c.id === cid)?.name ?? '';
@@ -211,6 +223,7 @@ export default function AccountDetailScreen() {
                 Due {period.dueDate.toDateString()} — pay it in full to avoid interest.
               </Text>
               {statementOwed > 0 ? (
+                <>
                 <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
                   {(() => {
                     // Payments made since the cycle closed count towards it.
@@ -225,6 +238,20 @@ export default function AccountDetailScreen() {
                       : `Still to pay: ${formatMoney(remaining, account.currency)}${paidSince > 0 ? ` (paid ${formatMoney(paidSince, account.currency)} so far)` : ''} · minimum about ${formatMoney(minimum, account.currency)}. Paying only the minimum means interest on the rest.`;
                   })()}
                 </Text>
+                {statementLeft > 0 ? (
+                  <Pressable
+                    onPress={() => {
+                      setPayAmount(statementLeft);
+                      setAdding('transfer');
+                    }}
+                    style={{ marginTop: 6 }}
+                  >
+                    <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>
+                      Pay {formatMoney(statementLeft, account.currency)} now
+                    </Text>
+                  </Pressable>
+                ) : null}
+                </>
               ) : null}
             </View>
           ) : isCredit && period.dueDate ? (
@@ -234,13 +261,26 @@ export default function AccountDetailScreen() {
           ) : null}
         </Card>
 
+        {statement.rows.length > 0 ? (
+          <View style={{ marginBottom: spacing.sm }}>
+            <ChipSelector
+              options={[
+                { id: 'all', label: 'All' },
+                { id: 'in', label: isCredit ? 'Payments & refunds' : 'Money in' },
+                { id: 'out', label: isCredit ? 'Charges' : 'Money out' },
+              ]}
+              selectedId={direction}
+              onSelect={setDirection}
+            />
+          </View>
+        ) : null}
         {statement.rows.length === 0 ? (
           <Card>
             <EmptyState icon="banknote" title="No transactions" message="Nothing in this period." />
           </Card>
         ) : (
           <Card padded={false}>
-            {[...statement.rows].reverse().map((r, i, arr) => (
+            {[...statement.rows].reverse().filter((r) => direction === 'all' || (direction === 'in' ? r.delta > 0 : r.delta < 0)).map((r, i, arr) => (
               <TransactionRow
                 key={r.tx.id}
                 tx={r.tx}
@@ -259,7 +299,12 @@ export default function AccountDetailScreen() {
         // Paying a card moves money from a bank account into it.
         initialAccountId={isCredit && adding === 'transfer' ? accounts.find((a) => a.type === 'bank' && !a.is_archived)?.id : account.id}
         initialToAccountId={isCredit && adding === 'transfer' ? account.id : undefined}
-        onClose={() => setAdding(null)}
+        initialAmount={isCredit && adding === 'transfer' ? payAmount : undefined}
+        initialNote={isCredit && adding === 'transfer' ? `${account.name} payment` : undefined}
+        onClose={() => {
+          setAdding(null);
+          setPayAmount(undefined);
+        }}
       />
     </View>
   );

@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -22,10 +22,10 @@ export function WaterCard() {
     }, [load])
   );
 
-  const addGlass = async () => {
+  const addGlass = async (n = 1) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const next = await add(1);
-    if (next === goal) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const next = await add(n);
+    if (next >= goal && next - n < goal) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   return (
@@ -37,7 +37,10 @@ export function WaterCard() {
             {count} / {goal} glasses
           </Text>
         </Pressable>
-        <Pressable onPress={addGlass} hitSlop={10}>
+        <Pressable onPress={() => addGlass(2)} hitSlop={6} style={{ marginRight: spacing.sm, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, backgroundColor: colors.blue + '22' }}>
+          <Text style={[typography.subhead, { color: colors.blue, fontWeight: '700' }]}>+2</Text>
+        </Pressable>
+        <Pressable onPress={() => addGlass(1)} hitSlop={10}>
           <Icon name="plus.circle.fill" size={34} color={colors.blue} />
         </Pressable>
       </View>

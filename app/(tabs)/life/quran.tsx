@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useLifeStore } from '../../../src/store/lifeStore';
@@ -225,11 +225,25 @@ export default function QuranScreen() {
 
         {quranLogs.length > 0 ? (
           <>
-            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>This khatm</Text>
+            <Text style={[typography.title3, { color: colors.label, marginBottom: 2 }]}>This khatm</Text>
+            <Text style={[typography.caption1, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>Long-press an entry to remove a mistake.</Text>
             <Card padded={false}>
               {quranLogs.slice(0, 30).map((l, i, arr) => (
-                <View
+                <Pressable
                   key={l.id}
+                  onLongPress={() =>
+                    Alert.alert('Remove this entry?', `${l.pages} page${l.pages === 1 ? '' : 's'} on ${formatDateKey(l.date)}`, [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Remove',
+                        style: 'destructive',
+                        onPress: async () => {
+                          await lifeRepo.deleteQuranLog(l.id);
+                          await useLifeStore.getState().refreshQuran();
+                        },
+                      },
+                    ])
+                  }
                   style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
@@ -242,7 +256,7 @@ export default function QuranScreen() {
                   <Text style={[typography.body, { color: colors.label, fontWeight: '600' }]}>
                     {l.pages} page{l.pages === 1 ? '' : 's'}
                   </Text>
-                </View>
+                </Pressable>
               ))}
             </Card>
           </>

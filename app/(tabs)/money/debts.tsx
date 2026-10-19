@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Share, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -67,6 +67,20 @@ function DebtCard({ debt, onPay, onDelete }: { debt: Debt; onPay: () => void; on
           <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.xs }]}>
             At this pace, paid off around {formatDateShort(payoffDate)}
           </Text>
+        ) : null}
+        {debt.direction === 'owed_to_me' && debt.status !== 'paid' ? (
+          <Pressable
+            onPress={() =>
+              Share.share({
+                message: `Hi ${debt.person_name.split(' ')[0]}, just a friendly reminder about the ${formatMoney(debt.remaining_amount, debt.currency)}${
+                  debt.notes ? ` for ${debt.notes.replace(/^Split: /, '')}` : ''
+                }${debt.due_date ? `, due ${formatDateShort(debt.due_date)}` : ''}. Thanks!`,
+              })
+            }
+            style={{ marginTop: spacing.sm }}
+          >
+            <Text style={[typography.subhead, { color: colors.blue }]}>Send a friendly reminder</Text>
+          </Pressable>
         ) : null}
         <Button
           title={debt.direction === 'i_owe' ? 'Pay' : 'Log payment received'}

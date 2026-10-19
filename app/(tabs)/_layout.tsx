@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname, useRouter } from 'expo-router';
+import { settingsHydrated, useSettingsStore } from '../../src/store/settingsStore';
 import { BlurView } from 'expo-blur';
 import { StyleSheet } from 'react-native';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { Icon } from '../../src/ui/Icon';
 
+// Opening on a tab other than Home happens once per app launch.
+let startTabApplied = false;
+
 export default function TabsLayout() {
   const { colors, scheme } = useTheme();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (startTabApplied) return;
+    startTabApplied = true;
+    settingsHydrated().then(() => {
+      const tab = useSettingsStore.getState().startTab;
+      // Skip when a notification or link already opened somewhere else.
+      if (tab !== 'home' && pathname === '/') router.navigate(`/${tab}`);
+    });
+  }, []);
 
   return (
     <Tabs

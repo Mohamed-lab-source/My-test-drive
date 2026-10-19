@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
@@ -31,6 +32,9 @@ export default function ProjectsScreen() {
   const [addVisible, setAddVisible] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const router = useRouter();
+  const today = todayKey();
+  const overdueCount = (id: string) => tasks.filter((t) => t.project_id === id && t.status !== 'done' && t.due_date && t.due_date < today).length;
   const projects = allProjects.filter((p) => !p.is_archived);
   const archived = allProjects.filter((p) => p.is_archived);
 
@@ -77,6 +81,12 @@ export default function ProjectsScreen() {
                         📅 {taskCount === 0 ? 'Deadline ' + project.due_date : deadlineText(project.due_date).text}
                       </Text>
                     ) : null}
+                    <Text
+                      onPress={() => router.push({ pathname: '/tasks', params: { project: project.id } })}
+                      style={[typography.footnote, { color: colors.blue, marginTop: 2 }]}
+                    >
+                      See tasks ›{overdueCount(project.id) ? `  · ${overdueCount(project.id)} overdue` : ''}
+                    </Text>
                     {projectTasks.length > 0 ? (
                       <View style={{ marginTop: 6 }}>
                         <ProgressBar progress={doneCount / projectTasks.length} color={project.color} />

@@ -93,6 +93,7 @@ export async function getCurrentKhatm(): Promise<number> {
   return row?.k ?? 1;
 }
 
+export const deleteQuranLog = (id: string) => deleteRow('quran_logs', id);
 export const listQuranLogs = (khatm: number) =>
   whereRows<QuranLog>('quran_logs', 'khatm = ? AND pages > 0', [khatm], 'created_at DESC');
 

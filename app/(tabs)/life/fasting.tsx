@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -174,6 +174,28 @@ export default function FastingScreen() {
               </Text>
             </View>
           ))}
+          {(() => {
+            // Sunnah Monday/Thursday fasts, and everything fasted this Hijri year.
+            const keyDay = (k: string) => new Date(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, Number(k.slice(8))).getDay();
+            const monThu = logs.filter((l) => l.date >= yearAgo && l.kind === 'voluntary' && [1, 4].includes(keyDay(l.date))).length;
+            const thisHijriYear = toHijri(new Date(), hijriOffset).year;
+            const hijriCount = logs.filter((l) => {
+              const [y, m, d] = l.date.split('-').map(Number);
+              return toHijri(new Date(y, m - 1, d), hijriOffset).year === thisHijriYear;
+            }).length;
+            return (
+              <View style={{ marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+                  <Text style={[typography.body, { color: colors.secondaryLabel }]}>Mondays & Thursdays</Text>
+                  <Text style={[typography.body, { color: colors.label, fontWeight: '600' }]}>{monThu}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+                  <Text style={[typography.body, { color: colors.secondaryLabel }]}>All fasts in {thisHijriYear} AH</Text>
+                  <Text style={[typography.body, { color: colors.label, fontWeight: '600' }]}>{hijriCount}</Text>
+                </View>
+              </View>
+            );
+          })()}
         </Card>
       </ScrollView>
     </View>

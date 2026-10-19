@@ -35,6 +35,7 @@ function AddOccasionSheet({ visible, onClose, onSaved }: { visible: boolean; onC
   const [kind, setKind] = useState<OccasionKind>('birthday');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [day, setDay] = useState('');
+  const [year, setYear] = useState('');
   const [saving, setSaving] = useState(false);
 
   const dayNum = Number(day);
@@ -44,10 +45,18 @@ function AddOccasionSheet({ visible, onClose, onSaved }: { visible: boolean; onC
     if (!canSave) return;
     setSaving(true);
     try {
-      const occasion = await repo.createOccasion({ name: name.trim(), kind, month, day: dayNum });
+      const y = Number(year);
+      const occasion = await repo.createOccasion({
+        name: name.trim(),
+        kind,
+        month,
+        day: dayNum,
+        year: Number.isInteger(y) && y > 1900 && y <= new Date().getFullYear() ? y : null,
+      });
       await scheduleOccasionReminder(occasion);
       setName('');
       setDay('');
+      setYear('');
       onSaved();
       onClose();
     } finally {
@@ -75,10 +84,22 @@ function AddOccasionSheet({ visible, onClose, onSaved }: { visible: boolean; onC
           />
         </View>
         <TextField label={`Day (1–${daysInMonth(month)})`} placeholder="e.g. 14" keyboardType="number-pad" value={day} onChangeText={setDay} />
+        <TextField label="Year (optional)" placeholder="e.g. 1990 — shows the age or anniversary" keyboardType="number-pad" value={year} onChangeText={setYear} />
         <Button title="Save" onPress={handleSave} disabled={!canSave} loading={saving} style={{ marginBottom: spacing.xl }} />
       </ScrollView>
     </Sheet>
   );
+}
+
+// "turns 30" / "10th anniversary" for the coming date, when the year is known.
+function milestone(o: Occasion, daysAway: number): string {
+  if (!o.year) return '';
+  const next = new Date(Date.now() + daysAway * 86400000).getFullYear();
+  const n = next - o.year;
+  if (n <= 0) return '';
+  if (o.kind === 'birthday') return ` · turns ${n}`;
+  const suffix = n % 10 === 1 && n % 100 !== 11 ? 'st' : n % 10 === 2 && n % 100 !== 12 ? 'nd' : n % 10 === 3 && n % 100 !== 13 ? 'rd' : 'th';
+  return ` · ${n}${suffix} ${o.kind === 'anniversary' ? 'anniversary' : 'year'}`;
 }
 
 export default function OccasionsScreen() {
@@ -123,7 +144,7 @@ export default function OccasionsScreen() {
                     isLast={i === upcoming.length - 1}
                     leading={<IconCircle name={k.icon} color={o.kind === 'birthday' ? colors.pink : colors.red} />}
                     title={o.name}
-                    subtitle={`${MONTHS[o.month - 1]} ${o.day} · ${k.label}`}
+                    subtitle={`${MONTHS[o.month - 1]} ${o.day} · ${k.label}${milestone(o, days)}`}
                     trailing={
                       <Text style={[typography.subhead, { color: days === 0 ? colors.green : colors.secondaryLabel, fontWeight: days <= 7 ? '700' : '400' }]}>
                         {days === 0 ? 'Today 🎉' : days === 1 ? 'Tomorrow' : `in ${days} days`}

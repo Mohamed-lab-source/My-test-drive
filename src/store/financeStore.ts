@@ -136,7 +136,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await settingsHydrated();
     const base = useSettingsStore.getState().currency;
     const { accounts, fxRates } = get();
-    const total = accounts.reduce((sum, a) => sum + fxRepo.convertToBase(a.balance, a.currency, base, fxRates), 0);
+    const excluded = useSettingsStore.getState().excludedAccounts;
+    const total = accounts.filter((a) => !excluded.includes(a.id)).reduce((sum, a) => sum + fxRepo.convertToBase(a.balance, a.currency, base, fxRates), 0);
     await repo.upsertNetWorthSnapshot(todayKey(), total, base);
     set({ netWorthHistory: await repo.listNetWorthSnapshots() });
   },

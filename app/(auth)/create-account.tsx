@@ -11,7 +11,7 @@ import Animated, {
   SlideOutRight,
   ZoomIn,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../src/utils/haptics';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { AuthBackground } from '../../src/features/auth/AuthBackground';

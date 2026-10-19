@@ -461,4 +461,6 @@ export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: stri
   { table: 'projects', column: 'due_date', ddl: 'ALTER TABLE projects ADD COLUMN due_date TEXT' },
   { table: 'transactions', column: 'flag', ddl: 'ALTER TABLE transactions ADD COLUMN flag TEXT' },
   { table: 'tasks', column: 'waiting_on', ddl: 'ALTER TABLE tasks ADD COLUMN waiting_on TEXT' },
+  { table: 'books', column: 'rating', ddl: 'ALTER TABLE books ADD COLUMN rating INTEGER' },
+  { table: 'occasions', column: 'year', ddl: 'ALTER TABLE occasions ADD COLUMN year INTEGER' },
 ];

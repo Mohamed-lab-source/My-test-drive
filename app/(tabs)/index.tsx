@@ -35,7 +35,7 @@ import { AddTaskSheet } from '../../src/features/tasks/AddTaskSheet';
 import { formatMoney } from '../../src/utils/money';
 import { convertToBase } from '../../src/db/repositories/fx';
 import { reconstructNetWorthTrend } from '../../src/utils/networth';
-import { formatHijri } from '../../src/utils/hijri';
+import { formatHijri, toHijri } from '../../src/utils/hijri';
 import { formatRelativeDay, formatTime, isOverdue, localDateKey } from '../../src/utils/date';
 import { todayKey } from '../../src/db/client';
 
@@ -59,6 +59,19 @@ function greeting(): string {
   return 'Good evening';
 }
 
+// A greeting for the day's occasion, if there is one.
+function occasionGreeting(offset: number): string | null {
+  const now = new Date();
+  const h = toHijri(now, offset);
+  if (h.month === 10 && h.day <= 3) return 'Eid Mubarak! 🌙';
+  if (h.month === 12 && h.day >= 10 && h.day <= 13) return 'Eid al-Adha Mubarak! 🐑';
+  if (h.month === 12 && h.day === 9) return 'The Day of Arafah 🤲';
+  if (h.month === 1 && h.day === 1) return `Happy new Hijri year ${h.year} 🌙`;
+  if (h.month === 9) return 'Ramadan Mubarak 🌙';
+  if (now.getDay() === 5) return "Jumu'ah Mubarak 🕌";
+  return null;
+}
+
 export default function HomeScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
@@ -80,7 +93,8 @@ export default function HomeScreen() {
   const { tasks, meetings } = useProductivityStore();
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
 
-  const netWorth = accounts.reduce(
+  const excluded = useSettingsStore((s) => s.excludedAccounts);
+  const netWorth = accounts.filter((a) => !excluded.includes(a.id)).reduce(
     (sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates),
     0
   );
@@ -149,9 +163,14 @@ export default function HomeScreen() {
           }}
         >
           <View>
-            <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
-              {greeting()}{displayName.trim() ? `, ${displayName.trim()}` : ''} · {formatHijri(new Date(), hijriOffset)}
-            </Text>
+            <Pressable onPress={() => router.push('/life/hijri-calendar')} hitSlop={6}>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
+                {greeting()}{displayName.trim() ? `, ${displayName.trim()}` : ''} · {formatHijri(new Date(), hijriOffset)}
+              </Text>
+            </Pressable>
+            {occasionGreeting(hijriOffset) ? (
+              <Text style={[typography.subhead, { color: colors.green, fontWeight: '600' }]}>{occasionGreeting(hijriOffset)}</Text>
+            ) : null}
             <Text style={[typography.largeTitle, { color: colors.label }]}>Anchor</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               <NextPrayerChip />

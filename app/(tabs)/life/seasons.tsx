@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -31,11 +31,12 @@ export default function SeasonsScreen() {
   const { hijriOffset, checklists, toggleChecklistItem } = useSettingsStore();
   const now = useMemo(() => new Date(), []);
   // Each search converts up to ~400 dates to Hijri, so do it once.
-  const { ramadan, dhulHijjah, shawwal } = useMemo(
+  const { ramadan, dhulHijjah, shawwal, muharram } = useMemo(
     () => ({
       ramadan: monthStart(9, hijriOffset, now),
       dhulHijjah: monthStart(12, hijriOffset, now),
       shawwal: monthStart(10, hijriOffset, now),
+      muharram: monthStart(1, hijriOffset, now),
     }),
     [hijriOffset, now]
   );
@@ -62,6 +63,7 @@ export default function SeasonsScreen() {
   const nineDays = Array.from({ length: 9 }, (_, i) => ({ day: i + 1, key: todayKey(addDays(dhulHijjah.start, i)) }));
   const shawwalDays = Array.from({ length: 29 }, (_, i) => todayKey(addDays(shawwal.start, i + 1)));
   const shawwalFasts = shawwalDays.filter((k) => fasts.has(k)).length;
+  const ashuraDays = [9, 10, 11].map((d) => ({ day: d, key: todayKey(addDays(muharram.start, d - 1)) }));
   const fmt = (d: Date) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const daysUntil = (d: Date) => Math.round((d.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
 
@@ -124,6 +126,16 @@ export default function SeasonsScreen() {
             {nineDays.map((d) => chip(String(d.day), fasts.has(d.key), () => toggleFast(d.key), d.day === 9 ? 'Arafah' : undefined))}
           </View>
           {checklist(dhKey, DHUL_HIJJAH_ACTS)}
+        </Card>
+
+        <Card style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.headline, { color: colors.label }]}>🌙 Ashura · Muharram {muharram.year} AH</Text>
+          <Text style={[typography.caption1, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
+            {when(muharram.start)}. Fast the 10th with the 9th (Tasu'a) or the 11th — tap the days you fast.
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {ashuraDays.map((d) => chip(String(d.day), fasts.has(d.key), () => toggleFast(d.key), d.day === 9 ? "Tasu'a" : d.day === 10 ? 'Ashura' : undefined))}
+          </View>
         </Card>
 
         <Card>

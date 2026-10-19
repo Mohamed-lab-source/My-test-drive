@@ -283,6 +283,7 @@ export interface Occasion {
   day: number;
   kind: OccasionKind;
   created_at: string;
+  year?: number | null; // birth/wedding year, for "turns 30" / "10th anniversary"
 }
 
 export type AdhkarSession = 'morning' | 'evening';
@@ -349,6 +350,7 @@ export interface Book {
   status: BookStatus;
   finished_at: string | null;
   created_at: string;
+  rating?: number | null; // 1-5 stars once finished
 }
 
 export interface Countdown {

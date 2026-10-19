@@ -23,6 +23,8 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'KWD', 'QAR
 export function AccountSheet({ visible, onClose, editing }: { visible: boolean; onClose: () => void; editing?: Account | null }) {
   const { colors, typography, spacing } = useTheme();
   const baseCurrency = useSettingsStore((s) => s.currency);
+  const excludedAccounts = useSettingsStore((s) => s.excludedAccounts);
+  const setExcludedAccounts = useSettingsStore((s) => s.setExcludedAccounts);
   const { accounts, addAccount, updateAccount } = useFinanceStore();
 
   const [name, setName] = useState('');
@@ -150,6 +152,20 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
             />
           ))}
         </View>
+        {editing ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.body, { color: colors.label }]}>Count in net worth</Text>
+              <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Turn off for money that isn't yours, e.g. a work or family account</Text>
+            </View>
+            <Switch
+              value={!excludedAccounts.includes(editing.id)}
+              onValueChange={(v) =>
+                setExcludedAccounts(v ? excludedAccounts.filter((x) => x !== editing.id) : [...excludedAccounts, editing.id])
+              }
+            />
+          </View>
+        ) : null}
         {editing ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
             <View style={{ flex: 1 }}>

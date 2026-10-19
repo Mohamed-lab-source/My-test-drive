@@ -27,6 +27,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Tap the eye on the Money card to hide balances',
       'Merchant rules rename bank merchants and remember their category; cash counter in Tools',
       'Duplicate finder and "needs a category" fixer in All Transactions; pay bills from Home',
+      'Date chips, save & add another, make a transaction a monthly bill, exclude accounts from net worth, VAT and salary calculators, Zakat "mark as paid"',
     ],
   },
   {
@@ -42,6 +43,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Time estimates with today\'s load, project deadlines and archived projects',
       'Task deadlines, a Waiting tab, task insights, meeting length, copy a meeting to next week and a daily focus goal',
       'Month calendar in Agenda, paste a list to add many tasks, deadline-day reminders',
+      'Long-press a task for a quick menu, sort chips, quick add "at 5pm" / "every week" / "by friday", auto-start routines each morning',
     ],
   },
   {
@@ -58,6 +60,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Hifz tracker (Juz \'Amma), edit the last 7 days of prayers, weekly habit grid, journal prompts, Zakat al-Fitr',
       '99 Names, blessed seasons checklists, hifz revision, dhikr goal and Life → Insights',
       'Vitals (blood pressure, sugar, heart rate), Tahajjud reminder, dhikr phrases, journal search, qada plan',
+      'Archive habits, book ratings, checklist notes, Hijri date converter, take-all medications, sleep goal, weekly mood strip, share Life insights',
     ],
   },
   {
@@ -73,6 +76,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Mood check-in and Ramadan/Eid countdown on Home; 24-hour clock, whole-number amounts, nightly spending digest',
       'Insight of the day, search by amount, monthly report and a backup reminder in Settings',
       'Accent colour, your name on Home, choose your quick actions, quiet hours, hadith of the day',
+      'Vibration switch, soft dark mode, start tab, Asr madhab, per-prayer adhan and get-ready reminders, lock now, test notification, search filters',
     ],
   },
 ];

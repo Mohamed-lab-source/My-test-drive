@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ScrollView, Pressable, Share } from 'react-native';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -34,6 +34,9 @@ export default function NamesScreen() {
           <Text style={{ fontSize: 40, color: colors.label, marginTop: 4 }}>{today.arabic}</Text>
           <Text style={[typography.title3, { color: colors.label }]}>{today.name}</Text>
           <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>{today.meaning}</Text>
+          <Pressable onPress={() => Share.share({ message: `${today.arabic} — ${today.name}\n${today.meaning}\n(One of the 99 Names of Allah)` })} style={{ marginTop: spacing.sm }}>
+            <Text style={[typography.subhead, { color: colors.blue }]}>Share</Text>
+          </Pressable>
         </Card>
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>

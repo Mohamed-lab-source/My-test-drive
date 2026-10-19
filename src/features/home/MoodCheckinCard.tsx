@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -25,10 +25,17 @@ export function MoodCheckinCard() {
   const refreshJournal = useLifeStore((s) => s.refreshJournal);
   const journalEntries = useLifeStore((s) => s.journalEntries);
   const [mood, setMood] = useState<JournalMood | null>(null);
+  const [week, setWeek] = useState<{ key: string; mood: JournalMood | null }[]>([]);
   const key = todayKey();
 
   useEffect(() => {
-    getJournalEntries([key]).then((rows) => setMood(rows[0]?.mood ?? null));
+    // Today plus the six days before it, oldest first.
+    const now = new Date();
+    const keys = Array.from({ length: 7 }, (_, i) => todayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6 + i)));
+    getJournalEntries(keys).then((rows) => {
+      setMood(rows.find((r) => r.date === key)?.mood ?? null);
+      setWeek(keys.map((k) => ({ key: k, mood: rows.find((r) => r.date === k)?.mood ?? null })));
+    });
   }, [key, journalEntries]);
 
   const pick = async (m: JournalMood) => {
@@ -58,6 +65,21 @@ export function MoodCheckinCard() {
           </Pressable>
         ))}
       </View>
+      {week.filter((d) => d.mood).length >= 2 ? (
+        <View style={{ flexDirection: 'row', marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+          {week.map((d) => {
+            const [y, m, day] = d.key.split('-').map(Number);
+            return (
+              <View key={d.key} style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, opacity: d.mood ? 1 : 0.3 }}>{d.mood ? MOODS.find((x) => x.id === d.mood)?.emoji : '·'}</Text>
+                <Text style={[typography.caption2, { color: colors.tertiaryLabel }]}>
+                  {new Date(y, m - 1, day).toLocaleDateString(undefined, { weekday: 'narrow' })}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
     </Card>
   );
 }

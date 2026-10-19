@@ -7,6 +7,7 @@ import { Button } from '../../ui/Button';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
 import { todayKey } from '../../db/client';
+import { formatTime } from '../../utils/date';
 import type { Meeting } from '../../db/types';
 
 const REMINDER_OPTIONS = [5, 15, 30, 60];
@@ -27,6 +28,7 @@ function timeOf(iso: string): string {
 export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolean; onClose: () => void; editing?: Meeting | null }) {
   const { colors, typography, spacing } = useTheme();
   const addMeeting = useProductivityStore((s) => s.addMeeting);
+  const allMeetings = useProductivityStore((s) => s.meetings);
   const updateMeeting = useProductivityStore((s) => s.updateMeeting);
   const addTask = useProductivityStore((s) => s.addTask);
 
@@ -151,6 +153,23 @@ export function AddMeetingSheet({ visible, onClose, editing }: { visible: boolea
             <TextField label="Time" placeholder="HH:MM" value={time} onChangeText={setTime} />
           </View>
         </View>
+        {(() => {
+          // Another meeting overlapping this one's time slot.
+          const start = new Date(combineDateAndTime(date, time)).getTime();
+          if (isNaN(start)) return null;
+          const end = start + (duration || 30) * 60000;
+          const clash = allMeetings.find((m) => {
+            if (m.id === editing?.id) return false;
+            const s0 = new Date(m.start_at).getTime();
+            const e0 = m.end_at ? new Date(m.end_at).getTime() : s0 + 30 * 60000;
+            return s0 < end && start < e0;
+          });
+          return clash ? (
+            <Text style={[typography.caption1, { color: colors.orange, marginTop: -spacing.sm, marginBottom: spacing.sm }]}>
+              ⚠ Overlaps "{clash.title}" at {formatTime(clash.start_at)}
+            </Text>
+          ) : null;
+        })()}
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Length</Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector

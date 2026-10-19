@@ -38,6 +38,13 @@ async function loadBadges(): Promise<Badge[]> {
     count('SELECT COUNT(*) AS n FROM fasting_logs'),
     count("SELECT COUNT(*) AS n FROM books WHERE status = 'finished'"),
   ]);
+  const [sunnah, habitLogs, notes, hifz, waterDays] = await Promise.all([
+    count('SELECT COUNT(*) AS n FROM sunnah_prayer_logs'),
+    count('SELECT COUNT(*) AS n FROM habit_logs'),
+    count('SELECT COUNT(*) AS n FROM notes'),
+    count("SELECT COUNT(*) AS n FROM hifz WHERE status = 'memorised'"),
+    count('SELECT COUNT(*) AS n FROM water_logs WHERE count >= 8'),
+  ]);
   const b = (emoji: string, title: string, detail: string, value: number, target: number): Badge => ({
     emoji,
     title,
@@ -61,6 +68,11 @@ async function loadBadges(): Promise<Badge[]> {
     b('🕊', 'Debt-free', 'Pay off every debt you tracked', debtsAll > 0 && debtsOpen === 0 ? 1 : 0, 1),
     b('🍽', 'Faster', 'Log 10 fasts', fasts, 10),
     b('📚', 'Reader', 'Finish 5 books', books, 5),
+    b('🤲', 'Sunnah lover', 'Log 50 sunnah prayers', sunnah, 50),
+    b('🔁', 'Habit builder', 'Check in on habits 100 times', habitLogs, 100),
+    b('🗒', 'Note taker', 'Write 10 notes', notes, 10),
+    b('🧠', 'Hafiz in the making', 'Memorise 10 surahs', hifz, 10),
+    b('💧', 'Well hydrated', 'Reach 8 glasses on 30 days', waterDays, 30),
   ];
 }
 

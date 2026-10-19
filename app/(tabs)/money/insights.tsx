@@ -408,6 +408,19 @@ export default function InsightsScreen() {
           </Insight>
         ) : null}
 
+        {(() => {
+          const year = String(now.getFullYear());
+          const totals = new Map<string, number>();
+          for (const sp of data.sp) if (sp.month.startsWith(year)) totals.set(sp.categoryId ?? '', (totals.get(sp.categoryId ?? '') ?? 0) + sp.amount);
+          const top = [...totals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+          const all = [...totals.values()].reduce((a, b) => a + b, 0);
+          return top.length ? (
+            <Insight emoji="🗂️" title="Top categories this year">
+              {top.map(([id, v]) => sub(`${catName(id || null)}: ${money(v)} (${Math.round((v / all) * 100)}%)`, undefined, id || 'none'))}
+            </Insight>
+          ) : null;
+        })()}
+
         <Insight emoji="📆" title="Year to date">
           {sub(`${money(data.ytd.thisYear)} spent in ${now.getFullYear()}`)}
           {data.ytd.lastYear !== null

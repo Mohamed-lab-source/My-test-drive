@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Button } from '../../ui/Button';
 import { ChipSelector } from '../../ui/ChipSelector';
@@ -8,7 +8,7 @@ import { useProductivityStore } from '../../store/productivityStore';
 import { cancelFocusEnd, scheduleFocusEnd } from '../../notifications/scheduler';
 import type { Task } from '../../db/types';
 
-const DURATIONS = [15, 25, 50];
+const DURATIONS = [10, 15, 25, 45, 50, 90];
 
 function formatClock(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));

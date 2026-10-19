@@ -20,10 +20,11 @@ import {
   rescheduleOccasionReminders,
 } from '../src/notifications/scheduler';
 import { rescheduleExtraReminders } from '../src/notifications/extras';
+import { applyAutoRoutines } from '../src/utils/autoRoutines';
 
 import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
-import { setPrayerAdjustments } from '../src/utils/prayerTimes';
+import { setAsrMadhab, setPrayerAdjustments } from '../src/utils/prayerTimes';
 import { setUse24hClock } from '../src/utils/date';
 import { setWholeMoney } from '../src/utils/money';
 import { settingsHydrated, useSettingsStore } from '../src/store/settingsStore';
@@ -90,6 +91,7 @@ function AppShell() {
         setDataReady(true);
         await settingsHydrated();
         setPrayerAdjustments(useSettingsStore.getState().prayerAdjust);
+        setAsrMadhab(useSettingsStore.getState().asrMadhab);
         // Bank SMS: pick up any new debit alerts (no-op unless turned on).
         syncSmsAlertConfig();
         useSmsStore
@@ -105,6 +107,7 @@ function AppShell() {
         await reschedulePrayerAlerts();
         await rescheduleOccasionReminders();
         await rescheduleExtraReminders();
+        await applyAutoRoutines().catch(() => 0);
       })
       .catch((e) => {
         console.error('Failed to hydrate app state', e);
@@ -116,7 +119,11 @@ function AppShell() {
   // card payment made a minute ago is waiting when you open Anchor.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') useSmsStore.getState().scan().catch(() => {});
+      if (state === 'active') {
+        useSmsStore.getState().scan().catch(() => {});
+        // A new day may have started while Anchor was in the background.
+        applyAutoRoutines().catch(() => 0);
+      }
     });
     return () => sub.remove();
   }, []);

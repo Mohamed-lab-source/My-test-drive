@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
 import { useHabitsStore } from '../../store/habitsStore';

@@ -16,6 +16,7 @@ import { nowIso } from '../../../src/db/client';
 import type { Book, BookStatus } from '../../../src/db/types';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
+import { formatDateShort } from '../../../src/utils/date';
 
 const TABS: BookStatus[] = ['reading', 'want', 'finished'];
 
@@ -138,6 +139,29 @@ export default function BooksScreen() {
                       </Pressable>
                     </View>
                   </>
+                ) : b.status === 'finished' ? (
+                  <View style={{ marginTop: spacing.sm }}>
+                    <View style={{ flexDirection: 'row' }}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Pressable
+                          key={n}
+                          hitSlop={4}
+                          onPress={async () => {
+                            await repo.updateBook(b.id, { rating: b.rating === n ? null : n });
+                            await load();
+                          }}
+                        >
+                          <Text style={{ fontSize: 22, color: (b.rating ?? 0) >= n ? colors.orange : colors.gray4, marginRight: 4 }}>★</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    {b.finished_at ? (
+                      <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                        Finished {formatDateShort(b.finished_at)} · read in{' '}
+                        {Math.max(1, Math.round((new Date(b.finished_at).getTime() - new Date(b.created_at).getTime()) / 86400000))} days
+                      </Text>
+                    ) : null}
+                  </View>
                 ) : b.status === 'want' ? (
                   <Pressable
                     onPress={async () => {

@@ -5,6 +5,12 @@ import { useTheme } from '../theme/ThemeProvider';
 import { isBiometricLockEnabled, authenticate } from './biometricLock';
 import { useSettingsStore } from '../store/settingsStore';
 
+// Set while the gate is mounted, so Settings can lock the app on demand.
+let lockListener: (() => void) | null = null;
+export function lockNow(): void {
+  lockListener?.();
+}
+
 // Locks the app behind Face ID/fingerprint when enabled in Settings: locked
 // on first mount and again when the app returns from the background after
 // the chosen timeout (immediately by default).
@@ -37,6 +43,9 @@ export function BiometricLockGate({ children }: { children: React.ReactNode }) {
       setChecked(true);
     });
 
+    // Locks without prompting; the Unlock button asks when you're back.
+    lockListener = () => setLocked(true);
+
     const sub = AppState.addEventListener('change', (next) => {
       if (authenticating.current) {
         appState.current = next;
@@ -58,7 +67,10 @@ export function BiometricLockGate({ children }: { children: React.ReactNode }) {
       }
       appState.current = next;
     });
-    return () => sub.remove();
+    return () => {
+      lockListener = null;
+      sub.remove();
+    };
   }, []);
 
   if (!checked) return null;

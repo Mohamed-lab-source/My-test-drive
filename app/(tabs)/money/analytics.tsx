@@ -100,7 +100,8 @@ export default function AnalyticsScreen() {
 
   const maxTrendValue = Math.max(1, ...monthlyTrend.flatMap((m) => [m.income, m.expense]));
 
-  const netWorth = accounts.reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
+  const excluded = useSettingsStore((s) => s.excludedAccounts);
+  const netWorth = accounts.filter((a) => !excluded.includes(a.id)).reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
   const forecast = useMemo(
     () => forecastCashFlow(netWorth, recurringRules, 30, currency, fxRates),
     [netWorth, recurringRules, currency, fxRates]

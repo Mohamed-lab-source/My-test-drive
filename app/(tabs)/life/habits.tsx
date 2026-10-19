@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useHabitsStore } from '../../../src/store/habitsStore';
@@ -18,7 +18,7 @@ import * as habitsRepo from '../../../src/db/repositories/habits';
 import { todayKey } from '../../../src/db/client';
 import { longestStreak } from '../../../src/utils/streaks';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
-import { HABIT_REMINDER_TIMES, requestNotificationPermission } from '../../../src/notifications/scheduler';
+import { HABIT_REMINDER_TIMES, cancelHabitReminder, requestNotificationPermission } from '../../../src/notifications/scheduler';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { formatClock } from '../../../src/utils/date';
 import type { Habit } from '../../../src/db/types';
@@ -28,11 +28,15 @@ const WEEKS = 5;
 function HabitCard({
   habit,
   onDelete,
+  onEdit,
+  onArchive,
   canUp,
   canDown,
 }: {
   habit: Habit;
   onDelete: () => void;
+  onEdit: () => void;
+  onArchive: () => void;
   canUp: boolean;
   canDown: boolean;
 }) {
@@ -120,6 +124,14 @@ function HabitCard({
                 setHabitReminder(habit.id, id === 'none' ? null : id);
               }}
             />
+            <View style={{ flexDirection: 'row', marginTop: spacing.md }}>
+              <Pressable onPress={onEdit} hitSlop={8} style={{ marginRight: spacing.lg }}>
+                <Text style={[typography.subhead, { color: colors.blue }]}>Edit</Text>
+              </Pressable>
+              <Pressable onPress={onArchive} hitSlop={8}>
+                <Text style={[typography.subhead, { color: colors.orange }]}>Archive (keeps history)</Text>
+              </Pressable>
+            </View>
           </View>
         ) : null}
       </Card>
@@ -131,6 +143,19 @@ export default function HabitsScreen() {
   const { colors, spacing } = useTheme();
   const { habits, removeHabit, hydrate } = useHabitsStore();
   const [addVisible, setAddVisible] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [archived, setArchived] = useState<Habit[]>([]);
+  const loadArchived = () => habitsRepo.listArchivedHabits().then(setArchived);
+  useEffect(() => {
+    loadArchived();
+  }, [habits.length]);
+
+  const archive = async (habit: Habit, on: boolean) => {
+    await habitsRepo.updateHabit(habit.id, { is_archived: on ? 1 : 0 });
+    if (on) await cancelHabitReminder(habit.id);
+    await hydrate();
+    await loadArchived();
+  };
 
   const handleDelete = async (habit: Habit) => {
     await removeHabit(habit.id);
@@ -147,13 +172,36 @@ export default function HabitsScreen() {
           <>
           <HabitWeekGrid />
           {habits.map((habit, i) => (
-            <HabitCard key={habit.id} habit={habit} onDelete={() => handleDelete(habit)} canUp={i > 0} canDown={i < habits.length - 1} />
+            <HabitCard
+              key={habit.id}
+              habit={habit}
+              onDelete={() => handleDelete(habit)}
+              onEdit={() => setEditingHabit(habit)}
+              onArchive={() => archive(habit, true)}
+              canUp={i > 0}
+              canDown={i < habits.length - 1}
+            />
           ))}
           </>
         )}
+        {archived.length ? (
+          <View style={{ marginTop: spacing.lg }}>
+            <Text style={{ color: colors.secondaryLabel, fontWeight: '600', marginBottom: spacing.xs }}>ARCHIVED</Text>
+            {archived.map((h) => (
+              <Card key={h.id} style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', opacity: 0.75 }}>
+                <IconCircle name={h.icon} color={h.color} size={32} />
+                <Text style={{ flex: 1, marginLeft: spacing.sm, color: colors.label, fontSize: 16 }}>{h.name}</Text>
+                <Pressable onPress={() => archive(h, false)} hitSlop={8}>
+                  <Text style={{ color: colors.blue, fontSize: 15 }}>Restore</Text>
+                </Pressable>
+              </Card>
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />
       <AddHabitSheet visible={addVisible} onClose={() => setAddVisible(false)} />
+      <AddHabitSheet visible={!!editingHabit} editing={editingHabit} onClose={() => setEditingHabit(null)} />
     </View>
   );
 }

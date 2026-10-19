@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
@@ -6,6 +6,8 @@ import { ChipSelector } from '../../ui/ChipSelector';
 import { Button } from '../../ui/Button';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useHabitsStore } from '../../store/habitsStore';
+import { updateHabit } from '../../db/repositories/habits';
+import type { Habit } from '../../db/types';
 import { accentColors } from '../../theme/colors';
 import { HABIT_REMINDER_TIMES, requestNotificationPermission } from '../../notifications/scheduler';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -13,7 +15,7 @@ import { formatClock } from '../../utils/date';
 
 const ICONS = ['flame.fill', 'book.fill', 'heart.fill', 'sparkles', 'sun.max.fill', 'moon.stars.fill', 'hands.sparkles.fill'];
 
-export function AddHabitSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function AddHabitSheet({ visible, onClose, editing }: { visible: boolean; onClose: () => void; editing?: Habit | null }) {
   const { colors, typography, spacing } = useTheme();
   const { habits, addHabit } = useHabitsStore();
 
@@ -23,6 +25,14 @@ export function AddHabitSheet({ visible, onClose }: { visible: boolean; onClose:
   const [remind, setRemind] = useState('none');
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!visible) return;
+    setName(editing?.name ?? '');
+    setIcon(editing?.icon ?? ICONS[0]);
+    setColor(editing?.color ?? accentColors[0]);
+    setRemind(editing?.remind_time ?? 'none');
+  }, [visible, editing?.id]);
+
   const canSave = name.trim().length > 0;
 
   const handleSave = async () => {
@@ -30,7 +40,12 @@ export function AddHabitSheet({ visible, onClose }: { visible: boolean; onClose:
     setSaving(true);
     try {
       if (remind !== 'none' && !useSettingsStore.getState().notificationsEnabled) await requestNotificationPermission();
-      await addHabit({ name: name.trim(), icon, color, sort_order: habits.length, remind_time: remind === 'none' ? null : remind });
+      if (editing) {
+        await updateHabit(editing.id, { name: name.trim(), icon, color });
+        await useHabitsStore.getState().setHabitReminder(editing.id, remind === 'none' ? null : remind);
+      } else {
+        await addHabit({ name: name.trim(), icon, color, sort_order: habits.length, remind_time: remind === 'none' ? null : remind });
+      }
       setName('');
       setRemind('none');
       onClose();
@@ -42,8 +57,8 @@ export function AddHabitSheet({ visible, onClose }: { visible: boolean; onClose:
   return (
     <Sheet visible={visible} onClose={onClose}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
-        <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.md }]}>New Habit</Text>
-        <TextField label="Name" placeholder="e.g. Read, Exercise, No sugar" value={name} onChangeText={setName} autoFocus />
+        <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.md }]}>{editing ? 'Edit Habit' : 'New Habit'}</Text>
+        <TextField label="Name" placeholder="e.g. Read, Exercise, No sugar" value={name} onChangeText={setName} autoFocus={!editing} />
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>Daily reminder</Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector

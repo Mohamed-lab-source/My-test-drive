@@ -75,7 +75,9 @@ export default function BudgetsScreen() {
           .filter((t) => t.category_id === budget.category_id && t.type === 'expense' && localDateKey(t.date) >= monthStart)
           .reduce((sum, t) => sum + t.amount, 0);
         return { budget, category, spend, progress: budget.monthly_limit > 0 ? spend / budget.monthly_limit : 0 };
-      }),
+      })
+        // Closest to (or over) the limit first.
+        .sort((a, b) => b.progress - a.progress),
     [budgets, categories, transactions, monthStart]
   );
 

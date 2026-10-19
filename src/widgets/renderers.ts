@@ -10,7 +10,7 @@ import * as financeRepo from '../db/repositories/finance';
 import { listFxRates, convertToBase } from '../db/repositories/fx';
 import { formatRelativeDay, formatTime, setUse24hClock } from '../utils/date';
 import { setWholeMoney } from '../utils/money';
-import { findPrayerCity, getNextPrayer, setPrayerAdjustments } from '../utils/prayerTimes';
+import { findPrayerCity, getNextPrayer, setAsrMadhab, setPrayerAdjustments } from '../utils/prayerTimes';
 import { buildPrayerWidget } from './PrayerWidget';
 import { buildTasksWidget } from './TasksWidget';
 import { buildMoneyWidget } from './MoneyWidget';
@@ -24,6 +24,8 @@ async function readSettings(): Promise<{
   prayerAdjust?: Record<string, number>;
   use24h?: boolean;
   wholeMoney?: boolean;
+  excludedAccounts?: string[];
+  asrMadhab?: 'auto' | 'shafi' | 'hanafi';
 }> {
   try {
     const raw = await AsyncStorage.getItem('anchor-settings');
@@ -46,6 +48,7 @@ const PRAYER_NAMES: Record<string, string> = { fajr: 'Fajr', dhuhr: 'Dhuhr', asr
 async function getNextPrayerLabel(): Promise<string | null> {
   const settings = await readSettings();
   setPrayerAdjustments(settings.prayerAdjust ?? {});
+  setAsrMadhab(settings.asrMadhab ?? 'auto');
   const city = findPrayerCity(settings.prayerCityId ?? null);
   if (!city) return null;
   const next = getNextPrayer(city);
@@ -77,7 +80,8 @@ export async function renderMoneyWidget(scheme: 'light' | 'dark') {
     getCurrency(),
     listFxRates(),
   ]);
-  const netWorthMinor = accounts.reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
+  const excluded = (await readSettings()).excludedAccounts ?? [];
+  const netWorthMinor = accounts.filter((a) => !excluded.includes(a.id)).reduce((sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates), 0);
   const nextRule = recurringRules
     .filter((r) => r.is_active && !r.is_paused && r.type === 'expense')
     .sort((a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime())[0];

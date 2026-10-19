@@ -14,6 +14,14 @@ interface Theme {
   shadow: typeof shadow;
 }
 
+const SOFT_DARK: Partial<ThemeColors> = {
+  systemBackground: '#17181A',
+  secondarySystemBackground: '#222326',
+  systemGroupedBackground: '#17181A',
+  secondarySystemGroupedBackground: '#222326',
+  tertiarySystemGroupedBackground: '#2E2F33',
+};
+
 const ThemeContext = createContext<Theme | null>(null);
 
 // The "Larger text" setting scales every text style from one place.
@@ -29,6 +37,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const preference = useSettingsStore((s) => s.appearance);
   const textScale = useSettingsStore((s) => s.textScale);
   const accent = useSettingsStore((s) => s.accent);
+  const softDark = useSettingsStore((s) => s.softDark);
 
   const scheme: ColorScheme =
     preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
@@ -38,13 +47,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       scheme,
       // The accent colour (Settings → Appearance) replaces the default blue
       // used for buttons, links and selection everywhere.
-      colors: accent === 'blue' ? palette[scheme] : { ...palette[scheme], blue: palette[scheme][accent] },
+      colors: {
+        ...palette[scheme],
+        ...(accent === 'blue' ? null : { blue: palette[scheme][accent] }),
+        // "Soft dark": charcoal instead of true black, easier on some eyes.
+        ...(scheme === 'dark' && softDark ? SOFT_DARK : null),
+      },
       typography: scaleTypography(textScale),
       spacing,
       radius,
       shadow,
     }),
-    [scheme, textScale, accent]
+    [scheme, textScale, accent, softDark]
   );
 
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;

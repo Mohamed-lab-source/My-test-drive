@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -157,9 +157,28 @@ export default function LifeInsightsScreen() {
   const bmi = heightCm > 0 && data.weight ? data.weight / Math.pow(heightCm / 100, 2) : null;
   const bmiLabel = bmi === null ? '' : bmi < 18.5 ? 'underweight' : bmi < 25 ? 'healthy range' : bmi < 30 ? 'overweight' : 'obese range';
 
+  // A plain-text summary of the cards below.
+  const share = () => {
+    const parts = ['My life insights (Anchor)'];
+    if (data.onTime) parts.push(`🕌 ${Math.round(data.onTime.rate * 100)}% of prayers on time (30 days)`);
+    if (data.journalStreak) parts.push(`📓 ${data.journalStreak}-day journal streak`);
+    if (data.habits.length) parts.push(`🎯 Strongest habit: ${data.habits[0].name} (${Math.round(data.habits[0].rate * 100)}%)`);
+    parts.push(`💧 ${data.waterAvg.toFixed(1)} glasses of water a day`);
+    if (data.sleepThis !== null) parts.push(`😴 ${data.sleepThis.toFixed(1)} h sleep a night`);
+    if (data.medRate !== null) parts.push(`💊 ${Math.round(Math.min(1, data.medRate) * 100)}% of doses taken`);
+    Share.share({ message: parts.join('\n') });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <NavHeader title="Life insights" />
+      <NavHeader
+        title="Life insights"
+        right={
+          <Pressable onPress={share} hitSlop={8}>
+            <Text style={[typography.subhead, { color: colors.blue }]}>Share</Text>
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
         {card(
           '🕌',

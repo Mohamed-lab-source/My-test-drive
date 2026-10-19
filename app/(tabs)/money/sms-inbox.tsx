@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Platform, Switch } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -42,6 +42,11 @@ export default function SmsInboxScreen() {
   const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules, links, loadLinks } = useSmsStore();
   const addAccount = useFinanceStore((s) => s.addAccount);
   const [pickedAccount, setPickedAccount] = useState<Record<string, string>>({});
+  const [inboxSort, setInboxSort] = useState('new');
+  const [showRaw, setShowRaw] = useState<string | null>(null);
+  const sortedPending = [...pending].sort((a, b) =>
+    inboxSort === 'big' ? b.amount - a.amount : inboxSort === 'old' ? a.sms_date.localeCompare(b.sms_date) : b.sms_date.localeCompare(a.sms_date)
+  );
   const accountFor = (p: SmsImport) =>
     accounts.find((a) => a.id === pickedAccount[p.id]) ?? accountForImport(p, accounts, links);
 
@@ -353,17 +358,49 @@ export default function SmsInboxScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
               <Text style={[typography.title3, { color: colors.label, flex: 1 }]}>To review ({pending.length})</Text>
               {pending.length > 1 ? (
-                <Pressable onPress={addAll}>
-                  <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Add all</Text>
-                </Pressable>
+                <>
+                  <Pressable
+                    onPress={() =>
+                      Alert.alert('Dismiss all?', `Remove ${pending.length} items from the review list without adding them?`, [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Dismiss all',
+                          style: 'destructive',
+                          onPress: async () => {
+                            for (const x of [...pending]) await dismiss(x.id);
+                          },
+                        },
+                      ])
+                    }
+                    style={{ marginRight: spacing.md }}
+                  >
+                    <Text style={[typography.subhead, { color: colors.red }]}>Dismiss all</Text>
+                  </Pressable>
+                  <Pressable onPress={addAll}>
+                    <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Add all</Text>
+                  </Pressable>
+                </>
               ) : null}
             </View>
+            {pending.length > 1 ? (
+              <View style={{ marginBottom: spacing.sm }}>
+                <ChipSelector
+                  options={[
+                    { id: 'new', label: 'Newest first' },
+                    { id: 'old', label: 'Oldest first' },
+                    { id: 'big', label: 'Largest first' },
+                  ]}
+                  selectedId={inboxSort}
+                  onSelect={setInboxSort}
+                />
+              </View>
+            ) : null}
             {pending.length === 0 ? (
               <Card>
                 <EmptyState icon="checkmark.circle.fill" title="All caught up" message="New bank debits show up here whenever you open Anchor." />
               </Card>
             ) : (
-              pending.map((p) => {
+              sortedPending.map((p) => {
                 const dup = looksLogged(p);
                 const target = accountFor(p);
                 const foreign = target && p.currency !== target.currency;
@@ -389,8 +426,16 @@ export default function SmsInboxScreen() {
                           </Text>
                         ) : null}
                         <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
-                          {formatRelativeDay(p.sms_date)} · {formatTime(p.sms_date)}
+                          {formatRelativeDay(p.sms_date)} · {formatTime(p.sms_date)} ·{' '}
+                          <Text onPress={() => setShowRaw(showRaw === p.id ? null : p.id)} style={{ color: colors.blue }}>
+                            {showRaw === p.id ? 'Hide message' : 'Show message'}
+                          </Text>
                         </Text>
+                        {showRaw === p.id ? (
+                          <Text selectable style={[typography.caption1, { color: colors.label, marginTop: 4, padding: 6, borderRadius: 8, backgroundColor: colors.tertiaryFill }]}>
+                            {p.body}
+                          </Text>
+                        ) : null}
                         <View
                           style={{
                             flexDirection: 'row',

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -21,7 +21,7 @@ const SLEEP_OPTIONS = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9];
 
 export default function HealthScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { waterGoal, setWaterGoal, bedtime, setBedtime, weightGoal, setWeightGoal, notificationsEnabled } = useSettingsStore();
+  const { waterGoal, setWaterGoal, sleepGoal, setSleepGoal, bedtime, setBedtime, weightGoal, setWeightGoal, notificationsEnabled } = useSettingsStore();
   const [goalInput, setGoalInput] = useState(weightGoal > 0 ? String(weightGoal) : '');
   const today = todayKey();
   const week = lastDays(7, todayKey);
@@ -69,7 +69,7 @@ export default function HealthScreen() {
   const changeWater = async (delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await repo.setWater(today, glasses + delta);
-    if (glasses + delta === waterGoal && delta > 0) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (glasses < waterGoal && glasses + delta >= waterGoal) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await load();
   };
 
@@ -104,6 +104,9 @@ export default function HealthScreen() {
             <Pressable onPress={() => changeWater(1)} hitSlop={8}>
               <Icon name="plus.circle.fill" size={36} color={colors.blue} />
             </Pressable>
+            <Pressable onPress={() => changeWater(2)} hitSlop={8} style={{ marginLeft: 6 }}>
+              <Text style={[typography.headline, { color: colors.blue }]}>+2</Text>
+            </Pressable>
           </View>
           <MiniBars data={week.map((d) => ({ ...d, value: water.find((w) => w.id === d.key)?.count ?? 0 }))} color={colors.blue} max={waterGoal} />
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.sm, marginBottom: 6 }]}>Daily goal</Text>
@@ -131,6 +134,18 @@ export default function HealthScreen() {
           <View style={{ marginTop: spacing.md }}>
             <MiniBars data={sleepWeek} color={colors.indigo} max={9} />
           </View>
+          {sleepLogged.length ? (
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>
+              Goal of {sleepGoal} h met on {sleepLogged.filter((d) => d.value >= sleepGoal).length} of {sleepLogged.length} logged night
+              {sleepLogged.length === 1 ? '' : 's'} this week
+            </Text>
+          ) : null}
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>Sleep goal</Text>
+          <ChipSelector
+            options={[6, 7, 7.5, 8, 9].map((h) => ({ id: String(h), label: `${h} h` }))}
+            selectedId={String(sleepGoal)}
+            onSelect={(id) => setSleepGoal(Number(id))}
+          />
           <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: 6 }]}>Bedtime reminder</Text>
           <ChipSelector
             options={[{ id: 'off', label: 'Off' }, ...['21:30', '22:00', '22:30', '23:00', '23:30'].map((t) => ({ id: t, label: formatClock(t) }))]}
@@ -149,6 +164,19 @@ export default function HealthScreen() {
             {latestWeight ? `${latestWeight.kg} kg on ${formatDateKey(latestWeight.id)}` : 'Log your weight to see the trend.'}
             {weightChange !== null ? ` · ${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} kg over 90 days` : ''}
           </Text>
+          {(() => {
+            // A 7-day average smooths out day-to-day water weight.
+            const recent = weight.filter((w) => w.id >= todayKey(new Date(Date.now() - 6 * 86400000)));
+            const prior = weight.filter((w) => w.id < todayKey(new Date(Date.now() - 6 * 86400000)) && w.id >= todayKey(new Date(Date.now() - 13 * 86400000)));
+            const avg = (xs: WeightLog[]) => (xs.length ? xs.reduce((s2, w) => s2 + w.kg, 0) / xs.length : null);
+            const a = avg(recent);
+            const b = avg(prior);
+            return a !== null ? (
+              <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                7-day average {a.toFixed(1)} kg{b !== null ? ` (${a - b > 0 ? '+' : ''}${(a - b).toFixed(1)} vs the week before)` : ''}
+              </Text>
+            ) : null;
+          })()}
           {weightGoal > 0 && latestWeight ? (
             <Text style={[typography.subhead, { color: Math.abs(latestWeight.kg - weightGoal) < 0.05 ? colors.green : colors.pink, marginBottom: spacing.sm, fontWeight: '600' }]}>
               {Math.abs(latestWeight.kg - weightGoal) < 0.05

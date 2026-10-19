@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -59,9 +59,12 @@ export default function TasbihScreen() {
   const [mode, setMode] = useState<'free' | 'salah'>('free');
   const [salahPos, setSalahPos] = useState(0);
   const [history, setHistory] = useState<Record<string, number>>({});
+  const [pastTotal, setPastTotal] = useState<number | null>(null);
   const week = lastDays(7, todayKey);
   useEffect(() => {
     repo.listDhikrSince(week[0].key).then((rows) => setHistory(Object.fromEntries(rows.map((r) => [r.date, r.count]))));
+    // Everything before today, so the live count can be added on top.
+    repo.listDhikrSince('2000-01-01').then((rows) => setPastTotal(rows.filter((r) => r.date !== todayKey()).reduce((n, r) => n + r.count, 0)));
   }, []);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(total);
@@ -243,6 +246,11 @@ export default function TasbihScreen() {
             color={colors.mint}
             height={50}
           />
+          {pastTotal !== null ? (
+            <Text style={[typography.caption1, { color: colors.secondaryLabel, textAlign: 'center', marginTop: spacing.sm }]}>
+              {(pastTotal + total).toLocaleString()} dhikr all time
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
     </View>

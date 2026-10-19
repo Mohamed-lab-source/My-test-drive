@@ -16,6 +16,7 @@ export function WeeklyLimitCard() {
   const transactions = useFinanceStore((s) => s.transactions);
   const { currency, weeklyLimit, setWeeklyLimit, weekStart } = useSettingsStore();
   const [spent, setSpent] = useState(0);
+  const [lastWeek, setLastWeek] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState('');
   const now = new Date();
@@ -24,6 +25,12 @@ export function WeeklyLimitCard() {
 
   useEffect(() => {
     repo.getSpendSince(start.toISOString(), currency).then(setSpent);
+    // Last week up to the same weekday, for a fair comparison.
+    const prevStart = new Date(start.getTime() - 7 * 86400000);
+    const prevEnd = new Date(Date.now() - 7 * 86400000);
+    repo
+      .listTransactionsInRange(prevStart.toISOString(), prevEnd.toISOString())
+      .then((rows) => setLastWeek(rows.filter((t) => t.type === 'expense' && t.currency === currency).reduce((s, t) => s + t.amount, 0)));
   }, [transactions, currency, weekStart]);
 
   if (!weeklyLimit && !editing) {
@@ -77,6 +84,11 @@ export function WeeklyLimitCard() {
               ? `${formatMoney(-left, currency)} over this week`
               : `${formatMoney(left, currency)} left · ${formatMoney(Math.floor(left / daysLeft), currency)}/day for ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}
           </Text>
+          {lastWeek !== null && lastWeek > 0 ? (
+            <Text style={[typography.caption1, { color: spent > lastWeek ? colors.orange : colors.green, marginTop: 2 }]}>
+              {spent > lastWeek ? '▲' : '▼'} {formatMoney(Math.abs(spent - lastWeek), currency)} vs the same point last week
+            </Text>
+          ) : null}
         </>
       )}
     </Card>

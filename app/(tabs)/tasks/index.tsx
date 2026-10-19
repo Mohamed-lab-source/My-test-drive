@@ -25,12 +25,20 @@ import { TextField } from '../../../src/ui/TextField';
 import { parseQuickTask } from '../../../src/utils/quickAdd';
 import { formatDateKey } from '../../../src/utils/date';
 import { todayKey } from '../../../src/db/client';
-import { formatRelativeDay, formatTime, localDateKey } from '../../../src/utils/date';
+import { formatClock, formatRelativeDay, formatTime, localDateKey } from '../../../src/utils/date';
 import type { Task } from '../../../src/db/types';
 import { insertRow } from '../../../src/db/helpers';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useUndoStore } from '../../../src/store/undoStore';
 import { DAILY_CAPACITY_MINUTES, daysToDeadline, formatEstimate, plannedMinutes } from '../../../src/utils/estimate';
+
+function remindAtFor(dateKey: string | null, hhmm: string): string | null {
+  const day = dateKey ?? todayKey();
+  const [y, m, d] = day.split('-').map(Number);
+  const [h, min] = hhmm.split(':').map(Number);
+  const at = new Date(y, m - 1, d, h, min);
+  return at.getTime() > Date.now() ? at.toISOString() : null;
+}
 
 const SEGMENTS = ['Today', 'Backlog', 'All', 'Done', 'Waiting'];
 
@@ -38,7 +46,7 @@ export default function TasksScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { action } = useLocalSearchParams<{ action?: string }>();
+  const { action, project } = useLocalSearchParams<{ action?: string; project?: string }>();
   const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask, rescheduleTask } = useProductivityStore();
   const [quickText, setQuickText] = useState('');
   const quick = useMemo(() => parseQuickTask(quickText, projects), [quickText, projects]);
@@ -51,8 +59,12 @@ export default function TasksScreen() {
       notes: null,
       status: quick.backlog ? 'backlog' : 'todo',
       priority: quick.priority,
-      due_date: null,
+      due_date: quick.deadline,
       scheduled_date: quick.scheduledDate,
+      repeat_frequency: quick.repeat,
+      repeat_interval: quick.repeat ? 1 : null,
+      // "at 5pm" on the task's day (today when it isn't scheduled).
+      remind_at: quick.remindTime ? remindAtFor(quick.scheduledDate, quick.remindTime) : null,
       sort_order: Date.now(),
     });
     setQuickText('');
@@ -67,6 +79,7 @@ export default function TasksScreen() {
         : 'Unscheduled';
   const [segment, setSegment] = useState(0);
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [taskSort, setTaskSort] = useState('manual');
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const topTaskSetting = useSettingsStore((s) => s.topTask);
@@ -76,6 +89,14 @@ export default function TasksScreen() {
   const [planTomorrowVisible, setPlanTomorrowVisible] = useState(false);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [focusTask, setFocusTask] = useState<Task | null>(null);
+
+  // Opened from a project's "Tasks" link: show All, filtered to it.
+  useEffect(() => {
+    if (project) {
+      setSegment(2);
+      setProjectFilter(project);
+    }
+  }, [project]);
 
   // Opened via the Today widget's "+" button (anchor://tasks?action=add).
   useEffect(() => {
@@ -121,10 +142,18 @@ export default function TasksScreen() {
     const base = q
       ? tasks.filter((t) => t.title.toLowerCase().includes(q) || (t.notes ?? '').toLowerCase().includes(q))
       : bySegment;
-    return activeProject === 'all'
-      ? base
-      : base.filter((t) => (activeProject === 'none' ? !t.project_id : t.project_id === activeProject));
-  }, [bySegment, activeProject, query, tasks]);
+    const list =
+      activeProject === 'all' ? base : base.filter((t) => (activeProject === 'none' ? !t.project_id : t.project_id === activeProject));
+    if (taskSort === 'manual' || segment === 3) return list;
+    const rank = { high: 0, medium: 1, low: 2 } as const;
+    return [...list].sort((a, b) =>
+      taskSort === 'priority'
+        ? rank[a.priority] - rank[b.priority]
+        : taskSort === 'deadline'
+          ? (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999')
+          : b.created_at.localeCompare(a.created_at)
+    );
+  }, [bySegment, activeProject, query, tasks, taskSort, segment]);
 
   const staleCount = useMemo(() => staleBacklog(tasks).length, [tasks]);
 
@@ -216,10 +245,27 @@ export default function TasksScreen() {
             <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.xs, marginBottom: spacing.sm }]}>
               “{quick.title}” · {quickWhen}
               {quick.priority !== 'medium' ? ` · ${quick.priority}` : ''}
-              {quick.projectName ? ` · ${quick.projectName}` : ''} — press return to add
+              {quick.projectName ? ` · ${quick.projectName}` : ''}
+              {quick.remindTime ? ` · ⏰ ${formatClock(quick.remindTime)}` : ''}
+              {quick.repeat ? ` · ↻ ${quick.repeat}` : ''}
+              {quick.deadline ? ` · 📅 by ${formatDateKey(quick.deadline)}` : ''} — press return to add
             </Text>
           ) : null}
           <SegmentedControl options={SEGMENTS} selectedIndex={segment} onChange={setSegment} />
+          {segment !== 0 && segment !== 3 ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <ChipSelector
+                options={[
+                  { id: 'manual', label: 'My order' },
+                  { id: 'priority', label: 'Priority' },
+                  { id: 'deadline', label: 'Deadline' },
+                  { id: 'newest', label: 'Newest' },
+                ]}
+                selectedId={taskSort}
+                onSelect={setTaskSort}
+              />
+            </View>
+          ) : null}
           {projects.length > 0 ? (
             <View style={{ marginTop: spacing.sm }}>
               <ChipSelector
@@ -334,6 +380,11 @@ export default function TasksScreen() {
                   ? ' — more than 6h of focused work. Consider moving something to tomorrow.'
                   : ` · ${bySegment.filter((t) => t.status !== 'done' && !t.estimate_minutes).length} without an estimate`}
               </Text>
+              {plannedMinutes(bySegment) > 0 ? (
+                <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                  Starting now, you'd finish around {formatTime(new Date(Date.now() + (plannedMinutes(bySegment) + todaysMeetingMinutes) * 60000).toISOString())}
+                </Text>
+              ) : null}
             </Card>
           ) : null}
           {segment === 0 && !query && new Date().getHours() >= 17 && bySegment.some((t) => t.status === 'todo') ? (
@@ -395,7 +446,7 @@ export default function TasksScreen() {
                   isLast={i === arr.length - 1}
                   onPress={() => setDetailTask(task)}
                   reorder={
-                    segment === 2 && activeProject === 'all'
+                    segment === 2 && activeProject === 'all' && taskSort === 'manual'
                       ? {
                           canMoveUp: i > 0,
                           canMoveDown: i < arr.length - 1,

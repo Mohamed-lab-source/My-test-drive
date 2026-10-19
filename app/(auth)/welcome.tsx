@@ -3,7 +3,7 @@ import { View, Text, Image, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../src/utils/haptics';
 import { useTheme } from '../../src/theme/ThemeProvider';
 import { AuthBackground } from '../../src/features/auth/AuthBackground';
 import { PrestigeButton } from '../../src/features/auth/PrestigeButton';

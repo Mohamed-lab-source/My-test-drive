@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { ActionMenu } from '../../ui/ActionMenu';
+import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Icon } from '../../ui/Icon';
 import { Badge } from '../../ui/Badge';
@@ -23,6 +24,14 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
   const removeTask = useProductivityStore((s) => s.removeTask);
   const refreshTasks = useProductivityStore((s) => s.refreshTasks);
   const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
+  const updateTask = useProductivityStore((s) => s.updateTask);
+
+  // Long-press: the common actions without opening the task.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const quickMenu = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setMenuOpen(true);
+  };
   const project = useProductivityStore((s) => s.projects.find((p) => p.id === task.project_id));
   const subtasks = useProductivityStore((s) => s.subtaskCounts[task.id]);
 
@@ -63,7 +72,7 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
         >
           <Icon name={isDone ? 'checkmark.circle.fill' : 'circle'} size={24} color={isDone ? colors.green : colors.gray3} />
         </Pressable>
-        <Pressable style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={onPress} disabled={!onPress}>
+        <Pressable style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={onPress} onLongPress={quickMenu} delayLongPress={350}>
           <View style={{ flex: 1 }}>
             <Text
               style={[
@@ -133,6 +142,26 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
           </View>
         ) : null}
       </View>
+      <ActionMenu
+        visible={menuOpen}
+        title={task.title}
+        onClose={() => setMenuOpen(false)}
+        actions={[
+          { label: isDone ? 'Mark not done' : 'Mark done', onPress: () => toggleTaskDone(task.id, !isDone) },
+          ...(isDone
+            ? []
+            : [
+                { label: 'Do today', onPress: () => rescheduleTask(task.id, 'today') },
+                { label: 'Tomorrow', onPress: () => rescheduleTask(task.id, 'tomorrow') },
+                { label: 'Next week', onPress: () => rescheduleTask(task.id, 'next_week') },
+                {
+                  label: task.priority === 'high' ? 'Lower priority' : 'Make high priority',
+                  onPress: () => updateTask(task.id, { priority: task.priority === 'high' ? 'medium' : 'high' }),
+                },
+              ]),
+          { label: 'Delete', destructive: true, onPress: handleDelete },
+        ]}
+      />
     </SwipeableRow>
   );
 }

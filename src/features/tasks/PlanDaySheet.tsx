@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { Sheet } from '../../ui/Sheet';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';

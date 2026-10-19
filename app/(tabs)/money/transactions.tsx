@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, Text, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -20,6 +20,7 @@ import { useUndoStore } from '../../../src/store/undoStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
+import { localDateKey } from '../../../src/utils/date';
 import type { Transaction, TransactionType } from '../../../src/db/types';
 
 const TYPE_FILTERS: (TransactionType | 'all')[] = ['all', 'expense', 'income', 'transfer'];
@@ -33,6 +34,27 @@ const PERIODS = [
   { id: '3m', label: '3 months' },
   { id: 'year', label: 'This year' },
 ];
+
+function groupByDay(list: Transaction[]): { key: string; items: Transaction[] }[] {
+  const out: { key: string; items: Transaction[] }[] = [];
+  for (const t of list) {
+    const key = localDateKey(t.date);
+    const last = out[out.length - 1];
+    if (last && last.key === key) last.items.push(t);
+    else out.push({ key, items: [t] });
+  }
+  return out;
+}
+
+function formatDayHeader(key: string): string {
+  const [y, m, d] = key.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const today = new Date();
+  const diff = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() - date.getTime()) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  return date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+}
 
 function periodRange(id: string, weekStart: number): [Date, Date] | null {
   const now = new Date();
@@ -232,19 +254,38 @@ export default function TransactionsScreen() {
         {filtered.length === 0 ? (
           <EmptyState icon="banknote" title="No transactions" message="Nothing matches these filters." />
         ) : (
-          <Card padded={false}>
-            {filtered.map((tx, i, arr) => (
-              <SwipeableRow
-                key={tx.id}
-                actions={[
-                  { label: 'Repeat', color: colors.blue, onPress: () => handleRepeat(tx) },
-                  { label: 'Delete', color: colors.red, onPress: () => handleDelete(tx) },
-                ]}
-              >
-                <TransactionRow tx={tx} isLast={i === arr.length - 1} onPress={() => setEditing(tx)} />
-              </SwipeableRow>
-            ))}
-          </Card>
+          // By date, each day gets a header with what went out and came in.
+          (sort === 'big' ? [{ key: 'all', items: filtered }] : groupByDay(filtered)).map((group) => {
+            const out = group.items.filter((t) => t.type === 'expense').reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0);
+            const inn = group.items.filter((t) => t.type === 'income').reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0);
+            return (
+              <View key={group.key} style={{ marginBottom: spacing.md }}>
+                {group.key !== 'all' ? (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, paddingHorizontal: 4 }}>
+                    <Text style={{ color: colors.secondaryLabel, fontWeight: '600', fontSize: 13 }}>{formatDayHeader(group.key)}</Text>
+                    <Text style={{ color: colors.secondaryLabel, fontSize: 13 }}>
+                      {out ? `−${formatMoney(out, currency)}` : ''}
+                      {out && inn ? '  ' : ''}
+                      {inn ? `+${formatMoney(inn, currency)}` : ''}
+                    </Text>
+                  </View>
+                ) : null}
+                <Card padded={false}>
+                  {group.items.map((tx, i, arr) => (
+                    <SwipeableRow
+                      key={tx.id}
+                      actions={[
+                        { label: 'Repeat', color: colors.blue, onPress: () => handleRepeat(tx) },
+                        { label: 'Delete', color: colors.red, onPress: () => handleDelete(tx) },
+                      ]}
+                    >
+                      <TransactionRow tx={tx} isLast={i === arr.length - 1} onPress={() => setEditing(tx)} />
+                    </SwipeableRow>
+                  ))}
+                </Card>
+              </View>
+            );
+          })
         )}
       </ScrollView>
       <AddTransactionSheet visible={!!editing} editing={editing} onClose={() => setEditing(null)} />

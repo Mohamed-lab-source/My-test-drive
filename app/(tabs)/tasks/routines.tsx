@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { View, Text, ScrollView, Alert, Switch } from 'react-native';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -14,8 +14,11 @@ import { useProductivityStore } from '../../../src/store/productivityStore';
 import * as repo from '../../../src/db/repositories/lists';
 import { todayKey } from '../../../src/db/client';
 import type { Routine } from '../../../src/db/types';
+import { useSettingsStore } from '../../../src/store/settingsStore';
+import { applyAutoRoutines } from '../../../src/utils/autoRoutines';
 
 export default function RoutinesScreen() {
+  const { autoRoutines, setAutoRoutines } = useSettingsStore();
   const { colors, typography, spacing } = useTheme();
   const addTask = useProductivityStore((s) => s.addTask);
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -97,7 +100,21 @@ export default function RoutinesScreen() {
                   {items.length > 6 ? (
                     <Text style={[typography.footnote, { color: colors.tertiaryLabel, marginTop: 2 }]}>+{items.length - 6} more</Text>
                   ) : null}
-                  <Button title="Add to today" variant="secondary" onPress={() => run(r)} style={{ marginTop: spacing.sm, alignSelf: 'flex-start', paddingHorizontal: spacing.md }} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+                    <Button title="Add to today" variant="secondary" onPress={() => run(r)} style={{ paddingHorizontal: spacing.md }} />
+                    <View style={{ flex: 1 }} />
+                    <Text style={[typography.footnote, { color: colors.secondaryLabel, marginRight: 6 }]}>Every morning</Text>
+                    <Switch
+                      value={r.id in autoRoutines}
+                      onValueChange={(v) => {
+                        const next = { ...autoRoutines };
+                        if (v) next[r.id] = '';
+                        else delete next[r.id];
+                        setAutoRoutines(next);
+                        if (v) applyAutoRoutines();
+                      }}
+                    />
+                  </View>
                 </Card>
               </SwipeableRow>
             );

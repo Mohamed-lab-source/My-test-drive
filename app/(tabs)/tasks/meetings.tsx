@@ -12,6 +12,7 @@ import { SwipeableRow } from '../../../src/ui/SwipeableRow';
 import { showUndoDelete } from '../../../src/ui/undo';
 import { formatDateLong, formatTime } from '../../../src/utils/date';
 import { AddMeetingSheet } from '../../../src/features/tasks/AddMeetingSheet';
+import { SegmentedControl } from '../../../src/ui/SegmentedControl';
 
 // A link (video call) opens directly; anything else is searched in Maps.
 function openLocation(location: string) {
@@ -28,6 +29,12 @@ export default function MeetingsScreen() {
   const { meetings, removeMeeting, refreshMeetings } = useProductivityStore();
   const [addVisible, setAddVisible] = useState(false);
   const [editing, setEditing] = useState<(typeof meetings)[number] | null>(null);
+  const [tab, setTab] = useState(0);
+  // A meeting stays "upcoming" until it has ended (or an hour after it began).
+  const endOf = (m: (typeof meetings)[number]) => (m.end_at ? new Date(m.end_at).getTime() : new Date(m.start_at).getTime() + 3600000);
+  const upcoming = meetings.filter((m) => endOf(m) >= Date.now()).sort((a, b) => a.start_at.localeCompare(b.start_at));
+  const past = meetings.filter((m) => endOf(m) < Date.now()).sort((a, b) => b.start_at.localeCompare(a.start_at));
+  const shown = tab === 0 ? upcoming : past;
 
   const handleDelete = async (meeting: (typeof meetings)[number]) => {
     await removeMeeting(meeting.id);
@@ -38,10 +45,13 @@ export default function MeetingsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Meetings" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
-        {meetings.length === 0 ? (
-          <EmptyState icon="calendar" title="No meetings scheduled" />
+        <View style={{ marginBottom: spacing.md }}>
+          <SegmentedControl options={[`Upcoming (${upcoming.length})`, `Past (${past.length})`]} selectedIndex={tab} onChange={setTab} />
+        </View>
+        {shown.length === 0 ? (
+          <EmptyState icon="calendar" title={tab === 0 ? 'No meetings scheduled' : 'No past meetings'} />
         ) : (
-          meetings.map((m) => (
+          shown.map((m) => (
             <SwipeableRow key={m.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(m) }]}>
               <Pressable onPress={() => setEditing(m)}>
                 <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>

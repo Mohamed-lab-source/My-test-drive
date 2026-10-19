@@ -65,3 +65,11 @@ export async function updateSmsImportParsed(
     [fields.amount, fields.currency, fields.merchant, fields.card_last4, fields.kind, fields.card_type, fields.balance, fields.balance_currency, id]
   );
 }
+
+// Privacy: blanks the text of handled messages but keeps the rows, so a
+// rescan still recognises them and doesn't import them again.
+export async function clearHandledSmsText(): Promise<number> {
+  const db = await getDb();
+  const result = await db.runAsync("UPDATE sms_imports SET body = '' WHERE status != 'pending' AND body != ''");
+  return result.changes;
+}

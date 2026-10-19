@@ -60,9 +60,17 @@ export function setPrayerAdjustments(adj: Partial<Record<Prayer, number>>): void
   adjustments = { ...adj };
 }
 
+// Asr: 'auto' follows the city (Hanafi in Pakistan), or force either school.
+export type AsrMadhab = 'auto' | 'shafi' | 'hanafi';
+let asrMadhab: AsrMadhab = 'auto';
+export function setAsrMadhab(m: AsrMadhab): void {
+  asrMadhab = m;
+}
+
 function computeTimes(city: PrayerCity, date: Date): PrayerTimes {
   const params = CalculationMethod[city.method]();
-  if (city.hanafi) params.madhab = Madhab.Hanafi;
+  if (asrMadhab === 'hanafi' || (asrMadhab === 'auto' && city.hanafi)) params.madhab = Madhab.Hanafi;
+  else params.madhab = Madhab.Shafi;
   for (const p of ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as Prayer[]) {
     params.adjustments[p] = (params.adjustments[p] ?? 0) + (adjustments[p] ?? 0);
   }

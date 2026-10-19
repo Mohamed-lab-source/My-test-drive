@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -20,6 +20,8 @@ export default function AdhkarScreen() {
   const [sessionIndex, setSessionIndex] = useState(new Date().getHours() >= 15 ? 1 : 0);
   const session = SESSIONS[sessionIndex];
   const [done, setDone] = useState<string[]>([]);
+  // Repetitions counted so far for dhikr said several times (×3, ×33, ×100).
+  const [reps, setReps] = useState<Record<string, number>>({});
   const items = adhkarFor(session);
   const date = todayKey();
 
@@ -90,17 +92,27 @@ export default function AdhkarScreen() {
                     {item.text}
                   </Text>
                 </View>
-                <View
+                <Pressable
+                  disabled={item.count <= 1 || isDone}
+                  hitSlop={8}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    const n = (reps[item.id] ?? 0) + 1;
+                    setReps({ ...reps, [item.id]: n });
+                    if (n >= item.count) toggle(item.id);
+                  }}
                   style={{
                     marginLeft: spacing.sm,
-                    paddingHorizontal: 8,
-                    paddingVertical: 2,
-                    borderRadius: 10,
-                    backgroundColor: colors.tertiaryFill,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                    backgroundColor: item.count > 1 && !isDone ? colors.blue + '22' : colors.tertiaryFill,
                   }}
                 >
-                  <Text style={[typography.caption1, { color: colors.label, fontWeight: '600' }]}>×{item.count}</Text>
-                </View>
+                  <Text style={[typography.caption1, { color: item.count > 1 && !isDone ? colors.blue : colors.label, fontWeight: '600' }]}>
+                    {item.count > 1 && !isDone && reps[item.id] ? `${reps[item.id]}/${item.count}` : `×${item.count}`}
+                  </Text>
+                </Pressable>
               </Pressable>
             );
           })}

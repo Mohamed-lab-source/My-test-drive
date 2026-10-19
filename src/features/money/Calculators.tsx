@@ -225,3 +225,61 @@ export function UnitPriceCalculator({ currency }: { currency: string }) {
     </Section>
   );
 }
+
+// Egypt's VAT is 14%; any rate works. Adds VAT to a price or takes it out.
+export function VatCalculator({ currency }: { currency: string }) {
+  const { spacing } = useTheme();
+  const [amount, setAmount] = useState('');
+  const [rate, setRate] = useState('14');
+  const a = num(amount);
+  const r = num(rate) / 100;
+  return (
+    <Section title="VAT">
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 2, marginRight: spacing.sm }}>
+          <TextField label={`Amount (${currency})`} placeholder="0.00" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <TextField label="VAT %" keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+        </View>
+      </View>
+      {a > 0 ? (
+        <>
+          <Result label="Price + VAT" value={formatMoney(toMinorUnits(a * (1 + r)), currency)} note={`VAT ${formatMoney(toMinorUnits(a * r), currency)}`} />
+          <Result label="If VAT is already included" value={formatMoney(toMinorUnits(a / (1 + r)), currency)} note={`of which VAT ${formatMoney(toMinorUnits(a - a / (1 + r)), currency)}`} />
+        </>
+      ) : null}
+    </Section>
+  );
+}
+
+// What your salary is worth per day and per hour, and what a purchase costs in work.
+export function SalaryCalculator({ currency }: { currency: string }) {
+  const { spacing } = useTheme();
+  const [salary, setSalary] = useState('');
+  const [hours, setHours] = useState('40');
+  const [price, setPrice] = useState('');
+  const perHour = num(salary) / ((num(hours) || 40) * 4.33);
+  return (
+    <Section title="Salary & time">
+      <View style={{ flexDirection: 'row' }}>
+        <View style={{ flex: 2, marginRight: spacing.sm }}>
+          <TextField label={`Monthly salary (${currency})`} placeholder="0" keyboardType="decimal-pad" value={salary} onChangeText={setSalary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <TextField label="Hours/week" keyboardType="decimal-pad" value={hours} onChangeText={setHours} />
+        </View>
+      </View>
+      <TextField label="Something you want to buy (optional)" placeholder="Price" keyboardType="decimal-pad" value={price} onChangeText={setPrice} />
+      {num(salary) > 0 ? (
+        <Result
+          label="You earn"
+          value={`${formatMoney(toMinorUnits(perHour), currency)}/hour`}
+          note={`${formatMoney(toMinorUnits(num(salary) / 30), currency)} a day${
+            num(price) > 0 ? ` · that purchase costs ${(num(price) / perHour).toFixed(1)} hours of work` : ''
+          }`}
+        />
+      ) : null}
+    </Section>
+  );
+}

@@ -38,6 +38,7 @@ function occurrencesInMonth(rules: RecurringRule[], year: number, month: number)
 
 export default function BillsCalendarScreen() {
   const { colors, typography, spacing } = useTheme();
+  const weekStart = useSettingsStore((s) => s.weekStart);
   const currency = useSettingsStore((s) => s.currency);
   const { recurringRules, fxRates } = useFinanceStore();
   const now = new Date();
@@ -59,7 +60,7 @@ export default function BillsCalendarScreen() {
   const totalIn = occurrences.filter((o) => o.rule.type === 'income').reduce((s, o) => s + toBase(o.rule), 0);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
-  const blanks = new Date(cursor.year, cursor.month, 1).getDay();
+  const blanks = (new Date(cursor.year, cursor.month, 1).getDay() - weekStart + 7) % 7;
   const cells: (number | null)[] = [...Array(blanks).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   while (cells.length % 7) cells.push(null);
   const isCurrentMonth = cursor.year === now.getFullYear() && cursor.month === now.getMonth();
@@ -91,7 +92,7 @@ export default function BillsCalendarScreen() {
             </Pressable>
           </View>
           <View style={{ flexDirection: 'row' }}>
-            {WEEKDAYS.map((w, i) => (
+            {WEEKDAYS.map((_, i) => WEEKDAYS[(weekStart + i) % 7]).map((w, i) => (
               <Text key={i} style={[typography.caption2, { flex: 1, textAlign: 'center', color: colors.secondaryLabel }]}>
                 {w}
               </Text>

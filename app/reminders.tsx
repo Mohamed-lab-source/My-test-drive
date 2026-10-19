@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { NavHeader } from '../src/ui/NavHeader';
 import { useTheme } from '../src/theme/ThemeProvider';
@@ -53,6 +53,19 @@ export default function RemindersScreen() {
     load();
   }, [load]);
 
+  const cancel = (r: Row) =>
+    Alert.alert('Cancel this reminder?', `${r.title}\n${r.when}\n\nRepeating reminders come back the next time their setting re-arms them; turn the setting off to stop them for good.`, [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Cancel it',
+        style: 'destructive',
+        onPress: async () => {
+          await Notifications.cancelScheduledNotificationAsync(r.id);
+          await load();
+        },
+      },
+    ]);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Upcoming reminders" />
@@ -77,15 +90,16 @@ export default function RemindersScreen() {
           </Card>
         ) : null}
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: spacing.sm }]}>
-          {rows.length} scheduled on this phone
+          {rows.length} scheduled on this phone{rows.length ? ' · tap one to cancel it' : ''}
         </Text>
         {rows.length === 0 ? (
           <EmptyState icon="bell.fill" title="Nothing scheduled" message="Reminders you turn on — prayers, bills, habits, meetings — will be listed here." />
         ) : (
           <Card padded={false}>
             {rows.map((r, i) => (
-              <View
+              <Pressable
                 key={r.id}
+                onPress={() => cancel(r)}
                 style={{ padding: spacing.md, borderBottomWidth: i === rows.length - 1 ? 0 : 0.5, borderBottomColor: colors.separator }}
               >
                 <View style={{ flexDirection: 'row' }}>
@@ -99,7 +113,7 @@ export default function RemindersScreen() {
                     {r.body}
                   </Text>
                 ) : null}
-              </View>
+              </Pressable>
             ))}
           </Card>
         )}

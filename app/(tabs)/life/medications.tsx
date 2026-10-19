@@ -15,7 +15,7 @@ import { useSettingsStore } from '../../../src/store/settingsStore';
 import { formatClock } from '../../../src/utils/date';
 import type { MedLog, Medication } from '../../../src/db/types';
 import { todayKey } from '../../../src/db/client';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../../src/utils/haptics';
 
 const TIMES = ['07:00', '08:00', '12:00', '14:00', '18:00', '20:00', '22:00'];
 
@@ -59,6 +59,37 @@ export default function MedicationsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Medications" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        {(() => {
+          // One tap for every dose at the same time, e.g. all the 8am tablets.
+          const slots = new Map<string, Medication[]>();
+          for (const m of meds.filter((x) => x.is_active)) {
+            for (const t of repo.medicationTimes(m)) {
+              if (taken.some((l) => l.medication_id === m.id && l.time === t)) continue;
+              slots.set(t, [...(slots.get(t) ?? []), m]);
+            }
+          }
+          const multi = [...slots.entries()].filter(([, ms]) => ms.length > 1).sort(([a], [b]) => a.localeCompare(b));
+          if (!multi.length) return null;
+          return (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm }}>
+              {multi.map(([t, ms]) => (
+                <Pressable
+                  key={t}
+                  onPress={async () => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    for (const m of ms) await repo.setMedTaken(todayKey(), m.id, t, true);
+                    await loadTaken();
+                  }}
+                  style={{ paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.md, marginRight: 8, marginBottom: 6, backgroundColor: colors.blue }}
+                >
+                  <Text style={[typography.subhead, { color: '#fff', fontWeight: '600' }]}>
+                    Take all {ms.length} at {formatClock(t)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          );
+        })()}
         {meds.length === 0 ? (
           <EmptyState icon="heart.fill" title="No medications" message="Add one to get a reminder at the times you take it." />
         ) : (

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, TextInput } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
 import { Icon } from '../../ui/Icon';
@@ -16,10 +16,26 @@ export function WeeklyGoalsCard() {
   const [goals, setGoals] = useState<WeeklyGoal[]>([]);
   const [draft, setDraft] = useState('');
 
-  const load = useCallback(() => repo.listWeeklyGoals(week).then(setGoals), [week]);
+  const [leftover, setLeftover] = useState<WeeklyGoal[]>([]);
+  const lastWeek = repo.weekKey(new Date(Date.now() - 7 * 86400000));
+
+  const load = useCallback(() => {
+    repo.listWeeklyGoals(week).then(setGoals);
+    repo.listWeeklyGoals(lastWeek).then((rows) => setLeftover(rows.filter((g) => !g.done)));
+  }, [week, lastWeek]);
   useEffect(() => {
     load();
   }, [load]);
+
+  // Last week's unfinished goals, brought into this week in one tap.
+  const carryOver = async () => {
+    const room = MAX_GOALS - goals.length;
+    for (const g of leftover.filter((x) => !goals.some((y) => y.title === x.title)).slice(0, room)) {
+      await repo.createWeeklyGoal(week, g.title);
+    }
+    await load();
+  };
+  const carriable = leftover.filter((x) => !goals.some((y) => y.title === x.title));
 
   const add = async () => {
     if (!draft.trim()) return;
@@ -35,6 +51,13 @@ export function WeeklyGoalsCard() {
       <Text style={[typography.headline, { color: colors.label }]}>
         This week's goals {goals.length ? <Text style={{ color: colors.secondaryLabel, fontWeight: '400' }}>{done}/{goals.length}</Text> : null}
       </Text>
+      {carriable.length && goals.length < MAX_GOALS ? (
+        <Pressable onPress={carryOver} style={{ paddingVertical: 4 }}>
+          <Text style={[typography.subhead, { color: colors.blue }]}>
+            ↪ Carry over {carriable.length} unfinished from last week
+          </Text>
+        </Pressable>
+      ) : null}
       {goals.map((g) => (
         <View key={g.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5 }}>
           <Pressable
