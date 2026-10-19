@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Platform,
   RefreshControl,
   ScrollView,
@@ -15,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
+import * as Clipboard from "expo-clipboard";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchRecipeDetail, fetchRecipes, rateRecipe, toggleHelpful } from "../api/endpoints";
@@ -45,6 +47,7 @@ import { formatQuantity } from "../utils/units";
 import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { suggestBeverage } from "../data/beveragePairings";
+import { daysSince, formatClock, nutritionBadges } from "../utils/recipeBadges";
 import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -80,12 +83,13 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { preference: localPreference } = useLocalPreference();
   const myAllergies = useMyAllergies();
   const { addRecent } = useRecentlyViewed();
-  const { addRated } = useRecentlyRated();
+  const { addRated, rememberScore } = useRecentlyRated();
   const { plan, setPlan } = useMealPlan();
   const { addEntry: addDiaryEntry, removeEntry: removeDiaryEntry } = useFoodDiary();
-  const { cookCountFor } = useCookStreak();
+  const { cookCountFor, lastCookedFor } = useCookStreak();
   const { getNote, setNote } = useNotes();
   const [noteText, setNoteText] = useState("");
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(() => new Set());
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -118,6 +122,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
         setRecipe(data);
         setServings((prev) => (prev === 1 ? data.baseServings : prev));
         setMyRating(data.myRating);
+        if (data.myRating != null) rememberScore(data.slug, data.myRating);
         setShowingOfflineCache(false);
         addRecent(data);
         AsyncStorage.setItem(cacheKey, JSON.stringify(data)).catch(() => {});
@@ -226,12 +231,72 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
   const cookCount = cookCountFor(recipe.slug);
   const myCollections = collectionsContaining(recipe.slug);
-  const sortedReviews = useMemo(() => {
-    const copy = [...recipe.reviews];
-    if (reviewSort === "highest") copy.sort((a, b) => b.score - a.score);
-    else if (reviewSort === "lowest") copy.sort((a, b) => a.score - b.score);
-    return copy;
-  }, [recipe.reviews, reviewSort]);
+  // Plain computation, not useMemo: this runs after the loading early-returns,
+  // and a hook here would change the hook count between renders.
+  const sortedReviews = [...recipe.reviews];
+  if (reviewSort === "highest") sortedReviews.sort((a, b) => b.score - a.score);
+  else if (reviewSort === "lowest") sortedReviews.sort((a, b) => a.score - b.score);
+  const badges = nutritionBadges(recipe.nutritionPerServing.calories, recipe.nutritionPerServing.proteinGrams);
+  const lastCooked = lastCookedFor(recipe.slug);
+  const lastCookedDays = lastCooked ? daysSince(lastCooked) : null;
+  const readyBy = formatClock(new Date(Date.now() + totalMinutes * 60000), locale);
+  const equipment = recipe.equipment ?? [];
+  const checkedCount = scaledIngredients.filter((ing) => checkedIngredients.has(ing.name)).length;
+
+  const toggleIngredient = (name: string) => {
+    setCheckedIngredients((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const ingredientLines = () =>
+    scaledIngredients.map((ing) => `- ${formatQuantity(ing.quantity, ing.unit, unitSystem)} ${ing.name}`);
+
+  const handleCopyIngredients = async () => {
+    try {
+      await Clipboard.setStringAsync(
+        [t("recipeDetail.ingredientsFor", { count: servings }) + ` -- ${recipe.title}`, ...ingredientLines()].join("\n")
+      );
+      showToast(t("recipeDetail.ingredientsCopied"));
+    } catch {
+      Alert.alert(t("share.error"));
+    }
+  };
+
+  /** Plain-text export: ingredients, steps, plus the cook's own rating and notes when they have any. */
+  const buildShareMessage = () => {
+    const notes = noteText.trim();
+    return [
+      recipe.title,
+      t("recipeDetail.shareMeta", {
+        minutes: totalMinutes,
+        cost: Math.round(recipe.costPerServing),
+        calories: recipe.nutritionPerServing.calories,
+      }),
+      "",
+      t("recipeDetail.ingredientsFor", { count: servings }),
+      ...ingredientLines(),
+      "",
+      t("recipeDetail.steps"),
+      ...recipe.steps.map((s) => `${s.order}. ${s.instruction}`),
+      ...(myRating ? ["", t("recipeDetail.shareMyRating", { stars: "★".repeat(myRating) })] : []),
+      ...(notes ? ["", t("recipeDetail.myNotes"), notes] : []),
+      "",
+      t("share.branding"),
+    ].join("\n");
+  };
+
+  const handleShareWhatsApp = async () => {
+    const message = buildShareMessage();
+    try {
+      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+    } catch {
+      Share.share({ message }).catch(() => {});
+    }
+  };
 
   const handleToggleHelpful = (reviewId: string) => {
     setRecipe((prev) => {
@@ -272,21 +337,8 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   };
 
   const handleShareText = async () => {
-    const ingredientLines = scaledIngredients.map(
-      (ing) => `- ${formatQuantity(ing.quantity, ing.unit, unitSystem)} ${ing.name}`
-    );
-    const stepLines = recipe.steps.map((s) => `${s.order}. ${s.instruction}`);
-    const message = [
-      recipe.title,
-      "",
-      t("recipeDetail.ingredientsFor", { count: servings }),
-      ...ingredientLines,
-      "",
-      t("recipeDetail.steps"),
-      ...stepLines,
-    ].join("\n");
     try {
-      await Share.share({ message });
+      await Share.share({ message: buildShareMessage() });
     } catch {
       // User cancelled or share failed silently; nothing to recover.
     }
@@ -423,7 +475,23 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             {cookCount > 0 ? (
               <MetaPill label={t("recipeDetail.cookedCount", { count: cookCount })} styles={styles} />
             ) : null}
+            {badges.map((b) => (
+              <View key={b.key} style={[styles.metaPill, styles.badgePill]}>
+                <Text style={[styles.metaPillText, styles.badgePillText]}>{t(b.labelKey)}</Text>
+              </View>
+            ))}
           </View>
+
+          <Text style={[styles.pairingText, { textAlign }]}>{t("recipeDetail.readyBy", { time: readyBy })}</Text>
+          {lastCookedDays != null ? (
+            <Text style={[styles.pairingText, styles.infoLine, { textAlign }]}>
+              {lastCookedDays === 0
+                ? t("recipeDetail.lastCookedToday")
+                : lastCookedDays === 1
+                  ? t("recipeDetail.lastCookedYesterday")
+                  : t("recipeDetail.lastCookedDaysAgo", { count: lastCookedDays })}
+            </Text>
+          ) : null}
 
           <View style={styles.pairingRow}>
             <Text style={[styles.pairingText, { textAlign }]}>
@@ -472,6 +540,9 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
               styles={styles}
             />
           </View>
+          <Text style={[styles.pairingText, styles.infoLine, { textAlign }]}>
+            {t("recipeDetail.nutritionPerServingNote")}
+          </Text>
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.servingsQuestion")}</Text>
           <View style={styles.stepperRow}>
@@ -503,19 +574,66 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             ))}
           </View>
 
+          <Text style={[styles.pairingText, styles.infoLine, { textAlign }]}>
+            {t("recipeDetail.nutritionForServings", {
+              count: servings,
+              calories: Math.round(recipe.nutritionPerServing.calories * servings),
+              protein: Math.round(recipe.nutritionPerServing.proteinGrams * servings),
+              cost: Math.round(recipe.costPerServing * servings),
+            })}
+          </Text>
+
+          {equipment.length > 0 ? (
+            <>
+              <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.equipmentTitle")}</Text>
+              <View style={styles.chipRow}>
+                {equipment.map((key) => (
+                  <MetaPill key={key} label={t(`equipment.${key}` as TranslationKey)} styles={styles} />
+                ))}
+              </View>
+            </>
+          ) : null}
+
           <Text style={[styles.sectionTitle, { textAlign }]}>
             {t("recipeDetail.ingredientsFor", { count: servings })}
           </Text>
+          <View style={styles.checklistBar}>
+            <Text style={styles.checklistCount}>
+              {t("recipeDetail.checklistProgress", { done: checkedCount, total: scaledIngredients.length })}
+            </Text>
+            <View style={styles.checklistActions}>
+              {checkedCount > 0 ? (
+                <Chip label={t("recipeDetail.checklistReset")} onPress={() => setCheckedIngredients(new Set())} />
+              ) : null}
+              <Chip label={t("recipeDetail.copyIngredients")} onPress={handleCopyIngredients} />
+            </View>
+          </View>
           {scaledIngredients.map((ing, i) => {
             const ingredientConflicts = intersectAllergens(ing.allergens, myAllergies);
+            const checked = checkedIngredients.has(ing.name);
             return (
             <FadeSlideIn key={ing.name} index={i}>
-              <View style={styles.ingredientCell}>
+              <AnimatedPressable
+                style={styles.ingredientCell}
+                pressScale={0.99}
+                onPress={() => toggleIngredient(ing.name)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked }}
+              >
                 <View style={styles.ingredientRow}>
-                  <Text style={[styles.ingredientName, ingredientConflicts.length > 0 && styles.ingredientNameWarning]}>
+                  <Text
+                    style={[
+                      styles.ingredientName,
+                      ingredientConflicts.length > 0 && styles.ingredientNameWarning,
+                      checked && styles.ingredientChecked,
+                    ]}
+                  >
+                    {checked ? "☑ " : "☐ "}
                     {ing.name}
                   </Text>
-                  <Text style={styles.ingredientQty}>{formatQuantity(ing.quantity, ing.unit, unitSystem)}</Text>
+                  <Text style={[styles.ingredientQty, checked && styles.ingredientChecked]}>
+                    {formatQuantity(ing.quantity, ing.unit, unitSystem)}
+                  </Text>
                 </View>
                 {ingredientConflicts.length > 0 ? (
                   <Text style={[styles.ingredientAllergenNote, { textAlign }]}>
@@ -532,7 +650,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
                     {t("recipeDetail.substituteHint", { substitute: ing.substitute })}
                   </Text>
                 ) : null}
-              </View>
+              </AnimatedPressable>
             </FadeSlideIn>
             );
           })}
@@ -775,8 +893,13 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
         <View style={styles.shareButton}>
           <PrimaryButton label={t("share.button")} onPress={handleShare} loading={sharing} variant="outline" />
         </View>
-        <View style={styles.shareButton}>
-          <PrimaryButton label={t("share.textButton")} onPress={handleShareText} variant="outline" />
+        <View style={[styles.shareButton, styles.shareRow]}>
+          <View style={styles.flex1}>
+            <PrimaryButton label={t("share.textButton")} onPress={handleShareText} variant="outline" />
+          </View>
+          <View style={styles.flex1}>
+            <PrimaryButton label={t("share.whatsApp")} onPress={handleShareWhatsApp} variant="outline" />
+          </View>
         </View>
         {isAuthenticated ? (
           <View style={styles.shareButton}>
@@ -1016,6 +1139,21 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
     borderTopColor: colors.border,
   },
   shareButton: { marginTop: spacing(1.5) },
+  shareRow: { flexDirection: "row", gap: spacing(1) },
+  flex1: { flex: 1 },
+  badgePill: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.success },
+  badgePillText: { color: colors.success },
+  infoLine: { marginTop: spacing(0.75) },
+  checklistBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: spacing(1),
+  },
+  checklistCount: { fontSize: 13, fontWeight: "700", color: colors.textMuted },
+  checklistActions: { flexDirection: "row", gap: spacing(1) },
+  ingredientChecked: { textDecorationLine: "line-through", color: colors.textMuted },
   collectionChipsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: spacing(1.5) },
   offlineBanner: {
     backgroundColor: colors.chipBackground,

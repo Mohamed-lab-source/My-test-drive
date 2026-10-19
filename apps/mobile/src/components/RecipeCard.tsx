@@ -7,6 +7,8 @@ import { useTheme } from "../theme/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useToast } from "../context/ToastContext";
+import { useRecentlyRated } from "../context/RecentlyRatedContext";
+import { nutritionBadges } from "../utils/recipeBadges";
 import { useLocale } from "../i18n/LocaleContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
@@ -31,6 +33,9 @@ export function RecipeCard({ recipe, onPress, onLongPress, index = 0 }: Props) {
   const { showToast } = useToast();
   const myAllergies = useMyAllergies();
   const favorited = isFavorite(recipe.slug);
+  const { scoreFor } = useRecentlyRated();
+  const myScore = scoreFor(recipe.slug);
+  const badges = nutritionBadges(recipe.caloriesPerServing, recipe.proteinPerServing);
 
   const addToTodaysPlan = () => {
     const todayKey = new Date().toISOString().slice(0, 10);
@@ -100,6 +105,20 @@ export function RecipeCard({ recipe, onPress, onLongPress, index = 0 }: Props) {
               <Text style={styles.ratingText}>
                 {recipe.avgRating.toFixed(1)} ({recipe.ratingCount})
               </Text>
+            </View>
+          ) : null}
+          {myScore != null || badges.length > 0 ? (
+            <View style={styles.tagRow}>
+              {myScore != null ? (
+                <View style={[styles.tagBadge, styles.myScoreBadge]}>
+                  <Text style={[styles.tagText, styles.myScoreText]}>{t("recipeCard.yourRating", { score: myScore })}</Text>
+                </View>
+              ) : null}
+              {badges.map((b) => (
+                <View key={b.key} style={[styles.tagBadge, styles.nutritionBadge]}>
+                  <Text style={[styles.tagText, styles.nutritionBadgeText]}>{t(b.labelKey)}</Text>
+                </View>
+              ))}
             </View>
           ) : null}
           {conflictingAllergens.length > 0 ? (
@@ -221,4 +240,8 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: "700",
       color: colors.primaryDark,
     },
+    myScoreBadge: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary },
+    myScoreText: { color: colors.primary },
+    nutritionBadge: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.success },
+    nutritionBadgeText: { color: colors.success },
   });

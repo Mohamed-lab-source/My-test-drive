@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-recipe-page",
+    date: "2026-10-19",
+    title: { en: "A smarter recipe page", ar: "صفحة وصفة أذكى" },
+    body: {
+      en: "Ready-by time, a kitchen tools list, last-cooked date, an ingredient checklist with one-tap copy, nutrition and cost for your serving count, high-protein and low-calorie badges, your rating on cards, and WhatsApp sharing with your notes.",
+      ar: "وقت الجاهزية، وقائمة أدوات المطبخ، وتاريخ آخر طبخ، وقائمة مكونات للتأشير مع نسخ بضغطة، والتغذية والتكلفة لعدد الحصص، وشارات غني بالبروتين وقليل السعرات، وتقييمك على البطاقات، ومشاركة على واتساب مع ملاحظاتك.",
+    },
+  },
+  {
     id: "2026-10-food-diary",
     date: "2026-10-18",
     title: { en: "Food diary & nutrition tracking", ar: "يوميات الطعام ومتابعة التغذية" },

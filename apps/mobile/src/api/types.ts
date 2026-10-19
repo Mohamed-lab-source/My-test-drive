@@ -115,6 +115,8 @@ export type RecipeDetail = RecipeSummary & {
   ratingBreakdown: RatingBreakdown;
   adaptedForGoal: DietGoal | null;
   reviews: Review[];
+  /** Missing from detail responses cached before the server sent it. */
+  equipment?: string[];
 };
 
 export type RatingResult = {

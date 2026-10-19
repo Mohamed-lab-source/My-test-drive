@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { optionalAuth } from "../middleware/auth";
 import type { DietGoal, DishTag, Occasion } from "@prisma/client";
+import { detectEquipment } from "../utils/equipment";
 
 export const recipesRouter = Router();
 
@@ -474,6 +475,7 @@ recipesRouter.get("/recipes/:slug", optionalAuth, async (req, res) => {
     caloriesPerServing,
     proteinPerServing,
     adaptedForGoal: goal,
+    equipment: detectEquipment(recipe.steps.map((s) => s.instruction)),
     ingredients: adapted.map(({ ri, substitutedFrom }) => ({
       name: lang === "ar" ? ri.ingredient.nameAr ?? ri.ingredient.name : ri.ingredient.name,
       quantity: ri.quantity,
