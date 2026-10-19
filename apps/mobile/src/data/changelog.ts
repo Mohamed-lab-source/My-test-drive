@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-pantry",
+    date: "2026-10-19",
+    title: { en: "My pantry & smarter shopping lists", ar: "مخزني وقوائم تسوق أذكى" },
+    body: {
+      en: "Track what's in your kitchen and it's ticked off on every shopping list. Lists now sort by aisle or A-Z, hide what you have, tick whole aisles, take extra items, show progress and what's left to spend, and share to WhatsApp.",
+      ar: "تابعي ما في مطبخك ليُؤشَّر تلقائياً في كل قائمة تسوق. القوائم الآن تُرتَّب حسب القسم أو أبجدياً، وتخفي ما لديكِ، وتؤشّر أقساماً كاملة، وتقبل عناصر إضافية، وتعرض التقدم وما تبقى للإنفاق، وتُشارك على واتساب.",
+    },
+  },
+  {
     id: "2026-10-recipe-page",
     date: "2026-10-19",
     title: { en: "A smarter recipe page", ar: "صفحة وصفة أذكى" },

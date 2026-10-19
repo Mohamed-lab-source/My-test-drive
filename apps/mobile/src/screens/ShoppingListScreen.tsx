@@ -5,7 +5,6 @@ import {
   Linking,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -23,10 +22,7 @@ import { FadeSlideIn } from "../components/FadeSlideIn";
 import { PopOnChange } from "../components/PopOnChange";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
-import { useUnits } from "../context/UnitsContext";
-import { usePantryCheck } from "../context/PantryCheckContext";
-import { formatQuantity } from "../utils/units";
-import { categoryEmoji, categoryLabelKey, groupByCategory } from "../utils/ingredientCategory";
+import { ShoppingChecklist } from "../components/ShoppingChecklist";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { ShoppingListResult } from "../api/types";
 
@@ -36,7 +32,6 @@ export function ShoppingListScreen({ route, navigation }: Props) {
   const { slug, title, baseServings, initialServings } = route.params;
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
-  const { unitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [servings, setServings] = useState(initialServings ?? baseServings);
   const [budget, setBudget] = useState("");
@@ -44,11 +39,6 @@ export function ShoppingListScreen({ route, navigation }: Props) {
   const [result, setResult] = useState<ShoppingListResult | null>(null);
   const [mapsUrl, setMapsUrl] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
-  const { isChecked, toggle: toggleHaveAlready, checkedCount } = usePantryCheck();
-
-  const stillNeedCost = result
-    ? result.items.reduce((sum, item) => (isChecked(item.ingredientName) ? sum : sum + item.estimatedCost), 0)
-    : 0;
 
   useEffect(() => {
     navigation.setOptions({ title: t("shoppingList.title") });
@@ -65,25 +55,6 @@ export function ShoppingListScreen({ route, navigation }: Props) {
       Alert.alert(t("shoppingList.errorGenerate"), apiErrorMessage(error));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleShareList = async () => {
-    if (!result) return;
-    const lines = result.items.map(
-      (item) => `- ${item.ingredientName}: ${formatQuantity(item.quantity, item.unit, unitSystem)}`
-    );
-    const message = [
-      t("shoppingList.shareTitle", { title }),
-      "",
-      ...lines,
-      "",
-      t("shoppingList.estimatedTotal", { amount: result.totalEstimatedCost.toFixed(2) }),
-    ].join("\n");
-    try {
-      await Share.share({ message });
-    } catch {
-      // User cancelled or share failed silently; nothing to recover.
     }
   };
 
@@ -178,53 +149,13 @@ export function ShoppingListScreen({ route, navigation }: Props) {
               )}
             </View>
 
-            <View style={styles.listTitleRow}>
-              <Text style={[styles.sectionTitle, { textAlign }]}>
-                {t("shoppingList.listTitle", { count: result.servings })}
-              </Text>
-              {checkedCount(result.items.map((item) => item.ingredientName)) > 0 ? (
-                <Text style={styles.stillNeedText}>
-                  {t("shoppingList.stillNeed", { amount: stillNeedCost.toFixed(2) })}
-                </Text>
-              ) : null}
-            </View>
-            <Text style={[styles.pantryHint, { textAlign }]}>{t("shoppingList.pantryHint")}</Text>
-            {groupByCategory(result.items).map((group) => (
-              <View key={group.category}>
-                <Text style={[styles.aisleHeader, { textAlign }]}>
-                  {categoryEmoji(group.category)} {t(categoryLabelKey(group.category))}
-                </Text>
-                {group.items.map((item, i) => {
-                  const have = isChecked(item.ingredientName);
-                  return (
-                    <FadeSlideIn key={item.ingredientName} index={i}>
-                      <AnimatedPressable
-                        style={styles.itemRow}
-                        pressScale={0.99}
-                        onPress={() => toggleHaveAlready(item.ingredientName)}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: have }}
-                      >
-                        <View style={styles.itemLeft}>
-                          <View style={[styles.checkbox, have && styles.checkboxChecked]}>
-                            {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                          </View>
-                          <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.ingredientName}</Text>
-                        </View>
-                        <View style={styles.itemRight}>
-                          <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
-                            {formatQuantity(item.quantity, item.unit, unitSystem)}
-                          </Text>
-                          <Text style={[styles.itemCost, have && styles.itemNameChecked]}>
-                            {item.estimatedCost.toFixed(2)} EGP
-                          </Text>
-                        </View>
-                      </AnimatedPressable>
-                    </FadeSlideIn>
-                  );
-                })}
-              </View>
-            ))}
+            <Text style={[styles.sectionTitle, { textAlign }]}>
+              {t("shoppingList.listTitle", { count: result.servings })}
+            </Text>
+            <ShoppingChecklist
+              items={result.items.map((item) => ({ ...item, key: item.ingredientName }))}
+              shareTitle={t("shoppingList.shareTitle", { title })}
+            />
 
             <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
             <View style={styles.partnerRow}>
@@ -254,9 +185,6 @@ export function ShoppingListScreen({ route, navigation }: Props) {
                 <Text style={styles.mapsLink}>{t("shoppingList.openMaps")}</Text>
               </Pressable>
             ) : null}
-            <View style={styles.shareButton}>
-              <PrimaryButton label={t("shoppingList.share")} variant="outline" onPress={handleShareList} />
-            </View>
           </FadeSlideIn>
         ) : null}
       </ScrollView>

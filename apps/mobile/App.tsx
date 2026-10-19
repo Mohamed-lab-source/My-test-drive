@@ -21,6 +21,7 @@ import { WhatsNewProvider } from "./src/context/WhatsNewContext";
 import { CollectionsProvider } from "./src/context/CollectionsContext";
 import { BadgesProvider } from "./src/context/BadgesContext";
 import { FoodDiaryProvider } from "./src/context/FoodDiaryContext";
+import { ShoppingExtrasProvider } from "./src/context/ShoppingExtrasContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -60,7 +61,9 @@ export default function App() {
                                             <CollectionsProvider>
                                               <BadgesProvider>
                                                 <FoodDiaryProvider>
-                                                  <AppShell />
+                                                  <ShoppingExtrasProvider>
+                                                    <AppShell />
+                                                  </ShoppingExtrasProvider>
                                                 </FoodDiaryProvider>
                                               </BadgesProvider>
                                             </CollectionsProvider>

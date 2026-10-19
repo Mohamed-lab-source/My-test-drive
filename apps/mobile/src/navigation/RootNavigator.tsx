@@ -33,6 +33,7 @@ import { MiseEnPlaceScreen } from "../screens/MiseEnPlaceScreen";
 import { WeeklyRecapScreen } from "../screens/WeeklyRecapScreen";
 import { MealPrepScreen } from "../screens/MealPrepScreen";
 import { FoodDiaryScreen } from "../screens/FoodDiaryScreen";
+import { MyPantryScreen } from "../screens/MyPantryScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -177,6 +178,7 @@ export function RootNavigator() {
         />
         <Stack.Screen name="MealPrep" component={MealPrepScreen} options={{ title: t("mealPrep.title") }} />
         <Stack.Screen name="FoodDiary" component={FoodDiaryScreen} options={{ title: t("diary.title") }} />
+        <Stack.Screen name="MyPantry" component={MyPantryScreen} options={{ title: t("myPantry.title") }} />
         <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>

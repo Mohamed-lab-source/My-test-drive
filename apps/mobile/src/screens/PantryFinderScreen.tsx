@@ -9,6 +9,7 @@ import { AnimatedPressable } from "../components/AnimatedPressable";
 import { FadeSlideIn } from "../components/FadeSlideIn";
 import { RecipeCard } from "../components/RecipeCard";
 import { useLocale } from "../i18n/LocaleContext";
+import { normalizePantryName, usePantryCheck } from "../context/PantryCheckContext";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { PantryIngredient, PantryMatch } from "../api/types";
@@ -18,7 +19,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "PantryFinder">;
 const DEBOUNCE_MS = 400;
 const PANTRY_STORAGE_KEY = "cookmate.pantrySelectedIds";
 
-export function PantryFinderScreen({ navigation }: Props) {
+export function PantryFinderScreen({ navigation, route }: Props) {
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -31,6 +32,8 @@ export function PantryFinderScreen({ navigation }: Props) {
   const [matching, setMatching] = useState(false);
   const [ingredientsError, setIngredientsError] = useState(false);
   const [matchError, setMatchError] = useState(false);
+  const { items: pantryItems } = usePantryCheck();
+  const usePantry = route.params?.usePantry ?? false;
 
   const loadIngredients = () => {
     setIngredientsError(false);
@@ -47,6 +50,14 @@ export function PantryFinderScreen({ navigation }: Props) {
       })
       .catch(() => {});
   }, []);
+
+  // Arriving from My Pantry: select every catalog ingredient the pantry holds.
+  useEffect(() => {
+    if (!usePantry || allIngredients.length === 0) return;
+    const wanted = new Set(pantryItems.map(normalizePantryName));
+    setSelectedIds(allIngredients.filter((i) => wanted.has(normalizePantryName(i.name))).map((i) => i.id));
+    navigation.setParams({ usePantry: undefined });
+  }, [usePantry, allIngredients, pantryItems, navigation]);
 
   useEffect(() => {
     AsyncStorage.setItem(PANTRY_STORAGE_KEY, JSON.stringify(selectedIds)).catch(() => {});

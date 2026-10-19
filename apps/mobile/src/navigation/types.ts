@@ -58,7 +58,7 @@ export type RootStackParamList = {
   Search: undefined;
   MealPlanner: undefined;
   CookingCalendar: undefined;
-  PantryFinder: undefined;
+  PantryFinder: { usePantry?: boolean } | undefined;
   SubstitutionFinder: undefined;
   CustomizeHome: undefined;
   CookingStats: undefined;
@@ -67,6 +67,7 @@ export type RootStackParamList = {
   LeanMuscleMode: undefined;
   MealPrep: undefined;
   FoodDiary: undefined;
+  MyPantry: undefined;
   WhatsNew: undefined;
 };
 

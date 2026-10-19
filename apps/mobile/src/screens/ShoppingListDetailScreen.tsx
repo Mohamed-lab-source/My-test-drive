@@ -5,13 +5,9 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { fetchShoppingListDetail } from "../api/endpoints";
 import { AnimatedPressable } from "../components/AnimatedPressable";
-import { FadeSlideIn } from "../components/FadeSlideIn";
-import { usePantryCheck } from "../context/PantryCheckContext";
+import { ShoppingChecklist } from "../components/ShoppingChecklist";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
-import { useUnits } from "../context/UnitsContext";
-import { formatQuantity } from "../utils/units";
-import { categoryEmoji, categoryLabelKey, groupByCategory } from "../utils/ingredientCategory";
 import { radius, spacing, type ThemeColors } from "../theme";
 import type { ShoppingListDetail } from "../api/types";
 
@@ -21,9 +17,7 @@ export function ShoppingListDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { t, isRTL } = useLocale();
   const { colors } = useTheme();
-  const { unitSystem } = useUnits();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { isChecked, toggle: toggleHaveAlready } = usePantryCheck();
   const [list, setList] = useState<ShoppingListDetail | null>(null);
   const textAlign = isRTL ? "right" : "left";
 
@@ -63,37 +57,10 @@ export function ShoppingListDetailScreen({ route, navigation }: Props) {
         <Text style={[styles.sectionTitle, { textAlign }]}>
           {t("shoppingList.listTitle", { count: list.servings })}
         </Text>
-        {groupByCategory(list.items).map((group) => (
-          <View key={group.category}>
-            <Text style={[styles.aisleHeader, { textAlign }]}>
-              {categoryEmoji(group.category)} {t(categoryLabelKey(group.category))}
-            </Text>
-            {group.items.map((item, i) => {
-              const have = isChecked(item.ingredientName);
-              return (
-                <FadeSlideIn key={item.id} index={i}>
-                  <AnimatedPressable
-                    style={styles.itemRow}
-                    pressScale={0.99}
-                    onPress={() => toggleHaveAlready(item.ingredientName)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: have }}
-                  >
-                    <View style={styles.itemLeft}>
-                      <View style={[styles.checkbox, have && styles.checkboxChecked]}>
-                        {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
-                      </View>
-                      <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.ingredientName}</Text>
-                    </View>
-                    <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
-                      {formatQuantity(item.quantity, item.unit, unitSystem)}
-                    </Text>
-                  </AnimatedPressable>
-                </FadeSlideIn>
-              );
-            })}
-          </View>
-        ))}
+        <ShoppingChecklist
+          items={list.items.map((item) => ({ ...item, key: item.id }))}
+          shareTitle={t("shoppingList.shareTitle", { title: list.recipe.title })}
+        />
       </ScrollView>
     </SafeAreaView>
   );
