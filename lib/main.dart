@@ -12,7 +12,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app/extras.dart' show cityCenters, isDaytime;
 import 'app/local_prefs.dart';
+import 'data/providers.dart' show cityProvider;
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'app/theme_settings.dart';
@@ -80,7 +82,7 @@ class KhrogaApp extends ConsumerWidget {
           accent: look.accent,
           brightness: Brightness.dark,
           pureBlack: ref.watch(appSettingsProvider.select((s) => s.pureBlack))),
-      themeMode: look.mode,
+      themeMode: look.followSun ? _sunMode(ref) : look.mode,
       routerConfig: ref.watch(routerProvider),
       // "Bigger text" setting, on top of the phone's own text size.
       builder: (context, child) {
@@ -99,6 +101,15 @@ class KhrogaApp extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Re-checks the sun every 10 minutes while "follow the sun" is on.
+final _sunTick = StreamProvider<int>((_) => Stream.periodic(const Duration(minutes: 10), (i) => i));
+
+ThemeMode _sunMode(WidgetRef ref) {
+  ref.watch(_sunTick);
+  final c = cityCenters[ref.watch(cityProvider)] ?? cityCenters['cairo']!;
+  return isDaytime(DateTime.now(), c.$1, c.$2) ? ThemeMode.light : ThemeMode.dark;
 }
 
 String? _shortcutsLang;

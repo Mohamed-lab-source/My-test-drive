@@ -9,6 +9,15 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🎒', 'Who brings what', 'A shared list in each group: anyone can say "I\'ll bring it".'),
+    ('👍', 'Helpful reviews', 'Mark reviews that helped you; see how many found each one helpful.'),
+    ('🔮', 'For you', 'Real places like the ones you visit and save, with the reason why.'),
+    ('✍️', 'Friends\' reviews', 'What your friends reviewed lately, from the Friends tab.'),
+    ('📍', 'Now and next', 'On the day of your plan: where you should be now and what\'s next.'),
+    ('🌤️', 'Best time today', 'The most comfortable hour to be outside today.'),
+    ('☔', 'Weather heads-up', 'A warning when rain or strong heat is forecast for a coming outing.'),
+    ('🧾', 'Split by items', 'Each person pays for what they ordered, plus a fair share of extras.'),
+    ('🌗', 'Follow the sun', 'Light by day and dark after sunset, by the real sunset time.'),
     ('🎁', 'Send a surprise', 'Share a plan as a mystery: your friend reveals it stop by stop.'),
     ('☔', 'Indoor backup', 'Rain or heat? Swap outdoor stops for real indoor places nearby.'),
     ('🚗', 'When should I leave?', 'A rough leave-by time from where you are to the first stop.'),

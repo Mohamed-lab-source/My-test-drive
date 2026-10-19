@@ -1,3 +1,4 @@
+import 'bring_list.dart' show showBringList;
 import '../plan/reminder_sheet.dart' show ReminderButton;
 import '../../app/fun.dart' show nextDays;
 import '../../app/i18n.dart';
@@ -494,6 +495,11 @@ class _Header extends ConsumerWidget {
                     avatar: const Icon(Icons.calculate_outlined, size: 18),
                     label: Text(tr('Split the bill')),
                     onPressed: () => _showBillSplitter(context, group),
+                  ),
+                  ActionChip(
+                    avatar: const Text('🎒'),
+                    label: Text(tr('Who brings what')),
+                    onPressed: () => showBringList(context, group, uid),
                   ),
                   if (routeMapsUrl([for (final s in group.planStops) PlanStop.fromMap(s)]) case final url?) ...[
                     ActionChip(

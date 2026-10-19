@@ -266,6 +266,7 @@ class _PlanBody extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           _InfoBanner(icon: Icons.wb_twilight, text: facts),
         ],
+        NowBanner(plan: plan),
         LeaveByCard(plan: plan),
         if (plan.source == 'fallback') ...[
           const SizedBox(height: KSpace.md),

@@ -267,6 +267,15 @@ How the code enforces it (keep it this way):
   daily place-of-the-day notification (`syncDailyIdeas`, phone pref
   `fun.dailyIdea`), emergency numbers + phrasebook in Tools, app shortcuts
   (quick_actions).
+- 1.2 extras: group "who brings what" (`groups/{id}/items/{itemId}`, take
+  only for yourself, organizer/adder deletes; `features/groups/bring_list.dart`),
+  helpful votes `reviews/{rid}/helpful/{uid}` (never own review, counted with
+  `count()`) + private `users/{uid}/helpfulGiven/{rid}` so account deletion
+  removes them; both in rules-test. Friends' reviews feed (`friendsLatest`,
+  whereIn ≤30 + updatedAt index), For you (`forYou` in fun.dart), now/next
+  banner (`currentAndNext`), best hour today (`bestHour`), weather heads-up
+  (`weatherWarnings`), split by items (`splitByItems`), follow-the-sun theme
+  (`isDaytime`, pref `theme.sun`).
 
 ## Setup (browser only, see SETUP.md)
 

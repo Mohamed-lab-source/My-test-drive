@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import '../models/place.dart';
 import '../models/plan.dart';
+import 'extras.dart' show DayForecast;
 import 'i18n.dart';
 
 // ------------------------------------------------------------------ badges
@@ -554,3 +555,59 @@ const phrasebook = [
   ('Good night', 'تصبح على خير', 'tesbah \'ala kheir'),
   ('Help!', 'الحقوني!', 'el-ha\'uni!'),
 ];
+
+// ------------------------------------------------------------- for you
+
+typedef Suggestion = ({Place place, String? category, String? area});
+
+/// Places you might like: the kinds and areas you visit and save most,
+/// that you haven't been to or saved yet. Only well-documented real places.
+List<Suggestion> forYou(List<Place> all, List<Place> visited, List<Place> favorites, String city,
+    {int limit = 12}) {
+  final cats = <String, int>{};
+  final areas = <String, int>{};
+  for (final p in [...visited, ...favorites, ...favorites]) {
+    cats[p.category] = (cats[p.category] ?? 0) + 1;
+    if (p.area != null) areas[p.area!] = (areas[p.area!] ?? 0) + 1;
+  }
+  if (cats.isEmpty) return const [];
+  final seen = {for (final p in [...visited, ...favorites]) p.id};
+  final scored = <(Suggestion, double)>[];
+  for (final p in all) {
+    if (p.city != city || seen.contains(p.id) || p.category == 'shop' || p.quality < 3) continue;
+    final c = cats[p.category] ?? 0;
+    if (c == 0) continue;
+    final a = p.area == null ? 0 : areas[p.area!] ?? 0;
+    scored.add(((place: p, category: p.category, area: a > 0 ? p.area : null), c * 2.0 + a + p.quality * 0.1));
+  }
+  scored.sort((x, y) => y.$2.compareTo(x.$2));
+  return [for (final (s, _) in scored.take(limit)) s];
+}
+
+// ------------------------------------------------------- weather heads-up
+
+/// Upcoming outings (within the forecast) with rain likely (≥ 50 %) or very
+/// hot (≥ 38 °C): (title, day, forecast).
+List<(String, DateTime, DayForecast)> weatherWarnings(
+    Iterable<(String, DateTime)> outings, List<DayForecast> week, DateTime now) {
+  final today = DateTime(now.year, now.month, now.day);
+  final out = <(String, DateTime, DayForecast)>[];
+  for (final (title, day) in outings) {
+    final d = DateTime(day.year, day.month, day.day);
+    if (d.isBefore(today)) continue;
+    for (final f in week) {
+      if (f.day.year == d.year && f.day.month == d.month && f.day.day == d.day && (f.rainPct >= 50 || f.maxC >= 38)) {
+        out.add((title, d, f));
+      }
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------- split by item
+
+/// Each person pays what they ordered plus their share of the extras
+/// ([extraPct] = service + tax + tip, in percent). User-entered numbers only.
+Map<String, double> splitByItems(Map<String, double> ordered, double extraPct) => {
+      for (final e in ordered.entries) e.key: e.value * (1 + extraPct / 100),
+    };

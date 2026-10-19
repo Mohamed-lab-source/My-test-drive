@@ -400,3 +400,11 @@ int ideaForNow(DateTime now, {double? maxTempC, int? rainPct}) {
   if (h < 16) return idx(weekend ? 'Family day' : 'Coffee and a walk');
   return idx(weekend ? 'Friends catch-up' : 'Date night');
 }
+
+/// Whether the sun is up at [now] at a real spot (from [sunTimes]).
+bool isDaytime(DateTime now, double lat, double lng) {
+  final s = sunTimes(now, lat, lng);
+  if (s == null) return true;
+  final t = now.toUtc();
+  return t.isAfter(s.sunrise) && t.isBefore(s.sunset);
+}

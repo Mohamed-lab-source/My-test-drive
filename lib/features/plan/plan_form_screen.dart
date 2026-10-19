@@ -1,5 +1,6 @@
 import '../fun/place_of_day.dart';
 import '../fun/timeline_screen.dart' show OnThisDayCard;
+import 'plan_extras.dart' show BestTimeCard, WeatherHeadsUp;
 import '../../app/i18n.dart';
 import 'dart:convert';
 
@@ -304,6 +305,8 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
           const _TodayStrip(),
           const _IdeaForNow(),
+          const WeatherHeadsUp(),
+          const BestTimeCard(),
           const OnThisDayCard(),
           const PlaceOfDayCard(),
           const ChallengeCard(),
@@ -868,7 +871,7 @@ class _WhatsNewCard extends ConsumerWidget {
         child: ListTile(
           leading: const Text('🎁', style: TextStyle(fontSize: 26)),
           title: Text(trf("What's new in {v}", {'v': appVersion})),
-          subtitle: Text(tr('Surprise plans, indoor backups, memories and more')),
+          subtitle: Text(tr('Who brings what, helpful reviews, For you and more')),
           trailing: IconButton(
             tooltip: tr('Hide'),
             icon: const Icon(Icons.close),

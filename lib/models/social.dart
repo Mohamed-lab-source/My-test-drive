@@ -242,3 +242,31 @@ class Poll {
         createdAt: (m['createdAt'] as Timestamp?)?.toDate(),
       );
 }
+
+/// One thing on a group's "who's bringing what" list.
+class BringItem {
+  const BringItem({
+    required this.id,
+    required this.uid,
+    required this.name,
+    required this.text,
+    this.takenBy,
+    this.takenName,
+  });
+
+  final String id;
+  final String uid;
+  final String name;
+  final String text;
+  final String? takenBy;
+  final String? takenName;
+
+  factory BringItem.fromMap(String id, Map<String, dynamic> m) => BringItem(
+        id: id,
+        uid: (m['uid'] as String?) ?? '',
+        name: (m['name'] as String?) ?? '',
+        text: (m['text'] as String?) ?? '',
+        takenBy: m['takenBy'] as String?,
+        takenName: m['takenName'] as String?,
+      );
+}

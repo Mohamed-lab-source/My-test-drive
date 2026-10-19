@@ -104,7 +104,7 @@ class GroupsRepository {
 
   /// Deletes the group, its messages, polls and invite code (organizer only).
   Future<void> delete(Group group) async {
-    for (final sub in ['messages', 'polls']) {
+    for (final sub in ['messages', 'polls', 'items']) {
       final docs = _groups.doc(group.id).collection(sub);
       while (true) {
         final page = await docs.limit(400).get();
@@ -181,6 +181,35 @@ class GroupsRepository {
         'votes': <String, int>{},
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+  // ---- Who's bringing what (at most 50 things per group) ----
+  Stream<List<BringItem>> watchItems(String groupId) => _groups
+      .doc(groupId)
+      .collection('items')
+      .orderBy('createdAt')
+      .limit(50)
+      .snapshots()
+      .map((s) => s.docs.map((d) => BringItem.fromMap(d.id, d.data())).toList());
+
+  Future<void> addItem(String groupId, String uid, String name, String text) =>
+      _groups.doc(groupId).collection('items').add({
+        'uid': uid,
+        'name': name.length > 40 ? name.substring(0, 40) : name,
+        'text': text.trim().length > 60 ? text.trim().substring(0, 60) : text.trim(),
+        'takenBy': null,
+        'takenName': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+  /// "I'll bring it" ([uid] set) or "I can't anymore" ([uid] null).
+  Future<void> takeItem(String groupId, String itemId, String? uid, String? name) =>
+      _groups.doc(groupId).collection('items').doc(itemId).update({
+        'takenBy': uid,
+        'takenName': uid == null ? null : (name!.length > 40 ? name.substring(0, 40) : name),
+      });
+
+  Future<void> deleteItem(String groupId, String itemId) =>
+      _groups.doc(groupId).collection('items').doc(itemId).delete();
 
   Future<void> vote(String groupId, String pollId, String uid, int option) =>
       _groups.doc(groupId).collection('polls').doc(pollId).update({'votes.$uid': option});

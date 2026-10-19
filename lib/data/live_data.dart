@@ -237,3 +237,16 @@ Future<List<CommonsPhoto>> fetchCommonsNearby(double lat, double lng, {http.Clie
       client: client);
   return json == null ? const [] : parseCommonsPhotos(json);
 }
+
+/// The most comfortable hour between [from] and [to] (inclusive): least
+/// rain first, then closest to 24 °C. Null when no hours are known.
+(int, HourWeather)? bestHour(Map<int, HourWeather> hours, {int from = 9, int to = 23}) {
+  (int, HourWeather)? best;
+  double score(HourWeather w) => w.rain * 2 + (w.temp - 24).abs();
+  for (var h = from; h <= to; h++) {
+    final w = hours[h];
+    if (w == null) continue;
+    if (best == null || score(w) < score(best.$2)) best = (h, w);
+  }
+  return best;
+}

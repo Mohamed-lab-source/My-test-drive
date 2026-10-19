@@ -63,7 +63,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('Send a surprise'), findsOneWidget);
+    expect(find.text('Who brings what'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

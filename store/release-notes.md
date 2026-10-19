@@ -2,6 +2,26 @@
 
 Keep each under 500 characters.
 
+## 1.2.0
+
+<en-US>
+• Who brings what: a shared list in every group
+• Mark reviews helpful, and read your friends' reviews
+• For you: real places like the ones you love
+• On the day: where to be now and what's next
+• Best time to be outside, and weather heads-ups for your outings
+• Split a bill by what each person ordered; light by day, dark at night
+</en-US>
+
+<ar>
+• مين هيجيب إيه: قائمة مشتركة في كل جروب
+• علّم التقييمات المفيدة، واقرا تقييمات صحابك
+• ليك: أماكن حقيقية شبه اللي بتحبها
+• يوم الخروجة: تكون فين دلوقتي وإيه الجاي
+• أحسن وقت للخروج، وتنبيه بالجو لخروجاتك
+• قسّم الحساب حسب طلب كل واحد؛ فاتح بالنهار وغامق بالليل
+</ar>
+
 ## 1.1.0
 
 <en-US>

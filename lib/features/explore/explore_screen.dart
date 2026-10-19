@@ -419,6 +419,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     },
                   ),
                   ActionChip(
+                    avatar: const Text('🔮'),
+                    label: Text(tr('For you')),
+                    onPressed: () => context.push('/for-you'),
+                  ),
+                  ActionChip(
                     avatar: const Text('🗂️'),
                     label: Text(tr('Collections')),
                     onPressed: () => context.push('/collections'),

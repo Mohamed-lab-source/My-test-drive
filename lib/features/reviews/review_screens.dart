@@ -277,7 +277,52 @@ class _ReviewTile extends ConsumerWidget {
                 ],
               ),
             ),
+          _HelpfulButton(review: review),
         ],
+      ),
+    );
+  }
+}
+
+/// "How many found it helpful" + whether you did, read when a review shows.
+final _helpfulProvider = FutureProvider.autoDispose.family<(int, bool), String>((ref, reviewId) {
+  final uid = ref.watch(uidProvider);
+  return ref.watch(reviewsRepositoryProvider).helpful(reviewId, uid);
+});
+
+class _HelpfulButton extends ConsumerWidget {
+  const _HelpfulButton({required this.review});
+
+  final Review review;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final id = Review.docId(review.placeId, review.uid);
+    final me = ref.watch(authStateProvider).value;
+    final (count, mine) = ref.watch(_helpfulProvider(id)).value ?? (0, false);
+    final own = me?.uid == review.uid;
+    if (own && count == 0) return const SizedBox.shrink();
+    final label = count == 0 ? tr('Helpful') : trf('Helpful · {n}', {'n': count});
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: TextButton.icon(
+        style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero),
+        icon: Icon(mine ? Icons.thumb_up : Icons.thumb_up_outlined, size: 16),
+        label: Text(label),
+        onPressed: own || me == null
+            ? null
+            : () async {
+                if (me.isAnonymous) {
+                  showMessage(context, tr('Sign in with Google (Profile) to mark reviews helpful.'));
+                  return;
+                }
+                try {
+                  await ref.read(reviewsRepositoryProvider).setHelpful(id, me.uid, !mine);
+                  ref.invalidate(_helpfulProvider(id));
+                } catch (e) {
+                  if (context.mounted) showError(context, e);
+                }
+              },
       ),
     );
   }

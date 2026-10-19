@@ -120,6 +120,60 @@ class ReviewsRepository {
 
   /// "Delete my account": removes all your reviews (fixing each place's
   /// stars), then your reviewer numbers.
+  /// Your friends' newest reviews: up to 30 friends, 20 reviews, newest
+  /// first (uses the reviews(uid, updatedAt) index).
+  Future<List<Review>> friendsLatest(List<String> uids, {int limit = 20}) async {
+    if (uids.isEmpty) return const [];
+    final snap = await _reviews
+        .where('uid', whereIn: uids.take(30).toList())
+        .orderBy('updatedAt', descending: true)
+        .limit(limit)
+        .get();
+    return snap.docs.map((d) => Review.fromMap(d.data())).toList();
+  }
+
+  // ---- "Helpful" votes ----
+  CollectionReference<Map<String, dynamic>> _helpful(String reviewId) =>
+      _reviews.doc(reviewId).collection('helpful');
+
+  /// How many found a review helpful, and whether you did (2 small reads).
+  Future<(int, bool)> helpful(String reviewId, String? uid) async {
+    final count = (await _helpful(reviewId).count().get()).count ?? 0;
+    final mine = uid != null && (await _helpful(reviewId).doc(uid).get()).exists;
+    return (count, mine);
+  }
+
+  Future<void> setHelpful(String reviewId, String uid, bool on) {
+    final batch = _db.batch();
+    final given = _db.collection('users').doc(uid).collection('helpfulGiven').doc(reviewId);
+    if (on) {
+      batch
+        ..set(_helpful(reviewId).doc(uid), {'at': FieldValue.serverTimestamp()})
+        ..set(given, {'at': FieldValue.serverTimestamp()});
+    } else {
+      batch
+        ..delete(_helpful(reviewId).doc(uid))
+        ..delete(given);
+    }
+    return batch.commit();
+  }
+
+  /// Removes every "helpful" vote you gave (used by Delete my account).
+  Future<void> deleteMyHelpful(String uid) async {
+    final given = _db.collection('users').doc(uid).collection('helpfulGiven');
+    while (true) {
+      final page = await given.limit(200).get();
+      if (page.docs.isEmpty) break;
+      final batch = _db.batch();
+      for (final d in page.docs) {
+        batch
+          ..delete(_helpful(d.id).doc(uid))
+          ..delete(d.reference);
+      }
+      await batch.commit();
+    }
+  }
+
   Future<void> deleteAllMine(String uid) async {
     while (true) {
       final batch = await _reviews.where('uid', isEqualTo: uid).limit(50).get();

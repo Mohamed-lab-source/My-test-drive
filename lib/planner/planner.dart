@@ -906,3 +906,19 @@ List<PlanStop> shiftTimes(List<PlanStop> stops, int minutes) => [
       for (final s in stops)
         _minutesOf(s.startTime) == null ? s : s.copyWith(startTime: _hhmm(_minutesOf(s.startTime)! + minutes)),
     ];
+
+/// During an outing: the stop you're at now and the next one, by their
+/// times (null when unknown or the outing is over).
+({int? now, int? next}) currentAndNext(List<PlanStop> stops, DateTime at) {
+  final minute = at.hour * 60 + at.minute;
+  int? now;
+  int? next;
+  for (final (i, s) in stops.indexed) {
+    final start = _minutesOf(s.startTime);
+    if (start == null) continue;
+    final end = start + (s.durationMinutes ?? 60);
+    if (minute >= start && minute < end) now = i;
+    if (start > minute && next == null) next = i;
+  }
+  return (now: now, next: next);
+}

@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/extras.dart';
-import '../../app/fun.dart' show makeTeams, conversationStarters, emergencyNumbers, phrasebook;
+import '../../app/fun.dart' show makeTeams, conversationStarters, emergencyNumbers, phrasebook, splitByItems;
 import '../../widgets/launchers.dart' show callPhone;
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import '../../widgets/common.dart' show showMessage;
@@ -40,6 +40,7 @@ class ToolsScreen extends StatelessWidget {
           _StarterCard(),
           _PhrasebookCard(),
           _SplitCard(),
+          _SplitByItemsCard(),
           _WalkCard(),
           _WeekCard(),
           _SunCard(),
@@ -220,6 +221,92 @@ class _CoinCardState extends ConsumerState<_CoinCard> {
             ),
         ]),
       );
+}
+
+/// Everyone pays for what they ordered, plus a fair share of service, tax
+/// and tip. Only the numbers you type.
+class _SplitByItemsCard extends StatefulWidget {
+  const _SplitByItemsCard();
+
+  @override
+  State<_SplitByItemsCard> createState() => _SplitByItemsCardState();
+}
+
+class _SplitByItemsCardState extends State<_SplitByItemsCard> {
+  final _rows = <(TextEditingController, TextEditingController)>[
+    (TextEditingController(), TextEditingController()),
+    (TextEditingController(), TextEditingController()),
+  ];
+  int _extra = 0;
+
+  @override
+  void dispose() {
+    for (final (a, b) in _rows) {
+      a.dispose();
+      b.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final ordered = <String, double>{
+      for (final (i, (name, amount)) in _rows.indexed)
+        if (double.tryParse(amount.text.replaceAll(',', '').trim()) case final a? when a > 0)
+          (name.text.trim().isEmpty ? trf('Person {n}', {'n': i + 1}) : name.text.trim()): a,
+    };
+    final shares = splitByItems(ordered, _extra.toDouble());
+    final total = shares.values.fold(0.0, (s, v) => s + v);
+    return _ToolCard(
+      emoji: '🧾',
+      title: tr('Split by what each ordered'),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final (i, (name, amount)) in _rows.indexed)
+          Row(children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: name,
+                decoration: InputDecoration(hintText: trf('Person {n}', {'n': i + 1}), isDense: true),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(width: KSpace.sm),
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: amount,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(suffixText: 'EGP', isDense: true),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+          ]),
+        if (_rows.length < 12)
+          TextButton.icon(
+            onPressed: () => setState(() => _rows.add((TextEditingController(), TextEditingController()))),
+            icon: const Icon(Icons.person_add_alt),
+            label: Text(tr('Add a person')),
+          ),
+        Wrap(spacing: KSpace.sm, children: [
+          for (final p in [0, 12, 14, 26, 30])
+            ChoiceChip(
+              label: Text(p == 0 ? tr('Nothing extra') : '+$p%'),
+              selected: _extra == p,
+              showCheckmark: false,
+              onSelected: (_) => setState(() => _extra = p),
+            ),
+        ]),
+        Text(tr('Extras = service, tax and tip on the bill (12% service + 14% VAT = 26%).'), style: text.bodySmall),
+        if (shares.isNotEmpty) ...[
+          const SizedBox(height: KSpace.sm),
+          for (final e in shares.entries) Text('${e.key}: ${trf('{n} EGP', {'n': e.value.ceil()})}', style: text.bodyLarge),
+          Text(trf('Total: {n} EGP', {'n': total.ceil()}), style: text.titleMedium),
+        ],
+      ]),
+    );
+  }
 }
 
 /// Egypt's emergency numbers, one tap to call.

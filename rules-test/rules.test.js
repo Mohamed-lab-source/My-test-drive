@@ -423,3 +423,36 @@ test("crowd: counts only go up by one, with your own mark, once per 30 minutes",
   await assertSucceeds(getDoc(doc(as(EVE), "crowd/p8")));
   await assertFails(getDoc(doc(as(EVE), "users/alice/crowdMarks/p8")), "marks are private");
 });
+
+test("bring list: members add, claim only for themselves, outsiders can't", async () => {
+  const items = (db) => collection(db, "groups/g1/items");
+  const item = { uid: BOB, name: "Bob", text: "Cards", takenBy: null, takenName: null, createdAt: serverTimestamp() };
+  await assertFails(addDoc(items(as(EVE)), { ...item, uid: EVE }), "outsider");
+  await assertFails(addDoc(items(as(BOB)), { ...item, takenBy: BOB, takenName: "Bob" }), "can't start taken");
+  const ref = await addDoc(items(as(BOB)), item);
+  const id = ref.id;
+  await assertFails(updateDoc(doc(as(ALICE), `groups/g1/items/${id}`), { takenBy: BOB, takenName: "Bob" }), "not for others");
+  await assertSucceeds(updateDoc(doc(as(ALICE), `groups/g1/items/${id}`), { takenBy: ALICE, takenName: "Alice" }));
+  await assertFails(updateDoc(doc(as(BOB), `groups/g1/items/${id}`), { takenBy: BOB, takenName: "Bob" }), "already taken");
+  await assertFails(updateDoc(doc(as(BOB), `groups/g1/items/${id}`), { takenBy: null, takenName: null }), "only Alice lets go");
+  await assertSucceeds(updateDoc(doc(as(ALICE), `groups/g1/items/${id}`), { takenBy: null, takenName: null }));
+  await assertFails(updateDoc(doc(as(ALICE), `groups/g1/items/${id}`), { text: "Changed" }));
+  await assertFails(getDocs(items(as(EVE))));
+  await assertSucceeds(deleteDoc(doc(as(ALICE), `groups/g1/items/${id}`)), "organizer can delete");
+});
+
+test("helpful votes: one per person, never on your own review", async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "reviews/p1__alice"), { placeId: "p1", uid: ALICE, stars: 5 });
+  });
+  const vote = (db, voter) => setDoc(doc(db, `reviews/p1__alice/helpful/${voter}`), { at: serverTimestamp() });
+  await assertFails(vote(as(ALICE), ALICE), "own review");
+  await assertFails(vote(as(BOB), ALICE), "for someone else");
+  await assertFails(vote(guest("gina"), "gina"), "guests");
+  await assertSucceeds(vote(as(BOB), BOB));
+  await assertSucceeds(getDocs(collection(as(EVE), "reviews/p1__alice/helpful")));
+  await assertFails(deleteDoc(doc(as(EVE), "reviews/p1__alice/helpful/bob")));
+  await assertSucceeds(deleteDoc(doc(as(BOB), "reviews/p1__alice/helpful/bob")));
+  await assertSucceeds(setDoc(doc(as(BOB), "users/bob/helpfulGiven/p1__alice"), { at: serverTimestamp() }));
+  await assertFails(getDoc(doc(as(EVE), "users/bob/helpfulGiven/p1__alice")));
+});

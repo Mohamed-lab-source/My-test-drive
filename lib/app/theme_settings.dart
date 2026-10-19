@@ -11,7 +11,11 @@ class ThemeSettings {
     this.mode = ThemeMode.dark,
     this.accentId = 'coral',
     this.textScale = 1.0,
+    this.followSun = false,
   });
+
+  /// Light between sunrise and sunset in your city, dark after (calculated).
+  final bool followSun;
 
   final ThemeMode mode;
   final String accentId;
@@ -21,10 +25,11 @@ class ThemeSettings {
 
   AccentTheme get accent => accentById(accentId);
 
-  ThemeSettings copyWith({ThemeMode? mode, String? accentId, double? textScale}) => ThemeSettings(
+  ThemeSettings copyWith({ThemeMode? mode, String? accentId, double? textScale, bool? followSun}) => ThemeSettings(
         mode: mode ?? this.mode,
         accentId: accentId ?? this.accentId,
         textScale: textScale ?? this.textScale,
+        followSun: followSun ?? this.followSun,
       );
 }
 
@@ -37,6 +42,7 @@ class ThemeSettingsNotifier extends Notifier<ThemeSettings> {
   static const _modeKey = 'theme.mode';
   static const _accentKey = 'theme.accent';
   static const _scaleKey = 'theme.textScale';
+  static const _sunKey = 'theme.sun';
 
   @override
   ThemeSettings build() {
@@ -51,7 +57,13 @@ class ThemeSettingsNotifier extends Notifier<ThemeSettings> {
       mode: mode,
       accentId: prefs?.getString(_accentKey) ?? 'coral',
       textScale: textScales.containsKey(scale) ? scale : 1.0,
+      followSun: prefs?.getBool(_sunKey) ?? false,
     );
+  }
+
+  void setFollowSun(bool v) {
+    state = state.copyWith(followSun: v);
+    ref.read(sharedPrefsProvider)?.setBool(_sunKey, v);
   }
 
   void setMode(ThemeMode mode) {

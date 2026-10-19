@@ -168,4 +168,37 @@ void main() {
     expect(emergencyNumbers.map((e) => e.$3), containsAll(['122', '123', '180']));
     expect(phrasebook.every((p) => p.$1.isNotEmpty && p.$2.isNotEmpty && p.$3.isNotEmpty), isTrue);
   });
+
+  test('for you, weather heads-up and split by items', () {
+    final visited = [_p('v1', 'cafe', area: 'Zed'), _p('v2', 'cafe', area: 'Zed')];
+    final all = [
+      ...visited,
+      _p('c1', 'cafe', area: 'Zed'),
+      _p('c2', 'cafe', area: 'Other'),
+      _p('m1', 'museum', area: 'Zed'),
+      _p('low', 'cafe', area: 'Zed', quality: 1),
+      _p('alex', 'cafe', city: 'alexandria', area: 'Zed'),
+    ];
+    final picks = forYou(all, visited, const [], 'cairo');
+    expect(picks.map((s) => s.place.id), ['c1', 'c2'], reason: 'same kind, best area first; no low-quality, no other city');
+    expect(picks.first.area, 'Zed');
+    expect(forYou(all, const [], const [], 'cairo'), isEmpty);
+
+    final now = DateTime(2026, 10, 19, 12);
+    final week = [
+      (day: DateTime(2026, 10, 20), maxC: 30.0, rainPct: 70),
+      (day: DateTime(2026, 10, 21), maxC: 28.0, rainPct: 10),
+      (day: DateTime(2026, 10, 22), maxC: 39.0, rainPct: 0),
+    ];
+    final w = weatherWarnings([
+      ('Rainy plan', DateTime(2026, 10, 20, 18)),
+      ('Fine plan', DateTime(2026, 10, 21)),
+      ('Hot plan', DateTime(2026, 10, 22)),
+      ('Old plan', DateTime(2026, 10, 1)),
+    ], week, now);
+    expect(w.map((e) => e.$1), ['Rainy plan', 'Hot plan']);
+
+    expect(splitByItems({'A': 100, 'B': 50}, 26), {'A': 126.0, 'B': 63.0});
+    expect(splitByItems(const {}, 10), isEmpty);
+  });
 }

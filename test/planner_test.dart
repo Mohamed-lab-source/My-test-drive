@@ -291,4 +291,16 @@ void _hoursAndSwapTests() {
     expect(leaveBy(null, 3), isNull);
     expect(leaveBy('bad', 3), isNull);
   });
+
+  test('now and next stop during an outing', () {
+    const stops = [
+      PlanStop(placeId: 'a', name: 'Test A', category: 'cafe', startTime: '18:00', durationMinutes: 60),
+      PlanStop(placeId: 'b', name: 'Test B', category: 'park', startTime: '19:15', durationMinutes: 45),
+    ];
+    expect(currentAndNext(stops, DateTime(2026, 10, 19, 17, 30)), (now: null, next: 0));
+    expect(currentAndNext(stops, DateTime(2026, 10, 19, 18, 30)), (now: 0, next: 1));
+    expect(currentAndNext(stops, DateTime(2026, 10, 19, 19, 5)), (now: null, next: 1));
+    expect(currentAndNext(stops, DateTime(2026, 10, 19, 19, 30)), (now: 1, next: null));
+    expect(currentAndNext(stops, DateTime(2026, 10, 19, 22)), (now: null, next: null));
+  });
 }

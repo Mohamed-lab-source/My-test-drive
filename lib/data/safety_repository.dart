@@ -88,6 +88,7 @@ class SafetyRepository {
   /// "been there", check-in, friendships, username, profile. Groups they run
   /// are deleted; other groups they simply leave.
   Future<void> deleteAllData(String uid, {String? username}) async {
+    await _reviews.deleteMyHelpful(uid);
     await _reviews.deleteAllMine(uid);
     final groups = await _db.collection('groups').where('memberUids', arrayContains: uid).get();
     for (final d in groups.docs) {

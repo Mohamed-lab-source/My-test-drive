@@ -61,6 +61,11 @@ class FriendsScreen extends ConsumerWidget {
         title: Text(tr('Friends')),
         actions: [
           IconButton(
+            tooltip: tr("Friends' reviews"),
+            icon: const Icon(Icons.rate_review_outlined),
+            onPressed: () => context.push('/friends-reviews'),
+          ),
+          IconButton(
             tooltip: tr('Invite a friend to add you'),
             icon: const Icon(Icons.person_add_alt_1_outlined),
             onPressed: uid == null

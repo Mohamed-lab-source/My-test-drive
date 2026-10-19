@@ -151,4 +151,11 @@ void main() {
       expect(ideaForNow(DateTime(2026, 10, 12, h)), greaterThanOrEqualTo(0));
     }
   });
+
+  test('daytime from the real sunrise and sunset', () {
+    // Cairo, 21 June (UTC): sunrise ≈ 02:54, sunset ≈ 17:00.
+    expect(isDaytime(DateTime.utc(2026, 6, 21, 12), 30.0444, 31.2357), isTrue);
+    expect(isDaytime(DateTime.utc(2026, 6, 21, 20), 30.0444, 31.2357), isFalse);
+    expect(isDaytime(DateTime.utc(2026, 6, 21, 1), 30.0444, 31.2357), isFalse);
+  });
 }

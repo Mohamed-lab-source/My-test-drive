@@ -81,6 +81,13 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/crowd/$(placeId)).data.last == request.time;
       }
 
+      // Reviews you marked helpful (private copy, so deleting your account
+      // can find and remove your votes).
+      match /helpfulGiven/{reviewId} {
+        allow read, delete: if isMe(uid);
+        allow create: if isMe(uid) && newData().keys().hasOnly(['at']) && newData().at == request.time;
+      }
+
       // Favorite places: just a place id and when it was added.
       match /favorites/{placeId} {
         allow read, delete: if isMe(uid);
@@ -194,6 +201,16 @@ service cloud.firestore {
         && r.answers is map && r.answers.size() <= 20
         && r.category is string && r.category.size() > 0 && r.category.size() <= 30
         && r.updatedAt == request.time;
+    }
+
+    // "Helpful" votes on a review: one per person, never on your own review.
+    match /reviews/{reviewId}/helpful/{voter} {
+      allow read: if signedIn();
+      allow create: if isMe(voter) && !isGuest()
+        && newData().keys().hasOnly(['at'])
+        && newData().at == request.time
+        && get(/databases/$(database)/documents/reviews/$(reviewId)).data.uid != me();
+      allow delete: if isMe(voter);
     }
 
     match /reviews/{reviewId} {
@@ -481,6 +498,27 @@ service cloud.firestore {
           && (!(me() in newData().votes)
               || (newData().votes[me()] is int && newData().votes[me()] >= 0
                   && newData().votes[me()] < resource.data.options.size()));
+        allow delete: if signedIn() && (resource.data.uid == me() || group().ownerUid == me());
+      }
+
+      // "Who's bringing what": anyone in the group adds a thing; anyone can
+      // say "I'll bring it" (only for themselves) or let it go again.
+      match /items/{itemId} {
+        function group() { return get(/databases/$(database)/documents/groups/$(groupId)).data; }
+        function member() { return signedIn() && me() in group().memberUids; }
+
+        allow read: if member();
+        allow create: if member()
+          && newData().keys().hasOnly(['uid', 'name', 'text', 'takenBy', 'takenName', 'createdAt'])
+          && newData().uid == me()
+          && validName(newData().name)
+          && newData().text is string && newData().text.size() > 0 && newData().text.size() <= 60
+          && newData().takenBy == null && newData().takenName == null
+          && newData().createdAt == request.time;
+        allow update: if member()
+          && changed().hasOnly(['takenBy', 'takenName'])
+          && ((resource.data.takenBy == null && newData().takenBy == me() && validName(newData().takenName))
+              || (resource.data.takenBy == me() && newData().takenBy == null && newData().takenName == null));
         allow delete: if signedIn() && (resource.data.uid == me() || group().ownerUid == me());
       }
     }

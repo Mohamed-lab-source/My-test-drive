@@ -23,6 +23,8 @@ import '../features/fun/leaderboard_screen.dart';
 import '../features/fun/mystery_screen.dart';
 import '../features/fun/recap_screen.dart';
 import '../features/fun/timeline_screen.dart';
+import '../features/fun/for_you_screen.dart';
+import '../features/reviews/friends_reviews_screen.dart';
 import '../features/friends/person_screen.dart';
 import '../features/explore/lists_screen.dart';
 import '../features/explore/malls_screen.dart';
@@ -160,6 +162,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/badges', builder: (_, _) => const BadgesScreen()),
       GoRoute(path: '/help', builder: (_, _) => const HelpScreen()),
       GoRoute(path: '/timeline', builder: (_, _) => const TimelineScreen()),
+      GoRoute(path: '/for-you', builder: (_, _) => const ForYouScreen()),
+      GoRoute(path: '/friends-reviews', builder: (_, _) => const FriendsReviewsScreen()),
       GoRoute(path: '/person/:uid', builder: (_, s) => PersonScreen(uid: s.pathParameters['uid']!)),
       GoRoute(path: '/recap', builder: (_, _) => const RecapScreen()),
       GoRoute(path: '/bingo', builder: (_, _) => const BingoScreen()),

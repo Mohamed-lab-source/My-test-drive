@@ -94,4 +94,16 @@ void main() {
     expect(photos.first.author, 'Test Person');
     expect(photos.first.license, 'CC BY-SA 4.0');
   });
+
+  test('best hour: least rain, then closest to 24 degrees', () {
+    final hours = <int, HourWeather>{
+      15: (temp: 36, rain: 0),
+      18: (temp: 29, rain: 0),
+      20: (temp: 25, rain: 40),
+      21: (temp: 26, rain: 0),
+    };
+    expect(bestHour(hours, from: 9, to: 23)!.$1, 21);
+    expect(bestHour(hours, from: 9, to: 19)!.$1, 18);
+    expect(bestHour(const {}, from: 9, to: 23), isNull);
+  });
 }

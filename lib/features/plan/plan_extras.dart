@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+
+import '../../app/extras.dart' show cityCenters;
+import '../../app/fun.dart' show weatherWarnings;
+import '../../data/live_data.dart' show bestHour;
+import '../../widgets/launchers.dart' show openDirections;
 
 import '../../app/i18n.dart';
 import '../../app/theme.dart';
@@ -142,4 +149,113 @@ String safetyShareText(OutingPlan plan, String planText) {
     planText,
     if (end != null) trf('I should be done around {time}.', {'time': end}),
   ].where((s) => s.isNotEmpty).join('\n');
+}
+
+/// "Best time to be outside today": the most comfortable hour left today in
+/// your city (one Open-Meteo request, shared with plans).
+class BestTimeCard extends ConsumerWidget {
+  const BestTimeCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final city = ref.watch(cityProvider);
+    final center = cityCenters[city];
+    if (center == null) return const SizedBox.shrink();
+    final now = DateTime.now();
+    final ymd = DateFormat('yyyy-MM-dd').format(now);
+    final hours = ref.watch(hourlyWeatherProvider((center.$1, center.$2, ymd))).value;
+    if (hours == null || now.hour >= 22) return const SizedBox.shrink();
+    final best = bestHour(hours, from: (now.hour + 1).clamp(9, 23), to: 23);
+    if (best == null) return const SizedBox.shrink();
+    final (h, w) = best;
+    return Card(
+      margin: const EdgeInsets.only(top: KSpace.md),
+      child: ListTile(
+        leading: const Text('🌤️', style: TextStyle(fontSize: 26)),
+        title: Text(trf('Best time to be outside today: {time}', {'time': '${h.toString().padLeft(2, '0')}:00'})),
+        subtitle: Text(trf('{t}° · {r}% rain · Open-Meteo forecast', {'t': w.temp.round(), 'r': w.rain})),
+      ),
+    );
+  }
+}
+
+/// Heads-up for your coming outings when rain or strong heat is forecast.
+class WeatherHeadsUp extends ConsumerWidget {
+  const WeatherHeadsUp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final city = ref.watch(cityProvider);
+    final week = ref.watch(weekForecastProvider(city)).value;
+    if (week == null || week.isEmpty) return const SizedBox.shrink();
+    final plans = ref.watch(recentPlansProvider).value ?? const <OutingPlan>[];
+    final groups = ref.watch(myGroupsProvider).value ?? const [];
+    final outings = [
+      for (final p in plans)
+        if (p.request.date != null && p.request.city == city) (p.title, p.request.day),
+      for (final g in groups)
+        if (g.scheduledAt != null) (g.planTitle ?? g.name, g.scheduledAt!),
+    ];
+    final warnings = weatherWarnings(outings, week, DateTime.now());
+    if (warnings.isEmpty) return const SizedBox.shrink();
+    final (title, day, f) = warnings.first;
+    return Card(
+      margin: const EdgeInsets.only(top: KSpace.md),
+      child: ListTile(
+        leading: Text(f.rainPct >= 50 ? '☔' : '🥵', style: const TextStyle(fontSize: 26)),
+        title: Text(
+          f.rainPct >= 50
+              ? trf('Rain likely for "{plan}"', {'plan': title})
+              : trf('Very hot for "{plan}"', {'plan': title}),
+        ),
+        subtitle: Text(
+          trf('{day}: {t}° · {r}% rain. Open the plan for indoor backup ideas.', {
+            'day': DateFormat('EEE d MMM').format(day),
+            't': f.maxC.round(),
+            'r': f.rainPct,
+          }),
+        ),
+        onTap: () => context.push('/saved'),
+      ),
+    );
+  }
+}
+
+/// On the day of the outing: where you should be now and what's next.
+class NowBanner extends StatelessWidget {
+  const NowBanner({super.key, required this.plan});
+
+  final OutingPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final day = plan.request.day;
+    if (day.year != now.year || day.month != now.month || day.day != now.day) return const SizedBox.shrink();
+    final (now: at, :next) = currentAndNext(plan.stops, now);
+    if (at == null && next == null) return const SizedBox.shrink();
+    final target = next == null ? null : plan.stops[next];
+    return Card(
+      margin: const EdgeInsets.only(top: KSpace.md),
+      color: context.k.accentSoft,
+      child: ListTile(
+        leading: const Text('📍', style: TextStyle(fontSize: 26)),
+        title: Text(
+          at != null
+              ? trf('Now: {place}', {'place': plan.stops[at].name})
+              : trf('Next: {place} at {time}', {'place': target!.name, 'time': target.startTime ?? ''}),
+        ),
+        subtitle: at != null && target != null
+            ? Text(trf('Then {place} at {time}', {'place': target.name, 'time': target.startTime ?? ''}))
+            : null,
+        trailing: target != null && target.hasLocation
+            ? IconButton(
+                tooltip: tr('Directions'),
+                icon: const Icon(Icons.directions),
+                onPressed: () => openDirections(lat: target.lat!, lng: target.lng!),
+              )
+            : null,
+      ),
+    );
+  }
 }
