@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-bundled-catalog",
+    date: "2026-10-19",
+    title: { en: "All recipes work offline", ar: "كل الوصفات تعمل بدون إنترنت" },
+    body: {
+      en: "All 220 recipes now come built into the app. Browsing, search, filters, recipe pages, Cook Mode, pantry matching and shopping lists keep working even when you're offline or the Cookmate server is down.",
+      ar: "كل الوصفات الـ220 مدمجة الآن في التطبيق. التصفح والبحث والفلاتر وصفحات الوصفات ووضع الطبخ ومطابقة المخزن وقوائم التسوق تعمل حتى بدون إنترنت أو عند توقف خادم Cookmate.",
+    },
+  },
+  {
     id: "2026-10-guides-fasting",
     date: "2026-10-19",
     title: { en: "Kitchen guides & fasting tracker", ar: "أدلة المطبخ ومتابعة الصيام" },

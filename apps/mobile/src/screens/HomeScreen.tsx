@@ -54,7 +54,8 @@ import { useTheme } from "../theme/ThemeContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
 import type { TranslationKey } from "../i18n/translations";
 import type { Cuisine, RecipeSummary } from "../api/types";
-import { isOnline } from "../utils/connectivity";
+import { getCatalogSource, isOnline, subscribeCatalogSource } from "../utils/connectivity";
+import { retryServerNow } from "../api/client";
 
 const HOME_CACHE_KEY = "cookmate.homeCache";
 
@@ -114,6 +115,8 @@ export function HomeScreen({ navigation }: Props) {
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
   const [recommended, setRecommended] = useState<RecipeSummary[]>([]);
   const [showingOfflineCache, setShowingOfflineCache] = useState(false);
+  const [usingBundledCatalog, setUsingBundledCatalog] = useState(getCatalogSource() === "bundle");
+  useEffect(() => subscribeCatalogSource((source) => setUsingBundledCatalog(source === "bundle")), []);
   const [refreshing, setRefreshing] = useState(false);
   const [surprising, setSurprising] = useState(false);
   const [cookingSlug, setCookingSlug] = useState<string | null>(null);
@@ -230,6 +233,8 @@ export function HomeScreen({ navigation }: Props) {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    // Pulling down asks the live server again instead of waiting out the retry window.
+    retryServerNow();
     await load().catch(() => {});
     setRefreshing(false);
   };
@@ -363,6 +368,12 @@ export function HomeScreen({ navigation }: Props) {
                   </AnimatedPressable>
                 </View>
               </AnimatedPressable>
+            ) : null}
+
+            {usingBundledCatalog && !showingOfflineCache ? (
+              <View style={styles.offlineBanner}>
+                <Text style={styles.offlineBannerText}>{t("home.bundledCatalogBanner")}</Text>
+              </View>
             ) : null}
 
             {showingOfflineCache ? (

@@ -20,3 +20,27 @@ export function subscribeConnectivity(listener: Listener): () => void {
     listeners.delete(listener);
   };
 }
+
+export type CatalogSource = "server" | "bundle";
+type SourceListener = (source: CatalogSource) => void;
+
+let catalogSource: CatalogSource = "server";
+const sourceListeners = new Set<SourceListener>();
+
+/** Whether the latest recipe data came from the live server or the copy bundled in the app. */
+export function reportCatalogSource(next: CatalogSource) {
+  if (next === catalogSource) return;
+  catalogSource = next;
+  sourceListeners.forEach((l) => l(next));
+}
+
+export function getCatalogSource(): CatalogSource {
+  return catalogSource;
+}
+
+export function subscribeCatalogSource(listener: SourceListener): () => void {
+  sourceListeners.add(listener);
+  return () => {
+    sourceListeners.delete(listener);
+  };
+}

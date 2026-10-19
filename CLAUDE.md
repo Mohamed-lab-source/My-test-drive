@@ -38,7 +38,14 @@ this file was created.
   `apps/server`, then `sleep 4 && curl http://localhost:4000/api/health`.
 - Verify changes with `npx tsc --noEmit` in both `apps/mobile` and
   `apps/server`, and `npm run test` in both (mobile tests cover the pure
-  helpers under `apps/mobile/src/utils`), before committing.
+  helpers under `apps/mobile/src/utils` and the bundled catalog), before
+  committing.
+- The full recipe catalog is bundled into the app
+  (`apps/mobile/src/data/catalog.json`, served by `src/api/localCatalog.ts`
+  whenever the API is unreachable). After changing recipes in
+  `apps/server/prisma/seed.ts`, re-seed the local DB, start the local API,
+  and run `npx tsx scripts/exportCatalog.ts` from `apps/server` so the app's
+  copy stays in sync.
 - The Android build workflow triggers automatically on push to
   `claude/senior-app-developer-0b9qqe` touching `apps/mobile/**` and
   publishes to a rolling GitHub Release (`android-preview-latest`,

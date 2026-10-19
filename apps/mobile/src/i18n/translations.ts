@@ -24,7 +24,7 @@ const en = {
   "featureTour.next": "Next",
   "featureTour.getStarted": "Let's cook",
   "featureTour.browse.title": "Find something to cook",
-  "featureTour.browse.body": "Home leads with a single \"Cook Tonight\" pick chosen for you -- no more scrolling to decide. Browse 200+ recipes across 10+ cuisines, or search by name, ingredient, or narrow results to one cuisine. Filter by meal type, or tell Home what you're craving -- spicy, comforting, quick or light. Check what's trending this week, and use the Substitution Finder when you're missing an ingredient. Every recipe page suggests a non-alcoholic drink to pair it with, picked for that dish or cuisine. During Ramadan, browse Suhoor and Iftar picks right from Home, grab a Quick Iftar dish, and watch for the Ramadan/Eid countdown banner.",
+  "featureTour.browse.body": "Home leads with a single \"Cook Tonight\" pick chosen for you -- no more scrolling to decide. Browse 200+ recipes across 10+ cuisines, or search by name, ingredient, or narrow results to one cuisine. Filter by meal type, or tell Home what you're craving -- spicy, comforting, quick or light. Check what's trending this week, and use the Substitution Finder when you're missing an ingredient. Every recipe page suggests a non-alcoholic drink to pair it with, picked for that dish or cuisine. During Ramadan, browse Suhoor and Iftar picks right from Home, grab a Quick Iftar dish, and watch for the Ramadan/Eid countdown banner. Every recipe is built into the app, so you can browse and cook even with no connection.",
   "featureTour.daily.title": "Recipe of the day",
   "featureTour.daily.body": "A fresh featured recipe every day on Home, plus a Surprise Me button any time you want something random.",
   "featureTour.filters.title": "Sort it your way",
@@ -1168,6 +1168,7 @@ const en = {
   "featureTour.kitchenGuides.title": "Kitchen know-how",
   "featureTour.kitchenGuides.body": "Kitchen Guides on Home covers the basics -- Egyptian rice, pasta, eggs, lentils, ful and chickpeas, couscous and bulgur -- plus how long food keeps in the fridge and freezer, and classic spice blends like baharat, dukkah and za'atar. The Unit Converter now turns cups into grams for flour, sugar, rice and more. The Fasting tracker times intermittent or Ramadan fasts, alerts you at your goal, and keeps your history.",
   "home.serverIssueBanner": "⚠️ Cookmate's server isn't responding -- showing saved content. Pull down to retry.",
+  "home.bundledCatalogBanner": "📦 Using the recipes built into the app -- the Cookmate server is unavailable, so ratings, reviews and account sync are paused. Pull down to try the server again.",
 };
 
 const ar: Record<keyof typeof en, string> = {
@@ -1191,7 +1192,7 @@ const ar: Record<keyof typeof en, string> = {
   "featureTour.next": "التالي",
   "featureTour.getStarted": "لنبدأ الطبخ",
   "featureTour.browse.title": "ابحث عما تريد طبخه",
-  "featureTour.browse.body": "تبدأ الصفحة الرئيسية باقتراح واحد \"اطبخي هذا المساء\" مُختار لكِ -- لا داعي للتمرير للاختيار. تصفح أكثر من 200 وصفة من أكثر من 10 مطابخ، ابحثي بالاسم أو بمكوّن لديكِ، أو ضيّقي نتائج البحث بمطبخ واحد. صفِّ حسب نوع الوجبة، أو أخبري الصفحة الرئيسية بما تشتهين -- حار، مريح، سريع أو خفيف. تحققي من الرائج هذا الأسبوع، واستخدمي بديل المكونات عندما ينقصكِ شيء. كل صفحة وصفة تقترح مشروباً غير كحولي يُقدَّم معها، مختاراً حسب الطبق أو المطبخ. في رمضان، تصفحي أطباق السحور والإفطار من الصفحة الرئيسية مباشرة، واختاري إفطارًا سريعًا، وتابعي شريط العد التنازلي لرمضان والعيد.",
+  "featureTour.browse.body": "تبدأ الصفحة الرئيسية باقتراح واحد \"اطبخي هذا المساء\" مُختار لكِ -- لا داعي للتمرير للاختيار. تصفح أكثر من 200 وصفة من أكثر من 10 مطابخ، ابحثي بالاسم أو بمكوّن لديكِ، أو ضيّقي نتائج البحث بمطبخ واحد. صفِّ حسب نوع الوجبة، أو أخبري الصفحة الرئيسية بما تشتهين -- حار، مريح، سريع أو خفيف. تحققي من الرائج هذا الأسبوع، واستخدمي بديل المكونات عندما ينقصكِ شيء. كل صفحة وصفة تقترح مشروباً غير كحولي يُقدَّم معها، مختاراً حسب الطبق أو المطبخ. في رمضان، تصفحي أطباق السحور والإفطار من الصفحة الرئيسية مباشرة، واختاري إفطارًا سريعًا، وتابعي شريط العد التنازلي لرمضان والعيد. كل الوصفات مدمجة في التطبيق، لذا يمكنك التصفح والطبخ حتى بدون اتصال بالإنترنت.",
   "featureTour.daily.title": "وصفة اليوم",
   "featureTour.daily.body": "وصفة مميزة جديدة كل يوم على الصفحة الرئيسية، بالإضافة إلى زر \"فاجئني\" في أي وقت تريدين فيه شيئاً عشوائياً.",
   "featureTour.filters.title": "رتّبها بطريقتك",
@@ -2335,6 +2336,7 @@ const ar: Record<keyof typeof en, string> = {
   "featureTour.kitchenGuides.title": "خبرة المطبخ",
   "featureTour.kitchenGuides.body": "تغطي أدلة المطبخ في الرئيسية الأساسيات -- الأرز المصري، المكرونة، البيض، العدس، الفول والحمص، الكسكسي والبرغل -- بالإضافة إلى مدة حفظ الطعام في الثلاجة والفريزر، وخلطات التوابل الكلاسيكية مثل البهارات المصرية والدقة والزعتر. محوّل الوحدات يحوّل الآن الأكواب إلى جرامات للدقيق والسكر والأرز وغيرها. ومتابعة الصيام تقيس صيامك المتقطع أو صيام رمضان، وتنبّهك عند الهدف، وتحفظ سجلك.",
   "home.serverIssueBanner": "⚠️ خادم Cookmate لا يستجيب -- نعرض المحتوى المحفوظ. اسحبي للأسفل لإعادة المحاولة.",
+  "home.bundledCatalogBanner": "📦 نستخدم الوصفات المدمجة في التطبيق -- خادم Cookmate غير متاح، لذا التقييمات والمراجعات ومزامنة الحساب متوقفة مؤقتاً. اسحبي للأسفل لإعادة المحاولة.",
 };
 
 export const translations: Record<Locale, Record<string, string>> = { en, ar };

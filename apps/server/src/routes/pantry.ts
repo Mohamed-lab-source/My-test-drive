@@ -37,7 +37,9 @@ pantryRouter.post("/recipes/pantry-match", async (req, res) => {
     res.status(400).json({ error: parsed.error.flatten() });
     return;
   }
-  const lang = parseLang(parsed.data.lang);
+  // The app sends lang as a query parameter (like every other request); the
+  // body field is kept for older clients.
+  const lang = parseLang(req.query.lang ?? parsed.data.lang);
   const haveSet = new Set(parsed.data.ingredientIds);
 
   const recipes = await prisma.recipe.findMany({ select: recipeSummarySelect() });
@@ -50,7 +52,12 @@ pantryRouter.post("/recipes/pantry-match", async (req, res) => {
       return { recipe: r, matchedCount: matched.length, total, missing };
     })
     .filter((s) => s.matchedCount > 0)
-    .sort((a, b) => b.matchedCount / b.total - a.matchedCount / a.total || a.missing.length - b.missing.length);
+    .sort(
+      (a, b) =>
+        b.matchedCount / b.total - a.matchedCount / a.total ||
+        a.missing.length - b.missing.length ||
+        a.recipe.slug.localeCompare(b.recipe.slug)
+    );
 
   res.json(
     scored.map((s) => ({
