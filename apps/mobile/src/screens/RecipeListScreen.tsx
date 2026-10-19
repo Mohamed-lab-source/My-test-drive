@@ -14,6 +14,9 @@ import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { isKidFriendly } from "../utils/kidFriendly";
+import { HIGH_PROTEIN_GRAMS } from "../utils/recipeBadges";
+import { useInSeason } from "../utils/useInSeason";
+import { useHiddenRecipes } from "../context/HiddenRecipesContext";
 import { spacing, type ThemeColors } from "../theme";
 import type { Difficulty, DishTag, PantryIngredient, RecipeSummary } from "../api/types";
 
@@ -44,12 +47,13 @@ export function RecipeListScreen({ route, navigation }: Props) {
     sortByRating,
     lightOnly: initialLightOnly,
     maxTotalMinutes,
+    inSeason: initialInSeason,
   } = route.params;
   const { t, locale, isRTL } = useLocale();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTag, setActiveTag] = useState<DishTag | undefined>(initialTag as DishTag | undefined);
-  const [sortMode, setSortMode] = useState<"none" | "cheapest" | "topRated" | "fastest">(
+  const [sortMode, setSortMode] = useState<"none" | "cheapest" | "topRated" | "fastest" | "lowestCalories">(
     sortByRating ? "topRated" : sortByCost ? "cheapest" : "none"
   );
   const [hideAllergens, setHideAllergens] = useState(false);
@@ -57,6 +61,12 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const [lightOnly, setLightOnly] = useState(!!initialLightOnly);
   const [fewIngredientsOnly, setFewIngredientsOnly] = useState(false);
   const [kidFriendlyOnly, setKidFriendlyOnly] = useState(false);
+  const [highProteinOnly, setHighProteinOnly] = useState(false);
+  const [kcalCap, setKcalCap] = useState<number | undefined>(undefined);
+  const [inSeasonOnly, setInSeasonOnly] = useState(!!initialInSeason);
+  const [seasonSlugs, setSeasonSlugs] = useState<Set<string> | null>(null);
+  const { ingredientIds: seasonIngredientIds } = useInSeason();
+  const { isHidden } = useHiddenRecipes();
   const [timeBucket, setTimeBucket] = useState<TimeBucket | undefined>(
     timeBucketFromMaxMinutes(maxTotalMinutes)
   );
@@ -70,9 +80,10 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const [loadError, setLoadError] = useState(false);
 
   const myAllergies = useMyAllergies();
+  const visibleRecipes = recipes.filter((r) => !isHidden(r.slug));
   const allergenFiltered = hideAllergens
-    ? recipes.filter((r) => intersectAllergens(r.allergens, myAllergies).length === 0)
-    : recipes;
+    ? visibleRecipes.filter((r) => intersectAllergens(r.allergens, myAllergies).length === 0)
+    : visibleRecipes;
   const difficultyFiltered = difficultyFilter
     ? allergenFiltered.filter((r) => r.difficulty === difficultyFilter)
     : allergenFiltered;
@@ -82,7 +93,12 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const fewIngredientsFiltered = fewIngredientsOnly
     ? lightFiltered.filter((r) => r.ingredientCount <= FEW_INGREDIENTS_THRESHOLD)
     : lightFiltered;
-  const kidFiltered = kidFriendlyOnly ? fewIngredientsFiltered.filter(isKidFriendly) : fewIngredientsFiltered;
+  const kidFiltered = (kidFriendlyOnly ? fewIngredientsFiltered.filter(isKidFriendly) : fewIngredientsFiltered).filter(
+    (r) =>
+      (!highProteinOnly || r.proteinPerServing >= HIGH_PROTEIN_GRAMS) &&
+      (kcalCap == null || r.caloriesPerServing <= kcalCap) &&
+      (!inSeasonOnly || !seasonSlugs || seasonSlugs.has(r.slug))
+  );
   const filteredRecipes = timeBucket
     ? kidFiltered.filter((r) => {
         const total = r.prepMinutes + r.cookMinutes;
@@ -102,7 +118,12 @@ export function RecipeListScreen({ route, navigation }: Props) {
           ? [...filteredRecipes].sort(
               (a, b) => a.prepMinutes + a.cookMinutes - (b.prepMinutes + b.cookMinutes)
             )
-          : filteredRecipes;
+          : sortMode === "lowestCalories"
+            ? [...filteredRecipes].sort((a, b) => a.caloriesPerServing - b.caloriesPerServing)
+            : filteredRecipes;
+
+  const KCAL_CAPS: (number | undefined)[] = [undefined, 300, 500, 700];
+  const cycleKcalCap = () => setKcalCap((cap) => KCAL_CAPS[(KCAL_CAPS.indexOf(cap) + 1) % KCAL_CAPS.length]);
 
   const DIFFICULTY_FILTERS: { value: Difficulty | undefined; label: string }[] = [
     { value: undefined, label: t("recipeList.filter.all") },
@@ -135,6 +156,14 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const ingredientsParam = selectedIngredientIds.length > 0 ? selectedIngredientIds.join(",") : undefined;
   const cacheKey = `${CACHE_PREFIX}${locale}.${cuisineSlug ?? ""}.${activeTag ?? ""}.${dishType ?? ""}.${occasion ?? ""}.${ingredientsParam ?? ""}`;
   const [showingOfflineCache, setShowingOfflineCache] = useState(false);
+
+  // In-season = uses at least one of this month's produce (the server matches any listed ingredient).
+  useEffect(() => {
+    if (!inSeasonOnly || seasonIngredientIds.length === 0) return;
+    fetchRecipes({ ingredients: seasonIngredientIds.join(",") })
+      .then((data) => setSeasonSlugs(new Set(data.map((r) => r.slug))))
+      .catch(() => {});
+  }, [inSeasonOnly, seasonIngredientIds, locale]);
 
   useEffect(() => {
     fetchIngredients()
@@ -202,6 +231,11 @@ export function RecipeListScreen({ route, navigation }: Props) {
           selected={sortMode === "fastest"}
           onPress={() => setSortMode((m) => (m === "fastest" ? "none" : "fastest"))}
         />
+        <Chip
+          label={t("recipeList.filter.lowestCalories")}
+          selected={sortMode === "lowestCalories"}
+          onPress={() => setSortMode((m) => (m === "lowestCalories" ? "none" : "lowestCalories"))}
+        />
         {myAllergies.length > 0 ? (
           <Chip
             label={t("recipeList.filter.hideAllergens")}
@@ -233,6 +267,23 @@ export function RecipeListScreen({ route, navigation }: Props) {
           label={t("recipeList.filter.kidFriendly")}
           selected={kidFriendlyOnly}
           onPress={() => setKidFriendlyOnly((v) => !v)}
+        />
+        <Chip
+          label={t("recipeList.filter.highProtein")}
+          selected={highProteinOnly}
+          onPress={() => setHighProteinOnly((v) => !v)}
+        />
+        <Chip
+          label={
+            kcalCap == null ? t("recipeList.filter.maxKcalAny") : t("recipeList.filter.maxKcal", { kcal: kcalCap })
+          }
+          selected={kcalCap != null}
+          onPress={cycleKcalCap}
+        />
+        <Chip
+          label={t("recipeList.filter.inSeason")}
+          selected={inSeasonOnly}
+          onPress={() => setInSeasonOnly((v) => !v)}
         />
       </View>
       <View style={styles.filterRowSecondary}>

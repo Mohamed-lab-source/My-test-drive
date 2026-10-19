@@ -21,6 +21,7 @@ export type RootStackParamList = {
     sortByRating?: boolean;
     lightOnly?: boolean;
     maxTotalMinutes?: number;
+    inSeason?: boolean;
   };
   RecipeDetail: { slug: string; focusRating?: boolean };
   ShoppingListDetail: { id: string };
@@ -72,6 +73,9 @@ export type RootStackParamList = {
   Lunchbox: undefined;
   PartyPlanner: undefined;
   CompareRecipes: { slugA: string; slugB?: string };
+  Discover: undefined;
+  CuisineExplorer: undefined;
+  HiddenRecipes: undefined;
   WhatsNew: undefined;
 };
 

@@ -23,6 +23,7 @@ const FEATURE_TOUR_STEPS: { icon: string; titleKey: TranslationKey; bodyKey: Tra
   { icon: "🔍", titleKey: "featureTour.browse.title", bodyKey: "featureTour.browse.body" },
   { icon: "🌟", titleKey: "featureTour.daily.title", bodyKey: "featureTour.daily.body" },
   { icon: "🧾", titleKey: "featureTour.recipePage.title", bodyKey: "featureTour.recipePage.body" },
+  { icon: "🧭", titleKey: "featureTour.discover.title", bodyKey: "featureTour.discover.body" },
   { icon: "🎛️", titleKey: "featureTour.filters.title", bodyKey: "featureTour.filters.body" },
   { icon: "👩‍🍳", titleKey: "featureTour.cookMode.title", bodyKey: "featureTour.cookMode.body" },
   { icon: "⭐", titleKey: "featureTour.reviews.title", bodyKey: "featureTour.reviews.body" },

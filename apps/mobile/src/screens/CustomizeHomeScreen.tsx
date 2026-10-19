@@ -22,6 +22,7 @@ const SECTION_LABEL_KEYS: Record<HomeSectionKey, TranslationKey> = {
   recentlyCooked: "customizeHome.recentlyCooked",
   recentlyRated: "customizeHome.recentlyRated",
   trending: "customizeHome.trending",
+  becauseYouLiked: "customizeHome.becauseYouLiked",
 };
 
 export function CustomizeHomeScreen({}: Props) {

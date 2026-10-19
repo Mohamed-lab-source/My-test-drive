@@ -21,6 +21,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCookStreak } from "../context/CookStreakContext";
 import { useRecentlyRated } from "../context/RecentlyRatedContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { useHiddenRecipes } from "../context/HiddenRecipesContext";
 import { useHomeLayout } from "../context/HomeLayoutContext";
 import { localDayKey, useFoodDiary } from "../context/FoodDiaryContext";
 import { daysUntil, useLeftovers } from "../context/LeftoversContext";
@@ -112,6 +113,15 @@ export function HomeScreen({ navigation }: Props) {
   const [cookingSlug, setCookingSlug] = useState<string | null>(null);
   const [dailyRecipe, setDailyRecipe] = useState<RecipeSummary | null>(null);
   const [trending, setTrending] = useState<RecipeSummary[]>([]);
+  const [similarToLiked, setSimilarToLiked] = useState<RecipeSummary[]>([]);
+  const { isHidden } = useHiddenRecipes();
+  // The most recent recipe rated 4+ stars, falling back to a favourite.
+  const likedSource = useMemo(() => {
+    const rated = recentlyRated.find((r) => r.score >= 4);
+    if (rated) return { slug: rated.slug, title: rated.title, cuisineSlug: rated.cuisineSlug };
+    const fav = favoriteRecipes[0];
+    return fav ? { slug: fav.slug, title: fav.title, cuisineSlug: fav.cuisine.slug } : null;
+  }, [recentlyRated, favoriteRecipes]);
   const [activeCookSession, setActiveCookSession] = useState<ActiveCookSession | null>(null);
 
   useEffect(() => {
@@ -125,6 +135,17 @@ export function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     fetchTrending().then(setTrending).catch(() => {});
   }, [locale]);
+
+  useEffect(() => {
+    if (!likedSource) {
+      setSimilarToLiked([]);
+      return;
+    }
+    fetchRecipes({ cuisine: likedSource.cuisineSlug })
+      .then((data) => setSimilarToLiked(data.filter((r) => r.slug !== likedSource.slug).slice(0, 10)))
+      .catch(() => {});
+  }, [likedSource, locale]);
+  const becauseYouLiked = similarToLiked.filter((r) => !isHidden(r.slug)).slice(0, 8);
 
   useFocusEffect(
     useCallback(() => {
@@ -533,6 +554,28 @@ export function HomeScreen({ navigation }: Props) {
               </>
             ) : null}
 
+            {likedSource && becauseYouLiked.length > 0 && isSectionVisible("becauseYouLiked") ? (
+              <>
+                <Text style={styles.sectionTitle}>{t("home.becauseYouLiked", { title: likedSource.title })}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentScroll}>
+                  {becauseYouLiked.map((r, i) => (
+                    <FadeSlideIn key={r.slug} index={i}>
+                      <AnimatedPressable
+                        style={styles.recentCard}
+                        pressScale={0.96}
+                        onPress={() => navigation.navigate("RecipeDetail", { slug: r.slug })}
+                      >
+                        <Text style={styles.recentEmoji}>{CUISINE_EMOJI[r.cuisine.slug] ?? "🍽️"}</Text>
+                        <Text style={styles.recentTitle} numberOfLines={2}>
+                          {r.title}
+                        </Text>
+                      </AnimatedPressable>
+                    </FadeSlideIn>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
+
             {recentlyCooked.length > 0 && isSectionVisible("recentlyCooked") ? (
               <>
                 <Text style={styles.sectionTitle}>{t("home.recentlyCookedTitle")}</Text>
@@ -674,6 +717,11 @@ export function HomeScreen({ navigation }: Props) {
                   key: "leanMuscle",
                   label: t("home.leanMuscle"),
                   onPress: () => navigation.navigate("LeanMuscleMode"),
+                },
+                {
+                  key: "discover",
+                  label: t("home.discover"),
+                  onPress: () => navigation.navigate("Discover"),
                 },
                 {
                   key: "household",

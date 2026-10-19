@@ -8,6 +8,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useToast } from "../context/ToastContext";
 import { useRecentlyRated } from "../context/RecentlyRatedContext";
+import { useHiddenRecipes } from "../context/HiddenRecipesContext";
 import { nutritionBadges } from "../utils/recipeBadges";
 import { useLocale } from "../i18n/LocaleContext";
 import { radius, shadow, spacing, type ThemeColors } from "../theme";
@@ -52,8 +53,11 @@ export function RecipeCard({ recipe, onPress, onLongPress, index = 0 }: Props) {
       });
     }
   };
+  const { isHidden } = useHiddenRecipes();
   const totalMinutes = recipe.prepMinutes + recipe.cookMinutes;
   const conflictingAllergens = intersectAllergens(recipe.allergens, myAllergies);
+  // "Not interested" recipes disappear from every list that renders cards.
+  if (isHidden(recipe.slug)) return null;
   return (
     <FadeSlideIn index={index}>
       <AnimatedPressable

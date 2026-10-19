@@ -13,7 +13,8 @@ export type HomeSectionKey =
   | "recentlyViewed"
   | "recentlyCooked"
   | "recentlyRated"
-  | "trending";
+  | "trending"
+  | "becauseYouLiked";
 
 export const HOME_SECTION_KEYS: HomeSectionKey[] = [
   "cookTonight",
@@ -26,6 +27,7 @@ export const HOME_SECTION_KEYS: HomeSectionKey[] = [
   "recentlyCooked",
   "recentlyRated",
   "trending",
+  "becauseYouLiked",
 ];
 
 type HomeLayoutContextValue = {

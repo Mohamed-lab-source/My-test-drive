@@ -36,6 +36,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { useToast } from "../context/ToastContext";
 import { useFoodDiary } from "../context/FoodDiaryContext";
 import { useHousehold } from "../context/HouseholdContext";
+import { useHiddenRecipes } from "../context/HiddenRecipesContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
@@ -90,6 +91,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { cookCountFor, lastCookedFor } = useCookStreak();
   const { getNote, setNote } = useNotes();
   const { members: householdMembers, servingsFor, conflictsFor } = useHousehold();
+  const { isHidden, hide, unhide } = useHiddenRecipes();
   // null = everyone in the household is eating.
   const [eaterIds, setEaterIds] = useState<string[] | null>(null);
   const [noteText, setNoteText] = useState("");
@@ -511,6 +513,26 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             accessibilityRole="button"
           >
             <Text style={[styles.compareLink, { textAlign }]}>{t("compare.link")}</Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            pressScale={0.97}
+            onPress={() => {
+              if (isHidden(recipe.slug)) {
+                unhide(recipe.slug);
+                return;
+              }
+              hide({ slug: recipe.slug, title: recipe.title, cuisineSlug: recipe.cuisine.slug });
+              showToast(t("hidden.hiddenToast", { title: recipe.title }), {
+                actionLabel: t("home.undo"),
+                onAction: () => unhide(recipe.slug),
+              });
+              if (navigation.canGoBack()) navigation.goBack();
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.compareLink, styles.mutedLink, { textAlign }]}>
+              {isHidden(recipe.slug) ? t("hidden.unhideHere") : t("hidden.notInterested")}
+            </Text>
           </AnimatedPressable>
           {lastCookedDays != null ? (
             <Text style={[styles.pairingText, styles.infoLine, { textAlign }]}>
@@ -1198,6 +1220,7 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
   badgePillText: { color: colors.success },
   infoLine: { marginTop: spacing(0.75) },
   compareLink: { fontSize: 13, fontWeight: "700", color: colors.primary, marginTop: spacing(0.75) },
+  mutedLink: { color: colors.textMuted },
   checklistBar: {
     flexDirection: "row",
     justifyContent: "space-between",

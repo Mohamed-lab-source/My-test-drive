@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-discover",
+    date: "2026-10-19",
+    title: { en: "Discover", ar: "اكتشفي" },
+    body: {
+      en: "A new Discover hub: surprise recipes within your budget, what's in season in Egypt this month, a cuisine explorer, and hidden recipes. Lists gain in-season, high-protein, max-calorie and lowest-calorie options, and Home suggests dishes because you liked one.",
+      ar: "مركز \"اكتشفي\" الجديد: وصفات مفاجئة ضمن ميزانيتك، وما في موسمه في مصر هذا الشهر، ومستكشف المطابخ، والوصفات المخفية. القوائم تضيف فلاتر الموسم والبروتين وحد السعرات والأقل سعرات، والرئيسية تقترح أطباقاً لأنك أحببتِ طبقاً.",
+    },
+  },
+  {
     id: "2026-10-household",
     date: "2026-10-19",
     title: { en: "Cook for your household", ar: "اطبخي لعائلتك" },
