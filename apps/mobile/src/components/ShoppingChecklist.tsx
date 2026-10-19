@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Linking, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,6 +14,7 @@ import { useUnits } from "../context/UnitsContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { formatQuantity } from "../utils/units";
+import { shareViaWhatsApp } from "../utils/whatsapp";
 import { categoryEmoji, categoryLabelKey, groupByCategory } from "../utils/ingredientCategory";
 import { radius, spacing, type ThemeColors } from "../theme";
 
@@ -100,14 +101,6 @@ export function ShoppingChecklist({ items, shareTitle }: Props) {
     Share.share({ message: buildMessage() }).catch(() => {});
   };
 
-  const shareWhatsApp = async () => {
-    const message = buildMessage();
-    try {
-      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
-    } catch {
-      Share.share({ message }).catch(() => {});
-    }
-  };
 
   const untickAll = () => {
     Alert.alert(t("shoppingChecklist.untickConfirmTitle"), t("shoppingChecklist.untickConfirmMessage"), [
@@ -275,7 +268,7 @@ export function ShoppingChecklist({ items, shareTitle }: Props) {
           <PrimaryButton label={t("shoppingList.share")} variant="outline" onPress={shareText} />
         </View>
         <View style={styles.flex1}>
-          <PrimaryButton label={t("share.whatsApp")} variant="outline" onPress={shareWhatsApp} />
+          <PrimaryButton label={t("share.whatsApp")} variant="outline" onPress={() => shareViaWhatsApp(buildMessage())} />
         </View>
       </View>
     </View>

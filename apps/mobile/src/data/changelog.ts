@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-household",
+    date: "2026-10-19",
+    title: { en: "Cook for your household", ar: "اطبخي لعائلتك" },
+    body: {
+      en: "Add family members with their allergies, open recipes scaled to your household, pick who's eating, and get warned when a dish isn't safe for someone. Plus lunchbox ideas, a party planner, recipe comparison, a kid-friendly filter, family WhatsApp votes and friend invites.",
+      ar: "أضيفي أفراد العائلة وحساسياتهم، وافتحي الوصفات بمقادير تناسب عائلتك، واختاري من سيأكل، واحصلي على تنبيه عندما يكون الطبق غير آمن لأحدهم. بالإضافة إلى أفكار علبة الغداء، ومخطط العزومة، ومقارنة الوصفات، وفلتر الأطفال، وتصويت العائلة على واتساب، ودعوة الصديقات.",
+    },
+  },
+  {
     id: "2026-10-pantry",
     date: "2026-10-19",
     title: { en: "My pantry & smarter shopping lists", ar: "مخزني وقوائم تسوق أذكى" },

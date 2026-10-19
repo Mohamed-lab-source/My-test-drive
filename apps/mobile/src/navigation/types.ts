@@ -68,6 +68,10 @@ export type RootStackParamList = {
   MealPrep: undefined;
   FoodDiary: undefined;
   MyPantry: undefined;
+  Household: undefined;
+  Lunchbox: undefined;
+  PartyPlanner: undefined;
+  CompareRecipes: { slugA: string; slugB?: string };
   WhatsNew: undefined;
 };
 

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Platform,
   RefreshControl,
   ScrollView,
@@ -36,6 +35,7 @@ import { useCookStreak } from "../context/CookStreakContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useToast } from "../context/ToastContext";
 import { useFoodDiary } from "../context/FoodDiaryContext";
+import { useHousehold } from "../context/HouseholdContext";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
 import { useMealPlan } from "../context/MealPlanContext";
 import { useUnits } from "../context/UnitsContext";
@@ -48,6 +48,7 @@ import { intersectAllergens, useMyAllergies } from "../utils/allergens";
 import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
 import { suggestBeverage } from "../data/beveragePairings";
 import { daysSince, formatClock, nutritionBadges } from "../utils/recipeBadges";
+import { shareViaWhatsApp } from "../utils/whatsapp";
 import type { TranslationKey } from "../i18n/translations";
 import { useTheme } from "../theme/ThemeContext";
 import { radius, spacing, type ThemeColors } from "../theme";
@@ -88,6 +89,9 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const { addEntry: addDiaryEntry, removeEntry: removeDiaryEntry } = useFoodDiary();
   const { cookCountFor, lastCookedFor } = useCookStreak();
   const { getNote, setNote } = useNotes();
+  const { members: householdMembers, servingsFor, conflictsFor } = useHousehold();
+  // null = everyone in the household is eating.
+  const [eaterIds, setEaterIds] = useState<string[] | null>(null);
   const [noteText, setNoteText] = useState("");
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(() => new Set());
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
@@ -120,7 +124,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     fetchRecipeDetail(slug, hasBodyGoal && wantsAdapted ? myGoal : undefined)
       .then((data) => {
         setRecipe(data);
-        setServings((prev) => (prev === 1 ? data.baseServings : prev));
+        setServings((prev) => (prev === 1 ? servingsFor() ?? data.baseServings : prev));
         setMyRating(data.myRating);
         if (data.myRating != null) rememberScore(data.slug, data.myRating);
         setShowingOfflineCache(false);
@@ -132,7 +136,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
         if (cached) {
           const data = JSON.parse(cached) as RecipeDetail;
           setRecipe(data);
-          setServings((prev) => (prev === 1 ? data.baseServings : prev));
+          setServings((prev) => (prev === 1 ? servingsFor() ?? data.baseServings : prev));
           setMyRating(data.myRating);
           setShowingOfflineCache(true);
         } else {
@@ -241,6 +245,15 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
   const lastCookedDays = lastCooked ? daysSince(lastCooked) : null;
   const readyBy = formatClock(new Date(Date.now() + totalMinutes * 60000), locale);
   const equipment = recipe.equipment ?? [];
+  const familyConflicts = conflictsFor(recipe.allergens, eaterIds ?? undefined);
+  const toggleEater = (id: string) => {
+    const current = eaterIds ?? householdMembers.map((m) => m.id);
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    if (next.length === 0) return;
+    const everyone = next.length === householdMembers.length;
+    setEaterIds(everyone ? null : next);
+    setServings(servingsFor(everyone ? undefined : next) ?? servings);
+  };
   const checkedCount = scaledIngredients.filter((ing) => checkedIngredients.has(ing.name)).length;
 
   const toggleIngredient = (name: string) => {
@@ -289,14 +302,6 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
     ].join("\n");
   };
 
-  const handleShareWhatsApp = async () => {
-    const message = buildShareMessage();
-    try {
-      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
-    } catch {
-      Share.share({ message }).catch(() => {});
-    }
-  };
 
   const handleToggleHelpful = (reviewId: string) => {
     setRecipe((prev) => {
@@ -436,6 +441,23 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             </View>
           ) : null}
 
+          {familyConflicts.length > 0 ? (
+            <View style={styles.allergenBanner}>
+              <Text style={[styles.allergenBannerText, { textAlign }]}>
+                {t("household.familyWarning", {
+                  list: familyConflicts
+                    .map(
+                      (c) =>
+                        `${c.member.emoji} ${c.member.name} (${c.allergens
+                          .map((a) => t(`allergen.${a}` as TranslationKey))
+                          .join(", ")})`
+                    )
+                    .join(" · "),
+                })}
+              </Text>
+            </View>
+          ) : null}
+
           {recipe.ratingCount > 0 ? (
             <>
               <View style={styles.avgRatingRow}>
@@ -483,6 +505,13 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           </View>
 
           <Text style={[styles.pairingText, { textAlign }]}>{t("recipeDetail.readyBy", { time: readyBy })}</Text>
+          <AnimatedPressable
+            pressScale={0.97}
+            onPress={() => navigation.navigate("CompareRecipes", { slugA: recipe.slug })}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.compareLink, { textAlign }]}>{t("compare.link")}</Text>
+          </AnimatedPressable>
           {lastCookedDays != null ? (
             <Text style={[styles.pairingText, styles.infoLine, { textAlign }]}>
               {lastCookedDays === 0
@@ -543,6 +572,30 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
           <Text style={[styles.pairingText, styles.infoLine, { textAlign }]}>
             {t("recipeDetail.nutritionPerServingNote")}
           </Text>
+
+          {householdMembers.length > 0 ? (
+            <>
+              <Text style={[styles.sectionTitle, { textAlign }]}>{t("household.whosEating")}</Text>
+              <View style={styles.mealPlanDayRow}>
+                <Chip
+                  label={t("household.everyone")}
+                  selected={eaterIds === null}
+                  onPress={() => {
+                    setEaterIds(null);
+                    setServings(servingsFor() ?? servings);
+                  }}
+                />
+                {householdMembers.map((m) => (
+                  <Chip
+                    key={m.id}
+                    label={`${m.emoji} ${m.name}`}
+                    selected={eaterIds === null || eaterIds.includes(m.id)}
+                    onPress={() => toggleEater(m.id)}
+                  />
+                ))}
+              </View>
+            </>
+          ) : null}
 
           <Text style={[styles.sectionTitle, { textAlign }]}>{t("recipeDetail.servingsQuestion")}</Text>
           <View style={styles.stepperRow}>
@@ -898,7 +951,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
             <PrimaryButton label={t("share.textButton")} onPress={handleShareText} variant="outline" />
           </View>
           <View style={styles.flex1}>
-            <PrimaryButton label={t("share.whatsApp")} onPress={handleShareWhatsApp} variant="outline" />
+            <PrimaryButton label={t("share.whatsApp")} onPress={() => shareViaWhatsApp(buildShareMessage())} variant="outline" />
           </View>
         </View>
         {isAuthenticated ? (
@@ -1144,6 +1197,7 @@ const createStyles = (colors: ThemeColors, textScale: number) => StyleSheet.crea
   badgePill: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.success },
   badgePillText: { color: colors.success },
   infoLine: { marginTop: spacing(0.75) },
+  compareLink: { fontSize: 13, fontWeight: "700", color: colors.primary, marginTop: spacing(0.75) },
   checklistBar: {
     flexDirection: "row",
     justifyContent: "space-between",

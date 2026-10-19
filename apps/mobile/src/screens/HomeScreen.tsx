@@ -676,6 +676,11 @@ export function HomeScreen({ navigation }: Props) {
                   onPress: () => navigation.navigate("LeanMuscleMode"),
                 },
                 {
+                  key: "household",
+                  label: t("home.household"),
+                  onPress: () => navigation.navigate("Household"),
+                },
+                {
                   key: "myPantry",
                   label: t("home.myPantry"),
                   onPress: () => navigation.navigate("MyPantry"),

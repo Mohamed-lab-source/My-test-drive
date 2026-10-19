@@ -34,6 +34,10 @@ import { WeeklyRecapScreen } from "../screens/WeeklyRecapScreen";
 import { MealPrepScreen } from "../screens/MealPrepScreen";
 import { FoodDiaryScreen } from "../screens/FoodDiaryScreen";
 import { MyPantryScreen } from "../screens/MyPantryScreen";
+import { HouseholdScreen } from "../screens/HouseholdScreen";
+import { LunchboxScreen } from "../screens/LunchboxScreen";
+import { PartyPlannerScreen } from "../screens/PartyPlannerScreen";
+import { CompareRecipesScreen } from "../screens/CompareRecipesScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -179,6 +183,10 @@ export function RootNavigator() {
         <Stack.Screen name="MealPrep" component={MealPrepScreen} options={{ title: t("mealPrep.title") }} />
         <Stack.Screen name="FoodDiary" component={FoodDiaryScreen} options={{ title: t("diary.title") }} />
         <Stack.Screen name="MyPantry" component={MyPantryScreen} options={{ title: t("myPantry.title") }} />
+        <Stack.Screen name="Household" component={HouseholdScreen} options={{ title: t("household.title") }} />
+        <Stack.Screen name="Lunchbox" component={LunchboxScreen} options={{ title: t("lunchbox.title") }} />
+        <Stack.Screen name="PartyPlanner" component={PartyPlannerScreen} options={{ title: t("party.title") }} />
+        <Stack.Screen name="CompareRecipes" component={CompareRecipesScreen} options={{ title: t("compare.title") }} />
         <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>

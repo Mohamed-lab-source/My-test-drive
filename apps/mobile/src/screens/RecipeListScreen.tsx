@@ -13,6 +13,7 @@ import { AnimatedPressable } from "../components/AnimatedPressable";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
 import { intersectAllergens, useMyAllergies } from "../utils/allergens";
+import { isKidFriendly } from "../utils/kidFriendly";
 import { spacing, type ThemeColors } from "../theme";
 import type { Difficulty, DishTag, PantryIngredient, RecipeSummary } from "../api/types";
 
@@ -55,6 +56,7 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | undefined>(undefined);
   const [lightOnly, setLightOnly] = useState(!!initialLightOnly);
   const [fewIngredientsOnly, setFewIngredientsOnly] = useState(false);
+  const [kidFriendlyOnly, setKidFriendlyOnly] = useState(false);
   const [timeBucket, setTimeBucket] = useState<TimeBucket | undefined>(
     timeBucketFromMaxMinutes(maxTotalMinutes)
   );
@@ -80,15 +82,16 @@ export function RecipeListScreen({ route, navigation }: Props) {
   const fewIngredientsFiltered = fewIngredientsOnly
     ? lightFiltered.filter((r) => r.ingredientCount <= FEW_INGREDIENTS_THRESHOLD)
     : lightFiltered;
+  const kidFiltered = kidFriendlyOnly ? fewIngredientsFiltered.filter(isKidFriendly) : fewIngredientsFiltered;
   const filteredRecipes = timeBucket
-    ? fewIngredientsFiltered.filter((r) => {
+    ? kidFiltered.filter((r) => {
         const total = r.prepMinutes + r.cookMinutes;
         if (timeBucket === "under15") return total <= 15;
         if (timeBucket === "15to30") return total > 15 && total <= 30;
         if (timeBucket === "30to60") return total > 30 && total <= 60;
         return total > 60;
       })
-    : fewIngredientsFiltered;
+    : kidFiltered;
 
   const displayRecipes =
     sortMode === "cheapest"
@@ -225,6 +228,11 @@ export function RecipeListScreen({ route, navigation }: Props) {
           label={t("recipeList.filter.fewIngredients")}
           selected={fewIngredientsOnly}
           onPress={() => setFewIngredientsOnly((v) => !v)}
+        />
+        <Chip
+          label={t("recipeList.filter.kidFriendly")}
+          selected={kidFriendlyOnly}
+          onPress={() => setKidFriendlyOnly((v) => !v)}
         />
       </View>
       <View style={styles.filterRowSecondary}>
