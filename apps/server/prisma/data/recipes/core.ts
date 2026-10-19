@@ -1547,8 +1547,8 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.VEGETARIAN],
     ingredients: [
-      { name: "Bell Pepper", quantity: 4, displayUnit: "pcs" },
-      { name: "Tomato", quantity: 4, displayUnit: "pcs" },
+      { name: "Bell Pepper", quantity: 600, displayUnit: "g", note: "4 large peppers" },
+      { name: "Tomato", quantity: 600, displayUnit: "g", note: "4 large tomatoes" },
       { name: "Rice", quantity: 200, displayUnit: "g" },
       { name: "Onion", quantity: 120, displayUnit: "g" },
       { name: "Parsley", quantity: 20, displayUnit: "g" },
@@ -1720,7 +1720,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Tomato", quantity: 200, displayUnit: "g" },
       { name: "Chicken Stock", quantity: 600, displayUnit: "ml" },
       { name: "Thyme", quantity: 4, displayUnit: "g" },
-      { name: "Bay Leaves", quantity: 2, displayUnit: "pcs" },
+      { name: "Bay Leaves", quantity: 1, displayUnit: "g", note: "2 leaves" },
       { name: "Flour", quantity: 20, displayUnit: "g" },
       { name: "Olive Oil", quantity: 30, displayUnit: "ml" },
       { name: "Salt", quantity: 8, displayUnit: "g" },
@@ -2347,7 +2347,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Onion", quantity: 120, displayUnit: "g" },
       { name: "Breadcrumbs", quantity: 80, displayUnit: "g" },
       { name: "Egg", quantity: 2, displayUnit: "pcs" },
-      { name: "Ketchup", quantity: 100, displayUnit: "g" },
+      { name: "Ketchup", quantity: 100, displayUnit: "ml" },
       { name: "Brown Sugar", quantity: 20, displayUnit: "g" },
       { name: "Black Pepper", quantity: 3, displayUnit: "g" },
       { name: "Salt", quantity: 7, displayUnit: "g" },
@@ -2560,7 +2560,7 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.DESSERT, DishTag.VEGETARIAN],
     ingredients: [
-      { name: "Apple", quantity: 900, displayUnit: "g" },
+      { name: "Apple", quantity: 6, displayUnit: "pcs", note: "about 900 g" },
       { name: "Puff Pastry", quantity: 500, displayUnit: "g" },
       { name: "Sugar", quantity: 100, displayUnit: "g" },
       { name: "Cinnamon", quantity: 4, displayUnit: "g" },
@@ -3924,7 +3924,7 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.COMFORT],
     ingredients: [
-      { name: "Bell Pepper", quantity: 8, displayUnit: "pcs" },
+      { name: "Bell Pepper", quantity: 800, displayUnit: "g", note: "8 small peppers" },
       { name: "Ground Beef", quantity: 350, displayUnit: "g" },
       { name: "Rice", quantity: 150, displayUnit: "g" },
       { name: "Onion", quantity: 100, displayUnit: "g" },
@@ -5323,7 +5323,7 @@ export const coreRecipes: RecipeSeed[] = [
     tags: [DishTag.VEGETARIAN],
     occasions: [Occasion.RAMADAN_IFTAR],
     ingredients: [
-      { name: "Cabbage", quantity: 1, displayUnit: "pcs", note: "about 1.2kg, leaves separated" },
+      { name: "Cabbage", quantity: 1200, displayUnit: "g", note: "1 head, leaves separated" },
       { name: "Rice", quantity: 300, displayUnit: "g" },
       { name: "Tomato", quantity: 150, displayUnit: "g", note: "finely chopped" },
       { name: "Parsley", quantity: 20, displayUnit: "g" },
@@ -5758,7 +5758,7 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.MEDIUM,
     tags: [DishTag.VEGETARIAN],
     ingredients: [
-      { name: "Bell Pepper", quantity: 4, displayUnit: "pcs" },
+      { name: "Bell Pepper", quantity: 600, displayUnit: "g", note: "4 large peppers" },
       { name: "Cheddar Cheese", quantity: 250, displayUnit: "g" },
       { name: "Egg", quantity: 3, displayUnit: "pcs" },
       { name: "Flour", quantity: 60, displayUnit: "g" },
@@ -5827,7 +5827,7 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.EASY,
     tags: [DishTag.QUICK, DishTag.VEGETARIAN],
     ingredients: [
-      { name: "Corn", quantity: 4, displayUnit: "pcs", note: "whole cobs" },
+      { name: "Corn", quantity: 600, displayUnit: "g", note: "4 whole cobs" },
       { name: "Mayonnaise", quantity: 80, displayUnit: "g" },
       { name: "Sour Cream", quantity: 60, displayUnit: "g" },
       { name: "Chili Powder", quantity: 6, displayUnit: "g" },

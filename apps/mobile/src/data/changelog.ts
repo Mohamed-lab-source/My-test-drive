@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-egyptian-recipes",
+    date: "2026-10-19",
+    title: { en: "185 new Egyptian recipes", ar: "185 وصفة مصرية جديدة" },
+    body: {
+      en: "The catalog nearly doubles to 405 recipes: ful and ta'ameya variations, mahshi of every kind, molokhia, fattah, Alexandrian seafood, tabikh stews, béchamel bakes, Eid kahk and ghorayeba, Ramadan qatayef and kunafa, street drinks like sobia and karkade, and lighter 'fit' takes on the classics. Every one has costs, nutrition and Arabic steps, and works offline.",
+      ar: "تضاعف الكتالوج تقريباً إلى 405 وصفة: أنواع الفول والطعمية، المحشي بكل أشكاله، الملوخية، الفتة، مأكولات الإسكندرية البحرية، الطبيخ، صواني البشاميل، كحك وغريبة العيد، قطايف وكنافة رمضان، مشروبات الشارع مثل السوبيا والكركديه، ونسخ خفيفة من الأطباق الكلاسيكية. كلها بالتكلفة والقيم الغذائية وخطوات بالعربية وتعمل بدون إنترنت.",
+    },
+  },
+  {
     id: "2026-10-bundled-catalog",
     date: "2026-10-19",
     title: { en: "All recipes work offline", ar: "كل الوصفات تعمل بدون إنترنت" },

@@ -1,8 +1,15 @@
 import type { Difficulty, DishTag, Occasion } from "@prisma/client";
 import type { RecipeSeed } from "./types";
+import { ingredientMaster } from "./ingredients";
 
-/** [ingredient name (must exist in ingredients.ts), quantity, display unit, optional note] */
-export type Ing = [name: string, quantity: number, unit: string, note?: string];
+const unitOf = new Map(ingredientMaster.map((i) => [i.name, i.unit]));
+
+/**
+ * [ingredient name (must exist in ingredients.ts), quantity, optional note].
+ * Quantity is in the ingredient's own unit (g, ml or pcs), which is filled in
+ * automatically so it can never disagree with the price/nutrition unit.
+ */
+export type Ing = [name: string, quantity: number, note?: string];
 /** [English instruction, Arabic instruction, optional timer minutes] */
 export type Step = [en: string, ar: string, timerMinutes?: number];
 
@@ -11,7 +18,7 @@ export type Step = [en: string, ar: string, timerMinutes?: number];
  * without the verbose object layout of core.ts. Produces the same RecipeSeed
  * the seed script consumes.
  */
-export function r(x: {
+export type RecipeArgs = {
   slug: string;
   /** [English title, Arabic title] */
   t: [string, string];
@@ -31,7 +38,9 @@ export function r(x: {
   img: string;
   i: Ing[];
   st: Step[];
-}): RecipeSeed {
+};
+
+export function r(x: RecipeArgs): RecipeSeed {
   return {
     slug: x.slug,
     title: x.t[0],
@@ -47,7 +56,12 @@ export function r(x: {
     difficulty: x.lv,
     tags: x.tags ?? [],
     occasions: x.occ,
-    ingredients: x.i.map(([name, quantity, displayUnit, note]) => ({ name, quantity, displayUnit, ...(note ? { note } : {}) })),
+    ingredients: x.i.map(([name, quantity, note]) => ({
+      name,
+      quantity,
+      displayUnit: unitOf.get(name) ?? "g",
+      ...(note ? { note } : {}),
+    })),
     steps: x.st.map(([instruction, instructionAr, timerMinutes]) => ({
       instruction,
       instructionAr,
@@ -55,3 +69,9 @@ export function r(x: {
     })),
   };
 }
+
+/** Binds the cuisine once per file: `const eg = cuisine("egyptian")`. */
+export const cuisine =
+  (c: string) =>
+  (x: Omit<RecipeArgs, "c">): RecipeSeed =>
+    r({ ...x, c });

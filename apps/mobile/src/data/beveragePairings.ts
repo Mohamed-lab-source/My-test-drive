@@ -34,6 +34,18 @@ const BEVERAGE_BY_CUISINE: Record<string, BeverageKey> = {
   french: "limonata",
   mexican: "mintLemonade",
   american: "mintLemonade",
+  gulf: "arabicCoffee",
+  iraqi: "arabicCoffee",
+  yemeni: "arabicCoffee",
+  persian: "jasmineTea",
+  sudanese: "karkade",
+  tunisian: "moroccanMintTea",
+  greek: "limonata",
+  spanish: "limonata",
+  chinese: "jasmineTea",
+  japanese: "jasmineTea",
+  thai: "jasmineTea",
+  korean: "jasmineTea",
 };
 
 /**

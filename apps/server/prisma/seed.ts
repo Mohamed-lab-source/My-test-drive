@@ -50,7 +50,10 @@ async function main() {
 
   console.log("Seeding cuisines...");
   const cuisineBySlug = new Map<string, string>();
-  for (const c of cuisines) {
+  // Only cuisines that have recipes, so the app never lists an empty one
+  // while a new cuisine's recipes are still being written.
+  const usedCuisines = new Set(recipes.map((r) => r.cuisine));
+  for (const c of cuisines.filter((c) => usedCuisines.has(c.slug))) {
     const row = await prisma.cuisine.upsert({
       where: { slug: c.slug },
       update: { name: c.name, nameAr: c.nameAr },

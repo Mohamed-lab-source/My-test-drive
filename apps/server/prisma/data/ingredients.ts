@@ -1,4 +1,5 @@
 import { Allergen } from "@prisma/client";
+import { extraIngredients } from "./ingredientsExtra";
 
 // Approximate Cairo/Egypt retail prices (EGP), normalized to a per-unit price
 // so recipe costs can be estimated by quantity x pricePerUnit.
@@ -17,7 +18,7 @@ export type Nutrition = { kcal: number; protein: number; fat: number; carbs: num
 // list, so its nutrition/price can be looked up at request time.
 export type GoalSubstitutes = { LOSE_WEIGHT?: string; BUILD_MUSCLE?: string; GAIN_WEIGHT?: string };
 
-export const ingredientMaster: {
+export type IngredientSeed = {
   name: string;
   nameAr: string;
   unit: "g" | "ml" | "pcs";
@@ -28,7 +29,9 @@ export const ingredientMaster: {
   substituteAr?: string;
   allergens?: Allergen[];
   goalSubstitutes?: GoalSubstitutes;
-}[] = [
+};
+
+const baseIngredients: IngredientSeed[] = [
   { name: "Flour", nameAr: "دقيق", unit: "g", pricePerUnit: 0.03, category: "pantry", nutrition: { kcal: 364, protein: 10, fat: 1, carbs: 76 } , substituteEn: "1:1 all-purpose or whole wheat flour", substituteAr: "دقيق القمح الكامل بنفس النسبة" , allergens: [Allergen.GLUTEN], goalSubstitutes: { LOSE_WEIGHT: "Oatmeal Flour" } },
   { name: "Yeast", nameAr: "خميرة", unit: "g", pricePerUnit: 0.2, category: "pantry", nutrition: { kcal: 325, protein: 40, fat: 7, carbs: 41 } , substituteEn: "same amount of baking powder for quick breads (won't rise as much)", substituteAr: "بيكنج باودر بنفس الكمية للخبز السريع (لن يرتفع بنفس القدر)" },
   { name: "Olive Oil", nameAr: "زيت زيتون", unit: "ml", pricePerUnit: 0.25, category: "pantry", nutrition: { kcal: 884, protein: 0, fat: 100, carbs: 0 } , substituteEn: "any neutral vegetable oil", substituteAr: "أي زيت نباتي محايد" },
@@ -221,3 +224,6 @@ export const ingredientMaster: {
   { name: "Whole Wheat Pita", nameAr: "خبز بيتا بالقمح الكامل", unit: "pcs", pricePerUnit: 3.5, category: "pantry", nutrition: { kcal: 150, protein: 6, fat: 1, carbs: 28 }, substituteEn: "regular pita bread", substituteAr: "خبز بيتا عادي", allergens: [Allergen.GLUTEN] },
   { name: "Lettuce Wrap", nameAr: "لفافة خس", unit: "pcs", pricePerUnit: 1, category: "produce", nutrition: { kcal: 5, protein: 0.3, fat: 0.1, carbs: 1 }, substituteEn: "large cabbage leaf" , substituteAr: "ورقة كرنب كبيرة" },
 ];
+
+/** Every ingredient the seed loads; recipes reference these by `name`. */
+export const ingredientMaster: IngredientSeed[] = [...baseIngredients, ...extraIngredients];

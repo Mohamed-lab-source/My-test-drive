@@ -1,0 +1,197 @@
+import { Allergen } from "@prisma/client";
+import type { IngredientSeed } from "./ingredients";
+
+const { GLUTEN, DAIRY, EGGS, NUTS, PEANUTS, SHELLFISH, FISH, SOY, SESAME } = Allergen;
+
+/**
+ * Compact form: name, Arabic name, unit, EGP per unit, category,
+ * [kcal, protein, fat, carbs] (per 100 g/ml, or per piece for "pcs"),
+ * allergens, optional [English substitute, Arabic substitute].
+ */
+function x(
+  name: string,
+  nameAr: string,
+  unit: "g" | "ml" | "pcs",
+  pricePerUnit: number,
+  category: string,
+  [kcal, protein, fat, carbs]: [number, number, number, number],
+  allergens: Allergen[] = [],
+  sub?: [string, string]
+): IngredientSeed {
+  return {
+    name,
+    nameAr,
+    unit,
+    pricePerUnit,
+    category,
+    nutrition: { kcal, protein, fat, carbs },
+    ...(allergens.length ? { allergens } : {}),
+    ...(sub ? { substituteEn: sub[0], substituteAr: sub[1] } : {}),
+  };
+}
+
+// Added for the expanded (2000-recipe) catalog. Prices are approximate Cairo
+// retail figures; nutrition is standard database estimates.
+export const extraIngredients: IngredientSeed[] = [
+  // Meat & poultry
+  x("Lamb Shoulder", "كتف ضأن", "g", 0.38, "meat", [250, 17, 20, 0], [], ["beef chuck", "لحم بقري من الكتف"]),
+  x("Lamb Leg", "فخذ ضأن", "g", 0.42, "meat", [230, 18, 17, 0], [], ["lamb shoulder", "كتف ضأن"]),
+  x("Lamb Chops", "ريش ضأن", "g", 0.5, "meat", [282, 17, 23, 0], [], ["beef steak", "ستيك بقري"]),
+  x("Beef Cubes", "لحم بقري مكعبات", "g", 0.26, "meat", [220, 26, 12, 0], [], ["lamb cubes", "لحم ضأن مكعبات"]),
+  x("Beef Shank", "موزة بقري", "g", 0.27, "meat", [201, 34, 6, 0], [], ["beef cubes", "لحم بقري مكعبات"]),
+  x("Oxtail", "ذيل عجل", "g", 0.24, "meat", [262, 30, 14, 0], [], ["beef shank", "موزة بقري"]),
+  x("Beef Liver", "كبدة بقري", "g", 0.2, "meat", [135, 20, 3.6, 3.9], [], ["chicken liver", "كبدة فراخ"]),
+  x("Chicken Liver", "كبدة فراخ", "g", 0.1, "meat", [119, 17, 4.8, 0.7], [], ["beef liver", "كبدة بقري"]),
+  x("Whole Chicken", "فرخة كاملة", "g", 0.12, "meat", [215, 18.6, 15, 0], [], ["chicken thighs and breasts", "أفخاذ وصدور دجاج"]),
+  x("Chicken Wings", "أجنحة دجاج", "g", 0.12, "meat", [203, 18, 14, 0], [], ["chicken drumsticks", "دبابيس دجاج"]),
+  x("Ground Chicken", "دجاج مفروم", "g", 0.17, "meat", [143, 17, 8, 0], [], ["ground turkey", "ديك رومي مفروم"]),
+  x("Beef Sausage", "سجق بقري", "g", 0.25, "meat", [300, 13, 26, 3], [], ["spiced ground beef", "لحم مفروم متبل"]),
+  x("Beef Pepperoni", "ببروني بقري", "g", 0.35, "meat", [460, 19, 40, 2], [], ["beef salami", "سلامي بقري"]),
+  x("Smoked Turkey", "تركي مدخن", "g", 0.3, "meat", [104, 17, 2, 4], [], ["sliced roast chicken", "شرائح دجاج مشوي"]),
+  x("Pastirma", "بسطرمة", "g", 0.6, "meat", [250, 30, 12, 2], [], ["smoked turkey", "تركي مدخن"]),
+  x("Pigeon", "حمام", "pcs", 120, "meat", [450, 40, 30, 0], [], ["quail or a small chicken", "سمان أو فرخة صغيرة"]),
+  x("Rabbit", "أرانب", "g", 0.2, "meat", [173, 33, 3.5, 0], [], ["chicken thighs", "أفخاذ دجاج"]),
+  x("Duck", "بط", "g", 0.18, "meat", [337, 19, 28, 0], [], ["chicken thighs", "أفخاذ دجاج"]),
+
+  // Fish & seafood
+  x("Tilapia", "بلطي", "g", 0.1, "seafood", [96, 20, 1.7, 0], [FISH], ["any white fish", "أي سمك أبيض"]),
+  x("Sea Bass", "قاروص", "g", 0.4, "seafood", [97, 18, 2, 0], [FISH], ["sea bream", "دنيس"]),
+  x("Sardines", "سردين", "g", 0.12, "seafood", [208, 25, 11, 0], [FISH], ["mackerel", "ماكريل"]),
+  x("Mackerel", "ماكريل", "g", 0.15, "seafood", [205, 19, 14, 0], [FISH], ["sardines", "سردين"]),
+  x("Smoked Salmon", "سلمون مدخن", "g", 0.9, "seafood", [117, 18, 4.3, 0], [FISH], ["smoked herring", "رنجة مدخنة"]),
+  x("Smoked Herring", "رنجة", "g", 0.25, "seafood", [217, 18, 15, 0], [FISH], ["smoked mackerel", "ماكريل مدخن"]),
+  x("Feseekh", "فسيخ", "g", 0.4, "seafood", [200, 20, 13, 0], [FISH], ["smoked herring", "رنجة"]),
+  x("Calamari", "كاليماري", "g", 0.25, "seafood", [92, 15.6, 1.4, 3.1], [SHELLFISH], ["shrimp", "جمبري"]),
+  x("Mussels", "بلح البحر", "g", 0.2, "seafood", [86, 12, 2.2, 3.7], [SHELLFISH], ["clams", "أم الخلول"]),
+  x("Crab", "كابوريا", "g", 0.25, "seafood", [97, 19, 1.5, 0], [SHELLFISH], ["shrimp", "جمبري"]),
+
+  // Dairy & eggs
+  x("White Cheese", "جبنة بيضاء", "g", 0.15, "dairy", [260, 14, 21, 3], [DAIRY], ["feta", "جبنة فيتا"]),
+  x("Roumi Cheese", "جبنة رومي", "g", 0.4, "dairy", [380, 26, 30, 1], [DAIRY], ["aged cheddar or parmesan", "شيدر معتق أو بارميزان"]),
+  x("Ricotta Cheese", "جبنة ريكوتا", "g", 0.3, "dairy", [174, 11, 13, 3], [DAIRY], ["drained cottage cheese", "جبنة قريش مصفاة"]),
+  x("Gouda Cheese", "جبنة جودا", "g", 0.4, "dairy", [356, 25, 27, 2], [DAIRY], ["mozzarella", "موزاريلا"]),
+  x("Akkawi Cheese", "جبنة عكاوي", "g", 0.35, "dairy", [300, 20, 24, 1], [DAIRY], ["halloumi or mozzarella", "حلوم أو موزاريلا"]),
+  x("Kashkaval Cheese", "جبنة قشقوان", "g", 0.4, "dairy", [360, 25, 28, 1], [DAIRY], ["gouda", "جودا"]),
+  x("Cooking Cream", "كريمة طبخ", "ml", 0.08, "dairy", [195, 2.5, 20, 3.5], [DAIRY], ["milk thickened with a little flour", "حليب مكثف بقليل من الدقيق"]),
+  x("Condensed Milk", "لبن مكثف محلى", "g", 0.08, "dairy", [321, 8, 8.7, 54], [DAIRY], ["milk simmered down with sugar", "حليب مغلي مع السكر حتى يتكثف"]),
+  x("Evaporated Milk", "لبن مبخر", "ml", 0.05, "dairy", [134, 6.8, 7.6, 10], [DAIRY], ["whole milk", "حليب كامل الدسم"]),
+  x("Milk Powder", "لبن بودرة", "g", 0.15, "dairy", [496, 26, 27, 38], [DAIRY]),
+  x("Ashta", "قشطة", "g", 0.15, "dairy", [345, 3, 36, 3], [DAIRY], ["mascarpone or thick cream", "ماسكاربوني أو كريمة كثيفة"]),
+  x("Buttermilk", "لبن رايب", "ml", 0.03, "dairy", [40, 3.3, 0.9, 4.8], [DAIRY], ["yogurt thinned with water", "زبادي مخفف بالماء"]),
+  x("Vanilla Ice Cream", "آيس كريم فانيليا", "g", 0.15, "dairy", [207, 3.5, 11, 24], [DAIRY, EGGS]),
+
+  // Produce
+  x("Fresh Coriander", "كزبرة خضراء", "g", 0.04, "produce", [23, 2.1, 0.5, 3.7], [], ["parsley", "بقدونس"]),
+  x("Celery", "كرفس", "g", 0.03, "produce", [16, 0.7, 0.2, 3], [], ["fennel", "شمر"]),
+  x("Broccoli", "بروكلي", "g", 0.06, "produce", [34, 2.8, 0.4, 7], [], ["cauliflower", "قرنبيط"]),
+  x("Kale", "كيل", "g", 0.12, "produce", [49, 4.3, 0.9, 9], [], ["spinach", "سبانخ"]),
+  x("Arugula", "جرجير", "g", 0.04, "produce", [25, 2.6, 0.7, 3.7], [], ["watercress or baby spinach", "بقلة أو سبانخ صغيرة"]),
+  x("Lettuce", "خس", "g", 0.02, "produce", [15, 1.4, 0.2, 2.9]),
+  x("Radish", "فجل", "g", 0.02, "produce", [16, 0.7, 0.1, 3.4]),
+  x("Beetroot", "بنجر", "g", 0.02, "produce", [43, 1.6, 0.2, 10]),
+  x("Artichoke", "خرشوف", "g", 0.06, "produce", [47, 3.3, 0.2, 10.5], [], ["frozen artichoke bottoms", "قلوب خرشوف مجمدة"]),
+  x("Asparagus", "هليون", "g", 0.15, "produce", [20, 2.2, 0.1, 3.9], [], ["green beans", "فاصوليا خضراء"]),
+  x("Green Chili", "فلفل أخضر حار", "g", 0.03, "produce", [40, 2, 0.2, 9.5], [], ["jalapeño", "هالبينو"]),
+  x("Red Chili", "فلفل أحمر حار", "g", 0.04, "produce", [40, 1.9, 0.4, 8.8], [], ["chili flakes", "شطة مجروشة"]),
+  x("Red Onion", "بصل أحمر", "g", 0.02, "produce", [40, 1.1, 0.1, 9.3], [], ["white onion", "بصل أبيض"]),
+  x("Purple Cabbage", "كرنب أحمر", "g", 0.02, "produce", [31, 1.4, 0.2, 7.4], [], ["white cabbage", "كرنب أبيض"]),
+  x("Swiss Chard", "سلق", "g", 0.02, "produce", [19, 1.8, 0.2, 3.7], [], ["spinach", "سبانخ"]),
+  x("Taro", "قلقاس", "g", 0.02, "produce", [112, 1.5, 0.2, 26.5], [], ["potato", "بطاطس"]),
+  x("Lemongrass", "عشب الليمون", "g", 0.15, "produce", [99, 1.8, 0.5, 25], [], ["lemon zest", "قشر ليمون"]),
+  x("Mixed Vegetables", "خضار مشكل مجمد", "g", 0.04, "produce", [65, 3, 0.5, 13]),
+  x("Watermelon", "بطيخ", "g", 0.01, "produce", [30, 0.6, 0.2, 7.6]),
+  x("Cantaloupe", "كانتلوب", "g", 0.015, "produce", [34, 0.8, 0.2, 8]),
+  x("Grapes", "عنب", "g", 0.04, "produce", [69, 0.7, 0.2, 18]),
+  x("Guava", "جوافة", "g", 0.03, "produce", [68, 2.6, 1, 14]),
+  x("Peach", "خوخ", "g", 0.04, "produce", [39, 0.9, 0.3, 9.5]),
+  x("Figs", "تين", "g", 0.05, "produce", [74, 0.8, 0.3, 19]),
+  x("Kiwi", "كيوي", "pcs", 8, "produce", [42, 0.8, 0.4, 10]),
+  x("Mixed Berries", "توت مشكل مجمد", "g", 0.2, "produce", [50, 0.8, 0.3, 12], [], ["strawberries", "فراولة"]),
+  x("Blueberries", "توت أزرق", "g", 0.4, "produce", [57, 0.7, 0.3, 14.5], [], ["mixed berries", "توت مشكل"]),
+
+  // Pantry: canned, jarred, pickled
+  x("Tomato Paste", "صلصة طماطم", "g", 0.06, "pantry", [82, 4.3, 0.5, 19]),
+  x("Canned Tomatoes", "طماطم معلبة", "g", 0.04, "pantry", [32, 1.6, 0.3, 7], [], ["grated fresh tomatoes", "طماطم طازجة مبشورة"]),
+  x("Green Olives", "زيتون أخضر", "g", 0.08, "pantry", [145, 1, 15, 3.8], [], ["kalamata olives", "زيتون كالاماتا"]),
+  x("Pickles", "مخلل خيار", "g", 0.03, "pantry", [11, 0.3, 0.2, 2.3]),
+  x("Kimchi", "كيمتشي", "g", 0.2, "pantry", [15, 1.1, 0.5, 2.4], [], ["spicy pickled cabbage", "كرنب مخلل حار"]),
+  x("Kidney Beans", "فاصوليا حمراء", "g", 0.05, "pantry", [127, 8.7, 0.5, 22.8], [], ["black beans", "فاصوليا سوداء"]),
+  x("Tofu", "توفو", "g", 0.15, "pantry", [76, 8, 4.8, 1.9], [SOY], ["paneer or halloumi", "بانير أو حلوم"]),
+
+  // Pantry: grains, pasta, breads, doughs
+  x("Rolled Oats", "شوفان", "g", 0.06, "pantry", [389, 16.9, 6.9, 66], [GLUTEN], ["quick oats", "شوفان سريع التحضير"]),
+  x("Freekeh", "فريك", "g", 0.06, "pantry", [352, 14, 2.5, 72], [GLUTEN], ["coarse bulgur", "برغل خشن"]),
+  x("Barley", "شعير", "g", 0.04, "pantry", [354, 12.5, 2.3, 73.5], [GLUTEN], ["farro", "فارو"]),
+  x("Brown Rice", "أرز بني", "g", 0.06, "pantry", [367, 7.5, 2.7, 76], [], ["white rice", "أرز أبيض"]),
+  x("Yellow Lentils", "عدس أصفر", "g", 0.05, "pantry", [352, 24.5, 1.2, 63], [], ["red lentils", "عدس أحمر"]),
+  x("Split Fava Beans", "فول مدشوش", "g", 0.05, "pantry", [341, 26, 1.5, 58], [], ["dried chickpeas", "حمص ناشف"]),
+  x("Penne Pasta", "مكرونة قلم", "g", 0.045, "pantry", [371, 13, 1.5, 75], [GLUTEN], ["any short pasta", "أي مكرونة قصيرة"]),
+  x("Fettuccine", "مكرونة فيتوتشيني", "g", 0.06, "pantry", [371, 13, 1.5, 75], [GLUTEN], ["tagliatelle or spaghetti", "تالياتيلي أو اسباجيتي"]),
+  x("Lasagna Sheets", "رقائق لازانيا", "g", 0.06, "pantry", [371, 13, 1.5, 75], [GLUTEN]),
+  x("Egg Noodles", "نودلز بالبيض", "g", 0.06, "pantry", [384, 14, 4.4, 71], [GLUTEN, EGGS], ["spaghetti", "اسباجيتي"]),
+  x("Ramen Noodles", "نودلز رامن", "g", 0.06, "pantry", [350, 11, 1.5, 72], [GLUTEN], ["egg noodles", "نودلز بالبيض"]),
+  x("Udon Noodles", "نودلز أودون", "g", 0.07, "pantry", [340, 9, 1, 72], [GLUTEN], ["thick spaghetti", "اسباجيتي سميكة"]),
+  x("Soba Noodles", "نودلز سوبا", "g", 0.09, "pantry", [336, 14, 0.7, 74.6], [GLUTEN], ["whole wheat spaghetti", "اسباجيتي قمح كامل"]),
+  x("Glass Noodles", "شعيرية زجاجية", "g", 0.08, "pantry", [351, 0.2, 0.1, 86], [], ["rice noodles", "نودلز أرز"]),
+  x("Rice Paper", "ورق أرز", "pcs", 2, "pantry", [30, 0.5, 0, 7]),
+  x("Wonton Wrappers", "رقائق ونتون", "pcs", 1, "pantry", [23, 0.8, 0.1, 4.6], [GLUTEN], ["thin rolled dumpling dough", "عجينة رقيقة"]),
+  x("Flour Tortilla", "تورتيلا دقيق", "pcs", 5, "pantry", [140, 3.7, 3.5, 23.6], [GLUTEN], ["saj or pita bread", "خبز صاج أو بيتا"]),
+  x("Tortilla Chips", "رقائق تورتيلا", "g", 0.15, "pantry", [489, 7, 23, 64], [], ["baked pita chips", "رقائق عيش محمص"]),
+  x("Whole Wheat Flour", "دقيق قمح كامل", "g", 0.04, "pantry", [340, 13, 2.5, 72], [GLUTEN], ["all-purpose flour", "دقيق أبيض"]),
+  x("Rice Flour", "دقيق أرز", "g", 0.05, "pantry", [366, 6, 1.4, 80], [], ["cornstarch", "نشا"]),
+  x("Chickpea Flour", "دقيق حمص", "g", 0.08, "pantry", [387, 22, 6.7, 58], [], ["all-purpose flour", "دقيق أبيض"]),
+  x("Kunafa Dough", "عجينة كنافة", "g", 0.06, "pantry", [350, 8, 5, 68], [GLUTEN], ["crushed vermicelli", "شعيرية مكسرة"]),
+  x("Baladi Bread", "عيش بلدي", "pcs", 2, "pantry", [220, 8, 1.5, 45], [GLUTEN], ["whole wheat pita", "خبز بيتا قمح كامل"]),
+  x("Toast Bread", "خبز توست", "pcs", 2, "pantry", [75, 2.6, 1, 13.8], [GLUTEN], ["any sliced bread", "أي خبز مقطع"]),
+  x("Plain Biscuits", "بسكويت سادة", "g", 0.1, "pantry", [450, 7, 15, 72], [GLUTEN], ["digestive biscuits", "بسكويت دايجستيف"]),
+  x("Baking Soda", "بيكربونات الصودا", "g", 0.05, "pantry", [0, 0, 0, 0]),
+  x("Powdered Sugar", "سكر بودرة", "g", 0.04, "pantry", [389, 0, 0, 100], [], ["blitzed granulated sugar", "سكر عادي مطحون"]),
+  x("Custard Powder", "بودرة كاسترد", "g", 0.1, "pantry", [360, 0.5, 0.5, 88], [], ["cornstarch plus vanilla", "نشا مع فانيليا"]),
+
+  // Pantry: oils, sauces, sweeteners
+  x("Vegetable Oil", "زيت نباتي", "ml", 0.07, "pantry", [884, 0, 100, 0], [], ["sunflower or corn oil", "زيت عباد الشمس أو الذرة"]),
+  x("Sesame Oil", "زيت سمسم", "ml", 0.3, "pantry", [884, 0, 100, 0], [SESAME], ["neutral oil plus toasted sesame seeds", "زيت محايد مع سمسم محمص"]),
+  x("Balsamic Vinegar", "خل بلسميك", "ml", 0.15, "pantry", [88, 0.5, 0, 17], [], ["pomegranate molasses", "دبس رمان"]),
+  x("Apple Cider Vinegar", "خل تفاح", "ml", 0.05, "pantry", [21, 0, 0, 0.9], [], ["white vinegar", "خل أبيض"]),
+  x("Tamarind Paste", "تمر هندي", "g", 0.08, "pantry", [239, 2.8, 0.6, 62.5], [], ["lemon juice with a little sugar", "عصير ليمون مع قليل من السكر"]),
+  x("Red Curry Paste", "معجون كاري أحمر", "g", 0.3, "pantry", [120, 2, 6, 14], [], ["green curry paste", "معجون كاري أخضر"]),
+  x("Peanut Butter", "زبدة فول سوداني", "g", 0.2, "pantry", [588, 25, 50, 20], [PEANUTS], ["tahini", "طحينة"]),
+  x("Jam", "مربى", "g", 0.08, "pantry", [250, 0.4, 0.1, 65], [], ["honey", "عسل"]),
+  x("Molasses", "عسل أسود", "g", 0.05, "pantry", [290, 0, 0.1, 75], [], ["date syrup", "دبس تمر"]),
+  x("Date Syrup", "دبس تمر", "g", 0.1, "pantry", [300, 1.5, 0.1, 75], [], ["honey", "عسل"]),
+  x("Dark Chocolate", "شوكولاتة داكنة", "g", 0.5, "pantry", [546, 4.9, 31, 61], [], ["cocoa powder plus butter", "كاكاو مع زبدة"]),
+  x("White Chocolate", "شوكولاتة بيضاء", "g", 0.5, "pantry", [539, 5.9, 32, 59], [DAIRY]),
+  x("Chocolate Hazelnut Spread", "شوكولاتة بالبندق", "g", 0.4, "pantry", [539, 6.3, 30.9, 57.5], [NUTS, DAIRY]),
+
+  // Pantry: nuts, seeds, dried fruit
+  x("Raisins", "زبيب", "g", 0.12, "pantry", [299, 3.1, 0.5, 79], [], ["chopped dates", "تمر مقطع"]),
+  x("Hazelnuts", "بندق", "g", 0.6, "pantry", [628, 15, 61, 17], [NUTS], ["almonds", "لوز"]),
+  x("Chia Seeds", "بذور شيا", "g", 0.4, "pantry", [486, 16.5, 30.7, 42], [], ["ground flaxseed", "بذور كتان مطحونة"]),
+  x("Flaxseeds", "بذور كتان", "g", 0.1, "pantry", [534, 18, 42, 29], [], ["chia seeds", "بذور شيا"]),
+  x("Carob", "خروب", "g", 0.05, "pantry", [222, 4.6, 0.7, 89]),
+
+  // Spices & herbs
+  x("Saffron", "زعفران", "g", 3, "pantry", [310, 11, 6, 65], [], ["a pinch of turmeric for colour", "رشة كركم للون"]),
+  x("Allspice", "بهار حلو", "g", 0.15, "pantry", [263, 6, 8.7, 72], [], ["cinnamon with a pinch of cloves", "قرفة مع رشة قرنفل"]),
+  x("Baharat", "بهارات مشكلة", "g", 0.15, "pantry", [300, 10, 10, 60], [], ["allspice, cumin and black pepper", "بهار حلو وكمون وفلفل أسود"]),
+  x("Dried Lime", "لومي", "g", 0.2, "pantry", [300, 6, 1, 70], [], ["lemon zest and juice", "قشر وعصير ليمون"]),
+  x("Dried Mint", "نعناع مجفف", "g", 0.15, "pantry", [285, 20, 6, 52], [], ["fresh mint, triple the amount", "نعناع طازج بثلاثة أضعاف الكمية"]),
+  x("Mustard Seeds", "بذور خردل", "g", 0.12, "pantry", [508, 26, 36, 28], [], ["cumin seeds", "بذور كمون"]),
+  x("Curry Leaves", "ورق كاري", "g", 0.5, "pantry", [108, 6, 1, 18], [], ["bay leaves", "ورق لورا"]),
+  x("Fenugreek", "حلبة", "g", 0.08, "pantry", [323, 23, 6.4, 58]),
+  x("Nigella Seeds", "حبة البركة", "g", 0.2, "pantry", [345, 16, 22, 52], [], ["sesame seeds", "سمسم"]),
+  x("Anise Seeds", "ينسون", "g", 0.15, "pantry", [337, 17.6, 15.9, 50], [], ["fennel seeds", "شمر"]),
+  x("Caraway", "كراوية", "g", 0.15, "pantry", [333, 19.8, 14.6, 50], [], ["cumin", "كمون"]),
+  x("Mahlab", "محلب", "g", 0.5, "pantry", [400, 15, 25, 40], [], ["a drop of almond extract", "نقطة من خلاصة اللوز"]),
+  x("Mastic", "مستكة", "g", 4, "pantry", [350, 0, 0, 90]),
+
+  // Drinks
+  x("Hibiscus", "كركديه", "g", 0.15, "pantry", [37, 0.4, 0.6, 7.4]),
+  x("Black Tea", "شاي", "g", 0.3, "pantry", [1, 0, 0, 0]),
+  x("Green Tea", "شاي أخضر", "g", 0.5, "pantry", [1, 0, 0, 0]),
+  x("Ground Coffee", "بن مطحون", "g", 0.6, "pantry", [2, 0.1, 0, 0], [], ["instant coffee", "قهوة سريعة الذوبان"]),
+  x("Licorice Root", "عرق سوس", "g", 0.2, "pantry", [10, 0, 0, 2]),
+  x("Orange Juice", "عصير برتقال", "ml", 0.04, "pantry", [45, 0.7, 0.2, 10.4], [], ["freshly squeezed oranges", "برتقال معصور طازج"]),
+  x("Sparkling Water", "مياه فوارة", "ml", 0.02, "pantry", [0, 0, 0, 0], [], ["chilled still water", "ماء بارد"]),
+  x("Ice", "ثلج", "g", 0.005, "pantry", [0, 0, 0, 0]),
+];
