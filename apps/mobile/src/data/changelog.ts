@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-european-recipes",
+    date: "2026-10-19",
+    title: { en: "383 Italian, French, Greek, Spanish and Mediterranean recipes", ar: "383 وصفة إيطالية وفرنسية ويونانية وإسبانية ومتوسطية" },
+    body: {
+      en: "Now 1,309 recipes and two new cuisines. Italian regional pastas, risotto, pizza and dolci; French bistro classics, Provençal dishes, pâtisserie and crêpes; Greek stifado, ladera, filo pies and syrup cakes; Spanish paella, tapas, gazpacho and churros; and Mediterranean bowls plus dishes from Cyprus, Malta, the Adriatic and Portugal. Everything is halal-friendly, with no pork or alcohol.",
+      ar: "أصبح لدينا 1309 وصفة ومطبخان جديدان. معكرونة الأقاليم الإيطالية والريزوتو والبيتزا والحلويات؛ وكلاسيكيات البيسترو الفرنسية وأطباق بروفانس والمعجنات والكريب؛ والستيفادو اليوناني وأطباق زيت الزيتون وفطائر الفيلو وكيك الشربات؛ والباييا الإسبانية والتاباس والجازباتشو والتشوروس؛ وأطباق متوسطية صحية وأكلات من قبرص ومالطا والأدرياتيكي والبرتغال. كلها حلال بدون لحم خنزير أو كحول.",
+    },
+  },
+  {
     id: "2026-10-maghreb-turkish-persian",
     date: "2026-10-19",
     title: { en: "235 Moroccan, Tunisian, Turkish and Persian recipes", ar: "235 وصفة مغربية وتونسية وتركية وإيرانية" },

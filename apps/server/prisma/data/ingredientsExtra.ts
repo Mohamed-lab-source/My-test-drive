@@ -98,6 +98,7 @@ export const extraIngredients: IngredientSeed[] = [
   x("Purple Cabbage", "كرنب أحمر", "g", 0.02, "produce", [31, 1.4, 0.2, 7.4], [], ["white cabbage", "كرنب أبيض"]),
   x("Swiss Chard", "سلق", "g", 0.02, "produce", [19, 1.8, 0.2, 3.7], [], ["spinach", "سبانخ"]),
   x("Taro", "قلقاس", "g", 0.02, "produce", [112, 1.5, 0.2, 26.5], [], ["potato", "بطاطس"]),
+  x("Rosemary", "إكليل الجبل", "g", 0.3, "produce", [131, 3.3, 5.9, 20.7], [], ["dried rosemary, a third of the amount", "إكليل جبل مجفف بثلث الكمية"]),
   x("Lemongrass", "عشب الليمون", "g", 0.15, "produce", [99, 1.8, 0.5, 25], [], ["lemon zest", "قشر ليمون"]),
   x("Mixed Vegetables", "خضار مشكل مجمد", "g", 0.04, "produce", [65, 3, 0.5, 13]),
   x("Watermelon", "بطيخ", "g", 0.01, "produce", [30, 0.6, 0.2, 7.6]),
