@@ -41,7 +41,8 @@ const OVEN_PATTERN = /\boven\b|\bbake|\broast|\bbroil|فرن|اخبز/i;
 
 export function CookModeScreen({ route, navigation }: Props) {
   useKeepAwake();
-  const { slug, title, cuisineSlug, steps, ingredients, servings, myRating, initialStepIndex, nutrition } = route.params;
+  const { slug, title, cuisineSlug, steps, ingredients, servings, myRating, initialStepIndex, nutrition, costPerServing } =
+    route.params;
   const { t, locale, isRTL } = useLocale();
   const { colors } = useTheme();
   const { unitSystem } = useUnits();
@@ -239,6 +240,7 @@ export function CookModeScreen({ route, navigation }: Props) {
         finishedAt: new Date().toISOString(),
         durationMin: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 60000)),
         servings: cookServings,
+        costPerServing,
       });
       const streak = recordCooked({ slug, title, cuisineSlug });
       if (STREAK_MILESTONES.includes(streak)) {

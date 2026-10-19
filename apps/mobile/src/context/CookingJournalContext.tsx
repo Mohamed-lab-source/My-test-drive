@@ -15,6 +15,8 @@ export type JournalEntry = {
   /** Minutes from opening Cook Mode to tapping Finish. */
   durationMin: number;
   servings: number;
+  /** Estimated EGP per serving at the time; missing on older entries. */
+  costPerServing?: number;
   note: string;
 };
 

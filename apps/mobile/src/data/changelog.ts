@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-goals",
+    date: "2026-10-19",
+    title: { en: "Goals, passport & more badges", ar: "الأهداف والجواز وشارات أكثر" },
+    body: {
+      en: "Set a weekly cooking goal, take the weekly new-cuisine challenge, and protect your streak with a weekly freeze. Plus a cuisine passport, a monthly recap with money saved, a tip of the day, 8 new badges, and sharing for your achievements.",
+      ar: "حددي هدفاً أسبوعياً للطبخ، وخوضي تحدي المطبخ الجديد كل أسبوع، واحمي سلسلتك بتجميد أسبوعي. بالإضافة إلى جواز سفر المطابخ، وملخص شهري مع ما وفّرتِه، ونصيحة يومية، و8 شارات جديدة، ومشاركة إنجازاتك.",
+    },
+  },
+  {
     id: "2026-10-cook-mode",
     date: "2026-10-19",
     title: { en: "Cook Mode upgrades & cooking journal", ar: "تحسينات وضع الطبخ ودفتر الطبخ" },

@@ -22,6 +22,9 @@ import { useCookStreak } from "../context/CookStreakContext";
 import { useRecentlyRated } from "../context/RecentlyRatedContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useHiddenRecipes } from "../context/HiddenRecipesContext";
+import { useGoals } from "../context/GoalsContext";
+import { tipOfTheDay } from "../data/dailyTips";
+import { useWeeklyChallenge } from "../utils/useWeeklyChallenge";
 import { useHomeLayout } from "../context/HomeLayoutContext";
 import { localDayKey, useFoodDiary } from "../context/FoodDiaryContext";
 import { daysUntil, useLeftovers } from "../context/LeftoversContext";
@@ -89,6 +92,8 @@ export function HomeScreen({ navigation }: Props) {
   const { targets: diaryTargets, totalsFor: diaryTotalsFor, waterFor } = useFoodDiary();
   const diaryToday = diaryTotalsFor(localDayKey());
   const diaryRemaining = diaryTargets.calories - diaryToday.calories;
+  const { weeklyGoal, cookDaysThisWeek, goalMetThisWeek } = useGoals();
+  const { cuisine: challengeCuisine, completed: challengeDone } = useWeeklyChallenge();
   const { leftovers, removeLeftover, restoreLeftover, remindersEnabled: leftoverRemindersEnabled, setRemindersEnabled: setLeftoverRemindersEnabled } =
     useLeftovers();
   const { showToast } = useToast();
@@ -172,6 +177,7 @@ export function HomeScreen({ navigation }: Props) {
           fat: detail.nutritionPerServing.fatGrams,
           carbs: detail.nutritionPerServing.carbsGrams,
         },
+        costPerServing: detail.costPerServing,
       });
     } catch {
       // Recipe may have changed or be unavailable; nothing to recover into.
@@ -257,6 +263,7 @@ export function HomeScreen({ navigation }: Props) {
           fat: detail.nutritionPerServing.fatGrams,
           carbs: detail.nutritionPerServing.carbsGrams,
         },
+        costPerServing: detail.costPerServing,
       });
     } catch (error) {
       Alert.alert(t("home.cookAgainError"), apiErrorMessage(error));
@@ -423,6 +430,50 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.searchIcon}>🔍</Text>
               <Text style={styles.searchPlaceholder}>{t("search.placeholder")}</Text>
             </AnimatedPressable>
+
+            {isSectionVisible("weeklyGoal") ? (
+              <AnimatedPressable
+                style={styles.nutritionCard}
+                pressScale={0.98}
+                onPress={() => navigation.navigate("Goals")}
+                accessibilityRole="button"
+                accessibilityLabel={t("goals.title")}
+              >
+                <View style={styles.nutritionHeader}>
+                  <Text style={styles.nutritionTitle}>
+                    {goalMetThisWeek
+                      ? t("home.goalMet", { goal: weeklyGoal })
+                      : t("home.goalProgress", { done: cookDaysThisWeek, goal: weeklyGoal })}
+                  </Text>
+                  <Text style={styles.nutritionRemaining}>{t("home.goalOpen")}</Text>
+                </View>
+                <View style={styles.nutritionTrack}>
+                  <View
+                    style={[
+                      styles.nutritionFill,
+                      {
+                        width: `${Math.min(100, (cookDaysThisWeek / weeklyGoal) * 100)}%`,
+                        backgroundColor: goalMetThisWeek ? colors.success : colors.primary,
+                      },
+                    ]}
+                  />
+                </View>
+                {challengeCuisine ? (
+                  <Text style={styles.nutritionMeta}>
+                    {challengeDone
+                      ? t("goals.challengeDone", { cuisine: challengeCuisine.name })
+                      : t("home.challengeLine", { cuisine: challengeCuisine.name })}
+                  </Text>
+                ) : null}
+              </AnimatedPressable>
+            ) : null}
+
+            {isSectionVisible("dailyTip") ? (
+              <View style={styles.nutritionCard}>
+                <Text style={styles.nutritionTitle}>{t("home.tipTitle")}</Text>
+                <Text style={styles.tipText}>{tipOfTheDay()[locale]}</Text>
+              </View>
+            ) : null}
 
             {isSectionVisible("nutrition") ? (
               <AnimatedPressable
@@ -717,6 +768,11 @@ export function HomeScreen({ navigation }: Props) {
                   key: "leanMuscle",
                   label: t("home.leanMuscle"),
                   onPress: () => navigation.navigate("LeanMuscleMode"),
+                },
+                {
+                  key: "goals",
+                  label: t("home.goals"),
+                  onPress: () => navigation.navigate("Goals"),
                 },
                 {
                   key: "kitchenTimer",
@@ -1070,6 +1126,7 @@ const createStyles = (colors: ThemeColors) =>
     nutritionTrack: { height: 8, borderRadius: 4, backgroundColor: colors.chipBackground, overflow: "hidden", marginTop: spacing(1) },
     nutritionFill: { height: "100%", borderRadius: 4 },
     nutritionMeta: { fontSize: 12, color: colors.textMuted, marginTop: spacing(0.75) },
+    tipText: { fontSize: 13, color: colors.text, marginTop: spacing(0.75), lineHeight: 19 },
     searchPlaceholder: { color: colors.textMuted, fontSize: 14 },
     sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: spacing(3), marginBottom: spacing(1.5) },
     moodRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", gap: spacing(1) },

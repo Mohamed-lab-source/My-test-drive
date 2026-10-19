@@ -38,6 +38,7 @@ export type RootStackParamList = {
     initialStepIndex?: number;
     /** Per-serving values, used to offer logging the meal to the food diary when cooking finishes. */
     nutrition?: { calories: number; protein: number; fat: number; carbs: number };
+    costPerServing?: number;
   };
   MiseEnPlace: {
     slug: string;
@@ -78,6 +79,9 @@ export type RootStackParamList = {
   HiddenRecipes: undefined;
   KitchenTimer: undefined;
   CookingJournal: undefined;
+  Goals: undefined;
+  CuisinePassport: undefined;
+  MonthlyRecap: undefined;
   WhatsNew: undefined;
 };
 

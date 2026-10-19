@@ -5,6 +5,11 @@ import { useCookStreak } from "./CookStreakContext";
 import { useFavorites } from "./FavoritesContext";
 import { useCollections } from "./CollectionsContext";
 import { useToast } from "./ToastContext";
+import { useCookingJournal } from "./CookingJournalContext";
+import { useFoodDiary } from "./FoodDiaryContext";
+import { useHousehold } from "./HouseholdContext";
+import { usePantryCheck } from "./PantryCheckContext";
+import { useGoals } from "./GoalsContext";
 import { useLocale } from "../i18n/LocaleContext";
 
 const SEEN_BADGES_KEY = "cookmate.seenBadges";
@@ -22,6 +27,12 @@ export function BadgesProvider({ children }: { children: React.ReactNode }) {
   const { totalCooked, longestStreak, cuisinesCooked } = useCookStreak();
   const { favoriteRecipes } = useFavorites();
   const { collections } = useCollections();
+  const { entries: journalEntries } = useCookingJournal();
+  const { loggingStreak } = useFoodDiary();
+  const { members } = useHousehold();
+  const { items: pantryItems } = usePantryCheck();
+  const { weeksHit } = useGoals();
+  const journalNotes = journalEntries.filter((e) => e.note.trim().length > 0).length;
   const { showToast } = useToast();
   const { t } = useLocale();
   const seenRef = useRef<Set<string> | null>(null);
@@ -33,8 +44,24 @@ export function BadgesProvider({ children }: { children: React.ReactNode }) {
       cuisinesCooked: cuisinesCooked.length,
       favoritesCount: favoriteRecipes.length,
       collectionsCount: collections.length,
+      journalNotes,
+      diaryStreak: loggingStreak,
+      householdSize: members.length,
+      pantryCount: pantryItems.length,
+      goalWeeks: weeksHit.length,
     }),
-    [totalCooked, longestStreak, cuisinesCooked.length, favoriteRecipes.length, collections.length]
+    [
+      totalCooked,
+      longestStreak,
+      cuisinesCooked.length,
+      favoriteRecipes.length,
+      collections.length,
+      journalNotes,
+      loggingStreak,
+      members.length,
+      pantryItems.length,
+      weeksHit.length,
+    ]
   );
 
   const badges = useMemo<BadgeWithState[]>(

@@ -1,9 +1,10 @@
 import React, { useMemo } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, Share, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { FadeSlideIn } from "../components/FadeSlideIn";
+import { PrimaryButton } from "../components/PrimaryButton";
 import { useBadges } from "../context/BadgesContext";
 import { useLocale } from "../i18n/LocaleContext";
 import { useTheme } from "../theme/ThemeContext";
@@ -18,6 +19,19 @@ export function BadgesScreen({}: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const textAlign = isRTL ? "right" : "left";
 
+  const shareAchievements = () => {
+    const unlocked = badges.filter((b) => b.unlocked).map((b) => `${b.emoji} ${t(b.titleKey)}`);
+    Share.share({
+      message: [
+        t("badges.shareTitle", { unlocked: unlockedCount, total: badges.length }),
+        "",
+        ...unlocked,
+        "",
+        t("share.branding"),
+      ].join("\n"),
+    }).catch(() => {});
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <FlatList
@@ -30,6 +44,13 @@ export function BadgesScreen({}: Props) {
           <Text style={[styles.subtitle, { textAlign }]}>
             {t("badges.subtitle", { unlocked: unlockedCount, total: badges.length })}
           </Text>
+        }
+        ListFooterComponent={
+          unlockedCount > 0 ? (
+            <View style={styles.footer}>
+              <PrimaryButton label={t("badges.share")} variant="outline" onPress={shareAchievements} />
+            </View>
+          ) : null
         }
         renderItem={({ item, index }) => (
           <FadeSlideIn index={index} style={styles.cardWrap}>
@@ -68,4 +89,5 @@ const createStyles = (colors: ThemeColors) =>
     title: { fontSize: 13, fontWeight: "800", color: colors.text, marginBottom: 4 },
     titleLocked: { color: colors.textMuted },
     description: { fontSize: 11, color: colors.textMuted, lineHeight: 15 },
+    footer: { marginTop: spacing(1) },
   });

@@ -13,6 +13,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "CustomizeHome">;
 
 const SECTION_LABEL_KEYS: Record<HomeSectionKey, TranslationKey> = {
   cookTonight: "customizeHome.cookTonight",
+  weeklyGoal: "customizeHome.weeklyGoal",
+  dailyTip: "customizeHome.dailyTip",
   nutrition: "customizeHome.nutrition",
   recipeOfDay: "customizeHome.recipeOfDay",
   browseByMealType: "customizeHome.browseByMealType",

@@ -43,6 +43,9 @@ import { CuisineExplorerScreen } from "../screens/CuisineExplorerScreen";
 import { HiddenRecipesScreen } from "../screens/HiddenRecipesScreen";
 import { KitchenTimerScreen } from "../screens/KitchenTimerScreen";
 import { CookingJournalScreen } from "../screens/CookingJournalScreen";
+import { GoalsScreen } from "../screens/GoalsScreen";
+import { CuisinePassportScreen } from "../screens/CuisinePassportScreen";
+import { MonthlyRecapScreen } from "../screens/MonthlyRecapScreen";
 import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
 import { WhatsNewScreen } from "../screens/WhatsNewScreen";
 import { useLocalPreference } from "../context/LocalPreferenceContext";
@@ -197,6 +200,9 @@ export function RootNavigator() {
         <Stack.Screen name="HiddenRecipes" component={HiddenRecipesScreen} options={{ title: t("hidden.title") }} />
         <Stack.Screen name="KitchenTimer" component={KitchenTimerScreen} options={{ title: t("timers.title") }} />
         <Stack.Screen name="CookingJournal" component={CookingJournalScreen} options={{ title: t("journal.title") }} />
+        <Stack.Screen name="Goals" component={GoalsScreen} options={{ title: t("goals.title") }} />
+        <Stack.Screen name="CuisinePassport" component={CuisinePassportScreen} options={{ title: t("passport.title") }} />
+        <Stack.Screen name="MonthlyRecap" component={MonthlyRecapScreen} options={{ title: t("monthlyRecap.title") }} />
         <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
       </Stack.Navigator>
     </NavigationContainer>

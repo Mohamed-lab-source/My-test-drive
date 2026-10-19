@@ -23,7 +23,11 @@ type StreakState = {
   cuisinesCooked: string[];
   /** Last YYYY-MM-DD each recipe was cooked, uncapped (unlike recentlyCooked). */
   lastCooked: Record<string, string>;
+  /** The missed day a streak freeze last covered; one freeze is available per 7 days. */
+  freezeUsedOn: string | null;
 };
+
+const FREEZE_COOLDOWN_DAYS = 7;
 
 const DEFAULT_STATE: StreakState = {
   currentStreak: 0,
@@ -35,7 +39,17 @@ const DEFAULT_STATE: StreakState = {
   recentlyCooked: [],
   cuisinesCooked: [],
   lastCooked: {},
+  freezeUsedOn: null,
 };
+
+function freezeAvailableOn(freezeUsedOn: string | null, day: string): boolean {
+  return freezeUsedOn === null || daysBetween(freezeUsedOn, day) >= FREEZE_COOLDOWN_DAYS;
+}
+
+function shiftKey(day: string, offset: number): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10);
+}
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
@@ -57,6 +71,10 @@ type CookStreakContextValue = {
   longestStreak: number;
   totalCooked: number;
   cookedToday: boolean;
+  /** A streak freeze is ready to cover one missed day (one per week). */
+  freezeAvailable: boolean;
+  /** Yesterday was missed and the freeze is holding the streak until you cook today. */
+  freezeProtecting: boolean;
   /** Records today's cook, updating the streak and the per-recipe cook count. Safe to call more than once in a day. Returns the resulting streak length. */
   recordCooked: (recipe: CookedRecipeRef) => number;
   cookCountFor: (slug: string) => number;
@@ -122,7 +140,9 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
         return next;
       }
       const gap = prev.lastCookedDate ? daysBetween(prev.lastCookedDate, today) : null;
-      const nextStreak = gap === 1 ? prev.currentStreak + 1 : 1;
+      // Missing exactly one day spends the weekly streak freeze instead of resetting.
+      const useFreeze = gap === 2 && prev.currentStreak > 0 && freezeAvailableOn(prev.freezeUsedOn, today);
+      const nextStreak = gap === 1 || useFreeze ? prev.currentStreak + 1 : 1;
       const next: StreakState = {
         currentStreak: nextStreak,
         longestStreak: Math.max(prev.longestStreak, nextStreak),
@@ -133,6 +153,7 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
         recentlyCooked: nextRecentlyCooked,
         cuisinesCooked: nextCuisinesCooked,
         lastCooked: nextLastCooked,
+        freezeUsedOn: useFreeze ? shiftKey(today, -1) : prev.freezeUsedOn,
       };
       resultStreak = nextStreak;
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
@@ -146,7 +167,11 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
 
   const today = todayKey();
   const gapFromToday = state.lastCookedDate ? daysBetween(state.lastCookedDate, today) : null;
-  const displayStreak = gapFromToday === null || gapFromToday > 1 ? 0 : state.currentStreak;
+  const freezeAvailable = freezeAvailableOn(state.freezeUsedOn, today);
+  // Yesterday was missed but the freeze will cover it if you cook today.
+  const freezeProtecting = gapFromToday === 2 && state.currentStreak > 0 && freezeAvailable;
+  const displayStreak =
+    gapFromToday === null || (gapFromToday > 1 && !freezeProtecting) ? 0 : state.currentStreak;
   const cookedToday = state.lastCookedDate === today;
 
   const value = useMemo(
@@ -156,6 +181,8 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       longestStreak: state.longestStreak,
       totalCooked: state.totalCooked,
       cookedToday,
+      freezeAvailable,
+      freezeProtecting,
       recordCooked,
       cookCountFor,
       lastCookedFor,
@@ -174,6 +201,8 @@ export function CookStreakProvider({ children }: { children: React.ReactNode }) 
       state.recentlyCooked,
       state.cuisinesCooked,
       cookedToday,
+      freezeAvailable,
+      freezeProtecting,
       recordCooked,
       cookCountFor,
       lastCookedFor,

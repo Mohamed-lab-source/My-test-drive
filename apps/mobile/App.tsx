@@ -26,6 +26,7 @@ import { HouseholdProvider } from "./src/context/HouseholdContext";
 import { HiddenRecipesProvider } from "./src/context/HiddenRecipesContext";
 import { KitchenTimersProvider } from "./src/context/KitchenTimersContext";
 import { CookingJournalProvider } from "./src/context/CookingJournalContext";
+import { GoalsProvider } from "./src/context/GoalsContext";
 import { LocaleProvider } from "./src/i18n/LocaleContext";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
@@ -63,21 +64,23 @@ export default function App() {
                                         <PantryCheckProvider>
                                           <WhatsNewProvider>
                                             <CollectionsProvider>
-                                              <BadgesProvider>
-                                                <FoodDiaryProvider>
-                                                  <ShoppingExtrasProvider>
-                                                    <HouseholdProvider>
-                                                      <HiddenRecipesProvider>
-                                                        <KitchenTimersProvider>
-                                                          <CookingJournalProvider>
-                                                            <AppShell />
-                                                          </CookingJournalProvider>
-                                                        </KitchenTimersProvider>
-                                                      </HiddenRecipesProvider>
-                                                    </HouseholdProvider>
-                                                  </ShoppingExtrasProvider>
-                                                </FoodDiaryProvider>
-                                              </BadgesProvider>
+                                              <FoodDiaryProvider>
+                                                <ShoppingExtrasProvider>
+                                                  <HouseholdProvider>
+                                                    <HiddenRecipesProvider>
+                                                      <KitchenTimersProvider>
+                                                        <CookingJournalProvider>
+                                                          <GoalsProvider>
+                                                            <BadgesProvider>
+                                                              <AppShell />
+                                                            </BadgesProvider>
+                                                          </GoalsProvider>
+                                                        </CookingJournalProvider>
+                                                      </KitchenTimersProvider>
+                                                    </HiddenRecipesProvider>
+                                                  </HouseholdProvider>
+                                                </ShoppingExtrasProvider>
+                                              </FoodDiaryProvider>
                                             </CollectionsProvider>
                                           </WhatsNewProvider>
                                         </PantryCheckProvider>

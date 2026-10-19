@@ -931,6 +931,7 @@ export function RecipeDetailScreen({ route, navigation }: Props) {
                 fat: recipe.nutritionPerServing.fatGrams,
                 carbs: recipe.nutritionPerServing.carbsGrams,
               },
+              costPerServing: recipe.costPerServing,
             })
           }
         />
