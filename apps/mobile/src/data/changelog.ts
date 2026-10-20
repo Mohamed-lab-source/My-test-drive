@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-asian-recipes",
+    date: "2026-10-20",
+    title: { en: "332 Indian, Chinese, Japanese, Thai and Korean recipes", ar: "332 وصفة هندية وصينية ويابانية وتايلاندية وكورية" },
+    body: {
+      en: "Now 1,641 recipes and four new cuisines. Indian biryanis, curries, dals, chaat, breads and sweets; Chinese stir-fries, dumplings, noodles and halal Xinjiang dishes; Japanese katsu, donburi, sushi rolls, ramen and wagashi; Thai curries, noodles, salads and street desserts; and Korean barbecue, fried chicken, stews, kimchi and banchan. All halal-friendly: no pork, wine, sake or mirin.",
+      ar: "أصبح لدينا 1641 وصفة وأربعة مطابخ جديدة. البرياني والكاري والدال والتشات والخبز والحلويات الهندية؛ والأطباق الصينية المقلّبة والزلابية والنودلز وأطباق شينجيانغ الحلال؛ والكاتسو والدونبوري ولفائف السوشي والرامن والحلويات اليابانية؛ والكاري والنودلز والسلطات وحلويات الشارع التايلاندية؛ والشواء والدجاج المقلي واليخنات والكيمتشي والأطباق الجانبية الكورية. كلها حلال بدون لحم خنزير أو نبيذ أو ساكي أو ميرين.",
+    },
+  },
+  {
     id: "2026-10-european-recipes",
     date: "2026-10-19",
     title: { en: "383 Italian, French, Greek, Spanish and Mediterranean recipes", ar: "383 وصفة إيطالية وفرنسية ويونانية وإسبانية ومتوسطية" },
