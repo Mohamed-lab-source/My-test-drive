@@ -1243,7 +1243,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Egg", quantity: 1, displayUnit: "pcs" },
       { name: "Mint", quantity: 10, displayUnit: "g" },
       { name: "Oregano", quantity: 4, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 400, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 60, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 5, displayUnit: "g" },
     ],
     steps: [
@@ -1489,7 +1489,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Yeast", quantity: 7, displayUnit: "g" },
       { name: "Water", quantity: 300, displayUnit: "ml" },
       { name: "Sugar", quantity: 10, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 500, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 80, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Honey", quantity: 150, displayUnit: "g" },
       { name: "Cinnamon", quantity: 3, displayUnit: "g" },
       { name: "Walnuts", quantity: 30, displayUnit: "g", note: "crushed, for garnish" },
@@ -1780,7 +1780,7 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.EASY,
     tags: [DishTag.QUICK, DishTag.COMFORT],
     ingredients: [
-      { name: "Crusty Bread", quantity: 4, displayUnit: "pcs" },
+      { name: "Toast Bread", quantity: 4, displayUnit: "pcs" },
       { name: "Turkey Breast", quantity: 150, displayUnit: "g", note: "sliced deli-style" },
       { name: "Cheddar Cheese", quantity: 120, displayUnit: "g" },
       { name: "Milk", quantity: 200, displayUnit: "ml" },
@@ -1811,7 +1811,7 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.EASY,
     tags: [DishTag.VEGETARIAN, DishTag.QUICK, DishTag.DESSERT],
     ingredients: [
-      { name: "Crusty Bread", quantity: 6, displayUnit: "pcs" },
+      { name: "Toast Bread", quantity: 8, displayUnit: "pcs" },
       { name: "Egg", quantity: 3, displayUnit: "pcs" },
       { name: "Milk", quantity: 200, displayUnit: "ml" },
       { name: "Cinnamon", quantity: 3, displayUnit: "g" },
@@ -2318,7 +2318,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Flour", quantity: 60, displayUnit: "g" },
       { name: "Hot Sauce", quantity: 120, displayUnit: "ml" },
       { name: "Butter", quantity: 50, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 600, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 90, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 6, displayUnit: "g" },
     ],
     steps: [
@@ -2440,7 +2440,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Paprika", quantity: 8, displayUnit: "g" },
       { name: "Chili Powder", quantity: 4, displayUnit: "g" },
       { name: "Garlic", quantity: 10, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 700, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 100, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 8, displayUnit: "g" },
     ],
     steps: [
@@ -2469,7 +2469,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Onion", quantity: 150, displayUnit: "g" },
       { name: "Bell Pepper", quantity: 150, displayUnit: "g" },
       { name: "Cheddar Cheese", quantity: 200, displayUnit: "g" },
-      { name: "Crusty Bread", quantity: 4, displayUnit: "pcs" },
+      { name: "Burger Buns", quantity: 4, displayUnit: "pcs" },
       { name: "Olive Oil", quantity: 30, displayUnit: "ml" },
       { name: "Salt", quantity: 5, displayUnit: "g" },
     ],
@@ -3353,7 +3353,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Water", quantity: 260, displayUnit: "ml" },
       { name: "Sugar", quantity: 15, displayUnit: "g" },
       { name: "Salt", quantity: 5, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 600, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 90, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Honey", quantity: 80, displayUnit: "g" },
     ],
     steps: [
@@ -4375,7 +4375,7 @@ export const coreRecipes: RecipeSeed[] = [
     difficulty: Difficulty.EASY,
     tags: [DishTag.QUICK, DishTag.VEGETARIAN],
     ingredients: [
-      { name: "Crusty Bread", quantity: 4, displayUnit: "pcs", note: "or 300g day-old bread, cubed" },
+      { name: "Crusty Bread", quantity: 1, displayUnit: "pcs", note: "day-old loaf, cubed" },
       { name: "Cherry Tomato", quantity: 400, displayUnit: "g" },
       { name: "Cucumber", quantity: 200, displayUnit: "g" },
       { name: "Onion", quantity: 50, displayUnit: "g" },
@@ -4681,7 +4681,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Garlic", quantity: 8, displayUnit: "g" },
       { name: "Soy Sauce", quantity: 30, displayUnit: "ml" },
       { name: "Nori Sheets", quantity: 12, displayUnit: "pcs", note: "spring roll wrappers, or use nori" },
-      { name: "Olive Oil", quantity: 200, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 30, displayUnit: "ml", note: "for frying, amount absorbed" },
     ],
     steps: [
       { instruction: "Finely shred cabbage and carrot.", instructionAr: "ابشري الكرنب والجزر ناعمًا." },
@@ -4786,7 +4786,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Vinegar", quantity: 30, displayUnit: "ml" },
       { name: "Sugar", quantity: 40, displayUnit: "g" },
       { name: "Soy Sauce", quantity: 15, displayUnit: "ml" },
-      { name: "Olive Oil", quantity: 200, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 30, displayUnit: "ml", note: "for frying, amount absorbed" },
     ],
     steps: [
       { instruction: "Cut chicken into cubes and toss with egg and cornstarch to coat.", instructionAr: "قطّعي الدجاج لمكعبات وقلّبيه مع البيض والنشا للتغطية." },
@@ -4923,7 +4923,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Ginger", quantity: 8, displayUnit: "g" },
       { name: "Chili Flakes", quantity: 4, displayUnit: "g" },
       { name: "Spring Onion", quantity: 20, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 200, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 30, displayUnit: "ml", note: "for frying, amount absorbed" },
     ],
     steps: [
       { instruction: "Cut chicken into bite-sized pieces and coat with egg then cornstarch.", instructionAr: "قطّعي الدجاج لقطع صغيرة وغطّيها بالبيض ثم النشا." },
@@ -4956,7 +4956,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Cornstarch", quantity: 30, displayUnit: "g" },
       { name: "Water", quantity: 200, displayUnit: "ml", note: "ice-cold" },
       { name: "Egg", quantity: 1, displayUnit: "pcs" },
-      { name: "Olive Oil", quantity: 300, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 40, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Soy Sauce", quantity: 30, displayUnit: "ml", note: "for dipping" },
     ],
     steps: [
@@ -4991,7 +4991,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Garlic", quantity: 10, displayUnit: "g" },
       { name: "Ginger", quantity: 8, displayUnit: "g" },
       { name: "Chili Flakes", quantity: 3, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 200, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 30, displayUnit: "ml", note: "for frying, amount absorbed" },
     ],
     steps: [
       { instruction: "Cut chicken into bite-sized pieces and coat with egg then cornstarch.", instructionAr: "قطّعي الدجاج لقطع صغيرة وغطّيها بالبيض ثم النشا." },
@@ -5197,7 +5197,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Baking Powder", quantity: 5, displayUnit: "g" },
       { name: "Sesame Seeds", quantity: 30, displayUnit: "g" },
       { name: "Salt", quantity: 8, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 300, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 40, displayUnit: "ml", note: "for frying, amount absorbed" },
     ],
     steps: [
       { instruction: "Drain the soaked fava beans well.", instructionAr: "صفّي الفول المنقوع جيدًا." },
@@ -5764,7 +5764,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Flour", quantity: 60, displayUnit: "g" },
       { name: "Tomato", quantity: 300, displayUnit: "g" },
       { name: "Onion", quantity: 60, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 200, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 30, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 5, displayUnit: "g" },
     ],
     steps: [
@@ -5896,7 +5896,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Corn Tortilla", quantity: 4, displayUnit: "pcs" },
       { name: "Avocado", quantity: 1, displayUnit: "pcs" },
       { name: "Chili Powder", quantity: 5, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 100, displayUnit: "ml", note: "for frying tortilla strips" },
+      { name: "Vegetable Oil", quantity: 30, displayUnit: "ml", note: "for frying, amount absorbed tortilla strips" },
     ],
     steps: [
       { instruction: "Poach chicken breast in the stock until cooked through, then shred.", instructionAr: "اسلقي صدر الدجاج في المرقة حتى ينضج، ثم قطّعيه لخيوط.", timerMinutes: 15 },
@@ -5928,7 +5928,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Egg", quantity: 2, displayUnit: "pcs" },
       { name: "Sugar", quantity: 80, displayUnit: "g" },
       { name: "Cinnamon", quantity: 5, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 400, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 60, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Chocolate Chips", quantity: 100, displayUnit: "g", note: "melted, for dipping" },
     ],
     steps: [
@@ -5997,7 +5997,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Egg", quantity: 4, displayUnit: "pcs" },
       { name: "Cheddar Cheese", quantity: 100, displayUnit: "g" },
       { name: "Sour Cream", quantity: 60, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 200, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 30, displayUnit: "ml", note: "for frying, amount absorbed" },
     ],
     steps: [
       { instruction: "Cut tortillas into triangles and fry until crisp, then drain.", instructionAr: "قطّعي التورتيلا لمثلثات واقليها حتى تصبح مقرمشة، ثم صفّيها.", timerMinutes: 6 },
@@ -6234,7 +6234,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Cumin", quantity: 5, displayUnit: "g" },
       { name: "Garam Masala", quantity: 6, displayUnit: "g" },
       { name: "Flour", quantity: 300, displayUnit: "g", note: "for the pastry" },
-      { name: "Olive Oil", quantity: 400, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 60, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 6, displayUnit: "g" },
     ],
     steps: [
@@ -6539,7 +6539,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Water", quantity: 300, displayUnit: "ml" },
       { name: "Cardamom", quantity: 3, displayUnit: "g" },
       { name: "Rose Water", quantity: 10, displayUnit: "ml" },
-      { name: "Olive Oil", quantity: 300, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 40, displayUnit: "ml", note: "for frying, amount absorbed" },
     ],
     steps: [
       { instruction: "Simmer sugar and water into a light syrup, then stir in cardamom and rose water.", instructionAr: "اطبخي السكر والماء لعمل شراب خفيف، ثم أضيفي الحبهان وماء الورد.", timerMinutes: 10 },
@@ -6642,7 +6642,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Chili Powder", quantity: 10, displayUnit: "g" },
       { name: "Turmeric", quantity: 3, displayUnit: "g" },
       { name: "Curry Powder", quantity: 5, displayUnit: "g", note: "for the curry leaf-style aroma" },
-      { name: "Olive Oil", quantity: 300, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 40, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 5, displayUnit: "g" },
     ],
     steps: [
@@ -6771,7 +6771,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Cumin", quantity: 6, displayUnit: "g" },
       { name: "Sesame Seeds", quantity: 15, displayUnit: "g" },
       { name: "Baking Powder", quantity: 4, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 500, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 80, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 6, displayUnit: "g" },
     ],
     steps: [
@@ -6804,7 +6804,7 @@ export const coreRecipes: RecipeSeed[] = [
       { name: "Pine Nuts", quantity: 40, displayUnit: "g" },
       { name: "Cinnamon", quantity: 3, displayUnit: "g" },
       { name: "Cumin", quantity: 4, displayUnit: "g" },
-      { name: "Olive Oil", quantity: 500, displayUnit: "ml", note: "for frying" },
+      { name: "Vegetable Oil", quantity: 80, displayUnit: "ml", note: "for frying, amount absorbed" },
       { name: "Salt", quantity: 6, displayUnit: "g" },
     ],
     steps: [

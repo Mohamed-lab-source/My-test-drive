@@ -1,5 +1,12 @@
 import type { RecipeSeed } from "../types";
 import { coreRecipes } from "./core";
+import { american1 } from "./american1";
+import { american2 } from "./american2";
+import { american3 } from "./american3";
+import { asian1 } from "./asian1";
+import { asian2 } from "./asian2";
+import { asian3 } from "./asian3";
+import { asian4 } from "./asian4";
 import { chinese1 } from "./chinese1";
 import { chinese2 } from "./chinese2";
 import { egyptian1 } from "./egyptian1";
@@ -28,6 +35,9 @@ import { levantine2 } from "./levantine2";
 import { levantine3 } from "./levantine3";
 import { mediterranean1 } from "./mediterranean1";
 import { mediterranean2 } from "./mediterranean2";
+import { mexican1 } from "./mexican1";
+import { mexican2 } from "./mexican2";
+import { mexican3 } from "./mexican3";
 import { moroccan1 } from "./moroccan1";
 import { moroccan2 } from "./moroccan2";
 import { persian } from "./persian";
@@ -43,6 +53,13 @@ import { yemeni } from "./yemeni";
 /** Every recipe the seed loads; add new cuisine files here. */
 export const allRecipes: RecipeSeed[] = [
   ...coreRecipes,
+  ...american1,
+  ...american2,
+  ...american3,
+  ...asian1,
+  ...asian2,
+  ...asian3,
+  ...asian4,
   ...chinese1,
   ...chinese2,
   ...egyptian1,
@@ -71,6 +88,9 @@ export const allRecipes: RecipeSeed[] = [
   ...levantine3,
   ...mediterranean1,
   ...mediterranean2,
+  ...mexican1,
+  ...mexican2,
+  ...mexican3,
   ...moroccan1,
   ...moroccan2,
   ...persian,

@@ -7,6 +7,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: "2026-10-2000-recipes",
+    date: "2026-10-20",
+    title: { en: "2,000 recipes: American, Mexican and Southeast Asian", ar: "2000 وصفة: أمريكية ومكسيكية ومن جنوب شرق آسيا" },
+    body: {
+      en: "The catalog now holds 2,001 recipes. New this time: 127 American recipes (brunch, barbecue, Southern and Cajun cooking, sandwiches, game-day snacks, pies and cookies), 114 Mexican (birria, mole, tamales, enchiladas, street tacos, salsas, aguas frescas and pan dulce) and 119 from Vietnam, the Philippines, Indonesia, Malaysia, Singapore, Sri Lanka, Nepal, Taiwan, Pakistan and Afghanistan. Deep-fried recipes now count only the oil that is absorbed, so their calories and costs are more realistic.",
+      ar: "يضم الكتالوج الآن 2001 وصفة. الجديد هذه المرة: 127 وصفة أمريكية (فطور متأخر وشواء ومطبخ الجنوب والكاجون وساندويتشات ووجبات خفيفة وفطائر وكوكيز)، و114 مكسيكية (بيريا ومولي وتامالي وإنتشيلاداس وتاكو الشارع والصلصات والمشروبات والمخبوزات الحلوة)، و119 من فيتنام والفلبين وإندونيسيا وماليزيا وسنغافورة وسريلانكا ونيبال وتايوان وباكستان وأفغانستان. كما صارت وصفات القلي العميق تحسب الزيت الممتص فقط، فأصبحت سعراتها وتكلفتها أدق.",
+    },
+  },
+  {
     id: "2026-10-asian-recipes",
     date: "2026-10-20",
     title: { en: "332 Indian, Chinese, Japanese, Thai and Korean recipes", ar: "332 وصفة هندية وصينية ويابانية وتايلاندية وكورية" },
