@@ -276,6 +276,16 @@ How the code enforces it (keep it this way):
   banner (`currentAndNext`), best hour today (`bestHour`), weather heads-up
   (`weatherWarnings`), split by items (`splitByItems`), follow-the-sun theme
   (`isDaytime`, pref `theme.sun`).
+- 1.3 areas: `tool/districts.mjs` (tested in districts.test.mjs) gives every
+  place a well-known district (New Cairo (5th Settlement), Maadi, Heliopolis,
+  Dokki, … 32 in all) from its own data (OSM neighbourhood, Overture
+  locality, address) or a ≥60 % majority of labelled places within 800 m;
+  far-away new cities have a longitude check; "6 October Bridge" isn't the
+  city; venues in a mall take its district. Caps raised to 9000 restaurants /
+  7000 cafés per city. App: `lib/app/districts.dart` (same list, Arabic
+  names + search words, kept in sync by test/districts_test.dart); areas are
+  shown in Arabic by `PlacesRepository(arabic:)` (rebuilt on language
+  change). OSM also fetches named playgrounds / indoor play.
 
 ## Setup (browser only, see SETUP.md)
 
@@ -319,7 +329,7 @@ android/app/khroga-test.keystore  shared TEST signing key (SHA-1 FD:0F:A7:73:...
 
 ```bash
 flutter analyze && flutter test
-node --test tool/fetch_osm_places.test.mjs tool/merge_overture.test.mjs
+node --test tool/fetch_osm_places.test.mjs tool/merge_overture.test.mjs tool/districts.test.mjs
 cd rules-test && npm install && npm test   # needs Java + firebase-tools
 ```
 

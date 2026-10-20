@@ -97,6 +97,8 @@ test("categories and geometry helpers", () => {
   assert.equal(categoryOf({ tourism: "museum" }), "museum");
   assert.equal(categoryOf({ amenity: "ice_cream" }), "cafe");
   assert.equal(categoryOf({ amenity: "bank" }), null);
+  assert.equal(categoryOf({ leisure: "playground" }), "park");
+  assert.equal(categoryOf({ leisure: "indoor_play" }), "entertainment");
   const square = [[0, 0], [0, 1], [1, 1], [1, 0]];
   assert.equal(insidePolygon([0.5, 0.5], square), true);
   assert.equal(insidePolygon([1.5, 0.5], square), false);

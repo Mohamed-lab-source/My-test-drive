@@ -1907,4 +1907,10 @@ const arabic = <String, String>{
   'Light by day and dark after sunset, by the real sunset time.': 'فاتح بالنهار وغامق بعد المغرب، حسب ميعاد المغرب الحقيقي.',
   'Groups and helpful votes': 'الجروبات والتقييمات المفيدة',
   'Things on a group\'s "who brings what" list, and who said they\'ll bring them, are seen by that group\'s members. When you mark a review helpful, the number of helpful votes is public; a private copy under your account lets "Delete my account" remove your votes.': 'الحاجات اللي في قائمة "مين هيجيب إيه" في الجروب، ومين قال هيجيبها، بيشوفها أعضاء الجروب بس. لما تعلّم تقييم إنه مفيد، عدد التعليمات بيظهر للكل؛ ونسخة خاصة تحت حسابك بتخلي "امسح حسابي" يمسح تعليماتك.',
+  'New Cairo, Maadi, Heliopolis, Dokki and more areas': 'التجمع والمعادي ومصر الجديدة والدقي ومناطق أكتر',
+  'More areas': 'مناطق أكتر',
+  'New Cairo (5th Settlement), Maadi, Heliopolis, Dokki and 30 more districts, with their cafés, restaurants, malls and shops.': 'التجمع الخامس والمعادي ومصر الجديدة والدقي و30 منطقة كمان، بكافيهاتها ومطاعمها ومولاتها ومحلاتها.',
+  'Playgrounds': 'أماكن لعب الأطفال',
+  'Named playgrounds and indoor play areas from the map.': 'ملاعب الأطفال وأماكن اللعب المقفولة اللي على الخريطة.',
+  'indoor play': 'منطقة لعب مقفولة',
 };

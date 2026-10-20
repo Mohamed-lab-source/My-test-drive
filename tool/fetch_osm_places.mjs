@@ -41,11 +41,11 @@ export function categoryOf(t) {
   if (t.amenity === "cinema") return "cinema";
   if (t.shop === "mall") return "mall";
   if (t.leisure === "escape_game") return "escape_room";
-  if (["bowling_alley", "amusement_arcade", "trampoline_park", "water_park"].includes(t.leisure)) {
+  if (["bowling_alley", "amusement_arcade", "trampoline_park", "water_park", "indoor_play"].includes(t.leisure)) {
     return "entertainment";
   }
   if (["theme_park", "zoo", "aquarium"].includes(t.tourism)) return "entertainment";
-  if (t.leisure === "park" || t.leisure === "garden") return "park";
+  if (t.leisure === "park" || t.leisure === "garden" || t.leisure === "playground") return "park";
   if (["museum", "gallery"].includes(t.tourism) || ["arts_centre", "theatre"].includes(t.amenity)) {
     return "museum";
   }
@@ -241,7 +241,11 @@ export function convert(city, elements, shapes = []) {
       name,
       nameAr: nameAr && nameAr !== name ? nameAr : undefined,
       category,
-      kind: t.shop && category === "shop" ? t.shop : t.amenity === "fast_food" ? "fast_food" : undefined,
+      kind: t.shop && category === "shop" ? t.shop
+        : t.amenity === "fast_food" ? "fast_food"
+        : t.leisure === "playground" ? "playground"
+        : t.leisure === "indoor_play" ? "indoor_play"
+        : undefined,
       city,
       area,
       address: street || undefined,
@@ -305,7 +309,7 @@ out tags center;`;
   return {
     food: wrap(`  nwr(area.a)["amenity"~"^(restaurant|fast_food|cafe|ice_cream)$"]["name"];`),
     fun: wrap(`  nwr(area.a)["amenity"~"^(cinema|arts_centre|theatre)$"]["name"];
-  nwr(area.a)["leisure"~"^(escape_game|bowling_alley|amusement_arcade|trampoline_park|water_park|park|garden|sports_centre|ice_rink|horse_riding)$"]["name"];
+  nwr(area.a)["leisure"~"^(escape_game|bowling_alley|amusement_arcade|trampoline_park|water_park|indoor_play|playground|park|garden|sports_centre|ice_rink|horse_riding)$"]["name"];
   nwr(area.a)["tourism"~"^(museum|gallery|theme_park|zoo|aquarium|attraction|viewpoint)$"]["name"];
   nwr(area.a)["historic"~"^(${SIGHT_HISTORIC.join("|")})$"]["name"];
   nwr(area.a)["sport"="karting"]["name"];`),

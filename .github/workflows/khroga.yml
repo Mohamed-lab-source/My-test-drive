@@ -324,7 +324,7 @@ jobs:
           cache: true
 
       - name: Test the place tools
-        run: node --test tool/fetch_osm_places.test.mjs tool/merge_overture.test.mjs
+        run: node --test tool/fetch_osm_places.test.mjs tool/merge_overture.test.mjs tool/districts.test.mjs
 
       - name: Week number (places are refreshed weekly)
         id: week

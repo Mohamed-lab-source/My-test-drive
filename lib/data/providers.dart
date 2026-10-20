@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/local_prefs.dart' show appSettingsProvider;
 import '../app/theme_settings.dart' show sharedPrefsProvider;
 import '../models/place.dart';
 import '../app/extras.dart' show DayForecast, cityCenters;
@@ -31,7 +32,8 @@ final firestoreProvider = Provider((_) => FirebaseFirestore.instance);
 // ---- Repositories ----
 final authRepositoryProvider = Provider(
     (ref) => AuthRepository(FirebaseAuth.instance, ref.watch(firestoreProvider)));
-final placesRepositoryProvider = Provider((_) => PlacesRepository());
+final placesRepositoryProvider = Provider(
+    (ref) => PlacesRepository(arabic: ref.watch(appSettingsProvider.select((s) => s.lang)) == 'ar'));
 final plansRepositoryProvider = Provider((ref) =>
     PlansRepository(ref.watch(firestoreProvider), ref.watch(placesRepositoryProvider)));
 final groupsRepositoryProvider =

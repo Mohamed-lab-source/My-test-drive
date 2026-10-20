@@ -3,14 +3,19 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../app/districts.dart';
 import '../models/place.dart';
 
 /// Real places from OpenStreetMap and Overture Maps, bundled inside the app
 /// at build time (assets/data/places.json). No server, no cost, works offline.
 class PlacesRepository {
-  PlacesRepository({AssetBundle? bundle}) : _bundle = bundle ?? rootBundle;
+  PlacesRepository({AssetBundle? bundle, this.arabic = false}) : _bundle = bundle ?? rootBundle;
 
   final AssetBundle _bundle;
+
+  /// Show well-known area names in Arabic (the app makes a new repository
+  /// when the language changes).
+  final bool arabic;
   List<Place>? _all;
 
   Future<List<Place>>? _loading;
@@ -21,7 +26,7 @@ class PlacesRepository {
       final text = await _bundle.loadString('assets/data/places.json');
       // Tens of thousands of places: read them off the main thread so the
       // screen never freezes.
-      _all = await compute(_parsePlaces, text);
+      _all = await compute(_parsePlaces, (text, arabic));
       return _all!;
     }();
   }
@@ -46,19 +51,22 @@ class PlacesRepository {
   Future<List<Place>> malls(String city) async {
     final places = await all();
     final withVenues = {for (final p in places) ?p.parentMallId};
-    return places
-        .where((p) => p.city == city && p.category == 'mall' && withVenues.contains(p.id))
-        .toList()
+    return places.where((p) => p.city == city && p.category == 'mall' && withVenues.contains(p.id)).toList()
       ..sort((a, b) => a.name.compareTo(b.name));
   }
 }
 
-List<Place> _parsePlaces(String text) {
+List<Place> _parsePlaces((String, bool) input) {
+  final (text, arabic) = input;
   final raw = jsonDecode(text);
   final list = raw is Map ? (raw['places'] as List? ?? const []) : raw as List;
   return list
       .whereType<Map>()
-      .map((m) => Place.fromMap(Map<String, dynamic>.from(m)))
+      .map((m) {
+        final map = Map<String, dynamic>.from(m);
+        if (arabic && map['area'] is String) map['area'] = areaName(map['area'] as String, arabic: true);
+        return Place.fromMap(map);
+      })
       .where((p) => p.id.isNotEmpty)
       .toList();
 }

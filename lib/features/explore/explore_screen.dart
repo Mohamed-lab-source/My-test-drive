@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../../app/districts.dart' show areaSearchText;
 import '../../app/fun.dart' show luckyPlace;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
@@ -166,7 +167,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       bool has(String? s) => s != null && normalizeSearch(s).contains(q);
       return has(p.name) ||
           has(p.nameAr) ||
-          has(p.area) ||
+          (p.area != null && has(areaSearchText(p.area!))) ||
           has(p.cuisine?.replaceAll('_', ' ')) ||
           has(p.cuisineLabel) ||
           has(p.kind?.replaceAll('_', ' ')) ||

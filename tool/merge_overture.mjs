@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { insidePolygon } from "./fetch_osm_places.mjs";
+import { assignDistricts } from "./districts.mjs";
 
 const PLACES_FILE = "assets/data/places.json";
 
@@ -165,7 +166,7 @@ const NEAR_MALL_KM = 0.12;
 const NAMED_MALL_KM = 1.5;
 
 /** Per-city limits so the app stays fast (best-documented places first). */
-const CAPS = { restaurant: 5000, cafe: 3500, shop: 8000 };
+const CAPS = { restaurant: 9000, cafe: 7000, shop: 8000 };
 const SHOPS_PER_MALL = 250;
 
 /** The first Instagram/Facebook URL among Overture's social links. */
@@ -214,6 +215,7 @@ export function merge(osmPlaces, overtureRows) {
       kind: (o.tax ?? o.basic ?? "").replace(/_/g, " ") || undefined,
       city: cityFor(o, osmGrid),
       address: o.address || undefined,
+      _locality: o.locality || undefined,
       lat: o.lat,
       lng: o.lng,
       website: o.website || undefined,
@@ -286,7 +288,16 @@ export function merge(osmPlaces, overtureRows) {
     if (mall) { p.parentMallId = mall.id; linked++; }
   }
 
-  // 4. Keep shops only inside malls; drop mall-tagged things that aren't malls; apply limits.
+  // 4. Areas: every place gets its district (from its own data or its
+  //    neighbours); places inside a mall take the mall's district.
+  assignDistricts(all, { km, Grid });
+  const byId = new Map(all.map((p) => [p.id, p]));
+  for (const p of all) {
+    const mall = p.parentMallId && byId.get(p.parentMallId);
+    if (mall?.area && mall.city === p.city) p.area = mall.area;
+  }
+
+  // 5. Keep shops only inside malls; drop mall-tagged things that aren't malls; apply limits.
   const counts = {};
   const perMall = {};
   const out = [];

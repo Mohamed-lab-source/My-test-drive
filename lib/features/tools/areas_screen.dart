@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/extras.dart';
 import '../../app/fun.dart' show areaProgress;
+import '../../app/districts.dart' show areaSearchText;
 import '../../app/helpers.dart' show normalizeSearch;
 import '../../app/i18n.dart';
 import '../../app/theme.dart';
@@ -69,7 +70,8 @@ class _AreasScreenState extends ConsumerState<AreasScreen> {
             child: AsyncView(
               value: areas,
               builder: (list) {
-                final shown = list.where((a) => _q.isEmpty || normalizeSearch(a.name).contains(_q)).toList();
+                final shown =
+                    list.where((a) => _q.isEmpty || normalizeSearch(areaSearchText(a.name)).contains(_q)).toList();
                 if (_az) shown.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
                 if (shown.isEmpty) {
                   return EmptyState(emoji: '🏘️', title: tr('No areas found'));

@@ -9,6 +9,8 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🏙️', 'More areas', 'New Cairo (5th Settlement), Maadi, Heliopolis, Dokki and 30 more districts, with their cafés, restaurants, malls and shops.'),
+    ('🛝', 'Playgrounds', 'Named playgrounds and indoor play areas from the map.'),
     ('🎒', 'Who brings what', 'A shared list in each group: anyone can say "I\'ll bring it".'),
     ('👍', 'Helpful reviews', 'Mark reviews that helped you; see how many found each one helpful.'),
     ('🔮', 'For you', 'Real places like the ones you visit and save, with the reason why.'),

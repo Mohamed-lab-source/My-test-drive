@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 1.3.0
+
+<en-US>
+• Many more places in New Cairo (5th Settlement), Maadi, Heliopolis, Dokki, Nasr City, Sheikh Zayed, 6th of October and more
+• Every place now shows its district, in English or Arabic
+• Search areas the way you say them: "التجمع", "masr el gedida", "doki"
+• Playgrounds and indoor play areas
+</en-US>
+
+<ar>
+• أماكن أكتر بكتير في التجمع الخامس والمعادي ومصر الجديدة والدقي ومدينة نصر والشيخ زايد و6 أكتوبر وغيرهم
+• كل مكان بيظهر بمنطقته، بالعربي أو الإنجليزي
+• دوّر على المنطقة زي ما بتقولها: "التجمع"، "masr el gedida"، "doki"
+• أماكن لعب للأطفال
+</ar>
+
 ## 1.2.0
 
 <en-US>

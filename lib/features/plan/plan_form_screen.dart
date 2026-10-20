@@ -871,7 +871,7 @@ class _WhatsNewCard extends ConsumerWidget {
         child: ListTile(
           leading: const Text('🎁', style: TextStyle(fontSize: 26)),
           title: Text(trf("What's new in {v}", {'v': appVersion})),
-          subtitle: Text(tr('Who brings what, helpful reviews, For you and more')),
+          subtitle: Text(tr('New Cairo, Maadi, Heliopolis, Dokki and more areas')),
           trailing: IconButton(
             tooltip: tr('Hide'),
             icon: const Icon(Icons.close),
