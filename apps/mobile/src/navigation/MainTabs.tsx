@@ -1,0 +1,69 @@
+import React, { useEffect, useRef } from "react";
+import { Animated } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import * as Haptics from "expo-haptics";
+import type { MainTabParamList } from "./types";
+import { HomeScreen } from "../screens/HomeScreen";
+import { ListsScreen } from "../screens/ListsScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
+import { useLocale } from "../i18n/LocaleContext";
+import { useTheme } from "../theme/ThemeContext";
+import { useAccessibilityPrefs } from "../context/AccessibilityPrefsContext";
+import { useAppSettings } from "../context/AppSettingsContext";
+
+const Tab = createBottomTabNavigator<MainTabParamList>();
+
+const ICONS: Record<keyof MainTabParamList, string> = {
+  Home: "🏠",
+  Lists: "🧾",
+  Profile: "👤",
+};
+
+function TabIcon({ name, focused }: { name: keyof MainTabParamList; focused: boolean }) {
+  const { reduceMotion } = useAccessibilityPrefs();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      scale.setValue(focused ? 1.15 : 1);
+      return;
+    }
+    Animated.spring(scale, {
+      toValue: focused ? 1.15 : 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 14,
+    }).start();
+  }, [focused, reduceMotion]);
+
+  return (
+    <Animated.Text style={{ fontSize: 18, transform: [{ scale }] }}>{ICONS[name]}</Animated.Text>
+  );
+}
+
+export function MainTabs() {
+  const { t } = useLocale();
+  const { colors } = useTheme();
+  const { hapticsEnabled } = useAccessibilityPrefs();
+  const { startTab } = useAppSettings();
+  return (
+    <Tab.Navigator
+      initialRouteName={startTab}
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
+      })}
+      screenListeners={{
+        tabPress: () => {
+          if (hapticsEnabled) Haptics.selectionAsync().catch(() => {});
+        },
+      }}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: t("tabs.home") }} />
+      <Tab.Screen name="Lists" component={ListsScreen} options={{ title: t("tabs.lists") }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t("tabs.profile") }} />
+    </Tab.Navigator>
+  );
+}

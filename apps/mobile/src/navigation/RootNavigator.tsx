@@ -1,0 +1,220 @@
+import React from "react";
+import { ActivityIndicator } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "./types";
+import { MainTabs } from "./MainTabs";
+import { OnboardingScreen } from "../screens/OnboardingScreen";
+import { useAppSettings } from "../context/AppSettingsContext";
+import { FeatureTourScreen } from "../screens/FeatureTourScreen";
+import { RecipeListScreen } from "../screens/RecipeListScreen";
+import { RecipeDetailScreen } from "../screens/RecipeDetailScreen";
+import { ShoppingListScreen } from "../screens/ShoppingListScreen";
+import { ShoppingListDetailScreen } from "../screens/ShoppingListDetailScreen";
+import { CollectionDetailScreen } from "../screens/CollectionDetailScreen";
+import { CookModeScreen } from "../screens/CookModeScreen";
+import { LoginScreen } from "../screens/LoginScreen";
+import { SignupScreen } from "../screens/SignupScreen";
+import { ChangePasswordScreen } from "../screens/ChangePasswordScreen";
+import { ChangeEmailScreen } from "../screens/ChangeEmailScreen";
+import { GlossaryScreen } from "../screens/GlossaryScreen";
+import { UnitConverterScreen } from "../screens/UnitConverterScreen";
+import { NotesListScreen } from "../screens/NotesListScreen";
+import { MyReviewsScreen } from "../screens/MyReviewsScreen";
+import { SearchScreen } from "../screens/SearchScreen";
+import { MealPlannerScreen } from "../screens/MealPlannerScreen";
+import { CookingCalendarScreen } from "../screens/CookingCalendarScreen";
+import { PantryFinderScreen } from "../screens/PantryFinderScreen";
+import { SubstitutionFinderScreen } from "../screens/SubstitutionFinderScreen";
+import { CustomizeHomeScreen } from "../screens/CustomizeHomeScreen";
+import { CookingStatsScreen } from "../screens/CookingStatsScreen";
+import { BadgesScreen } from "../screens/BadgesScreen";
+import { MiseEnPlaceScreen } from "../screens/MiseEnPlaceScreen";
+import { WeeklyRecapScreen } from "../screens/WeeklyRecapScreen";
+import { MealPrepScreen } from "../screens/MealPrepScreen";
+import { FoodDiaryScreen } from "../screens/FoodDiaryScreen";
+import { MyPantryScreen } from "../screens/MyPantryScreen";
+import { HouseholdScreen } from "../screens/HouseholdScreen";
+import { LunchboxScreen } from "../screens/LunchboxScreen";
+import { PartyPlannerScreen } from "../screens/PartyPlannerScreen";
+import { CompareRecipesScreen } from "../screens/CompareRecipesScreen";
+import { DiscoverScreen } from "../screens/DiscoverScreen";
+import { CuisineExplorerScreen } from "../screens/CuisineExplorerScreen";
+import { HiddenRecipesScreen } from "../screens/HiddenRecipesScreen";
+import { KitchenTimerScreen } from "../screens/KitchenTimerScreen";
+import { CookingJournalScreen } from "../screens/CookingJournalScreen";
+import { GoalsScreen } from "../screens/GoalsScreen";
+import { CuisinePassportScreen } from "../screens/CuisinePassportScreen";
+import { MonthlyRecapScreen } from "../screens/MonthlyRecapScreen";
+import { SettingsScreen } from "../screens/SettingsScreen";
+import { AboutScreen } from "../screens/AboutScreen";
+import { KitchenGuidesScreen } from "../screens/KitchenGuidesScreen";
+import { FastingScreen } from "../screens/FastingScreen";
+import { LeanMuscleModeScreen } from "../screens/LeanMuscleModeScreen";
+import { WhatsNewScreen } from "../screens/WhatsNewScreen";
+import { useLocalPreference } from "../context/LocalPreferenceContext";
+import { useLocale } from "../i18n/LocaleContext";
+import { useTheme } from "../theme/ThemeContext";
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export function RootNavigator() {
+  const { preference, isLoading } = useLocalPreference();
+  const { isLoading: isLocaleLoading, t } = useLocale();
+  const { colors, isDark, isLoading: isThemeLoading } = useTheme();
+  const { isLoading: isSettingsLoading } = useAppSettings();
+
+  if (isLoading || isLocaleLoading || isThemeLoading || isSettingsLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </SafeAreaView>
+    );
+  }
+
+  const navigationTheme = {
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+      background: colors.background,
+      card: colors.background,
+      text: colors.text,
+      border: colors.border,
+      primary: colors.primary,
+    },
+  };
+
+  return (
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator
+        initialRouteName={preference.onboarded ? "Main" : "Onboarding"}
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          headerShadowVisible: false,
+          // Apple-style push: slide in from the right with the outgoing
+          // screen parallax-dimming underneath, matching iOS's UINavigationController.
+          animation: "slide_from_right",
+        }}
+      >
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="FeatureTour" component={FeatureTourScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+        <Stack.Screen name="RecipeList" component={RecipeListScreen} options={{ title: t("recipeList.title") }} />
+        <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} options={{ title: "" }} />
+        <Stack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: t("shoppingList.title") }} />
+        <Stack.Screen
+          name="ShoppingListDetail"
+          component={ShoppingListDetailScreen}
+          options={{ title: t("shoppingList.title") }}
+        />
+        <Stack.Screen
+          name="CollectionDetail"
+          component={CollectionDetailScreen}
+          options={{ title: t("collections.title") }}
+        />
+        <Stack.Screen
+          name="CookMode"
+          component={CookModeScreen}
+          options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+        />
+        <Stack.Screen
+          name="MiseEnPlace"
+          component={MiseEnPlaceScreen}
+          options={{ title: t("miseEnPlace.title") }}
+        />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ presentation: "modal", title: t("login.headerTitle") }}
+        />
+        <Stack.Screen
+          name="Signup"
+          component={SignupScreen}
+          options={{ presentation: "modal", title: t("signup.headerTitle") }}
+        />
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePasswordScreen}
+          options={{ title: t("changePassword.title") }}
+        />
+        <Stack.Screen
+          name="ChangeEmail"
+          component={ChangeEmailScreen}
+          options={{ title: t("changeEmail.title") }}
+        />
+        <Stack.Screen name="Glossary" component={GlossaryScreen} options={{ title: t("glossary.title") }} />
+        <Stack.Screen
+          name="UnitConverter"
+          component={UnitConverterScreen}
+          options={{ title: t("converter.title") }}
+        />
+        <Stack.Screen name="Notes" component={NotesListScreen} options={{ title: t("notes.title") }} />
+        <Stack.Screen name="MyReviews" component={MyReviewsScreen} options={{ title: t("myReviews.title") }} />
+        <Stack.Screen
+          name="Search"
+          component={SearchScreen}
+          options={{ presentation: "modal", title: t("search.title") }}
+        />
+        <Stack.Screen
+          name="MealPlanner"
+          component={MealPlannerScreen}
+          options={{ title: t("mealPlanner.title") }}
+        />
+        <Stack.Screen
+          name="CookingCalendar"
+          component={CookingCalendarScreen}
+          options={{ title: t("cookingCalendar.title") }}
+        />
+        <Stack.Screen
+          name="PantryFinder"
+          component={PantryFinderScreen}
+          options={{ title: t("pantryFinder.title") }}
+        />
+        <Stack.Screen
+          name="SubstitutionFinder"
+          component={SubstitutionFinderScreen}
+          options={{ title: t("substitutionFinder.title") }}
+        />
+        <Stack.Screen
+          name="CustomizeHome"
+          component={CustomizeHomeScreen}
+          options={{ title: t("customizeHome.title") }}
+        />
+        <Stack.Screen
+          name="CookingStats"
+          component={CookingStatsScreen}
+          options={{ title: t("cookingStats.title") }}
+        />
+        <Stack.Screen name="Badges" component={BadgesScreen} options={{ title: t("badges.title") }} />
+        <Stack.Screen name="WeeklyRecap" component={WeeklyRecapScreen} options={{ title: t("recap.title") }} />
+        <Stack.Screen
+          name="LeanMuscleMode"
+          component={LeanMuscleModeScreen}
+          options={{ title: t("leanMuscle.title") }}
+        />
+        <Stack.Screen name="MealPrep" component={MealPrepScreen} options={{ title: t("mealPrep.title") }} />
+        <Stack.Screen name="FoodDiary" component={FoodDiaryScreen} options={{ title: t("diary.title") }} />
+        <Stack.Screen name="MyPantry" component={MyPantryScreen} options={{ title: t("myPantry.title") }} />
+        <Stack.Screen name="Household" component={HouseholdScreen} options={{ title: t("household.title") }} />
+        <Stack.Screen name="Lunchbox" component={LunchboxScreen} options={{ title: t("lunchbox.title") }} />
+        <Stack.Screen name="PartyPlanner" component={PartyPlannerScreen} options={{ title: t("party.title") }} />
+        <Stack.Screen name="CompareRecipes" component={CompareRecipesScreen} options={{ title: t("compare.title") }} />
+        <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: t("discover.title") }} />
+        <Stack.Screen name="CuisineExplorer" component={CuisineExplorerScreen} options={{ title: t("cuisineExplorer.title") }} />
+        <Stack.Screen name="HiddenRecipes" component={HiddenRecipesScreen} options={{ title: t("hidden.title") }} />
+        <Stack.Screen name="KitchenTimer" component={KitchenTimerScreen} options={{ title: t("timers.title") }} />
+        <Stack.Screen name="CookingJournal" component={CookingJournalScreen} options={{ title: t("journal.title") }} />
+        <Stack.Screen name="Goals" component={GoalsScreen} options={{ title: t("goals.title") }} />
+        <Stack.Screen name="CuisinePassport" component={CuisinePassportScreen} options={{ title: t("passport.title") }} />
+        <Stack.Screen name="MonthlyRecap" component={MonthlyRecapScreen} options={{ title: t("monthlyRecap.title") }} />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t("settings.title") }} />
+        <Stack.Screen name="About" component={AboutScreen} options={{ title: t("about.title") }} />
+        <Stack.Screen name="KitchenGuides" component={KitchenGuidesScreen} options={{ title: t("guides.title") }} />
+        <Stack.Screen name="Fasting" component={FastingScreen} options={{ title: t("fasting.title") }} />
+        <Stack.Screen name="WhatsNew" component={WhatsNewScreen} options={{ title: t("whatsNew.title") }} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}

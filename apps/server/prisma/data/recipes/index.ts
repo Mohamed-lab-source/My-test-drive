@@ -1,0 +1,105 @@
+import type { RecipeSeed } from "../types";
+import { coreRecipes } from "./core";
+import { american1 } from "./american1";
+import { american2 } from "./american2";
+import { american3 } from "./american3";
+import { asian1 } from "./asian1";
+import { asian2 } from "./asian2";
+import { asian3 } from "./asian3";
+import { asian4 } from "./asian4";
+import { chinese1 } from "./chinese1";
+import { chinese2 } from "./chinese2";
+import { egyptian1 } from "./egyptian1";
+import { egyptian2 } from "./egyptian2";
+import { egyptian3 } from "./egyptian3";
+import { egyptian4 } from "./egyptian4";
+import { egyptian5 } from "./egyptian5";
+import { french1 } from "./french1";
+import { french2 } from "./french2";
+import { greek1 } from "./greek1";
+import { gulf1 } from "./gulf1";
+import { gulf2 } from "./gulf2";
+import { gulf3 } from "./gulf3";
+import { indian1 } from "./indian1";
+import { indian2 } from "./indian2";
+import { iraqi } from "./iraqi";
+import { italian1 } from "./italian1";
+import { italian2 } from "./italian2";
+import { italian3 } from "./italian3";
+import { japanese1 } from "./japanese1";
+import { japanese2 } from "./japanese2";
+import { korean1 } from "./korean1";
+import { korean2 } from "./korean2";
+import { levantine1 } from "./levantine1";
+import { levantine2 } from "./levantine2";
+import { levantine3 } from "./levantine3";
+import { mediterranean1 } from "./mediterranean1";
+import { mediterranean2 } from "./mediterranean2";
+import { mexican1 } from "./mexican1";
+import { mexican2 } from "./mexican2";
+import { mexican3 } from "./mexican3";
+import { moroccan1 } from "./moroccan1";
+import { moroccan2 } from "./moroccan2";
+import { persian } from "./persian";
+import { spanish1 } from "./spanish1";
+import { sudanese } from "./sudanese";
+import { thai1 } from "./thai1";
+import { thai2 } from "./thai2";
+import { tunisian } from "./tunisian";
+import { turkish1 } from "./turkish1";
+import { turkish2 } from "./turkish2";
+import { yemeni } from "./yemeni";
+
+/** Every recipe the seed loads; add new cuisine files here. */
+export const allRecipes: RecipeSeed[] = [
+  ...coreRecipes,
+  ...american1,
+  ...american2,
+  ...american3,
+  ...asian1,
+  ...asian2,
+  ...asian3,
+  ...asian4,
+  ...chinese1,
+  ...chinese2,
+  ...egyptian1,
+  ...egyptian2,
+  ...egyptian3,
+  ...egyptian4,
+  ...egyptian5,
+  ...french1,
+  ...french2,
+  ...greek1,
+  ...gulf1,
+  ...gulf2,
+  ...gulf3,
+  ...indian1,
+  ...indian2,
+  ...iraqi,
+  ...italian1,
+  ...italian2,
+  ...italian3,
+  ...japanese1,
+  ...japanese2,
+  ...korean1,
+  ...korean2,
+  ...levantine1,
+  ...levantine2,
+  ...levantine3,
+  ...mediterranean1,
+  ...mediterranean2,
+  ...mexican1,
+  ...mexican2,
+  ...mexican3,
+  ...moroccan1,
+  ...moroccan2,
+  ...persian,
+  ...spanish1,
+  ...sudanese,
+  ...thai1,
+  ...thai2,
+  ...tunisian,
+  ...turkish1,
+  ...turkish2,
+  ...yemeni,
+];

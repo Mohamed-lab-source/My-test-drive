@@ -1,0 +1,931 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
+import * as Sharing from "expo-sharing";
+import { captureRef } from "react-native-view-shot";
+import { ShareablePlanCard } from "../components/ShareablePlanCard";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/types";
+import {
+  fetchCuisines,
+  fetchDeliveryPartners,
+  fetchNearbyStores,
+  fetchRecipeDetail,
+  fetchRecipes,
+  fetchRecommended,
+} from "../api/endpoints";
+import { apiErrorMessage } from "../api/client";
+import { AnimatedPressable } from "../components/AnimatedPressable";
+import { Chip } from "../components/Chip";
+import { FadeSlideIn } from "../components/FadeSlideIn";
+import { PrimaryButton } from "../components/PrimaryButton";
+import { useAuth } from "../context/AuthContext";
+import { useLocalPreference } from "../context/LocalPreferenceContext";
+import { useMealPlan } from "../context/MealPlanContext";
+import { useMealReminder } from "../context/MealReminderContext";
+import { useLeftovers } from "../context/LeftoversContext";
+import { useToast } from "../context/ToastContext";
+import { usePantryCheck } from "../context/PantryCheckContext";
+import { useUnits } from "../context/UnitsContext";
+import { formatQuantity } from "../utils/units";
+import { categoryEmoji, categoryLabelKey, groupByCategory } from "../utils/ingredientCategory";
+import { rankRecipes } from "../utils/rank";
+import { useLocale } from "../i18n/LocaleContext";
+import type { TranslationKey } from "../i18n/translations";
+import { useTheme } from "../theme/ThemeContext";
+import { CUISINE_EMOJI } from "../utils/cuisineEmoji";
+import { radius, spacing, type ThemeColors } from "../theme";
+import type { Cuisine, DeliveryPartner, RecipeSummary } from "../api/types";
+
+type Props = NativeStackScreenProps<RootStackParamList, "MealPlanner">;
+
+const DAYS_AHEAD = 7;
+const DEBOUNCE_MS = 350;
+const BUDGET_CAP_KEY = "cookmate.weeklyBudgetCap";
+const LOCKED_DAYS_KEY = "cookmate.mealPlanLockedDays";
+const REMINDER_TIME_PRESETS: { hour: number; minute: number; label: string }[] = [
+  { hour: 15, minute: 0, label: "15:00" },
+  { hour: 16, minute: 0, label: "16:00" },
+  { hour: 17, minute: 0, label: "17:00" },
+  { hour: 18, minute: 0, label: "18:00" },
+  { hour: 19, minute: 0, label: "19:00" },
+];
+
+function dateKeyFor(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
+type AggregatedItem = { name: string; quantity: number; unit: string; category: string };
+
+export function MealPlannerScreen({ navigation }: Props) {
+  const { t, locale, isRTL } = useLocale();
+  const { colors } = useTheme();
+  const { unitSystem } = useUnits();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { plan, setPlan } = useMealPlan();
+  const { enabled: reminderEnabled, time: reminderTime, setEnabled: setReminderEnabled, setTime: setReminderTime } =
+    useMealReminder();
+  const { leftovers } = useLeftovers();
+  const { showToast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const { preference } = useLocalPreference();
+  const textAlign = isRTL ? "right" : "left";
+
+  const [pickerDate, setPickerDate] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<RecipeSummary[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [autoFilling, setAutoFilling] = useState(false);
+  const [aggregated, setAggregated] = useState<AggregatedItem[] | null>(null);
+  const [totalCost, setTotalCost] = useState(0);
+  const { isChecked: isHaveAlready, toggle: toggleHaveAlready } = usePantryCheck();
+  const [deliveryPartners, setDeliveryPartners] = useState<DeliveryPartner[]>([]);
+  const [mapsUrl, setMapsUrl] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [budgetCap, setBudgetCapState] = useState<number | null>(null);
+  const [budgetCapInput, setBudgetCapInput] = useState("");
+  const [lockedDays, setLockedDays] = useState<Set<string>>(new Set());
+  const [cuisines, setCuisines] = useState<Cuisine[]>([]);
+  const [themedFillingSlug, setThemedFillingSlug] = useState<string | null>(null);
+  const planCardRef = useRef<View>(null);
+  const [sharingPlanImage, setSharingPlanImage] = useState(false);
+
+  useEffect(() => {
+    fetchDeliveryPartners().then(setDeliveryPartners).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchCuisines().then(setCuisines).catch(() => {});
+  }, [locale]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(LOCKED_DAYS_KEY)
+      .then((stored) => {
+        if (stored) setLockedDays(new Set(JSON.parse(stored) as string[]));
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleDayLock = (dateKey: string) => {
+    setLockedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      AsyncStorage.setItem(LOCKED_DAYS_KEY, JSON.stringify(Array.from(next))).catch(() => {});
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    AsyncStorage.getItem(BUDGET_CAP_KEY)
+      .then((stored) => {
+        if (!stored) return;
+        const n = Number(stored);
+        if (!Number.isNaN(n) && n > 0) {
+          setBudgetCapState(n);
+          setBudgetCapInput(String(n));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const updateBudgetCap = (text: string) => {
+    setBudgetCapInput(text);
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setBudgetCapState(null);
+      AsyncStorage.removeItem(BUDGET_CAP_KEY).catch(() => {});
+      return;
+    }
+    const n = Number(trimmed);
+    if (!Number.isNaN(n) && n > 0) {
+      setBudgetCapState(n);
+      AsyncStorage.setItem(BUDGET_CAP_KEY, String(n)).catch(() => {});
+    }
+  };
+
+  const handleShareList = async () => {
+    if (!aggregated) return;
+    const lines = aggregated.map((item) => `- ${item.name}: ${formatQuantity(item.quantity, item.unit, unitSystem)}`);
+    const message = [
+      t("mealPlanner.combinedListTitle"),
+      "",
+      ...lines,
+      "",
+      t("mealPlanner.estimatedTotal", { amount: totalCost }),
+    ].join("\n");
+    try {
+      await Share.share({ message });
+    } catch {
+      // User cancelled or share failed silently; nothing to recover.
+    }
+  };
+
+  const shareWeek = async () => {
+    const lines = visibleDateKeys.map((dateKey, offset) => {
+      const recipe = plan[dateKey];
+      return `${weekdayLabel(offset, dateKey)}: ${recipe ? recipe.title : t("mealPlanner.shareWeekEmptyDay")}`;
+    });
+    const message = [t("mealPlanner.shareWeekTitle"), "", ...lines].join("\n");
+    try {
+      await Share.share({ message });
+    } catch {
+      // User cancelled or share failed silently; nothing to recover.
+    }
+  };
+
+  const handleSharePlanImage = async () => {
+    setSharingPlanImage(true);
+    try {
+      const uri = await captureRef(planCardRef, { format: "png", quality: 0.92 });
+      const canShareFile = Platform.OS !== "web" && (await Sharing.isAvailableAsync());
+      if (canShareFile) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: t("share.dialogTitle") });
+      } else {
+        await shareWeek();
+      }
+    } catch {
+      Alert.alert(t("share.error"));
+    } finally {
+      setSharingPlanImage(false);
+    }
+  };
+
+  const repeatLastWeek = () => {
+    let applied = 0;
+    visibleDateKeys.forEach((dateKey) => {
+      if (plan[dateKey]) return;
+      const d = new Date(dateKey + "T00:00:00");
+      d.setDate(d.getDate() - 7);
+      const lastWeekRecipe = plan[d.toISOString().slice(0, 10)];
+      if (lastWeekRecipe) {
+        setPlan(dateKey, lastWeekRecipe);
+        applied += 1;
+      }
+    });
+    if (applied === 0) Alert.alert(t("mealPlanner.repeatLastWeekError"));
+  };
+
+  const copyWeekForward = () => {
+    let applied = 0;
+    visibleDateKeys.forEach((dateKey) => {
+      const recipe = plan[dateKey];
+      if (!recipe) return;
+      const d = new Date(dateKey + "T00:00:00");
+      d.setDate(d.getDate() + 7);
+      const nextWeekKey = d.toISOString().slice(0, 10);
+      if (!plan[nextWeekKey] && !lockedDays.has(nextWeekKey)) {
+        setPlan(nextWeekKey, recipe);
+        applied += 1;
+      }
+    });
+    if (applied === 0) {
+      Alert.alert(t("mealPlanner.copyForwardError"));
+    } else {
+      showToast(t("mealPlanner.copyForwardSuccess", { count: applied }));
+    }
+  };
+
+  const findNearbyStores = async () => {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const { mapsSearchUrl } = await fetchNearbyStores();
+        setMapsUrl(mapsSearchUrl);
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const { mapsSearchUrl } = await fetchNearbyStores(position.coords.latitude, position.coords.longitude);
+      setMapsUrl(mapsSearchUrl);
+    } catch (error) {
+      Alert.alert(t("shoppingList.errorLocation"), apiErrorMessage(error));
+    } finally {
+      setLocating(false);
+    }
+  };
+
+  const weekdayLabel = (offset: number, dateKey: string) => {
+    if (offset === 0) return t("mealPlanner.today");
+    if (offset === 1) return t("mealPlanner.tomorrow");
+    const day = new Date(dateKey + "T00:00:00").getDay();
+    return t(`weekday.${day}` as TranslationKey);
+  };
+
+  const runSearch = (text: string) => {
+    setQuery(text);
+    const q = text.trim();
+    if (!q) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    setTimeout(() => {
+      fetchRecipes({ q })
+        .then(setResults)
+        .finally(() => setSearching(false));
+    }, DEBOUNCE_MS);
+  };
+
+  const openPicker = (dateKey: string) => {
+    setPickerDate(dateKey);
+    setQuery("");
+    setResults([]);
+  };
+
+  const pick = (recipe: RecipeSummary) => {
+    if (pickerDate) setPlan(pickerDate, recipe);
+    setPickerDate(null);
+  };
+
+  const visibleDateKeys = Array.from({ length: DAYS_AHEAD }, (_, offset) => dateKeyFor(offset));
+  const plannedEntries = visibleDateKeys
+    .map((dateKey) => [dateKey, plan[dateKey]] as const)
+    .filter((entry): entry is [string, RecipeSummary] => Boolean(entry[1]));
+
+  const weeklyNutrition =
+    plannedEntries.length > 0
+      ? {
+          daysPlanned: plannedEntries.length,
+          avgCalories: Math.round(
+            plannedEntries.reduce((sum, [, r]) => sum + r.caloriesPerServing, 0) / plannedEntries.length
+          ),
+          avgProtein:
+            Math.round(
+              (plannedEntries.reduce((sum, [, r]) => sum + r.proteinPerServing, 0) / plannedEntries.length) * 10
+            ) / 10,
+          estimatedCost: Math.round(
+            plannedEntries.reduce((sum, [, r]) => sum + r.costPerServing * r.baseServings, 0)
+          ),
+        }
+      : null;
+
+  const autoFillWeek = async () => {
+    let emptyDateKeys = visibleDateKeys.filter((dateKey) => !plan[dateKey] && !lockedDays.has(dateKey));
+    if (emptyDateKeys.length === 0) return;
+    setAutoFilling(true);
+    try {
+      const alreadyPlannedSlugs = new Set(plannedEntries.map(([, r]) => r.slug));
+
+      // Leftovers are time-sensitive (they spoil), so place the soonest-expiring
+      // ones into the earliest open days before filling the rest generically.
+      for (const leftover of leftovers) {
+        if (emptyDateKeys.length === 0) break;
+        if (alreadyPlannedSlugs.has(leftover.slug)) continue;
+        try {
+          const detail = await fetchRecipeDetail(leftover.slug);
+          const [dateKey, ...rest] = emptyDateKeys;
+          setPlan(dateKey, detail);
+          alreadyPlannedSlugs.add(leftover.slug);
+          emptyDateKeys = rest;
+        } catch {
+          // Recipe may no longer exist; skip this leftover.
+        }
+      }
+      if (emptyDateKeys.length === 0) return;
+
+      const candidates = isAuthenticated
+        ? await fetchRecommended()
+        : rankRecipes(await fetchRecipes({}), preference.dietGoal, preference.favoriteCuisineSlugs);
+      const pool = candidates.filter((r) => !alreadyPlannedSlugs.has(r.slug));
+      emptyDateKeys.forEach((dateKey, i) => {
+        if (pool.length === 0) return;
+        setPlan(dateKey, pool[i % pool.length]);
+      });
+    } catch (error) {
+      Alert.alert(t("mealPlanner.autoFillError"), apiErrorMessage(error));
+    } finally {
+      setAutoFilling(false);
+    }
+  };
+
+  const autoFillWeekThemed = async (cuisineSlug: string) => {
+    const emptyDateKeys = visibleDateKeys.filter((dateKey) => !plan[dateKey] && !lockedDays.has(dateKey));
+    if (emptyDateKeys.length === 0) return;
+    setThemedFillingSlug(cuisineSlug);
+    try {
+      const candidates = await fetchRecipes({ cuisine: cuisineSlug });
+      const alreadyPlannedSlugs = new Set(plannedEntries.map(([, r]) => r.slug));
+      const pool = candidates.filter((r) => !alreadyPlannedSlugs.has(r.slug));
+      if (pool.length === 0) {
+        Alert.alert(t("mealPlanner.autoFillError"));
+        return;
+      }
+      emptyDateKeys.forEach((dateKey, i) => {
+        setPlan(dateKey, pool[i % pool.length]);
+      });
+    } catch (error) {
+      Alert.alert(t("mealPlanner.autoFillError"), apiErrorMessage(error));
+    } finally {
+      setThemedFillingSlug(null);
+    }
+  };
+
+  const generateShoppingList = async () => {
+    if (plannedEntries.length === 0) return;
+    setGenerating(true);
+    try {
+      const uniqueSlugs = Array.from(new Set(plannedEntries.map(([, r]) => r.slug)));
+      const details = await Promise.all(uniqueSlugs.map((slug) => fetchRecipeDetail(slug)));
+      const detailBySlug = new Map(details.map((d) => [d.slug, d]));
+
+      const totals = new Map<string, AggregatedItem>();
+      let cost = 0;
+      for (const [, recipe] of plannedEntries) {
+        const detail = detailBySlug.get(recipe.slug);
+        if (!detail) continue;
+        cost += detail.costPerServing * detail.baseServings;
+        for (const ing of detail.ingredients) {
+          const key = `${ing.name}|${ing.unit}`;
+          const existing = totals.get(key);
+          if (existing) {
+            existing.quantity += ing.quantity;
+          } else {
+            totals.set(key, { name: ing.name, quantity: ing.quantity, unit: ing.unit, category: ing.category });
+          }
+        }
+      }
+      setAggregated(Array.from(totals.values()).sort((a, b) => a.name.localeCompare(b.name)));
+      setTotalCost(Math.round(cost * 100) / 100);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={["bottom"]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.subtitle, { textAlign }]}>{t("mealPlanner.subtitle")}</Text>
+
+        {visibleDateKeys.some((dateKey) => !plan[dateKey]) ? (
+          <View style={styles.autoFillButton}>
+            <PrimaryButton
+              label={t("mealPlanner.autoFillWeek")}
+              variant="outline"
+              onPress={autoFillWeek}
+              loading={autoFilling}
+            />
+          </View>
+        ) : null}
+        {visibleDateKeys.some((dateKey) => !plan[dateKey]) ? (
+          <View style={styles.autoFillButton}>
+            <PrimaryButton label={t("mealPlanner.repeatLastWeek")} variant="outline" onPress={repeatLastWeek} />
+          </View>
+        ) : null}
+        {plannedEntries.length > 0 ? (
+          <View style={styles.autoFillButton}>
+            <PrimaryButton label={t("mealPlanner.copyForward")} variant="outline" onPress={copyWeekForward} />
+          </View>
+        ) : null}
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
+            label={t("leanMuscle.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("LeanMuscleMode")}
+          />
+        </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
+            label={t("mealPrep.title")}
+            variant="outline"
+            onPress={() => navigation.navigate("MealPrep")}
+          />
+        </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
+            label={t("mealPlanner.viewCalendar")}
+            variant="outline"
+            onPress={() => navigation.navigate("CookingCalendar")}
+          />
+        </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton label={t("mealPlanner.shareWeek")} variant="outline" onPress={shareWeek} />
+        </View>
+        <View style={styles.autoFillButton}>
+          <PrimaryButton
+            label={t("mealPlanner.sharePlanImage")}
+            variant="outline"
+            onPress={handleSharePlanImage}
+            loading={sharingPlanImage}
+          />
+        </View>
+
+        {visibleDateKeys.some((dateKey) => !plan[dateKey]) && cuisines.length > 0 ? (
+          <>
+            <Text style={[styles.label, { textAlign }]}>{t("mealPlanner.themedWeekLabel")}</Text>
+            <View style={styles.themeRow}>
+              {cuisines.slice(0, 8).map((c) => (
+                <Chip
+                  key={c.slug}
+                  label={c.name}
+                  selected={themedFillingSlug === c.slug}
+                  onPress={() => autoFillWeekThemed(c.slug)}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        <Text style={[styles.label, { textAlign }]}>{t("mealPlanner.budgetCapLabel")}</Text>
+        <TextInput
+          style={[styles.input, { textAlign }]}
+          placeholder={t("mealPlanner.budgetCapPlaceholder")}
+          placeholderTextColor={colors.textMuted}
+          keyboardType="decimal-pad"
+          value={budgetCapInput}
+          onChangeText={updateBudgetCap}
+        />
+        {budgetCap && weeklyNutrition ? (
+          <View style={styles.budgetProgressWrap}>
+            <View style={styles.budgetProgressTrack}>
+              <View
+                style={[
+                  styles.budgetProgressFill,
+                  {
+                    width: `${Math.min(100, Math.round((weeklyNutrition.estimatedCost / budgetCap) * 100))}%`,
+                    backgroundColor:
+                      weeklyNutrition.estimatedCost > budgetCap ? colors.danger : colors.success,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.budgetProgressText}>
+              {t("mealPlanner.budgetCapProgress", { spent: weeklyNutrition.estimatedCost, cap: budgetCap })}
+            </Text>
+            {weeklyNutrition.estimatedCost > budgetCap ? (
+              <Text style={styles.budgetOverText}>
+                {t("mealPlanner.budgetCapOver", { amount: weeklyNutrition.estimatedCost - budgetCap })}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        <Text style={[styles.label, { textAlign }]}>{t("mealPlanner.remindersLabel")}</Text>
+        <View style={styles.themeRow}>
+          <Chip
+            label={t(reminderEnabled ? "mealPlanner.remindersOn" : "mealPlanner.remindersOff")}
+            selected={reminderEnabled}
+            onPress={async () => {
+              const result = await setReminderEnabled(!reminderEnabled);
+              if (!reminderEnabled && !result) {
+                Alert.alert(t("mealPlanner.remindersPermissionDeniedTitle"), t("mealPlanner.remindersPermissionDeniedMessage"));
+              }
+            }}
+          />
+          {reminderEnabled
+            ? REMINDER_TIME_PRESETS.map((preset) => (
+                <Chip
+                  key={preset.hour}
+                  label={preset.label}
+                  selected={reminderTime.hour === preset.hour && reminderTime.minute === preset.minute}
+                  onPress={() => setReminderTime({ hour: preset.hour, minute: preset.minute })}
+                />
+              ))
+            : null}
+        </View>
+
+        {weeklyNutrition ? (
+          <View style={styles.nutritionRow}>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>
+                {weeklyNutrition.daysPlanned}/{DAYS_AHEAD}
+              </Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.daysPlanned")}</Text>
+            </View>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>{weeklyNutrition.avgCalories}</Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.avgCalories")}</Text>
+            </View>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>{weeklyNutrition.avgProtein}g</Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.avgProtein")}</Text>
+            </View>
+            <View style={styles.nutritionStat}>
+              <Text style={styles.nutritionValue}>
+                {t("mealPlanner.estimatedWeekCostValue", { amount: weeklyNutrition.estimatedCost })}
+              </Text>
+              <Text style={styles.nutritionLabel}>{t("mealPlanner.estimatedWeekCost")}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {Array.from({ length: DAYS_AHEAD }).map((_, offset) => {
+          const dateKey = dateKeyFor(offset);
+          const recipe = plan[dateKey];
+          return (
+            <FadeSlideIn key={dateKey} index={offset}>
+              <View style={styles.dayRow}>
+                <View style={styles.dayLabelRow}>
+                  <Text style={[styles.dayLabel, { textAlign }]}>{weekdayLabel(offset, dateKey)}</Text>
+                  <AnimatedPressable
+                    pressScale={0.85}
+                    onPress={() => toggleDayLock(dateKey)}
+                    accessibilityLabel={t(lockedDays.has(dateKey) ? "mealPlanner.unlockDay" : "mealPlanner.lockDay")}
+                  >
+                    <Text style={styles.lockIcon}>{lockedDays.has(dateKey) ? "🔒" : "🔓"}</Text>
+                  </AnimatedPressable>
+                </View>
+                {recipe ? (
+                  <View style={styles.plannedCard}>
+                    <AnimatedPressable
+                      style={styles.plannedCardMain}
+                      pressScale={0.98}
+                      onPress={() => navigation.navigate("RecipeDetail", { slug: recipe.slug })}
+                    >
+                      <Text style={styles.plannedEmoji}>{CUISINE_EMOJI[recipe.cuisine.slug] ?? "🍽️"}</Text>
+                      <Text style={styles.plannedTitle} numberOfLines={1}>
+                        {recipe.title}
+                      </Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      style={styles.removeButton}
+                      pressScale={0.85}
+                      accessibilityLabel={t("mealPlanner.removeDay")}
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setPlan(dateKey, null);
+                        showToast(t("mealPlanner.dayRemovedToast", { title: recipe.title }), {
+                          actionLabel: t("home.undo"),
+                          onAction: () => setPlan(dateKey, recipe),
+                        });
+                      }}
+                    >
+                      <Text style={styles.removeButtonText}>✕</Text>
+                    </AnimatedPressable>
+                  </View>
+                ) : (
+                  <AnimatedPressable
+                    style={styles.addCard}
+                    pressScale={0.97}
+                    onPress={() => openPicker(dateKey)}
+                  >
+                    <Text style={styles.addCardText}>{t("mealPlanner.addRecipe")}</Text>
+                  </AnimatedPressable>
+                )}
+              </View>
+            </FadeSlideIn>
+          );
+        })}
+
+        <View style={styles.generateButton}>
+          <PrimaryButton
+            label={t("mealPlanner.generateShoppingList")}
+            onPress={generateShoppingList}
+            loading={generating}
+            disabled={plannedEntries.length === 0}
+          />
+        </View>
+
+        {aggregated ? (
+          <FadeSlideIn style={styles.resultSection}>
+            <Text style={[styles.sectionTitle, { textAlign }]}>
+              {t("mealPlanner.combinedListTitle")}
+            </Text>
+            <Text style={styles.totalCost}>{t("mealPlanner.estimatedTotal", { amount: totalCost })}</Text>
+            <Text style={[styles.pantryHint, { textAlign }]}>{t("shoppingList.pantryHint")}</Text>
+            {groupByCategory(aggregated).map((group) => (
+              <View key={group.category}>
+                <Text style={[styles.aisleHeader, { textAlign }]}>
+                  {categoryEmoji(group.category)} {t(categoryLabelKey(group.category))}
+                </Text>
+                {group.items.map((item) => {
+                  const key = item.name;
+                  const have = isHaveAlready(key);
+                  return (
+                    <AnimatedPressable
+                      key={key}
+                      style={styles.itemRow}
+                      pressScale={0.99}
+                      onPress={() => toggleHaveAlready(key)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: have }}
+                    >
+                      <View style={styles.itemLeft}>
+                        <View style={[styles.checkbox, have && styles.checkboxChecked]}>
+                          {have ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                        </View>
+                        <Text style={[styles.itemName, have && styles.itemNameChecked]}>{item.name}</Text>
+                      </View>
+                      <Text style={[styles.itemQty, have && styles.itemNameChecked]}>
+                        {formatQuantity(item.quantity, item.unit, unitSystem)}
+                      </Text>
+                    </AnimatedPressable>
+                  );
+                })}
+              </View>
+            ))}
+
+            <Text style={[styles.sectionTitle, { textAlign }]}>{t("shoppingList.getIngredients")}</Text>
+            <View style={styles.partnerRow}>
+              {deliveryPartners.map((partner) => (
+                <AnimatedPressable
+                  key={partner.id}
+                  style={styles.partnerCard}
+                  pressScale={0.94}
+                  onPress={() => Linking.openURL(partner.websiteUrl)}
+                >
+                  <Text style={styles.partnerEmoji}>{partner.logoEmoji}</Text>
+                  <Text style={styles.partnerName}>{partner.name}</Text>
+                </AnimatedPressable>
+              ))}
+            </View>
+
+            <View style={styles.nearbyButton}>
+              <PrimaryButton
+                label={t("shoppingList.findNearby")}
+                variant="outline"
+                onPress={findNearbyStores}
+                loading={locating}
+              />
+            </View>
+            {mapsUrl ? (
+              <Pressable onPress={() => Linking.openURL(mapsUrl)}>
+                <Text style={styles.mapsLink}>{t("shoppingList.openMaps")}</Text>
+              </Pressable>
+            ) : null}
+            <View style={styles.shareButton}>
+              <PrimaryButton label={t("shoppingList.share")} variant="outline" onPress={handleShareList} />
+            </View>
+          </FadeSlideIn>
+        ) : null}
+
+        <View style={styles.offScreen} pointerEvents="none">
+          <ShareablePlanCard
+            ref={planCardRef}
+            titleLabel={t("mealPlanner.shareWeekTitle")}
+            brandingLabel={t("share.branding")}
+            emptyDayLabel={t("mealPlanner.shareWeekEmptyDay")}
+            isRTL={isRTL}
+            days={visibleDateKeys.map((dateKey, offset) => ({
+              label: weekdayLabel(offset, dateKey),
+              title: plan[dateKey]?.title ?? null,
+              cuisineSlug: plan[dateKey]?.cuisine.slug ?? null,
+            }))}
+          />
+        </View>
+      </ScrollView>
+
+      <Modal visible={pickerDate !== null} animationType="slide" transparent onRequestClose={() => setPickerDate(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={[styles.modalTitle, { textAlign }]}>{t("mealPlanner.pickerTitle")}</Text>
+            <TextInput
+              style={[styles.searchInput, { textAlign }]}
+              placeholder={t("search.placeholder")}
+              placeholderTextColor={colors.textMuted}
+              value={query}
+              onChangeText={runSearch}
+              autoFocus
+              autoCorrect={false}
+            />
+            {searching ? (
+              <ActivityIndicator color={colors.primary} style={styles.pickerSpinner} />
+            ) : (
+              <FlatList
+                data={results}
+                keyExtractor={(item) => item.id}
+                style={styles.pickerList}
+                renderItem={({ item }) => (
+                  <AnimatedPressable style={styles.pickerRow} pressScale={0.98} onPress={() => pick(item)}>
+                    <Text style={styles.plannedEmoji}>{CUISINE_EMOJI[item.cuisine.slug] ?? "🍽️"}</Text>
+                    <Text style={styles.pickerRowTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                  </AnimatedPressable>
+                )}
+              />
+            )}
+            <AnimatedPressable style={styles.modalClose} pressScale={0.96} onPress={() => setPickerDate(null)}>
+              <Text style={styles.modalCloseText}>{t("cookMode.close")}</Text>
+            </AnimatedPressable>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing(3), paddingBottom: spacing(6) },
+    subtitle: { color: colors.textMuted, marginBottom: spacing(2), lineHeight: 20 },
+    autoFillButton: { marginBottom: spacing(2) },
+    label: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: spacing(1) },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing(1.5),
+      paddingVertical: spacing(1.25),
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      marginBottom: spacing(1.5),
+    },
+    budgetProgressWrap: { marginBottom: spacing(2.5) },
+    budgetProgressTrack: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.chipBackground,
+      overflow: "hidden",
+    },
+    budgetProgressFill: { height: "100%", borderRadius: 5 },
+    budgetProgressText: { fontSize: 12, color: colors.textMuted, marginTop: 4, fontWeight: "600" },
+    budgetOverText: { fontSize: 12, color: colors.danger, marginTop: 2, fontWeight: "700" },
+    nutritionRow: {
+      flexDirection: "row",
+      backgroundColor: colors.chipBackground,
+      borderRadius: 14,
+      paddingVertical: spacing(1.5),
+      marginBottom: spacing(2.5),
+    },
+    nutritionStat: { flex: 1, alignItems: "center" },
+    nutritionValue: { fontSize: 18, fontWeight: "800", color: colors.primaryDark },
+    nutritionLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2, textAlign: "center" },
+    dayRow: { marginBottom: spacing(1.5) },
+    dayLabelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing(0.5),
+    },
+    dayLabel: { fontSize: 13, fontWeight: "700", color: colors.textMuted },
+    lockIcon: { fontSize: 14 },
+    themeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing(1), marginBottom: spacing(2) },
+    offScreen: { position: "absolute", top: -9999, left: 0, opacity: 0 },
+    plannedCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing(1.5),
+    },
+    plannedCardMain: { flex: 1, flexDirection: "row", alignItems: "center" },
+    plannedEmoji: { fontSize: 22, marginEnd: spacing(1.5) },
+    plannedTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: colors.text },
+    removeButton: {
+      width: 28,
+      height: 28,
+      borderRadius: radius.pill,
+      backgroundColor: colors.chipBackground,
+      alignItems: "center",
+      justifyContent: "center",
+      marginStart: spacing(1),
+    },
+    removeButtonText: { color: colors.textMuted, fontSize: 13, fontWeight: "700" },
+    addCard: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: "dashed",
+      padding: spacing(1.75),
+      alignItems: "center",
+    },
+    addCardText: { color: colors.primaryDark, fontWeight: "700", fontSize: 13 },
+    generateButton: { marginTop: spacing(2) },
+    resultSection: { marginTop: spacing(3) },
+    sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: spacing(0.5) },
+    totalCost: { color: colors.primaryDark, fontWeight: "700", marginBottom: spacing(1.5) },
+    pantryHint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing(1) },
+    aisleHeader: { fontSize: 12, fontWeight: "800", color: colors.textMuted, marginTop: spacing(1.5), marginBottom: 2 },
+    itemRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: spacing(1),
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    itemLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginEnd: spacing(1.25),
+    },
+    checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+    checkboxMark: { color: "#fff", fontSize: 12, fontWeight: "800" },
+    itemName: { color: colors.text, fontSize: 14, flex: 1 },
+    itemNameChecked: { color: colors.textMuted, textDecorationLine: "line-through" },
+    itemQty: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+    partnerRow: { flexDirection: "row" },
+    partnerCard: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      paddingVertical: spacing(2),
+      marginEnd: spacing(1),
+    },
+    partnerEmoji: { fontSize: 26 },
+    partnerName: { fontSize: 12, fontWeight: "700", color: colors.text, marginTop: 4 },
+    nearbyButton: { marginTop: spacing(2) },
+    shareButton: { marginTop: spacing(1.5) },
+    mapsLink: { color: colors.primary, fontWeight: "700", textAlign: "center", marginTop: spacing(1.5) },
+    modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+    modalSheet: {
+      backgroundColor: colors.background,
+      borderTopStartRadius: radius.lg,
+      borderTopEndRadius: radius.lg,
+      padding: spacing(3),
+      maxHeight: "80%",
+    },
+    modalTitle: { fontSize: 18, fontWeight: "800", color: colors.text, marginBottom: spacing(1.5) },
+    searchInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing(2),
+      paddingVertical: spacing(1.25),
+      color: colors.text,
+      fontSize: 15,
+      marginBottom: spacing(1.5),
+    },
+    pickerSpinner: { marginTop: spacing(3) },
+    pickerList: { marginBottom: spacing(1.5) },
+    pickerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: spacing(1.25),
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    pickerRowTitle: { flex: 1, fontSize: 14, fontWeight: "600", color: colors.text },
+    modalClose: {
+      backgroundColor: colors.chipBackground,
+      borderRadius: radius.md,
+      paddingVertical: spacing(1.5),
+      alignItems: "center",
+    },
+    modalCloseText: { color: colors.primaryDark, fontWeight: "700" },
+  });

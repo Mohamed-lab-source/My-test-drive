@@ -1,0 +1,218 @@
+export type DietGoal =
+  | "NONE"
+  | "FIT"
+  | "INDULGENT"
+  | "BALANCED"
+  | "LOSE_WEIGHT"
+  | "BUILD_MUSCLE"
+  | "GAIN_WEIGHT";
+export type Difficulty = "EASY" | "MEDIUM" | "HARD";
+export type DishTag = "FIT" | "DESSERT" | "VEGETARIAN" | "QUICK" | "COMFORT" | "SPICY";
+export type Occasion = "RAMADAN_SUHOOR" | "RAMADAN_IFTAR" | "EID";
+export type Allergen = "GLUTEN" | "DAIRY" | "EGGS" | "NUTS" | "PEANUTS" | "SHELLFISH" | "FISH" | "SOY" | "SESAME";
+
+export type Preference = {
+  id: string;
+  dietGoal: DietGoal;
+  favoriteCuisineSlugs: string[];
+  allergies: Allergen[];
+};
+
+export type User = {
+  id: string;
+  email: string;
+  name: string;
+  preference: Preference | null;
+};
+
+export type MyDataExport = {
+  exportedAt: string;
+  profile: { id: string; email: string; name: string; createdAt: string };
+  preference: Preference | null;
+  favorites: { recipeSlug: string; recipeTitle: string }[];
+  ratings: { recipeSlug: string; recipeTitle: string; score: number; comment: string | null; createdAt: string }[];
+  collections: { name: string; recipes: { recipeSlug: string; recipeTitle: string }[] }[];
+  shoppingLists: {
+    createdAt: string;
+    totalEstimatedCost: number;
+    items: { name: string; quantity: number; unit: string }[];
+  }[];
+};
+
+export type CuisineStats = {
+  slug: string;
+  name: string;
+  recipeCount: number;
+  avgCostPerServing: number;
+  avgCalories: number;
+  avgMinutes: number;
+  avgRating: number | null;
+  quickCount: number;
+  vegetarianCount: number;
+};
+
+export type ReportReason = "WRONG_INGREDIENTS" | "WRONG_STEPS" | "WRONG_NUTRITION" | "TRANSLATION" | "OTHER";
+
+export type Cuisine = {
+  id: string;
+  slug: string;
+  name: string;
+  recipeCount: number;
+};
+
+export type RecipeSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  dishType: string;
+  heroImageUrl: string;
+  baseServings: number;
+  prepMinutes: number;
+  cookMinutes: number;
+  difficulty: Difficulty;
+  tags: DishTag[];
+  occasions: Occasion[];
+  avgRating: number | null;
+  ratingCount: number;
+  costPerServing: number;
+  ingredientCount: number;
+  allergens: Allergen[];
+  caloriesPerServing: number;
+  proteinPerServing: number;
+  fatPerServing: number;
+  cuisine: { slug: string; name: string };
+};
+
+export type RecipeIngredient = {
+  name: string;
+  quantity: number;
+  unit: string;
+  note: string | null;
+  substitute: string | null;
+  allergens: Allergen[];
+  category: string;
+  /** Original ingredient name this was swapped from for a goal, e.g. "Flour" when name is "Oatmeal Flour". Null when not substituted. */
+  substitutedFrom: string | null;
+};
+
+export type RecipeStep = {
+  order: number;
+  instruction: string;
+  imageUrl: string;
+  timerMinutes: number | null;
+};
+
+export type NutritionPerServing = {
+  calories: number;
+  proteinGrams: number;
+  fatGrams: number;
+  carbsGrams: number;
+};
+
+export type Review = {
+  id: string;
+  name: string;
+  score: number;
+  comment: string;
+  helpfulCount: number;
+  helpfulByMe: boolean;
+};
+
+export type RatingBreakdown = { 1: number; 2: number; 3: number; 4: number; 5: number };
+
+export type RecipeDetail = RecipeSummary & {
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
+  nutritionPerServing: NutritionPerServing;
+  myRating: number | null;
+  ratingBreakdown: RatingBreakdown;
+  adaptedForGoal: DietGoal | null;
+  reviews: Review[];
+  /** Missing from detail responses cached before the server sent it. */
+  equipment?: string[];
+};
+
+export type RatingResult = {
+  myScore: number;
+  average: number;
+  count: number;
+};
+
+export type MyRating = {
+  score: number;
+  comment: string | null;
+  ratedAt: string;
+  recipe: RecipeSummary;
+};
+
+export type ShoppingListItem = {
+  ingredientName: string;
+  quantity: number;
+  unit: string;
+  estimatedCost: number;
+  category: string | null;
+};
+
+export type DeliveryPartner = {
+  id: string;
+  slug: string;
+  name: string;
+  websiteUrl: string;
+  logoEmoji: string;
+};
+
+export type ShoppingListResult = {
+  id: string;
+  recipe: { slug: string; title: string };
+  servings: number;
+  budget: number | null;
+  totalEstimatedCost: number;
+  withinBudget: boolean;
+  budgetDifference: number | null;
+  items: ShoppingListItem[];
+  deliveryPartners: DeliveryPartner[];
+};
+
+export type Collection = {
+  id: string;
+  name: string;
+  createdAt: string;
+  recipes: RecipeSummary[];
+};
+
+export type ShoppingListDetail = {
+  id: string;
+  servings: number;
+  budget: number | null;
+  totalEstimatedCost: number;
+  withinBudget: boolean;
+  createdAt: string;
+  recipe: { slug: string; title: string; heroImageUrl: string };
+  items: {
+    id: string;
+    ingredientName: string;
+    quantity: number;
+    unit: string;
+    estimatedCost: number;
+    category: string | null;
+  }[];
+};
+
+export type NearbyStores = {
+  mapsSearchUrl: string;
+  deliveryPartners: DeliveryPartner[];
+};
+
+export type PantryIngredient = {
+  id: string;
+  name: string;
+  category: string;
+  substitute: string | null;
+};
+
+export type PantryMatch = RecipeSummary & {
+  matchedIngredientCount: number;
+  totalIngredientCount: number;
+  missingIngredientNames: string[];
+};

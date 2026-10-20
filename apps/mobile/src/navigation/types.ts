@@ -1,0 +1,97 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
+import type { RecipeIngredient, RecipeStep } from "../api/types";
+
+export type MainTabParamList = {
+  Home: undefined;
+  Lists: undefined;
+  Profile: undefined;
+};
+
+export type RootStackParamList = {
+  Onboarding: undefined;
+  FeatureTour: { onFinishGoBack?: boolean } | undefined;
+  Main: NavigatorScreenParams<MainTabParamList>;
+  RecipeList: {
+    cuisineSlug?: string;
+    tag?: string;
+    dishType?: string;
+    occasion?: string;
+    title: string;
+    sortByCost?: boolean;
+    sortByRating?: boolean;
+    lightOnly?: boolean;
+    maxTotalMinutes?: number;
+    inSeason?: boolean;
+  };
+  RecipeDetail: { slug: string; focusRating?: boolean };
+  ShoppingListDetail: { id: string };
+  CollectionDetail: { id: string };
+  ShoppingList: { slug: string; title: string; baseServings: number; initialServings?: number };
+  CookMode: {
+    slug: string;
+    title: string;
+    cuisineSlug: string;
+    steps: RecipeStep[];
+    ingredients: RecipeIngredient[];
+    servings: number;
+    myRating?: number | null;
+    initialStepIndex?: number;
+    /** Per-serving values, used to offer logging the meal to the food diary when cooking finishes. */
+    nutrition?: { calories: number; protein: number; fat: number; carbs: number };
+    costPerServing?: number;
+  };
+  MiseEnPlace: {
+    slug: string;
+    title: string;
+    cuisineSlug: string;
+    steps: RecipeStep[];
+    ingredients: RecipeIngredient[];
+    servings: number;
+    myRating?: number | null;
+  };
+  Login: undefined;
+  Signup: undefined;
+  ChangePassword: undefined;
+  ChangeEmail: undefined;
+  Glossary: undefined;
+  UnitConverter: undefined;
+  Notes: undefined;
+  MyReviews: undefined;
+  Search: undefined;
+  MealPlanner: undefined;
+  CookingCalendar: undefined;
+  PantryFinder: { usePantry?: boolean } | undefined;
+  SubstitutionFinder: undefined;
+  CustomizeHome: undefined;
+  CookingStats: undefined;
+  Badges: undefined;
+  WeeklyRecap: undefined;
+  LeanMuscleMode: undefined;
+  MealPrep: undefined;
+  FoodDiary: undefined;
+  MyPantry: undefined;
+  Household: undefined;
+  Lunchbox: undefined;
+  PartyPlanner: undefined;
+  CompareRecipes: { slugA: string; slugB?: string };
+  Discover: undefined;
+  CuisineExplorer: undefined;
+  HiddenRecipes: undefined;
+  KitchenTimer: undefined;
+  CookingJournal: undefined;
+  Goals: undefined;
+  CuisinePassport: undefined;
+  MonthlyRecap: undefined;
+  Settings: undefined;
+  About: undefined;
+  KitchenGuides: undefined;
+  Fasting: undefined;
+  WhatsNew: undefined;
+};
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace ReactNavigation {
+    interface RootParamList extends RootStackParamList {}
+  }
+}
