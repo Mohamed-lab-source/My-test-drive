@@ -20,6 +20,7 @@ import '../../planner/planner.dart';
 import '../../data/live_data.dart' show weatherAt;
 import '../../planner/services.dart' show AiUnavailable;
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../../widgets/khroga_map.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/launchers.dart';
@@ -204,7 +205,7 @@ class _PlanBody extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(plan.title, style: text.headlineMedium)),
+              Expanded(child: FadeSlideIn(child: Text(plan.title, style: text.headlineLarge))),
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Icon(Icons.edit_outlined, size: 20, color: context.k.inkMuted),
@@ -240,12 +241,11 @@ class _PlanBody extends ConsumerWidget {
         ),
         if (plan.stops.isNotEmpty && plan.stops.first.hasLocation) ...[
           const SizedBox(height: KSpace.md),
-          FilledButton.icon(
+          GradientButton(
             onPressed: () =>
                 openDirections(lat: plan.stops.first.lat!, lng: plan.stops.first.lng!),
-            icon: const Icon(Icons.navigation_outlined),
-            label: Text(trf('Go to the first stop: {name}', {'name': plan.stops.first.name}),
-                overflow: TextOverflow.ellipsis),
+            icon: Icons.navigation_outlined,
+            label: trf('Go to the first stop: {name}', {'name': plan.stops.first.name}),
           ),
         ],
         if (plan.stops.length < plan.request.stops) ...[
@@ -290,7 +290,7 @@ class _PlanBody extends ConsumerWidget {
           ),
         const SizedBox(height: KSpace.lg),
         for (var i = 0; i < plan.stops.length; i++)
-          _StopTile(
+          FadeSlideIn(index: i, child: _StopTile(
             stop: plan.stops[i],
             day: plan.request.day,
             clock24: clock24,
@@ -312,7 +312,7 @@ class _PlanBody extends ConsumerWidget {
             onEditTime: () => _editTime(context, ref, plan, i),
             onEditLength: () => _editLength(context, ref, plan, i),
             onEditNote: () => _editNote(context, ref, plan, i),
-          ),
+          )),
         if (plan.stops.where((s) => s.hasLocation).length >= 2) ...[
           ClipRRect(
             borderRadius: BorderRadius.circular(KRadius.card),
@@ -526,11 +526,16 @@ class _StopTile extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: 30,
+                  height: 30,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                      color: context.k.accent, shape: BoxShape.circle),
+                    gradient: context.k.accentGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: context.k.accent.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 3)),
+                    ],
+                  ),
                   child: done
                       ? Icon(Icons.check, size: 18, color: context.k.onAccent)
                       : Text('${index + 1}',
@@ -539,7 +544,17 @@ class _StopTile extends StatelessWidget {
                 ),
                 if (!isLast)
                   Expanded(
-                    child: Container(width: 2, color: context.k.line),
+                    child: Container(
+                      width: 2.5,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(2),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [context.k.accent.withValues(alpha: 0.7), context.k.line],
+                        ),
+                      ),
+                    ),
                   ),
               ],
             ),

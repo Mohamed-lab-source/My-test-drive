@@ -1913,4 +1913,11 @@ const arabic = <String, String>{
   'Playgrounds': 'أماكن لعب الأطفال',
   'Named playgrounds and indoor play areas from the map.': 'ملاعب الأطفال وأماكن اللعب المقفولة اللي على الخريطة.',
   'indoor play': 'منطقة لعب مقفولة',
+  'Settings': 'الإعدادات',
+  'A fresh new look': 'شكل جديد خالص',
+  'New fonts drawn for Arabic and English, richer colors, smooth animations and tidier menus.':
+      'خطوط جديدة معمولة للعربي والإنجليزي، ألوان أغنى، حركة ناعمة وقوائم أنضف.',
+  'Gradient themes': 'ألوان متدرجة',
+  'Every color theme now has its own gradient. Pick yours in Look & colors.':
+      'كل لون بقى ليه تدرّج خاص بيه. اختار اللي يعجبك من الشكل والألوان.',
 };

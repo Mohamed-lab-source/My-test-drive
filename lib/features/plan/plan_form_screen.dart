@@ -20,6 +20,7 @@ import '../../models/plan.dart';
 import '../../planner/services.dart' show aiResting;
 import '../../planner/planner.dart' show compactRadiusKm, planNeeds;
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../profile/about_screen.dart' show appVersion;
 import '../profile/theme_sheet.dart';
 import '../reviews/challenge_card.dart';
@@ -275,7 +276,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(tr('Khroga')),
+        title: const KhrogaWordmark(),
         actions: [
           IconButton(
             tooltip: tr('Look & colors'),
@@ -297,38 +298,52 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 120),
         children: [
-          Text(greeting(DateTime.now().hour, ref.watch(myProfileProvider).value?.displayName),
-              style: text.titleMedium?.copyWith(color: context.k.accent)),
-          Text(tr("Where are we going?"), style: text.headlineMedium),
           const SizedBox(height: KSpace.xs),
-          Text(tr('Tell us the vibe. We only suggest real places.'),
-              style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
-          const _TodayStrip(),
-          const _IdeaForNow(),
-          const WeatherHeadsUp(),
-          const BestTimeCard(),
-          const OnThisDayCard(),
-          const PlaceOfDayCard(),
-          const ChallengeCard(),
-          const _WhatsNewCard(),
-          const _NextOutingCard(),
-          const _RecentPlans(),
+          FadeSlideIn(
+            child: HeroCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(greeting(DateTime.now().hour, ref.watch(myProfileProvider).value?.displayName),
+                      style: text.titleMedium?.copyWith(color: context.k.onHero.withValues(alpha: 0.9))),
+                  const SizedBox(height: KSpace.xs),
+                  Text(tr("Where are we going?"),
+                      style: text.headlineLarge?.copyWith(color: context.k.onHero)),
+                  const SizedBox(height: KSpace.sm),
+                  Text(tr('Tell us the vibe. We only suggest real places.'),
+                      style: text.bodyMedium?.copyWith(color: context.k.onHero.withValues(alpha: 0.9))),
+                  const SizedBox(height: KSpace.md),
+                  Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+                    for (final (emoji, label, onTap) in [
+                      ('🎲', tr('Surprise plan'), _surprisePlan),
+                      ('💡', tr('Ideas'), () => context.push('/ideas')),
+                      ('🗺️', tr('Areas'), () => context.push('/areas')),
+                    ])
+                      _GlassChip(emoji: emoji, label: label, onTap: onTap),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+          for (final (i, card) in const <Widget>[
+            _TodayStrip(),
+            _IdeaForNow(),
+            WeatherHeadsUp(),
+            BestTimeCard(),
+            OnThisDayCard(),
+            PlaceOfDayCard(),
+            ChallengeCard(),
+            _WhatsNewCard(),
+            _NextOutingCard(),
+            _RecentPlans(),
+          ].indexed)
+            FadeSlideIn(index: i + 1, child: card),
           SectionTitle(tr('Quick start'),
               trailing: TextButton(onPressed: _reset, child: Text(tr('Reset')))),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
             children: [
-              ActionChip(
-                avatar: const Text('🎲'),
-                label: Text(tr('Surprise plan')),
-                onPressed: _surprisePlan,
-              ),
-              ActionChip(
-                avatar: const Text('💡'),
-                label: Text(tr('More ideas')),
-                onPressed: () => context.push('/ideas'),
-              ),
               for (final name in ref.watch(planPresetsProvider).keys)
                 InputChip(
                   avatar: const Text('⭐'),
@@ -681,10 +696,10 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         padding: const EdgeInsets.symmetric(horizontal: KSpace.md),
         child: SizedBox(
           width: double.infinity,
-          child: FilledButton.icon(
+          child: GradientButton(
             onPressed: _vibes.isEmpty ? null : _generate,
-            icon: const Icon(Icons.auto_awesome),
-            label: Text(_vibes.isEmpty ? tr('Pick at least one vibe') : tr('Plan my outing')),
+            icon: Icons.auto_awesome,
+            label: _vibes.isEmpty ? tr('Pick at least one vibe') : tr('Plan my outing'),
           ),
         ),
       ),
@@ -755,21 +770,122 @@ class _GeneratingDialogState extends State<_GeneratingDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       child: Padding(
-        padding: EdgeInsets.all(KSpace.lg),
+        padding: const EdgeInsets.fromLTRB(KSpace.lg, KSpace.xl, KSpace.lg, KSpace.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: KSpace.md),
-            Text(tr('Building your plan…'),
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            SizedBox(height: KSpace.xs),
-            Text(tr(_steps[_i]),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.k.inkMuted)),
+            const _Orbit(),
+            const SizedBox(height: KSpace.lg),
+            Text(tr('Building your plan…'), style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: KSpace.sm),
+            AnimatedSwitcher(
+              duration: KMotion.medium,
+              transitionBuilder: (child, a) => FadeTransition(
+                opacity: a,
+                child: SlideTransition(
+                  position: Tween(begin: const Offset(0, 0.3), end: Offset.zero).animate(a),
+                  child: child,
+                ),
+              ),
+              child: Text(tr(_steps[_i]),
+                  key: ValueKey(_i),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.k.inkMuted)),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A glowing ring that turns around a sparkle while the plan is made.
+class _Orbit extends StatefulWidget {
+  const _Orbit();
+
+  @override
+  State<_Orbit> createState() => _OrbitState();
+}
+
+class _OrbitState extends State<_Orbit> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return SizedBox(
+      width: 92,
+      height: 92,
+      child: Stack(alignment: Alignment.center, children: [
+        RotationTransition(
+          turns: _c,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: SweepGradient(colors: [k.accent.withValues(alpha: 0), k.accent, k.accent2]),
+            ),
+          ),
+        ),
+        Container(
+          width: 78,
+          height: 78,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: k.surface),
+          child: const Text('✨', style: TextStyle(fontSize: 34)),
+        ),
+      ]),
+    );
+  }
+}
+
+/// A see-through pill on a [HeroCard].
+class _GlassChip extends StatelessWidget {
+  const _GlassChip({required this.emoji, required this.label, required this.onTap});
+
+  final String emoji;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Pressable(
+      child: Material(
+        color: Colors.white.withValues(alpha: k.isDark ? 0.08 : 0.18),
+        shape: StadiumBorder(side: BorderSide(color: Colors.white.withValues(alpha: k.isDark ? 0.14 : 0.32))),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Text('$emoji  $label',
+                style: TextStyle(color: k.onHero, fontWeight: FontWeight.w600, fontSize: 14)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Khroga" in the theme's gradient, for the home tab's top bar.
+class KhrogaWordmark extends StatelessWidget {
+  const KhrogaWordmark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (r) => k.accentGradient.createShader(r),
+      child: Text(tr('Khroga'),
+          style: const TextStyle(fontFamily: KFont.display, fontSize: 25, fontWeight: FontWeight.w800)),
     );
   }
 }

@@ -11,7 +11,7 @@ Future<void> showThemeSheet(BuildContext context) => showModalBottomSheet(
       useSafeArea: true,
       isScrollControlled: true,
       builder: (_) => const SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(KSpace.lg, KSpace.lg, KSpace.lg, KSpace.xl),
+        padding: EdgeInsets.fromLTRB(KSpace.lg, 0, KSpace.lg, KSpace.xl),
         child: ThemePicker(),
       ),
     );
@@ -83,6 +83,7 @@ class ThemePicker extends ConsumerWidget {
               _Swatch(
                 theme: t,
                 color: isDark ? t.dark : t.light,
+                color2: isDark ? t.dark2 : t.light2,
                 selected: t.id == settings.accentId,
                 onTap: () => notifier.setAccent(t.id),
               ),
@@ -97,12 +98,14 @@ class _Swatch extends StatelessWidget {
   const _Swatch({
     required this.theme,
     required this.color,
+    required this.color2,
     required this.selected,
     required this.onTap,
   });
 
   final AccentTheme theme;
   final Color color;
+  final Color color2;
   final bool selected;
   final VoidCallback onTap;
 
@@ -116,19 +119,32 @@ class _Swatch extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Container(
+        child: AnimatedContainer(
+          duration: KMotion.medium,
           decoration: BoxDecoration(
-            color: k.surface,
-            borderRadius: BorderRadius.circular(16),
+            color: selected ? Color.alphaBlend(color.withValues(alpha: 0.10), k.surface) : k.surface,
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: selected ? color : k.line, width: selected ? 2.5 : 1),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              AnimatedContainer(
+                duration: KMotion.medium,
+                curve: Curves.easeOutBack,
+                width: selected ? 46 : 40,
+                height: selected ? 46 : 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: AlignmentDirectional.topStart,
+                    end: AlignmentDirectional.bottomEnd,
+                    colors: [color, color2],
+                  ),
+                  boxShadow: selected
+                      ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))]
+                      : null,
+                ),
                 child: selected
                     ? Icon(Icons.check,
                         color: ThemeData.estimateBrightnessForColor(color) == Brightness.dark

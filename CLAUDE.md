@@ -287,6 +287,19 @@ How the code enforces it (keep it this way):
   shown in Arabic by `PlacesRepository(arabic:)` (rebuilt on language
   change). OSM also fetches named playgrounds / indoor play.
 
+- 1.4 premium look: fonts Alexandria (titles, `KFont.display`) + Readex Pro
+  (everything else, `KFont.body`), bundled in assets/fonts (OFL, both draw
+  Arabic). Each `AccentTheme` has a gradient partner (`light2`/`dark2`);
+  `KPalette` adds `accent2`, `surfaceHigh`, hero colors (`heroGradient`,
+  `onHero`), `softShadow`, `isDark` (contrast covered in theme_test).
+  Motion in `lib/widgets/motion.dart` (`FadeSlideIn`, `Pressable`, `PopIn`,
+  `CountUp`): one-shot only, never repeating on a normal screen (tests use
+  pumpAndSettle), and still when "Reduce motion" is on. Shared pieces in
+  common.dart: `HeroCard`, `GradientBackdrop`, `GradientButton`,
+  `IconTile` (color picked from the icon), `MenuGroup`. Tabs use the
+  floating `_NavBar` in router.dart. Don't use letterSpacing on text that
+  can be Arabic (it breaks the joined letters).
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

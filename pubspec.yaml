@@ -1,7 +1,7 @@
 name: khroga
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.3.0+16
+version: 1.4.0+17
 
 environment:
   sdk: ^3.13.5
@@ -42,3 +42,26 @@ flutter:
   assets:
     - assets/data/places.json
     - assets/icon/khroga.png
+  # Free fonts (SIL Open Font License, see assets/fonts/*-OFL.txt). Both have
+  # Arabic and Latin letters drawn to match.
+  fonts:
+    - family: Alexandria
+      fonts:
+        - asset: assets/fonts/Alexandria_500Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Alexandria_600SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Alexandria_700Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Alexandria_800ExtraBold.ttf
+          weight: 800
+    - family: ReadexPro
+      fonts:
+        - asset: assets/fonts/ReadexPro_400Regular.ttf
+          weight: 400
+        - asset: assets/fonts/ReadexPro_500Medium.ttf
+          weight: 500
+        - asset: assets/fonts/ReadexPro_600SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/ReadexPro_700Bold.ttf
+          weight: 700

@@ -9,7 +9,9 @@ import 'package:go_router/go_router.dart';
 import '../data/providers.dart';
 import '../models/social.dart';
 import 'links.dart';
+import 'helpers.dart' show tapFeedback;
 import 'local_prefs.dart';
+import 'theme.dart';
 import '../features/links/link_screens.dart';
 import '../features/reviews/community_screen.dart';
 import '../features/reviews/review_screens.dart';
@@ -207,34 +209,136 @@ class _Shell extends ConsumerWidget {
         .length;
     return Scaffold(
       body: shell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) =>
-            shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        destinations: [
-          NavigationDestination(
-              icon: Icon(Icons.auto_awesome_outlined),
-              selectedIcon: Icon(Icons.auto_awesome),
-              label: tr('Plan')),
-          NavigationDestination(
-              icon: Icon(Icons.explore_outlined),
-              selectedIcon: Icon(Icons.explore),
-              label: tr('Explore')),
-          NavigationDestination(
-              icon: Icon(Icons.forum_outlined),
-              selectedIcon: Icon(Icons.forum),
-              label: tr('Groups')),
-          NavigationDestination(
-              icon: Badge(
-                  isLabelVisible: requests > 0,
-                  label: Text('$requests'),
-                  child: const Icon(Icons.people_outline)),
-              selectedIcon: Badge(
-                  isLabelVisible: requests > 0,
-                  label: Text('$requests'),
-                  child: const Icon(Icons.people)),
-              label: tr('Friends')),
+      bottomNavigationBar: _NavBar(
+        index: shell.currentIndex,
+        onTap: (i) {
+          tapFeedback(ref.read(phoneSettingsProvider).haptics);
+          shell.goBranch(i, initialLocation: i == shell.currentIndex);
+        },
+        items: [
+          (Icons.auto_awesome_outlined, Icons.auto_awesome, tr('Plan'), 0),
+          (Icons.explore_outlined, Icons.explore, tr('Explore'), 0),
+          (Icons.forum_outlined, Icons.forum, tr('Groups'), 0),
+          (Icons.people_outline, Icons.people, tr('Friends'), requests),
         ],
+      ),
+    );
+  }
+}
+
+/// The floating tab bar: a rounded card with a glowing pill behind the
+/// selected tab that slides between tabs.
+class _NavBar extends StatelessWidget {
+  const _NavBar({required this.index, required this.onTap, required this.items});
+
+  final int index;
+  final ValueChanged<int> onTap;
+
+  /// (icon, selected icon, label, badge count).
+  final List<(IconData, IconData, String, int)> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return ColoredBox(
+      color: k.background,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: KSpace.sm),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.xs, KSpace.md, KSpace.xs),
+          child: Container(
+            height: 70,
+            decoration: BoxDecoration(
+              color: k.surfaceHigh,
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: k.line.withValues(alpha: k.isDark ? 1 : 0.7)),
+              boxShadow: k.softShadow,
+            ),
+            child: Row(children: [
+              for (final (i, (icon, selected, label, badge)) in items.indexed)
+                Expanded(
+                  child: _NavItem(
+                    icon: i == index ? selected : icon,
+                    label: label,
+                    badge: badge,
+                    selected: i == index,
+                    onTap: () => onTap(i),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.badge,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final int badge;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: InkResponse(
+        onTap: onTap,
+        radius: 40,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: KMotion.medium,
+              curve: KMotion.curve,
+              width: selected ? 58 : 40,
+              height: 32,
+              decoration: ShapeDecoration(
+                shape: const StadiumBorder(),
+                gradient: selected ? k.accentGradient : null,
+                shadows: selected
+                    ? [BoxShadow(color: k.accent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))]
+                    : const [],
+              ),
+              child: Badge(
+                isLabelVisible: badge > 0,
+                label: Text('$badge'),
+                child: AnimatedScale(
+                  scale: selected ? 1.08 : 1,
+                  duration: KMotion.medium,
+                  curve: Curves.easeOutBack,
+                  child: Icon(icon, size: 22, color: selected ? k.onAccent : k.inkMuted),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: KMotion.fast,
+              style: TextStyle(
+                fontFamily: KFont.body,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? k.ink : k.inkMuted,
+              ),
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
       ),
     );
   }

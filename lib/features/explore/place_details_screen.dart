@@ -15,6 +15,7 @@ import '../../data/providers.dart';
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../../planner/planner.dart'
     show similarNearby, nearbyPlaces, haversineKm, addStop, otherBranches;
 import 'lists_screen.dart' show newListDialog;
@@ -120,14 +121,14 @@ class _Details extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
       children: [
-        _Header(place: place),
+        FadeSlideIn(child: _Header(place: place)),
         const SizedBox(height: KSpace.md),
         GestureDetector(
           onLongPress: () {
             Clipboard.setData(ClipboardData(text: place.name));
             showMessage(context, tr('Name copied'));
           },
-          child: Text(place.shownName, style: text.headlineMedium),
+          child: FadeSlideIn(index: 1, child: Text(place.shownName, style: text.headlineLarge)),
         ),
         if (todaysHours(place, DateTime.now()) case final today?)
           Text(trf('Today: {hours}', {'hours': tr(today)}), style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
@@ -464,18 +465,19 @@ class _Header extends StatelessWidget {
       final accent = HSLColor.fromColor(context.k.accent);
       final tint = accent.withHue(hue).toColor();
       return Container(
-        height: 150,
+        height: 190,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(KRadius.card),
+          borderRadius: BorderRadius.circular(KRadius.sheet),
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
             colors: [tint.withValues(alpha: 0.85), context.k.accentSoft],
           ),
+          boxShadow: [BoxShadow(color: tint.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 10))],
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(Categories.emoji(place.category), style: const TextStyle(fontSize: 64)),
+          PopIn(child: Text(Categories.emoji(place.category), style: const TextStyle(fontSize: 72))),
           if (place.details.brand != null && place.details.brand != place.name)
             Text(place.details.brand!, style: TextStyle(color: context.k.ink, fontWeight: FontWeight.w700)),
         ]),
@@ -486,13 +488,19 @@ class _Header extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () => _showPhoto(context, place),
-          child: PlaceImage(
-          url: place.photoUrl,
-          emoji: Categories.emoji(place.category),
-          height: 220,
-          width: double.infinity,
-          radius: KRadius.card,
-        ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(KRadius.sheet),
+              boxShadow: context.k.softShadow,
+            ),
+            child: PlaceImage(
+              url: place.photoUrl,
+              emoji: Categories.emoji(place.category),
+              height: 250,
+              width: double.infinity,
+              radius: KRadius.sheet,
+            ),
+          ),
         ),
         if (place.photoPage != null)
           TextButton(

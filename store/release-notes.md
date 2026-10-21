@@ -2,6 +2,20 @@
 
 Keep each under 500 characters.
 
+## 1.4.0
+
+<en-US>
+• A fresh new look: new fonts made for Arabic and English, richer colors and gradients
+• Smooth animations everywhere (turn them off in Profile → Reduce motion)
+• A new floating tab bar, tidier menus and a new app icon
+</en-US>
+
+<ar>
+• شكل جديد خالص: خطوط معمولة للعربي والإنجليزي، وألوان وتدرجات أغنى
+• حركة ناعمة في كل مكان (تقدر تقفلها من حسابي ← قلل الحركة)
+• شريط تبويب عائم جديد، قوائم أنضف وأيقونة جديدة
+</ar>
+
 ## 1.3.0
 
 <en-US>

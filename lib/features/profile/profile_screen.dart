@@ -16,6 +16,7 @@ import '../../models/plan.dart';
 import '../../models/review.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../auth/username_sheet.dart';
 import 'safety_screens.dart' show deleteMyAccount;
 import 'theme_sheet.dart';
@@ -40,23 +41,41 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(KSpace.md),
         children: [
-          Center(child: Avatar(profile: me, size: 88)),
-          const SizedBox(height: KSpace.md),
-          Center(child: Text(me?.displayName ?? '', style: text.titleLarge)),
-          if (me?.username != null)
-            Center(
-              child: Text('@${me!.username}',
-                  style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+          FadeSlideIn(
+            child: HeroCard(
+              child: Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.k.onHero.withValues(alpha: 0.6), width: 2),
+                  ),
+                  child: Avatar(profile: me, size: 76),
+                ),
+                const SizedBox(width: KSpace.md),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(me?.displayName ?? '',
+                        style: text.headlineSmall?.copyWith(color: context.k.onHero),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                    if (me?.username != null)
+                      Text('@${me!.username}',
+                          style: text.bodyMedium?.copyWith(color: context.k.onHero.withValues(alpha: 0.85))),
+                  ]),
+                ),
+              ]),
             ),
-          const SizedBox(height: KSpace.lg),
+          ),
+          const SizedBox(height: KSpace.md),
           const _Stats(),
           const SizedBox(height: KSpace.md),
           const _GuideCard(),
           const BadgesSummaryCard(),
           const _VisitedBreakdown(),
           const SizedBox(height: KSpace.md),
-          Card(
-            child: Column(
+          MenuGroup(
+            title: tr('Your outings'),
               children: [
                 for (final (icon, title, sub, path) in [
                   (Icons.auto_stories_outlined, tr('My timeline'), tr('Every place you\'ve been, by date'), '/timeline'),
@@ -72,23 +91,21 @@ class ProfileScreen extends ConsumerWidget {
                   (Icons.holiday_village_outlined, tr('Areas'), tr('Every neighbourhood we have places in'), '/areas'),
                 ]) ...[
                   ListTile(
-                    leading: Icon(icon),
+                    leading: IconTile(icon),
                     title: Text(title),
                     subtitle: Text(sub),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(path),
                   ),
-                  if (path != '/areas') const Divider(),
                 ],
               ],
-            ),
           ),
           const SizedBox(height: KSpace.md),
-          Card(
-            child: Column(
+          MenuGroup(
+            title: tr('You'),
               children: [
                 ListTile(
-                  leading: const Icon(Icons.palette_outlined),
+                  leading: const IconTile(Icons.palette_outlined),
                   title: Text(tr('Look & colors')),
                   subtitle: Text(tr('Dark mode, color themes, bigger text')),
                   trailing: const Icon(Icons.chevron_right),
@@ -96,14 +113,14 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.location_city),
+                  leading: const IconTile(Icons.location_city),
                   title: Text(tr('Home city')),
                   subtitle: Text(Cities.all[ref.watch(cityProvider)] ?? ''),
                   onTap: () => _pickCity(context, ref),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.badge_outlined),
+                  leading: const IconTile(Icons.badge_outlined),
                   title: Text(tr('Display name')),
                   subtitle: Text(me?.displayName ?? ''),
                   onTap: me == null
@@ -113,7 +130,7 @@ class ProfileScreen extends ConsumerWidget {
                 if (!isGuest) ...[
                   const Divider(),
                   ListTile(
-                    leading: const Icon(Icons.alternate_email),
+                    leading: const IconTile(Icons.alternate_email),
                     title: Text(tr('Username')),
                     subtitle: Text(me?.username == null
                         ? tr('Not set')
@@ -123,42 +140,41 @@ class ProfileScreen extends ConsumerWidget {
                 ],
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.cleaning_services_outlined),
+                  leading: const IconTile(Icons.cleaning_services_outlined),
                   title: Text(tr('Clear history on this phone')),
                   subtitle: Text(tr('Recently viewed, searches, star ratings, ticked stops')),
                   onTap: () => _clearHistory(context, ref),
                 ),
               ],
-            ),
           ),
           const SizedBox(height: KSpace.md),
           const _AppSettingsCard(),
           const SizedBox(height: KSpace.md),
-          Card(
-            child: Column(
+          MenuGroup(
+            title: tr('More'),
               children: [
                 ListTile(
-                  leading: const Icon(Icons.ios_share),
+                  leading: const IconTile(Icons.ios_share),
                   title: Text(tr('Export my data')),
                   subtitle: Text(tr('Plans, favorites, places you\'ve been, lists')),
                   onTap: () => _export(context, ref),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.share_outlined),
+                  leading: const IconTile(Icons.share_outlined),
                   title: Text(tr('Share Khroga with friends')),
                   onTap: () => SharePlus.instance.share(ShareParams(text: appInviteText())),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.star_outline),
+                  leading: const IconTile(Icons.star_outline),
                   title: Text(tr('Rate Khroga')),
                   subtitle: Text(tr('A good rating helps more people find it')),
                   onTap: openStoreListing,
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.person_add_alt_1_outlined),
+                  leading: const IconTile(Icons.person_add_alt_1_outlined),
                   title: Text(tr('Invite a friend to add you')),
                   subtitle: Text(tr('Sends a link that adds you as a friend')),
                   onTap: () {
@@ -169,28 +185,28 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.new_releases_outlined),
+                  leading: const IconTile(Icons.new_releases_outlined),
                   title: Text(tr("What's new")),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/whats-new'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.help_outline),
+                  leading: const IconTile(Icons.help_outline),
                   title: Text(tr('Help & questions')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/help'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.feedback_outlined),
+                  leading: const IconTile(Icons.feedback_outlined),
                   title: Text(tr('Report a problem or idea')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/feedback'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.system_update_outlined),
+                  leading: const IconTile(Icons.system_update_outlined),
                   title: Text(tr('Check for a new version')),
                   subtitle: Text(tr('Opens the download page')),
                   onTap: () => openWebsite(
@@ -198,41 +214,40 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.block),
+                  leading: const IconTile(Icons.block),
                   title: Text(tr('Blocked people')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/blocked'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
+                  leading: const IconTile(Icons.privacy_tip_outlined),
                   title: Text(tr('Privacy policy')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/privacy'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.gavel_outlined),
+                  leading: const IconTile(Icons.gavel_outlined),
                   title: Text(tr('Terms of use')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/terms'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.school_outlined),
+                  leading: const IconTile(Icons.school_outlined),
                   title: Text(tr('Show the welcome tour again')),
                   onTap: () => context.push('/welcome'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.info_outline),
+                  leading: const IconTile(Icons.info_outline),
                   title: Text(tr('About Khroga')),
                   subtitle: Text(tr('Where our facts come from')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/about'),
                 ),
               ],
-            ),
           ),
           const SizedBox(height: KSpace.md),
           if (isGuest) ...[
@@ -422,7 +437,9 @@ class _Stats extends ConsumerWidget {
             child: Column(
               children: [
                 Text(emoji, style: const TextStyle(fontSize: 22)),
-                Text(n == null ? '–' : '$n', style: Theme.of(context).textTheme.titleLarge),
+                n == null
+                    ? Text('–', style: Theme.of(context).textTheme.titleLarge)
+                    : CountUp(n, style: Theme.of(context).textTheme.titleLarge),
                 Text(tr(label), style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
               ],
             ),
@@ -453,11 +470,11 @@ class _AppSettingsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(appSettingsProvider);
     final n = ref.read(appSettingsProvider.notifier);
-    return Card(
-      child: Column(
+    return MenuGroup(
+        title: tr('Settings'),
         children: [
           ListTile(
-            leading: const Icon(Icons.translate),
+            leading: const IconTile(Icons.translate),
             title: const Text('Language · اللغة'),
             trailing: SegmentedButton<String>(
               showSelectedIcon: false,
@@ -472,7 +489,7 @@ class _AppSettingsCard extends ConsumerWidget {
           if (Reminders.available) ...[
             const Divider(),
             SwitchListTile(
-              secondary: const Icon(Icons.wb_sunny_outlined),
+              secondary: const IconTile(Icons.wb_sunny_outlined),
               title: Text(tr('Daily place idea')),
               subtitle: Text(tr('A notification at 10:00 with the place of the day')),
               value: ref.watch(funPrefsProvider)['dailyIdea'] == '1',
@@ -490,7 +507,7 @@ class _AppSettingsCard extends ConsumerWidget {
           ],
           const Divider(),
           SwitchListTile(
-            secondary: const Icon(Icons.dark_mode_outlined),
+            secondary: const IconTile(Icons.dark_mode_outlined),
             title: Text(tr('Pure black dark mode')),
             subtitle: Text(tr('Darker, saves battery on many phones')),
             value: s.pureBlack,
@@ -498,7 +515,7 @@ class _AppSettingsCard extends ConsumerWidget {
           ),
           const Divider(),
           SwitchListTile(
-            secondary: const Icon(Icons.data_saver_on_outlined),
+            secondary: const IconTile(Icons.data_saver_on_outlined),
             title: Text(tr('Data saver')),
             subtitle: Text(tr("Don't load place photos")),
             value: s.dataSaver,
@@ -510,55 +527,53 @@ class _AppSettingsCard extends ConsumerWidget {
             final pn = ref.read(phoneSettingsProvider.notifier);
             return Column(children: [
               SwitchListTile(
-                secondary: const Icon(Icons.schedule),
+                secondary: const IconTile(Icons.schedule),
                 title: Text(tr('24-hour clock')),
                 subtitle: Text(p.clock24 ? '18:30' : '6:30 PM'),
                 value: p.clock24,
                 onChanged: pn.setClock24,
               ),
-              const Divider(),
+              const Divider(indent: 68),
               SwitchListTile(
-                secondary: const Icon(Icons.vibration),
+                secondary: const IconTile(Icons.vibration),
                 title: Text(tr('Vibrate on taps')),
                 value: p.haptics,
                 onChanged: pn.setHaptics,
               ),
-              const Divider(),
+              const Divider(indent: 68),
               SwitchListTile(
-                secondary: const Icon(Icons.animation),
+                secondary: const IconTile(Icons.animation),
                 title: Text(tr('Reduce motion')),
                 subtitle: Text(tr('Fewer animations')),
                 value: p.reduceMotion,
                 onChanged: pn.setReduceMotion,
               ),
-              const Divider(),
+              const Divider(indent: 68),
               SwitchListTile(
-                secondary: const Icon(Icons.format_bold),
+                secondary: const IconTile(Icons.format_bold),
                 title: Text(tr('Bold text')),
                 subtitle: Text(tr('Easier to read')),
                 value: p.boldText,
                 onChanged: pn.setBoldText,
               ),
-              const Divider(),
+              const Divider(indent: 68),
               SwitchListTile(
-                secondary: const Icon(Icons.bug_report_outlined),
+                secondary: const IconTile(Icons.bug_report_outlined),
                 title: Text(tr('Send error reports')),
                 subtitle: Text(tr('Short technical notes, no personal details')),
                 value: p.sendErrors,
                 onChanged: pn.setSendErrors,
               ),
-              const Divider(),
             ]);
           }),
           SwitchListTile(
-            secondary: const Icon(Icons.explore_outlined),
+            secondary: const IconTile(Icons.explore_outlined),
             title: Text(tr('Open the app on Explore')),
             subtitle: Text(tr('Instead of Plan (next time you open it)')),
             value: s.startOnExplore,
             onChanged: n.setStartOnExplore,
           ),
         ],
-      ),
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../app/local_prefs.dart';
 import '../app/theme.dart';
 import '../models/social.dart';
+import 'motion.dart';
 
 /// Turns any error into one short, kind sentence that says what to do next.
 /// Never shows raw technical text (which would also be English-only).
@@ -136,7 +137,18 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 44)),
+            PopIn(
+              child: Container(
+                width: 104,
+                height: 104,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(colors: [context.k.accentSoft, context.k.background]),
+                ),
+                child: Text(emoji, style: const TextStyle(fontSize: 48)),
+              ),
+            ),
             const SizedBox(height: KSpace.md),
             Text(tr(title), style: text.titleLarge, textAlign: TextAlign.center),
             if (message != null) ...[
@@ -167,11 +179,22 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: KSpace.sm, top: KSpace.md),
+      padding: const EdgeInsets.only(bottom: KSpace.sm, top: KSpace.lg - 4),
       child: Row(
         children: [
+          Container(
+            width: 4,
+            height: 18,
+            margin: const EdgeInsetsDirectional.only(end: KSpace.sm),
+            decoration: ShapeDecoration(shape: const StadiumBorder(), gradient: context.k.accentGradient),
+          ),
           Expanded(
-            child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+            child: Text(text,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontFamily: KFont.display,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    )),
           ),
           ?trailing,
         ],
@@ -201,12 +224,19 @@ class PlaceImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final saver = ref.watch(appSettingsProvider.select((s) => s.dataSaver));
+    final k = context.k;
     final placeholder = Container(
       width: width,
       height: height,
-      color: context.k.accentSoft,
       alignment: Alignment.center,
-      child: Text(emoji, style: const TextStyle(fontSize: 26)),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: [k.accentSoft, k.surfaceHigh],
+        ),
+      ),
+      child: Text(emoji, style: TextStyle(fontSize: height != null && height! >= 120 ? 44 : 26)),
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
@@ -222,8 +252,18 @@ class PlaceImage extends ConsumerWidget {
                   ? (width! * MediaQuery.devicePixelRatioOf(context)).round()
                   : null,
               errorBuilder: (_, _, _) => placeholder,
-              loadingBuilder: (_, child, progress) =>
-                  progress == null ? child : placeholder,
+              // Photos fade in over the placeholder instead of popping in.
+              frameBuilder: (_, child, frame, sync) => sync
+                  ? child
+                  : Stack(fit: StackFit.passthrough, children: [
+                      placeholder,
+                      AnimatedOpacity(
+                        opacity: frame == null ? 0 : 1,
+                        duration: KMotion.medium,
+                        curve: Curves.easeOut,
+                        child: child,
+                      ),
+                    ]),
             ),
     );
   }
@@ -353,7 +393,7 @@ class SkeletonList extends StatefulWidget {
 
 class _SkeletonListState extends State<SkeletonList> with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
 
   @override
   void dispose() {
@@ -365,20 +405,26 @@ class _SkeletonListState extends State<SkeletonList> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final k = context.k;
     final still = MediaQuery.of(context).disableAnimations;
-    Widget bar(double w, double h) => Container(
+    Widget bar(double w, double h, [double r = 8]) => Container(
           width: w,
           height: h,
-          decoration: BoxDecoration(color: k.line, borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: k.surfaceHigh, borderRadius: BorderRadius.circular(r)),
         );
     final body = ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       padding: const EdgeInsets.all(KSpace.md),
       itemCount: widget.rows,
-      itemBuilder: (_, _) => Padding(
-        padding: const EdgeInsets.only(bottom: KSpace.md),
+      itemBuilder: (_, _) => Container(
+        margin: const EdgeInsets.only(bottom: KSpace.md),
+        padding: const EdgeInsets.all(KSpace.sm + 4),
+        decoration: BoxDecoration(
+          color: k.surface,
+          borderRadius: BorderRadius.circular(KRadius.card),
+          border: Border.all(color: k.line.withValues(alpha: 0.6)),
+        ),
         child: Row(children: [
-          bar(64, 64),
+          bar(64, 64, 14),
           const SizedBox(width: KSpace.md),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -392,7 +438,242 @@ class _SkeletonListState extends State<SkeletonList> with SingleTickerProviderSt
         ]),
       ),
     );
-    if (still) return Opacity(opacity: 0.6, child: body);
-    return FadeTransition(opacity: Tween(begin: 0.35, end: 0.85).animate(_c), child: body);
+    if (still) return body;
+    // A soft band of light sweeps across the cards.
+    return AnimatedBuilder(
+      animation: _c,
+      child: body,
+      builder: (_, child) => ShaderMask(
+        blendMode: BlendMode.srcATop,
+        shaderCallback: (rect) => LinearGradient(
+          begin: Alignment(-1.6 + 3.2 * _c.value, -0.3),
+          end: Alignment(-0.6 + 3.2 * _c.value, 0.3),
+          colors: [
+            Colors.transparent,
+            k.ink.withValues(alpha: k.isDark ? 0.06 : 0.05),
+            Colors.transparent,
+          ],
+        ).createShader(rect),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// The big colorful card at the top of a screen: a gradient with soft
+/// circles of light. Text inside should use [KPalette.onHero].
+class HeroCard extends StatelessWidget {
+  const HeroCard({super.key, required this.child, this.padding = const EdgeInsets.all(KSpace.lg)});
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    Widget glow(double size, double alpha) => IgnorePointer(
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [
+                Colors.white.withValues(alpha: alpha),
+                Colors.white.withValues(alpha: 0),
+              ]),
+            ),
+          ),
+        );
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(KRadius.sheet),
+        gradient: k.heroGradient,
+        border: k.isDark ? Border.all(color: k.accent.withValues(alpha: 0.25)) : null,
+        boxShadow: [
+          BoxShadow(
+            color: k.accent.withValues(alpha: k.isDark ? 0.18 : 0.28),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(children: [
+        PositionedDirectional(top: -60, end: -40, child: glow(200, k.isDark ? 0.10 : 0.22)),
+        PositionedDirectional(bottom: -80, start: -50, child: glow(180, k.isDark ? 0.06 : 0.14)),
+        Padding(
+          padding: padding,
+          child: DefaultTextStyle.merge(
+            style: TextStyle(color: k.onHero),
+            child: IconTheme.merge(data: IconThemeData(color: k.onHero), child: child),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// A full-screen version of the [HeroCard] gradient (sign-in, welcome).
+class GradientBackdrop extends StatelessWidget {
+  const GradientBackdrop({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final start = k.isDark ? Color.alphaBlend(k.heroStart, k.background) : k.heroStart;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: [start, k.heroEnd],
+        ),
+      ),
+      child: Stack(children: [
+        PositionedDirectional(
+          top: -120,
+          end: -100,
+          child: IgnorePointer(
+            child: Container(
+              width: 340,
+              height: 340,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  Colors.white.withValues(alpha: k.isDark ? 0.10 : 0.22),
+                  Colors.white.withValues(alpha: 0),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(child: child),
+      ]),
+    );
+  }
+}
+
+/// A small rounded, colored square behind a menu icon. Each icon gets its own
+/// color (picked from the icon, so it's always the same one).
+class IconTile extends StatelessWidget {
+  const IconTile(this.icon, {super.key, this.size = 38, this.hue});
+
+  final IconData icon;
+  final double size;
+
+  /// 0–360; default: from the icon.
+  final double? hue;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final h = hue ?? (icon.codePoint * 47) % 360.0;
+    final bg = k.isDark ? HSLColor.fromAHSL(1, h, 0.45, 0.22) : HSLColor.fromAHSL(1, h, 0.75, 0.93);
+    final fg = k.isDark ? HSLColor.fromAHSL(1, h, 0.85, 0.78) : HSLColor.fromAHSL(1, h, 0.7, 0.32);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: bg.toColor(), borderRadius: BorderRadius.circular(size * 0.32)),
+      child: Icon(icon, size: size * 0.55, color: fg.toColor()),
+    );
+  }
+}
+
+/// A rounded group of menu rows, with thin lines between them.
+class MenuGroup extends StatelessWidget {
+  const MenuGroup({super.key, required this.children, this.title});
+
+  final List<Widget> children;
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = children.where((c) => c is! Divider).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (title != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: KSpace.sm, bottom: KSpace.sm, top: KSpace.sm),
+            child: Text(title!.toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: isArabic ? null : 0.6)),
+          ),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0) const Divider(indent: 68),
+              rows[i],
+            ],
+          ]),
+        ),
+      ],
+    );
+  }
+}
+
+/// The main call-to-action: a pill with the theme's gradient and a glow.
+class GradientButton extends StatelessWidget {
+  const GradientButton({super.key, required this.label, required this.onPressed, this.icon});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final enabled = onPressed != null;
+    return Pressable(
+      child: AnimatedContainer(
+        duration: KMotion.medium,
+        decoration: ShapeDecoration(
+          shape: const StadiumBorder(),
+          gradient: enabled ? k.accentGradient : null,
+          color: enabled ? null : k.line,
+          shadows: enabled
+              ? [BoxShadow(color: k.accent.withValues(alpha: 0.35), blurRadius: 20, offset: const Offset(0, 8))]
+              : const [],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onPressed,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 58),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: KSpace.lg),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: enabled ? k.onAccent : k.inkMuted, size: 22),
+                      const SizedBox(width: KSpace.sm),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: KFont.display,
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w700,
+                          color: enabled ? k.onAccent : k.inkMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -9,6 +9,8 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('💎', 'A fresh new look', 'New fonts drawn for Arabic and English, richer colors, smooth animations and tidier menus.'),
+    ('🎨', 'Gradient themes', 'Every color theme now has its own gradient. Pick yours in Look & colors.'),
     ('🏙️', 'More areas', 'New Cairo (5th Settlement), Maadi, Heliopolis, Dokki and 30 more districts, with their cafés, restaurants, malls and shops.'),
     ('🛝', 'Playgrounds', 'Named playgrounds and indoor play areas from the map.'),
     ('🎒', 'Who brings what', 'A shared list in each group: anyone can say "I\'ll bring it".'),

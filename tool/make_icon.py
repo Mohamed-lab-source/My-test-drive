@@ -1,5 +1,6 @@
 """Draws the Khroga app icon (a white map pin with a sparkle on a warm
-coral gradient) and writes every size Android needs.
+coral-to-magenta gradient, the app's default theme) and writes every size
+Android needs.
 
 Run:  pip install pillow && python3 tool/make_icon.py
 Nothing here is downloaded; the icon is drawn from simple shapes.
@@ -12,10 +13,10 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 RES = os.path.join(ROOT, 'android', 'app', 'src', 'main', 'res')
 
-TOP = (255, 138, 101)     # #FF8A65, the dark-mode coral
-BOTTOM = (201, 61, 27)    # #C93D1B, the light-mode coral
+# Gradient stops, top-left to bottom-right (the Coral theme's colors).
+STOPS = [(255, 138, 101), (226, 74, 52), (184, 23, 79)]  # #FF8A65 → #E24A34 → #B8174F
 WHITE = (255, 255, 255, 255)
-SPARKLE = (232, 78, 44, 255)
+SPARKLE = (214, 52, 66, 255)
 
 DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
 
@@ -26,7 +27,13 @@ def gradient(size):
     for y in range(size):
         for x in range(size):
             t = (x + y) / (2 * (size - 1))
-            px[x, y] = tuple(round(TOP[i] + (BOTTOM[i] - TOP[i]) * t) for i in range(3)) + (255,)
+            a, b, u = (STOPS[0], STOPS[1], t * 2) if t < 0.5 else (STOPS[1], STOPS[2], t * 2 - 1)
+            px[x, y] = tuple(round(a[i] + (b[i] - a[i]) * u) for i in range(3)) + (255,)
+    # A soft glow of light in the top-left corner.
+    glow = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse([-size * 0.35, -size * 0.35, size * 0.55, size * 0.55],
+                                 fill=(255, 255, 255, 46))
+    img.alpha_composite(glow.filter(ImageFilter.GaussianBlur(size * 0.2)))
     return img
 
 

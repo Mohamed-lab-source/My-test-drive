@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
+import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 
 /// Three quick cards the first time someone opens Khroga.
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -41,8 +43,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final last = _index == _cards.length - 1;
+    final k = context.k;
     return Scaffold(
-      body: SafeArea(
+      body: GradientBackdrop(
+        child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(KSpace.lg),
           child: Column(
@@ -50,6 +54,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               Row(
                 children: [
                   TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: k.onHero),
                     icon: const Icon(Icons.translate),
                     label: Text(isArabic ? 'English' : 'العربية'),
                     onPressed: () => ref
@@ -57,7 +62,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         .setLanguage(isArabic ? 'en' : 'ar'),
                   ),
                   const Spacer(),
-                  TextButton(onPressed: _done, child: Text(tr('Skip'))),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: k.onHero),
+                    onPressed: _done,
+                    child: Text(tr('Skip')),
+                  ),
                 ],
               ),
               Expanded(
@@ -69,13 +78,32 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(emoji, style: const TextStyle(fontSize: 72)),
-                          const SizedBox(height: KSpace.lg),
-                          Text(tr(title), style: text.headlineMedium, textAlign: TextAlign.center),
+                          PopIn(
+                            child: Container(
+                              width: 148,
+                              height: 148,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withValues(alpha: k.isDark ? 0.08 : 0.18),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(emoji, style: const TextStyle(fontSize: 72)),
+                            ),
+                          ),
+                          const SizedBox(height: KSpace.xl),
+                          FadeSlideIn(
+                            index: 1,
+                            child: Text(tr(title),
+                                style: text.headlineLarge?.copyWith(color: k.onHero), textAlign: TextAlign.center),
+                          ),
                           const SizedBox(height: KSpace.sm),
-                          Text(tr(body),
-                              textAlign: TextAlign.center,
-                              style: text.bodyLarge?.copyWith(color: context.k.inkMuted)),
+                          FadeSlideIn(
+                            index: 2,
+                            child: Text(tr(body),
+                                textAlign: TextAlign.center,
+                                style: text.bodyLarge?.copyWith(color: k.onHero.withValues(alpha: 0.9))),
+                          ),
                         ],
                       ),
                   ],
@@ -85,13 +113,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   for (var i = 0; i < _cards.length; i++)
-                    Container(
-                      width: i == _index ? 22 : 8,
+                    AnimatedContainer(
+                      duration: KMotion.medium,
+                      curve: KMotion.curve,
+                      width: i == _index ? 26 : 8,
                       height: 8,
                       margin: const EdgeInsets.all(4),
                       decoration: ShapeDecoration(
                         shape: const StadiumBorder(),
-                        color: i == _index ? context.k.accent : context.k.line,
+                        color: k.onHero.withValues(alpha: i == _index ? 1 : 0.4),
                       ),
                     ),
                 ],
@@ -100,6 +130,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: k.surface, foregroundColor: k.ink),
                   onPressed: last
                       ? _done
                       : () => _pages.nextPage(
@@ -110,6 +141,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

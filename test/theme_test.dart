@@ -26,6 +26,11 @@ void main() {
         expect(contrast(p.onAccent, p.accent), greaterThanOrEqualTo(4.5), reason: 'button text');
         expect(contrast(p.ink, p.accentSoft), greaterThanOrEqualTo(4.5), reason: 'text on chips');
         expect(contrast(p.accent, p.surface), greaterThanOrEqualTo(3), reason: 'accent icons');
+        expect(contrast(p.onAccent, p.accent2), greaterThanOrEqualTo(4.5), reason: 'text on gradients');
+        expect(contrast(p.onHero, p.heroStart), greaterThanOrEqualTo(4.5), reason: 'header text');
+        expect(contrast(p.onHero, p.heroEnd), greaterThanOrEqualTo(4.5), reason: 'header text');
+        expect(contrast(p.ink, p.surfaceHigh), greaterThanOrEqualTo(7), reason: 'text on raised things');
+        expect(contrast(p.inkMuted, p.surfaceHigh), greaterThanOrEqualTo(4.5));
       });
 
       test('$label: theme builds', () {
@@ -45,6 +50,8 @@ void main() {
       expect(contrast(p.onAccent, p.accent), greaterThanOrEqualTo(4.5));
       expect(contrast(p.ink, p.accentSoft), greaterThanOrEqualTo(4.5));
       expect(contrast(p.accent, p.surface), greaterThanOrEqualTo(3));
+      expect(contrast(p.onHero, p.heroStart), greaterThanOrEqualTo(4.5));
+      expect(contrast(p.inkMuted, p.surfaceHigh), greaterThanOrEqualTo(4.5));
     });
   }
 

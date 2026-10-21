@@ -20,6 +20,7 @@ import '../../models/plan.dart';
 import '../../planner/planner.dart' show haversineKm;
 import '../../widgets/common.dart';
 import '../../widgets/khroga_map.dart';
+import '../../widgets/motion.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -660,8 +661,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       childAspectRatio: 0.8,
                     ),
                     itemCount: list.length,
-                    itemBuilder: (_, i) =>
-                        PlaceGridTile(place: list[i], from: _sort == _Sort.nearest ? me : null),
+                    itemBuilder: (_, i) => FadeSlideIn(
+                      key: ValueKey(list[i].id),
+                      index: i < 8 ? i : 0,
+                      child: PlaceGridTile(place: list[i], from: _sort == _Sort.nearest ? me : null),
+                    ),
                   ),
                 )
               else
@@ -672,7 +676,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
                     itemBuilder: (_, i) => i == list.length
                         ? const OsmCredit()
-                        : PlaceTile(place: list[i], from: _sort == _Sort.nearest ? me : null),
+                        : FadeSlideIn(
+                            key: ValueKey(list[i].id),
+                            index: i < 8 ? i : 0,
+                            child: PlaceTile(place: list[i], from: _sort == _Sort.nearest ? me : null),
+                          ),
                   ),
                 ),
             ],
@@ -778,7 +786,7 @@ class PlaceGridTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
-    return Card(
+    return Pressable(child: Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/place/${place.id}'),
@@ -786,11 +794,14 @@ class PlaceGridTile extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: PlaceImage(
-                url: place.photoUrl,
-                emoji: Categories.emoji(place.category),
-                width: double.infinity,
-                radius: 0,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                child: PlaceImage(
+                  url: place.photoUrl,
+                  emoji: Categories.emoji(place.category),
+                  width: double.infinity,
+                  radius: KRadius.card - 6,
+                ),
               ),
             ),
             Padding(
@@ -813,7 +824,7 @@ class PlaceGridTile extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -837,7 +848,11 @@ class OpenBadge extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6)],
+          ),
         ),
         const SizedBox(width: 4),
         Flexible(
@@ -872,20 +887,21 @@ class PlaceTile extends ConsumerWidget {
       if (place.area != null) place.area!,
       if (place.cuisineLabel != null) place.cuisineLabel!,
     ].join(' · ');
-    return Card(
+    return Pressable(child: Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/place/${place.id}'),
         onLongPress: () => showPlaceQuickActions(context, place),
         child: Padding(
-          padding: const EdgeInsets.all(KSpace.sm + 4),
+          padding: const EdgeInsets.all(KSpace.sm + 2),
           child: Row(
             children: [
               PlaceImage(
                 url: place.photoUrl,
                 emoji: Categories.emoji(place.category),
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
+                radius: 16,
               ),
               const SizedBox(width: KSpace.md),
               Expanded(
@@ -906,7 +922,7 @@ class PlaceTile extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }
 
