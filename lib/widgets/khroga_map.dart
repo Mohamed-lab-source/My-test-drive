@@ -15,7 +15,11 @@ class MapPin {
     this.number,
     this.onTap,
     this.dim = false,
+    this.initials,
   });
+
+  /// A person (live location): shown as a round badge with their initials.
+  final String? initials;
 
   /// Greyed out (e.g. known to be closed right now).
   final bool dim;
@@ -51,7 +55,11 @@ class KhrogaMap extends StatelessWidget {
     this.me,
     this.interactive = true,
     this.zoom = 14,
+    this.trail = const [],
   });
+
+  /// A recorded route (Track my outing), drawn as a line.
+  final List<(double, double)> trail;
 
   final List<MapPin> pins;
   final bool route;
@@ -66,7 +74,8 @@ class KhrogaMap extends StatelessWidget {
     final k = context.k;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final points = [for (final p in pins) LatLng(p.lat, p.lng)];
-    final all = [...points, if (me != null) LatLng(me!.$1, me!.$2)];
+    final line = [for (final t in trail) LatLng(t.$1, t.$2)];
+    final all = [...points, ...line, if (me != null) LatLng(me!.$1, me!.$2)];
     if (all.isEmpty) return const SizedBox.shrink();
     return FlutterMap(
       options: MapOptions(
@@ -102,6 +111,16 @@ class KhrogaMap extends StatelessWidget {
           PolylineLayer(polylines: [
             Polyline(points: points, strokeWidth: 4, color: k.accent),
           ]),
+        if (line.length > 1)
+          PolylineLayer(polylines: [
+            Polyline(
+              points: line,
+              strokeWidth: 5,
+              gradientColors: [k.accent, k.accent2],
+              borderStrokeWidth: 2,
+              borderColor: k.surface.withValues(alpha: 0.8),
+            ),
+          ]),
         MarkerLayer(markers: [
           if (me != null)
             Marker(
@@ -116,7 +135,31 @@ class KhrogaMap extends StatelessWidget {
                 ),
               ),
             ),
-          for (final p in pins)
+          for (final p in pins.where((p) => p.initials != null))
+            Marker(
+              point: LatLng(p.lat, p.lng),
+              width: 46,
+              height: 46,
+              child: Tooltip(
+                message: p.label,
+                child: GestureDetector(
+                  onTap: p.onTap,
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: p.dim ? null : k.accentGradient,
+                      color: p.dim ? k.inkMuted : null,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: const [BoxShadow(blurRadius: 8, color: Color(0x66000000))],
+                    ),
+                    child: Text(p.initials!,
+                        style: TextStyle(color: k.onAccent, fontWeight: FontWeight.w800, fontSize: 15)),
+                  ),
+                ),
+              ),
+            ),
+          for (final p in pins.where((p) => p.initials == null))
             Marker(
               point: LatLng(p.lat, p.lng),
               width: 40,

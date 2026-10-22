@@ -64,6 +64,7 @@ class CrowdCard extends ConsumerWidget {
     final crowd = ref.watch(crowdNowProvider(place.id)).value;
     final recent = crowd != null && crowd.isRecent(now);
     return Card(
+      margin: const EdgeInsets.only(bottom: KSpace.sm + 4),
       child: Padding(
         padding: const EdgeInsets.all(KSpace.md),
         child: Column(

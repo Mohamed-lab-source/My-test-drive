@@ -9,6 +9,10 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🛰️', 'Live map', 'Share your live location with your group for up to 4 hours: see who is on the way and who has arrived.'),
+    ('🤝', 'Meet in the middle', 'Real places halfway between everyone sharing; suggest one in the chat or make it the meeting point.'),
+    ('🥾', 'Track my outing', 'Record your route, distance and time. Saved only on your phone.'),
+    ('✨', 'A cleaner place page', 'Big buttons for what you do most, and tidy icon grids for everything else.'),
     ('💎', 'A fresh new look', 'New fonts drawn for Arabic and English, richer colors, smooth animations and tidier menus.'),
     ('🎨', 'Gradient themes', 'Every color theme now has its own gradient. Pick yours in Look & colors.'),
     ('🏙️', 'More areas', 'New Cairo (5th Settlement), Maadi, Heliopolis, Dokki and 30 more districts, with their cafés, restaurants, malls and shops.'),

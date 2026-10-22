@@ -96,15 +96,19 @@ class GroupsRepository {
     return groupId;
   }
 
-  Future<void> leave(String groupId, String uid) => _groups.doc(groupId).update({
-        'memberUids': FieldValue.arrayRemove([uid]),
-        'freeUids': FieldValue.arrayRemove([uid]),
-        'rsvp.$uid': FieldValue.delete(),
-      });
+  Future<void> leave(String groupId, String uid) async {
+    // Stop sharing your live location there first (if you were).
+    await _groups.doc(groupId).collection('live').doc(uid).delete().catchError((_) {});
+    await _groups.doc(groupId).update({
+      'memberUids': FieldValue.arrayRemove([uid]),
+      'freeUids': FieldValue.arrayRemove([uid]),
+      'rsvp.$uid': FieldValue.delete(),
+    });
+  }
 
   /// Deletes the group, its messages, polls and invite code (organizer only).
   Future<void> delete(Group group) async {
-    for (final sub in ['messages', 'polls', 'items']) {
+    for (final sub in ['messages', 'polls', 'items', 'live']) {
       final docs = _groups.doc(group.id).collection(sub);
       while (true) {
         final page = await docs.limit(400).get();

@@ -300,6 +300,21 @@ How the code enforces it (keep it this way):
   floating `_NavBar` in router.dart. Don't use letterSpacing on text that
   can be Arabic (it breaks the joined letters).
 
+- 1.5 live + tracking (`lib/app/live.dart` pure logic, tested in
+  test/live_test.dart; `lib/data/live_repository.dart`, `live_share.dart`):
+  group live location `groups/{id}/live/{uid}` {lat, lng, name, updatedAt,
+  until ≤ 4 h ahead, status way|here}; own doc only, members read, owner
+  may delete (group deletion); rules + rules-test. `LiveShareController`
+  uses the foreground position stream only (never background location),
+  sends only when `shouldSendLive` (40 m / 20 s, heartbeat 2 min), stops at
+  `until`, auto "here" within 150 m of the meeting point; leave/delete group
+  remove spots. Live map `/group/:id/live` (+ banner/badge in the group
+  chat), meet in the middle (`fairMidpoint`, `meetingSpots`). Track my
+  outing `/track`: `TrackController`, trail saved only on the phone (pref
+  `tracks`, newest 20, thinned), cleared with history. Strip above the tabs
+  while tracking/sharing. Place page: `_QuickActions` + `_ActionGrid`
+  sections instead of a pile of buttons; cards there get bottom margins.
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

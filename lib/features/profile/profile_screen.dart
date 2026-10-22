@@ -10,7 +10,9 @@ import '../../app/review.dart';
 import '../../app/share_texts.dart';
 
 import '../../app/theme.dart';
+import '../../app/theme_settings.dart' show sharedPrefsProvider;
 import '../../data/providers.dart';
+import '../../data/live_share.dart' show savedTracksProvider;
 import '../../models/place.dart';
 import '../../models/plan.dart';
 import '../../models/review.dart';
@@ -85,6 +87,7 @@ class ProfileScreen extends ConsumerWidget {
                   (Icons.collections_bookmark_outlined, tr('Collections'), tr('Work spots, open late, wheelchair friendly…'), '/collections'),
                   (Icons.insights_outlined, tr('My outings in numbers'), tr('Streaks, top areas, kinds of places'), '/stats'),
                   (Icons.map_outlined, tr('My map'), tr('Favorites and places you\'ve been'), '/my-map'),
+                  (Icons.route, tr('Track my outing'), tr('Record your route, distance and time'), '/track'),
                   (Icons.sticky_note_2_outlined, tr('My notes'), tr('All your private notes'), '/notes'),
                   (Icons.handyman_outlined, tr('Outing tools'), tr('Decide for us, who pays, sunset, holidays'), '/tools'),
                   (Icons.lightbulb_outline, tr('Outing ideas'), tr('Ready-made plans to start from'), '/ideas'),
@@ -142,7 +145,7 @@ class ProfileScreen extends ConsumerWidget {
                 ListTile(
                   leading: const IconTile(Icons.cleaning_services_outlined),
                   title: Text(tr('Clear history on this phone')),
-                  subtitle: Text(tr('Recently viewed, searches, star ratings, ticked stops')),
+                  subtitle: Text(tr('Recently viewed, searches, star ratings, ticked stops, routes')),
                   onTap: () => _clearHistory(context, ref),
                 ),
               ],
@@ -378,6 +381,8 @@ class ProfileScreen extends ConsumerWidget {
     ref.read(searchHistoryProvider.notifier).clear();
     ref.read(myRatingsProvider.notifier).clear();
     ref.read(planChecklistProvider.notifier).clear();
+    await ref.read(sharedPrefsProvider)?.remove('tracks');
+    ref.invalidate(savedTracksProvider);
     if (context.mounted) showMessage(context, tr('History cleared'));
   }
 

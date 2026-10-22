@@ -521,6 +521,30 @@ service cloud.firestore {
               || (resource.data.takenBy == me() && newData().takenBy == null && newData().takenName == null));
         allow delete: if signedIn() && (resource.data.uid == me() || group().ownerUid == me());
       }
+
+      // Live location during an outing: each member writes only their own
+      // spot, for a limited time (at most 4 hours ahead), and only members
+      // can see it. You can always delete your own, even after leaving; the
+      // organizer can clear them when deleting the group.
+      match /live/{uid} {
+        function liveGroup() { return get(/databases/$(database)/documents/groups/$(groupId)).data; }
+        function liveMember() { return signedIn() && me() in liveGroup().memberUids; }
+        function validLive() {
+          return newData().keys().hasOnly(['lat', 'lng', 'name', 'updatedAt', 'until', 'status'])
+            && newData().lat is number && newData().lat >= -90 && newData().lat <= 90
+            && newData().lng is number && newData().lng >= -180 && newData().lng <= 180
+            && validName(newData().name)
+            && newData().updatedAt == request.time
+            && newData().until is timestamp
+            && newData().until > request.time
+            && newData().until <= request.time + duration.value(4, 'h')
+            && (newData().get('status', null) == null || newData().status in ['way', 'here']);
+        }
+
+        allow read: if liveMember();
+        allow create, update: if isMe(uid) && liveMember() && validLive();
+        allow delete: if isMe(uid) || (signedIn() && liveGroup().ownerUid == me());
+      }
     }
   }
 }

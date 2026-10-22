@@ -39,6 +39,7 @@ class _AroundCardState extends ConsumerState<AroundCard> {
     final text = Theme.of(context).textTheme;
     final lang = isArabic ? 'ar' : 'en';
     return Card(
+      margin: const EdgeInsets.only(bottom: KSpace.sm + 4),
       child: Padding(
         padding: const EdgeInsets.all(KSpace.md),
         child: Column(

@@ -456,3 +456,25 @@ test("helpful votes: one per person, never on your own review", async () => {
   await assertSucceeds(setDoc(doc(as(BOB), "users/bob/helpfulGiven/p1__alice"), { at: serverTimestamp() }));
   await assertFails(getDoc(doc(as(EVE), "users/bob/helpfulGiven/p1__alice")));
 });
+
+test("live location: members share only their own spot, for a limited time", async () => {
+  const spot = (until) => ({
+    lat: 30.04, lng: 31.23, name: "Bob", updatedAt: serverTimestamp(),
+    until: Timestamp.fromMillis(Date.now() + until), status: "way",
+  });
+  const hour = 3600 * 1000;
+  await assertSucceeds(setDoc(doc(as(BOB), "groups/g1/live/bob"), spot(hour)));
+  await assertFails(setDoc(doc(as(BOB), "groups/g1/live/alice"), spot(hour)), "not for someone else");
+  await assertFails(setDoc(doc(as(EVE), "groups/g1/live/eve"), spot(hour)), "outsider");
+  await assertFails(setDoc(doc(as(BOB), "groups/g1/live/bob"), spot(5 * hour)), "more than 4 hours ahead");
+  await assertFails(setDoc(doc(as(BOB), "groups/g1/live/bob"), spot(-hour)), "already over");
+  await assertFails(setDoc(doc(as(BOB), "groups/g1/live/bob"), { ...spot(hour), status: "lost" }));
+  await assertFails(setDoc(doc(as(BOB), "groups/g1/live/bob"), { ...spot(hour), lat: 200 }));
+  await assertFails(setDoc(doc(as(BOB), "groups/g1/live/bob"), { ...spot(hour), extra: 1 }));
+  await assertSucceeds(getDocs(collection(as(ALICE), "groups/g1/live")));
+  await assertFails(getDocs(collection(as(EVE), "groups/g1/live")), "outsiders can't see");
+  await assertFails(deleteDoc(doc(as(EVE), "groups/g1/live/bob")), "outsiders can't stop it");
+  await assertSucceeds(deleteDoc(doc(as(BOB), "groups/g1/live/bob")));
+  await assertSucceeds(setDoc(doc(as(BOB), "groups/g1/live/bob"), spot(hour)));
+  await assertSucceeds(deleteDoc(doc(as(ALICE), "groups/g1/live/bob")), "organizer clears it when deleting the group");
+});

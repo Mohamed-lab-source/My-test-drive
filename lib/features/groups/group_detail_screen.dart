@@ -16,6 +16,8 @@ import '../../app/share_texts.dart';
 import '../../app/links.dart' show appRouteFor;
 import '../../app/web_host.dart';
 import '../../app/local_prefs.dart';
+import '../../app/live.dart' show LiveSpot;
+import '../../data/live_share.dart';
 import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/place.dart';
@@ -108,6 +110,11 @@ class _GroupViewState extends ConsumerState<_GroupView> {
             const {};
     final polls = ref.watch(groupPollsProvider(group.id)).value ?? const <Poll>[];
     final isOwner = group.isOwner(uid);
+    final now = DateTime.now();
+    final liveCount = (ref.watch(groupLiveProvider(group.id)).value ?? const <LiveSpot>[])
+        .where((s) => s.isLive(now) && group.memberUids.contains(s.uid))
+        .length;
+    final sharing = ref.watch(liveShareProvider.select((s) => s.groupId == group.id));
     return Scaffold(
       appBar: AppBar(
         title: _search == null
@@ -140,6 +147,15 @@ class _GroupViewState extends ConsumerState<_GroupView> {
               route: '/group/${group.id}',
               fixedStart: meetAt,
             ),
+          IconButton(
+            tooltip: tr('Live map'),
+            icon: Badge(
+              isLabelVisible: liveCount > 0,
+              label: Text('$liveCount'),
+              child: const Icon(Icons.share_location),
+            ),
+            onPressed: () => context.push('/group/${group.id}/live'),
+          ),
           IconButton(
             tooltip: tr('Polls'),
             icon: Badge(
@@ -195,6 +211,36 @@ class _GroupViewState extends ConsumerState<_GroupView> {
                       icon: const Icon(Icons.expand_more),
                       label: Text(tr('Show details')),
                     ),
+            if ((liveCount > 0 || sharing) && _search == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xs),
+                child: Material(
+                  color: context.k.accentSoft,
+                  shape: const StadiumBorder(),
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () => context.push('/group/${group.id}/live'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: 10),
+                      child: Row(children: [
+                        const Text('🟢'),
+                        const SizedBox(width: KSpace.sm),
+                        Expanded(
+                          child: Text(
+                            sharing
+                                ? (liveCount > 0
+                                    ? trf("You and {n} more are sharing live location", {'n': liveCount})
+                                    : tr("You're sharing your live location"))
+                                : trf('{n} sharing live location', {'n': liveCount}),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Text(tr('See map'), style: TextStyle(color: context.k.accent, fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
             if (group.pinned != null && _search == null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xs),

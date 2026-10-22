@@ -247,6 +247,12 @@ class _PlanBody extends ConsumerWidget {
             icon: Icons.navigation_outlined,
             label: trf('Go to the first stop: {name}', {'name': plan.stops.first.name}),
           ),
+          const SizedBox(height: KSpace.sm),
+          OutlinedButton.icon(
+            onPressed: () => context.push(Uri(path: '/track', queryParameters: {'title': plan.title}).toString()),
+            icon: const Icon(Icons.route),
+            label: Text(tr('Track this outing')),
+          ),
         ],
         if (plan.stops.length < plan.request.stops) ...[
           const SizedBox(height: KSpace.md),

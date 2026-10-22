@@ -10,6 +10,8 @@ import '../data/providers.dart';
 import '../models/social.dart';
 import 'links.dart';
 import 'helpers.dart' show tapFeedback;
+import 'live.dart' show trailKm;
+import '../data/live_share.dart';
 import 'local_prefs.dart';
 import 'theme.dart';
 import '../features/links/link_screens.dart';
@@ -35,6 +37,8 @@ import '../features/friends/friends_screen.dart';
 import '../features/friends/qr_scan_screen.dart';
 import '../features/groups/group_detail_screen.dart';
 import '../features/groups/groups_screen.dart';
+import '../features/groups/live_map_screen.dart';
+import '../features/tools/track_screen.dart';
 import '../features/plan/plan_form_screen.dart';
 import '../features/plan/plan_result_screen.dart';
 import '../features/plan/saved_plans_screen.dart';
@@ -131,6 +135,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/group/:id',
         builder: (_, s) => GroupDetailScreen(groupId: s.pathParameters['id']!),
       ),
+      GoRoute(
+        path: '/group/:id/live',
+        builder: (_, s) => LiveMapScreen(groupId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/track',
+        builder: (_, s) => TrackScreen(title: s.uri.queryParameters['title']),
+      ),
       GoRoute(path: '/scan', builder: (_, _) => const QrScanScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(path: '/malls', builder: (_, _) => const MallsScreen()),
@@ -207,9 +219,25 @@ class _Shell extends ConsumerWidget {
     final requests = (ref.watch(friendshipsProvider).value ?? const [])
         .where((f) => f.status == FriendshipStatus.pending && f.requestedBy != uid)
         .length;
+    final share = ref.watch(liveShareProvider);
+    final track = ref.watch(trackProvider);
     return Scaffold(
       body: shell,
-      bottomNavigationBar: _NavBar(
+      bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
+        // Something running in the background of the app: one tap back to it.
+        if (track.running)
+          _ActiveStrip(
+            emoji: '🔴',
+            text: trf('Recording your route · {km} km', {'km': trailKm(track.points).toStringAsFixed(2)}),
+            onTap: () => context.push('/track'),
+          ),
+        if (share.on)
+          _ActiveStrip(
+            emoji: '🟢',
+            text: tr("You're sharing your live location"),
+            onTap: () => context.push('/group/${share.groupId}/live'),
+          ),
+        _NavBar(
         index: shell.currentIndex,
         onTap: (i) {
           tapFeedback(ref.read(phoneSettingsProvider).haptics);
@@ -221,6 +249,49 @@ class _Shell extends ConsumerWidget {
           (Icons.forum_outlined, Icons.forum, tr('Groups'), 0),
           (Icons.people_outline, Icons.people, tr('Friends'), requests),
         ],
+      ),
+      ]),
+    );
+  }
+}
+
+/// A slim strip above the tabs while tracking or sharing is on.
+class _ActiveStrip extends StatelessWidget {
+  const _ActiveStrip({required this.emoji, required this.text, required this.onTap});
+
+  final String emoji;
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return ColoredBox(
+      color: k.background,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.xs, KSpace.md, 0),
+        child: Material(
+          color: k.accentSoft,
+          shape: const StadiumBorder(),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: 9),
+              child: Row(children: [
+                Text(emoji),
+                const SizedBox(width: KSpace.sm),
+                Expanded(
+                  child: Text(text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: k.ink, fontWeight: FontWeight.w600, fontSize: 13.5)),
+                ),
+                Icon(Icons.chevron_right, size: 18, color: k.inkMuted),
+              ]),
+            ),
+          ),
+        ),
       ),
     );
   }

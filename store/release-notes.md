@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 1.5.0
+
+<en-US>
+• Live map: share your live location with your group and see who's on the way
+• Meet in the middle: real places halfway between everyone
+• Track my outing: record your route, distance and time (stays on your phone)
+• A cleaner, more premium place page
+</en-US>
+
+<ar>
+• الخريطة المباشرة: شارك موقعك مع جروبك واعرف مين في السكة
+• نتقابل في النص: أماكن حقيقية في نص المسافة بين الكل
+• سجّل خروجتي: سجّل مسارك والمسافة والوقت (على موبايلك بس)
+• صفحة مكان أنضف وأشيك
+</ar>
+
 ## 1.4.0
 
 <en-US>

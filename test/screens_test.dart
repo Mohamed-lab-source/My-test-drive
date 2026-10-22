@@ -17,6 +17,10 @@ import 'package:khroga/features/profile/welcome_screen.dart';
 import 'package:khroga/features/profile/whats_new_screen.dart';
 import 'package:khroga/features/tools/ideas_screen.dart';
 import 'package:khroga/features/tools/tools_screen.dart';
+import 'package:khroga/features/tools/track_screen.dart';
+import 'package:khroga/features/groups/live_map_screen.dart';
+import 'package:khroga/data/live_share.dart';
+import 'package:khroga/models/social.dart';
 import 'package:khroga/models/place.dart';
 import 'package:khroga/widgets/share_card.dart';
 
@@ -63,7 +67,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('More areas'), findsOneWidget);
+    expect(find.text('Live map'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -151,6 +155,32 @@ void main() {
     await tester.pump();
     expect(find.text('How do reminders work?'), findsOneWidget);
     expect(find.text('Are the places real?'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('live map and track my outing fit a small phone', (tester) async {
+    final group = Group.fromMap('g1', const {
+      'name': 'Test group', 'ownerUid': 'me', 'memberUids': ['me', 'friend'], 'joinCode': 'ABC123',
+    });
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        uidProvider.overrideWith((_) => 'me'),
+        groupProvider('g1').overrideWith((_) => Stream.value(group)),
+        groupLiveProvider('g1').overrideWith((_) => Stream.value(const [])),
+        allPlacesProvider.overrideWith((_) async => const []),
+      ],
+      child: _router(const LiveMapScreen(groupId: 'g1')),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Share my live location'), findsOneWidget);
+    expect(find.text('1 h'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(ProviderScope(key: UniqueKey(), child: _router(const TrackScreen())));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Start tracking'), findsOneWidget);
+    expect(find.text('Routes you record show up here.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

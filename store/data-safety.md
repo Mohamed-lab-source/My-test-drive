@@ -11,7 +11,7 @@ These match what the app really does. Answer the form like this.
 | Personal info → Name | Yes | No | Required (a display name) | App functionality, account management |
 | Personal info → Email address | Yes (Google sign-in only) | No | Optional (guests have none) | Account management |
 | Personal info → User IDs | Yes | No | Required | App functionality, account management |
-| Location → Precise location | Yes | No | Optional (only when you tap "Send my location") | App functionality |
+| Location → Precise location | Yes | No | Optional (only when you tap "Send my location", check in, or share your live location with a group) | App functionality |
 | Messages → Other in-app messages | Yes (group chats) | No | Optional | App functionality |
 | Photos and videos | No | — | — | (QR scanning stays on the phone) |
 | App activity → Other user-generated content | Yes (plans, notes, polls, check-ins, place reviews, "how busy" reports) | No | Optional | App functionality |
@@ -24,6 +24,8 @@ Notes for the form:
 - The AI request (vibe, time, a list of real places, and your optional note) goes to Google Gemini as a **service provider**: not "sharing".
 - Place reviews (stars, answers, words) are shown publicly with your display name and guide level, because you chose to post them: not "sharing". You can delete them any time, and "Delete my account" removes them.
 - "How busy is it now?" reports add only a count to the place's public numbers (no name). The time you last reported a place is kept privately under your account so nobody can spam; "Delete my account" removes it. It isn't your GPS location: you pick the place.
+- Live location (groups): only when you choose to share, for at most 4 hours, only while the app is open, seen only by that group's members; deleted when you stop, leave the group or delete your account. Khroga never asks for background location.
+- Track my outing: the recorded route stays **on the phone only**; not "collected".
 - Outing reminders are scheduled **on the phone only** (Android notifications); nothing is sent to us.
 - What you spent per person is an optional answer inside your public review.
 - No ads, no analytics SDKs, no data sold.

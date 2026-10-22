@@ -148,6 +148,8 @@ class _Details extends ConsumerWidget {
             OpenBadge(place: place),
           ],
         ),
+        const SizedBox(height: KSpace.md),
+        FadeSlideIn(index: 2, child: _QuickActions(place: place)),
         if (mall != null) ...[
           const SizedBox(height: KSpace.md),
           Card(
@@ -167,23 +169,22 @@ class _Details extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           Text(facts.description!, style: text.bodyLarge),
         ],
-        if (place.address != null) ...[
+        if (place.address != null || place.phone != null || place.hasLocation) ...[
+          SectionTitle(tr('Details')),
+          MenuGroup(children: [
+            if (place.address != null)
+              _CopyRow(icon: Icons.place_outlined, text: place.address!, what: 'Address'),
+            if (place.phone != null)
+              _CopyRow(icon: Icons.call_outlined, text: place.phone!, what: 'Phone number'),
+            if (place.hasLocation)
+              _CopyRow(
+                  icon: Icons.my_location,
+                  text: '${place.lat!.toStringAsFixed(5)}, ${place.lng!.toStringAsFixed(5)}',
+                  what: 'Coordinates'),
+          ]),
+        ],
+        if (place.hasLocation) ...[
           const SizedBox(height: KSpace.md),
-          _CopyRow(icon: Icons.place_outlined, text: place.address!, what: 'Address'),
-        ],
-        if (place.phone != null) ...[
-          const SizedBox(height: KSpace.sm),
-          _CopyRow(icon: Icons.call_outlined, text: place.phone!, what: 'Phone number'),
-        ],
-        if (place.hasLocation) ...[
-          const SizedBox(height: KSpace.sm),
-          _CopyRow(
-              icon: Icons.my_location,
-              text: '${place.lat!.toStringAsFixed(5)}, ${place.lng!.toStringAsFixed(5)}',
-              what: 'Coordinates'),
-        ],
-        if (place.hasLocation) ...[
-          const SizedBox(height: KSpace.sm),
           _PlaceMap(place: place),
         ],
         const SizedBox(height: KSpace.sm),
@@ -202,8 +203,8 @@ class _Details extends ConsumerWidget {
         if (place.wikidata != null) _WikiCard(place: place),
         PlaceReviewsSection(place: place),
         if (place.hasLocation && place.category != 'shop') ...[
-          const SizedBox(height: KSpace.sm),
-          FilledButton.tonalIcon(
+          const SizedBox(height: KSpace.md),
+          GradientButton(
             onPressed: () {
               ref.read(cityProvider.notifier).set(place.city);
               context.push(Uri(path: '/new-plan', queryParameters: {
@@ -212,161 +213,11 @@ class _Details extends ConsumerWidget {
                 'label': place.name,
               }).toString());
             },
-            icon: const Icon(Icons.auto_awesome),
-            label: Text(tr('Plan an outing around here')),
+            icon: Icons.auto_awesome,
+            label: tr('Plan an outing around here'),
           ),
         ],
-        const SizedBox(height: KSpace.md),
-        Wrap(
-          spacing: KSpace.sm,
-          runSpacing: KSpace.sm,
-          children: [
-            if (place.hasLocation)
-              OutlinedButton.icon(
-                onPressed: () => openInMaps(name: place.name, lat: place.lat, lng: place.lng),
-                icon: const Icon(Icons.directions_outlined),
-                label: Text(tr('Directions')),
-              ),
-            if (place.hasLocation)
-              OutlinedButton.icon(
-                onPressed: () => openDirections(lat: place.lat!, lng: place.lng!, mode: 'walking'),
-                icon: const Icon(Icons.directions_walk),
-                label: Text(tr('Walk')),
-              ),
-            if (place.hasLocation)
-              OutlinedButton.icon(
-                onPressed: () => openUber(name: place.name, lat: place.lat!, lng: place.lng!),
-                icon: const Icon(Icons.local_taxi_outlined),
-                label: Text(tr('Uber')),
-              ),
-            if (place.phone != null)
-              OutlinedButton.icon(
-                onPressed: () => callPhone(place.phone!),
-                icon: const Icon(Icons.call_outlined),
-                label: Text(tr('Call')),
-              ),
-            if (place.website != null)
-              OutlinedButton.icon(
-                onPressed: () => openWebsite(place.website!),
-                icon: const Icon(Icons.language),
-                label: Text(websiteDomain(place.website) ?? tr('Website')),
-              ),
-            if (place.menuUrl != null)
-              OutlinedButton.icon(
-                onPressed: () => openWebsite(place.menuUrl!),
-                icon: const Icon(Icons.restaurant_menu),
-                label: Text(tr('Menu (their link)')),
-              ),
-            if (place.instagram != null)
-              OutlinedButton.icon(
-                onPressed: () => openWebsite(place.instagram!),
-                icon: const Icon(Icons.photo_camera_outlined),
-                label: Text(tr('Instagram')),
-              ),
-            if (place.facebook != null)
-              OutlinedButton.icon(
-                onPressed: () => openWebsite(place.facebook!),
-                icon: const Icon(Icons.facebook),
-                label: Text(tr('Facebook')),
-              ),
-            if (wazeUrl(place) != null)
-              OutlinedButton.icon(
-                onPressed: () => openUri(wazeUrl(place)!),
-                icon: const Icon(Icons.navigation_outlined),
-                label: Text(tr('Waze')),
-              ),
-            OutlinedButton.icon(
-              onPressed: () => openUri(googleSearchUrl(place)),
-              icon: const Icon(Icons.travel_explore),
-              label: Text(tr('Reviews & menus on Google')),
-            ),
-            if (wikidataUrl(place) != null)
-              OutlinedButton.icon(
-                onPressed: () => openUri(wikidataUrl(place)!),
-                icon: const Icon(Icons.menu_book_outlined),
-                label: Text(tr('Wikipedia / Wikidata')),
-              ),
-            if (whatsappUrl(place.phone) != null)
-              OutlinedButton.icon(
-                onPressed: () => openUri(whatsappUrl(place.phone)!),
-                icon: const Icon(Icons.chat_outlined),
-                label: Text(tr('WhatsApp')),
-              ),
-            if (transitUrl(place) != null)
-              OutlinedButton.icon(
-                onPressed: () => openUri(transitUrl(place)!),
-                icon: const Icon(Icons.directions_bus_outlined),
-                label: Text(tr('Transit')),
-              ),
-            if (place.hasLocation)
-              OutlinedButton.icon(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(
-                      text: Uri.https('www.google.com', '/maps/search/',
-                          {'api': '1', 'query': '${place.lat},${place.lng}'}).toString()));
-                  showMessage(context, tr('Map link copied'));
-                },
-                icon: const Icon(Icons.link),
-                label: Text(tr('Copy map link')),
-              ),
-            if (streetViewUrl(place) != null)
-              OutlinedButton.icon(
-                onPressed: () => openUri(streetViewUrl(place)!),
-                icon: const Icon(Icons.streetview),
-                label: Text(tr('Street View')),
-              ),
-            OutlinedButton.icon(
-              onPressed: () => _addToList(context, ref, place),
-              icon: const Icon(Icons.bookmark_add_outlined),
-              label: Text(tr('Add to a list')),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _compare(context, ref, place),
-              icon: const Icon(Icons.compare_arrows),
-              label: Text(tr('Compare')),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _addToPlan(context, ref, place),
-              icon: const Icon(Icons.playlist_add),
-              label: Text(tr('Add to a plan')),
-            ),
-            OutlinedButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: placeInfoText(place)));
-                showMessage(context, tr('All info copied'));
-              },
-              icon: const Icon(Icons.content_copy),
-              label: Text(tr('Copy all info')),
-            ),
-            if (geoUrl(place) != null)
-              OutlinedButton.icon(
-                onPressed: () => openUri(geoUrl(place)!),
-                icon: const Icon(Icons.map_outlined),
-                label: Text(tr('Other map app')),
-              ),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final now = DateTime.now();
-                final day = await showDatePicker(
-                    context: context,
-                    initialDate: now,
-                    firstDate: DateTime(now.year, now.month, now.day),
-                    lastDate: now.add(const Duration(days: 365)));
-                if (day == null || !context.mounted) return;
-                final t = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 19, minute: 0));
-                if (t == null) return;
-                await openUri(visitCalendarUrl(place, DateTime(day.year, day.month, day.day, t.hour, t.minute)));
-              },
-              icon: const Icon(Icons.event_available),
-              label: Text(tr('Add a visit to my calendar')),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _sendToGroup(context, ref, place),
-              icon: const Icon(Icons.forum_outlined),
-              label: Text(tr('Send to a group')),
-            ),
-          ],
-        ),
+        ..._actionSections(context, ref, place),
         if (facts.labels.isNotEmpty) ...[
           SectionTitle(tr('Good to know')),
           Wrap(
@@ -394,9 +245,10 @@ class _Details extends ConsumerWidget {
           const SizedBox(height: KSpace.xs),
           Text(tr('Hours can change. Call ahead if it matters.'), style: text.bodySmall),
         ],
-        const SizedBox(height: KSpace.md),
+        SectionTitle(tr('Right now')),
         CrowdCard(place: place),
         AroundCard(place: place),
+        SectionTitle(tr('You and this place')),
         _CheckInCard(place: place),
         _VisitedAndNote(place: place),
         _MyRating(place: place),
@@ -449,6 +301,170 @@ class _Details extends ConsumerWidget {
         .replaceAll('; ', '\n')
         .replaceAll(';', '\n')
         .replaceAll(' off', ' closed');
+  }
+}
+
+/// One thing you can do with a place.
+typedef _Act = (IconData icon, String label, VoidCallback onTap);
+
+/// Everything else you can do with a place, as tidy grids of icons
+/// (getting there, links, save & share) instead of a pile of buttons.
+List<Widget> _actionSections(BuildContext context, WidgetRef ref, Place place) {
+  final going = <_Act>[
+    if (place.hasLocation)
+      (Icons.directions_walk, tr('Walk'), () => openDirections(lat: place.lat!, lng: place.lng!, mode: 'walking')),
+    if (place.hasLocation)
+      (Icons.local_taxi_outlined, tr('Uber'), () => openUber(name: place.name, lat: place.lat!, lng: place.lng!)),
+    if (wazeUrl(place) != null) (Icons.navigation_outlined, tr('Waze'), () => openUri(wazeUrl(place)!)),
+    if (transitUrl(place) != null) (Icons.directions_bus_outlined, tr('Transit'), () => openUri(transitUrl(place)!)),
+    if (streetViewUrl(place) != null) (Icons.streetview, tr('Street View'), () => openUri(streetViewUrl(place)!)),
+    if (geoUrl(place) != null) (Icons.map_outlined, tr('Other map app'), () => openUri(geoUrl(place)!)),
+    if (place.hasLocation)
+      (Icons.link, tr('Copy map link'), () {
+        Clipboard.setData(ClipboardData(
+            text: Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '${place.lat},${place.lng}'})
+                .toString()));
+        showMessage(context, tr('Map link copied'));
+      }),
+  ];
+  final links = <_Act>[
+    if (place.website != null && place.phone != null)
+      (Icons.language, websiteDomain(place.website) ?? tr('Website'), () => openWebsite(place.website!)),
+    if (place.menuUrl != null) (Icons.restaurant_menu, tr('Menu (their link)'), () => openWebsite(place.menuUrl!)),
+    if (place.instagram != null) (Icons.photo_camera_outlined, tr('Instagram'), () => openWebsite(place.instagram!)),
+    if (place.facebook != null) (Icons.facebook, tr('Facebook'), () => openWebsite(place.facebook!)),
+    if (whatsappUrl(place.phone) != null) (Icons.chat_outlined, tr('WhatsApp'), () => openUri(whatsappUrl(place.phone)!)),
+    (Icons.travel_explore, tr('Reviews & menus on Google'), () => openUri(googleSearchUrl(place))),
+    if (wikidataUrl(place) != null) (Icons.menu_book_outlined, tr('Wikipedia / Wikidata'), () => openUri(wikidataUrl(place)!)),
+  ];
+  final keep = <_Act>[
+    (Icons.compare_arrows, tr('Compare'), () => _compare(context, ref, place)),
+    (Icons.event_available, tr('Add a visit to my calendar'), () async {
+      final now = DateTime.now();
+      final day = await showDatePicker(
+          context: context,
+          initialDate: now,
+          firstDate: DateTime(now.year, now.month, now.day),
+          lastDate: now.add(const Duration(days: 365)));
+      if (day == null || !context.mounted) return;
+      final t = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 19, minute: 0));
+      if (t == null) return;
+      await openUri(visitCalendarUrl(place, DateTime(day.year, day.month, day.day, t.hour, t.minute)));
+    }),
+    (Icons.content_copy, tr('Copy all info'), () {
+      Clipboard.setData(ClipboardData(text: placeInfoText(place)));
+      showMessage(context, tr('All info copied'));
+    }),
+  ];
+  return [
+    if (going.isNotEmpty) ...[SectionTitle(tr('Getting there')), _ActionGrid(acts: going)],
+    SectionTitle(tr('Links')),
+    _ActionGrid(acts: links),
+    SectionTitle(tr('Save & share')),
+    _ActionGrid(acts: keep),
+  ];
+}
+
+/// The big round buttons under a place's name: the things people do most.
+class _QuickActions extends ConsumerWidget {
+  const _QuickActions({required this.place});
+
+  final Place place;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final acts = <(IconData, String, VoidCallback, bool)>[
+      if (place.hasLocation)
+        (Icons.directions, tr('Directions'), () => openInMaps(name: place.name, lat: place.lat, lng: place.lng), true),
+      if (place.phone != null)
+        (Icons.call, tr('Call'), () => callPhone(place.phone!), false)
+      else if (place.website != null)
+        (Icons.language, tr('Website'), () => openWebsite(place.website!), false),
+      (Icons.playlist_add, tr('Add to a plan'), () => _addToPlan(context, ref, place), false),
+      (Icons.bookmark_add_outlined, tr('Add to a list'), () => _addToList(context, ref, place), false),
+      (Icons.forum_outlined, tr('Send to a group'), () => _sendToGroup(context, ref, place), false),
+    ];
+    final k = context.k;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (icon, label, onTap, primary) in acts)
+          Expanded(
+            child: Pressable(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: primary ? k.accentGradient : null,
+                        color: primary ? null : k.surfaceHigh,
+                        border: primary ? null : Border.all(color: k.line),
+                        boxShadow: primary
+                            ? [BoxShadow(color: k.accent.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 5))]
+                            : null,
+                      ),
+                      child: Icon(icon, color: primary ? k.onAccent : k.ink),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(label,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: k.ink, height: 1.25)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A card of small icon tiles, four to a row.
+class _ActionGrid extends StatelessWidget {
+  const _ActionGrid({required this.acts});
+
+  final List<_Act> acts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: KSpace.sm, horizontal: KSpace.xs),
+        child: LayoutBuilder(builder: (context, c) {
+          final w = c.maxWidth / 4;
+          return Wrap(children: [
+            for (final (icon, label, onTap) in acts)
+              SizedBox(
+                width: w,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    child: Column(children: [
+                      IconTile(icon, size: 44),
+                      const SizedBox(height: 6),
+                      Text(label,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.k.ink, height: 1.25)),
+                    ]),
+                  ),
+                ),
+              ),
+          ]);
+        }),
+      ),
+    );
   }
 }
 
@@ -655,18 +671,16 @@ class _CopyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
       onTap: () {
         Clipboard.setData(ClipboardData(text: text));
         showMessage(context, trf('{what} copied', {'what': tr(what)}));
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: 12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: context.k.inkMuted),
-            const SizedBox(width: KSpace.sm),
+            IconTile(icon, size: 36),
+            const SizedBox(width: KSpace.md),
             Expanded(
               child: Text(text,
                   // Phone numbers and coordinates read left-to-right even in Arabic.
@@ -786,6 +800,7 @@ class _VisitedAndNote extends ConsumerWidget {
     final visited = ref.watch(visitedIdsProvider).value?.contains(place.id) ?? false;
     final note = ref.watch(placeNoteProvider(place.id)).value;
     return Card(
+      margin: const EdgeInsets.only(bottom: KSpace.sm + 4),
       child: Column(
         children: [
           SwitchListTile(
@@ -942,6 +957,7 @@ class _MyRating extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stars = ref.watch(myRatingsProvider)[place.id] ?? 0;
     return Card(
+      margin: const EdgeInsets.only(bottom: KSpace.sm + 4),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: KSpace.md, vertical: KSpace.sm),
         child: Row(
@@ -1176,6 +1192,7 @@ class _CheckInCard extends ConsumerWidget {
         .toList();
     final friendCount = ref.watch(friendUidsProvider).length;
     return Card(
+      margin: const EdgeInsets.only(bottom: KSpace.sm + 4),
       child: Column(
         children: [
           ListTile(
