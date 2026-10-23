@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/i18n.dart';
 import '../../app/live.dart';
+import '../../app/money.dart' show fairCenter;
 import '../../app/theme.dart';
 import '../../data/live_share.dart';
 import '../../data/providers.dart';
@@ -250,7 +251,7 @@ class _MiddleCard extends ConsumerWidget {
       return Text(tr('When two or more people share, Khroga suggests real places halfway between you.'),
           style: text.bodyMedium);
     }
-    final mid = fairMidpoint(points)!;
+    final mid = fairCenter(points)!;
     final all = ref.watch(allPlacesProvider).value ?? const <Place>[];
     final spots = meetingSpots(all, mid);
     if (spots.isEmpty) return Text(tr('No good meeting places on the map near the middle.'), style: text.bodyMedium);

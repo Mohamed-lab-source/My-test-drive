@@ -10,6 +10,8 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('💸', 'Money & InstaPay', 'Everyone adds what they ordered with the price, one person collects, and the rest pay them with InstaPay in one tap.'),
+    ('📍', 'Where we start', 'Everyone adds where they start from, and Khroga plans an outing close to all of you.'),
     ('⚫', 'Mono', 'A new black-and-white look with one red signal dot, dot-matrix numbers and a new icon. Pick other colors in Look & colors.'),
     ('📱', 'Smoother everywhere', 'Big titles that slide into a see-through bar, soft bounce at the end of lists and cleaner menus.'),
     ('🛰️', 'Live map', 'Share your live location with your group for up to 4 hours: see who is on the way and who has arrived.'),

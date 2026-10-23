@@ -2,6 +2,18 @@
 
 Keep each under 500 characters.
 
+## 1.7.0
+
+<en-US>
+• Money & InstaPay in groups: add what you ordered with the price, pick who collects, pay them with InstaPay
+• Where we start: Khroga plans an outing close to everyone in the group
+</en-US>
+
+<ar>
+• الفلوس وإنستاباي في الجروبات: ضيف اللي طلبته بسعره، اختار مين يلم، وادفعله بإنستاباي
+• جايين منين: خروجة بتخطط خروجة قريبة من كل اللي في الجروب
+</ar>
+
 ## 1.6.0
 
 <en-US>

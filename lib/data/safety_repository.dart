@@ -93,6 +93,13 @@ class SafetyRepository {
     final groups = await _db.collection('groups').where('memberUids', arrayContains: uid).get();
     for (final d in groups.docs) {
       final g = Group.fromMap(d.id, d.data());
+      if (!g.isOwner(uid)) {
+        // Your own orders in that group's bill go too.
+        final orders = await d.reference.collection('orders').where('uid', isEqualTo: uid).limit(200).get();
+        for (final o in orders.docs) {
+          await o.reference.delete();
+        }
+      }
       g.isOwner(uid) ? await _groups.delete(g) : await _groups.leave(g.id, uid);
     }
     final friendships = await _db.collection('friendships').where('uids', arrayContains: uid).get();

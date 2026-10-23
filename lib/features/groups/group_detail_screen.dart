@@ -538,6 +538,16 @@ class _Header extends ConsumerWidget {
                       onPressed: () => openUri(calendarLink(group)),
                     ),
                   ActionChip(
+                    avatar: const Text('💸'),
+                    label: Text(tr('Money & InstaPay')),
+                    onPressed: () => context.push('/group/${group.id}/money'),
+                  ),
+                  ActionChip(
+                    avatar: const Text('📍'),
+                    label: Text(tr('Where we start')),
+                    onPressed: () => context.push('/group/${group.id}/start'),
+                  ),
+                  ActionChip(
                     avatar: const Icon(Icons.calculate_outlined, size: 18),
                     label: Text(tr('Split the bill')),
                     onPressed: () => _showBillSplitter(context, group),

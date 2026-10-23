@@ -26,6 +26,8 @@ Notes for the form:
 - "How busy is it now?" reports add only a count to the place's public numbers (no name). The time you last reported a place is kept privately under your account so nobody can spam; "Delete my account" removes it. It isn't your GPS location: you pick the place.
 - Live location (groups): only when you choose to share, for at most 4 hours, only while the app is open, seen only by that group's members; deleted when you stop, leave the group or delete your account. Khroga never asks for background location.
 - Track my outing: the recorded route stays **on the phone only**; not "collected".
+- Group money: items and prices people type, and "I've sent it", are seen by the group's members (user-generated content). A collector's InstaPay link and address/number are shown to that group because they chose to share them (Personal info → Phone number, optional). Khroga handles no payments: people pay inside InstaPay. Answer "Financial info: No" (Khroga collects no card, bank or payment data).
+- Starting points (groups): optional, saved rounded to about 1 km and seen only by the group: Location → Approximate location, optional, App functionality.
 - Outing reminders are scheduled **on the phone only** (Android notifications); nothing is sent to us.
 - What you spent per person is an optional answer inside your public review.
 - No ads, no analytics SDKs, no data sold.

@@ -545,6 +545,96 @@ service cloud.firestore {
         allow create, update: if isMe(uid) && liveMember() && validLive();
         allow delete: if isMe(uid) || (signedIn() && liveGroup().ownerUid == me());
       }
+
+      // Money for an outing. Prices are only what people type (menu or
+      // receipt). One person collects; others pay them with InstaPay.
+      function g() { return get(/databases/$(database)/documents/groups/$(groupId)).data; }
+      function gMember() { return signedIn() && me() in g().memberUids; }
+      function gOwner() { return signedIn() && g().ownerUid == me(); }
+      function moneyPath() { return /databases/$(database)/documents/groups/$(groupId)/money/settings; }
+      function collector() { return exists(moneyPath()) ? get(moneyPath()).data.get('collectorUid', null) : null; }
+
+      // Who collects, their InstaPay link/address, and service/tax %.
+      match /money/{doc} {
+        function old(k, d) { return resource == null ? d : resource.data.get(k, d); }
+        function nv(k) { return newData().get(k, null); }
+        function validMoney() {
+          return doc == 'settings'
+            && newData().keys().hasOnly(['collectorUid', 'collectorName', 'payLink', 'payTo', 'extraPct', 'updatedAt'])
+            && newData().updatedAt == request.time
+            && newData().extraPct is number && newData().extraPct >= 0 && newData().extraPct <= 40
+            && (nv('collectorUid') == null || nv('collectorUid') is string)
+            && (nv('collectorName') == null || validName(nv('collectorName')))
+            && (nv('payLink') == null || (nv('payLink') is string
+                && nv('payLink').matches('https://ipn[.]eg/S/[A-Za-z0-9._~/-]{1,120}')))
+            && (nv('payTo') == null || (nv('payTo') is string
+                && nv('payTo').matches('(01[0125][0-9]{8}|[A-Za-z0-9._-]{1,40}@instapay)')));
+        }
+        function sameCollector() {
+          return nv('collectorUid') == old('collectorUid', null)
+            && nv('collectorName') == old('collectorName', null)
+            && nv('payLink') == old('payLink', null)
+            && nv('payTo') == old('payTo', null);
+        }
+
+        allow read: if gMember();
+        allow create, update: if gMember() && validMoney() && (
+          // Become (or stay) the collector with your own details. Taking over
+          // from someone else is only for the organizer.
+          (nv('collectorUid') == me()
+            && (old('collectorUid', null) == null || old('collectorUid', null) == me() || gOwner()))
+          ||
+          // Stop collecting (yourself, or the organizer clears it).
+          (nv('collectorUid') == null && nv('payLink') == null && nv('payTo') == null && nv('collectorName') == null
+            && (old('collectorUid', null) == me() || gOwner()))
+          ||
+          // Only the service/tax % changes (organizer or collector).
+          (sameCollector() && (gOwner() || old('collectorUid', null) == me()))
+        );
+        allow delete: if gOwner();
+      }
+
+      // What each person ordered (only for yourself).
+      match /orders/{orderId} {
+        function validOrder() {
+          return newData().keys().hasOnly(['uid', 'name', 'item', 'price', 'qty', 'shared', 'place', 'createdAt'])
+            && newData().uid == me()
+            && validName(newData().name)
+            && newData().item is string && newData().item.size() > 0 && newData().item.size() <= 60
+            && newData().price is number && newData().price > 0 && newData().price <= 100000
+            && newData().qty is int && newData().qty >= 1 && newData().qty <= 50
+            && newData().shared is bool
+            && (newData().get('place', null) == null
+                || (newData().place is string && newData().place.size() <= 100));
+        }
+        allow read: if gMember();
+        allow create: if gMember() && validOrder() && newData().createdAt == request.time;
+        allow update: if gMember() && resource.data.uid == me() && validOrder()
+          && newData().createdAt == resource.data.createdAt;
+        allow delete: if signedIn() && (resource.data.uid == me() || gOwner());
+      }
+
+      // "I've sent it": set by the person, or by the collector for them.
+      match /paid/{uid} {
+        allow read: if gMember();
+        allow create, update: if gMember() && (isMe(uid) || collector() == me())
+          && newData().keys().hasOnly(['amount', 'at'])
+          && newData().amount is number && newData().amount >= 0 && newData().amount <= 1000000
+          && newData().at == request.time;
+        allow delete: if isMe(uid) || (signedIn() && (collector() == me() || g().ownerUid == me()));
+      }
+
+      // Where each person starts from (rounded to about 1 km by the app).
+      match /origins/{uid} {
+        allow read: if gMember();
+        allow create, update: if isMe(uid) && gMember()
+          && newData().keys().hasOnly(['lat', 'lng', 'label', 'updatedAt'])
+          && newData().lat is number && newData().lat >= -90 && newData().lat <= 90
+          && newData().lng is number && newData().lng >= -180 && newData().lng <= 180
+          && newData().label is string && newData().label.size() <= 60
+          && newData().updatedAt == request.time;
+        allow delete: if isMe(uid) || gOwner();
+      }
     }
   }
 }

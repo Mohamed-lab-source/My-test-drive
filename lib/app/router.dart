@@ -38,6 +38,8 @@ import '../features/friends/qr_scan_screen.dart';
 import '../features/groups/group_detail_screen.dart';
 import '../features/groups/groups_screen.dart';
 import '../features/groups/live_map_screen.dart';
+import '../features/groups/money_screen.dart';
+import '../features/groups/start_points_screen.dart';
 import '../features/tools/track_screen.dart';
 import '../features/plan/plan_form_screen.dart';
 import '../features/plan/plan_result_screen.dart';
@@ -134,6 +136,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/group/:id',
         builder: (_, s) => GroupDetailScreen(groupId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/group/:id/money',
+        builder: (_, s) => MoneyScreen(groupId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/group/:id/start',
+        builder: (_, s) => StartPointsScreen(groupId: s.pathParameters['id']!),
       ),
       GoRoute(
         path: '/group/:id/live',

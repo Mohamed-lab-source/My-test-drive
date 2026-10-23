@@ -328,6 +328,21 @@ How the code enforces it (keep it this way):
   (#0C0C0C) and store graphics in the Mono style (make_icon.py,
   make_store_graphic.py).
 
+- 1.7 group money + start points (`lib/app/money.dart` pure, tested in
+  test/money_test.dart; `data/money_repository.dart`, `money_providers.dart`;
+  screens `features/groups/money_screen.dart` `/group/:id/money` and
+  `start_points_screen.dart` `/group/:id/start`). Prices are only what
+  people type (menu/receipt), never guessed. `groups/{id}/orders/{oid}`
+  (own only), `money/settings` (one collector, InstaPay link must be
+  `https://ipn.eg/S/…`, address `name@instapay` or 01xxxxxxxxx, extraPct
+  0–40 set by collector/organizer), `paid/{uid}` (self or collector),
+  `origins/{uid}` (rounded ~1 km by `roundForPrivacy`); all in rules +
+  rules-test; cleared on leave/group delete/account delete. InstaPay has no
+  public way to prefill an amount: "Pay with InstaPay" copies the amount
+  and opens the collector's payment link (or shows address + amount to
+  copy). `fairCenter` = geometric median (one far person doesn't drag the
+  spot); "Plan an outing near everyone" opens /new-plan anchored there.
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

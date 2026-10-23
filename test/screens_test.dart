@@ -19,6 +19,11 @@ import 'package:khroga/features/tools/ideas_screen.dart';
 import 'package:khroga/features/tools/tools_screen.dart';
 import 'package:khroga/features/tools/track_screen.dart';
 import 'package:khroga/features/groups/live_map_screen.dart';
+import 'package:khroga/features/groups/money_screen.dart';
+import 'package:khroga/features/groups/start_points_screen.dart';
+import 'package:khroga/data/money_providers.dart';
+import 'package:khroga/data/money_repository.dart';
+import 'package:khroga/app/money.dart';
 import 'package:khroga/data/live_share.dart';
 import 'package:khroga/models/social.dart';
 import 'package:khroga/models/place.dart';
@@ -67,7 +72,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('Live map'), findsOneWidget);
+    expect(find.text('Money & InstaPay'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -181,6 +186,46 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('Start tracking'), findsOneWidget);
     expect(find.text('Routes you record show up here.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('money and where-we-start screens fit a small phone', (tester) async {
+    final group = Group.fromMap('g1', const {
+      'name': 'Test group', 'ownerUid': 'me', 'memberUids': ['me', 'friend'], 'joinCode': 'ABC123',
+    });
+    final base = [
+      uidProvider.overrideWith((_) => 'me'),
+      groupProvider('g1').overrideWith((_) => Stream.value(group)),
+      profilesProvider(profilesKey(group.memberUids)).overrideWith((_) async => const {}),
+    ];
+    await tester.pumpWidget(ProviderScope(
+      key: UniqueKey(),
+      overrides: [
+        ...base,
+        moneySettingsProvider('g1').overrideWith((_) => Stream.value(const MoneySettings(
+            collectorUid: 'friend', collectorName: 'Test Friend', payTo: 'test@instapay', extraPct: 12))),
+        groupOrdersProvider('g1').overrideWith((_) => Stream.value(const [
+              OrderItem(id: 'o1', uid: 'me', name: 'Me', item: 'Test drink', price: 50, qty: 2),
+              OrderItem(id: 'o2', uid: 'friend', name: 'Test Friend', item: 'Test plate', price: 80, shared: true),
+            ])),
+        groupPaidProvider('g1').overrideWith((_) => Stream.value(const <String, double>{})),
+      ],
+      child: _router(const MoneyScreen(groupId: 'g1')),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Pay with InstaPay'), findsOneWidget);
+    expect(find.text('157'), findsOneWidget, reason: '(100 + 40) x 1.12 = 156.8, rounded up');
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(ProviderScope(
+      key: UniqueKey(),
+      overrides: [...base, groupOriginsProvider('g1').overrideWith((_) => Stream.value(const <Origin>[]))],
+      child: _router(const StartPointsScreen(groupId: 'g1')),
+    ));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Plan close to everyone'), findsOneWidget);
+    expect(find.text('Where I am now'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

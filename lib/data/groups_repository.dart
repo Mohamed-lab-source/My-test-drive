@@ -97,8 +97,25 @@ class GroupsRepository {
   }
 
   Future<void> leave(String groupId, String uid) async {
-    // Stop sharing your live location there first (if you were).
-    await _groups.doc(groupId).collection('live').doc(uid).delete().catchError((_) {});
+    // Stop sharing your live location and remove your starting point and
+    // "I've sent it" first; stop being the collector if you were.
+    final g = _groups.doc(groupId);
+    for (final sub in ['live', 'origins', 'paid']) {
+      await g.collection(sub).doc(uid).delete().catchError((_) {});
+    }
+    try {
+      final money = await g.collection('money').doc('settings').get();
+      if (money.data()?['collectorUid'] == uid) {
+        await money.reference.set({
+          'collectorUid': null,
+          'collectorName': null,
+          'payLink': null,
+          'payTo': null,
+          'extraPct': money.data()?['extraPct'] ?? 0,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (_) {}
     await _groups.doc(groupId).update({
       'memberUids': FieldValue.arrayRemove([uid]),
       'freeUids': FieldValue.arrayRemove([uid]),
@@ -108,7 +125,7 @@ class GroupsRepository {
 
   /// Deletes the group, its messages, polls and invite code (organizer only).
   Future<void> delete(Group group) async {
-    for (final sub in ['messages', 'polls', 'items', 'live']) {
+    for (final sub in ['messages', 'polls', 'items', 'live', 'orders', 'paid', 'origins', 'money']) {
       final docs = _groups.doc(group.id).collection(sub);
       while (true) {
         final page = await docs.limit(400).get();

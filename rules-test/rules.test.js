@@ -478,3 +478,50 @@ test("live location: members share only their own spot, for a limited time", asy
   await assertSucceeds(setDoc(doc(as(BOB), "groups/g1/live/bob"), spot(hour)));
   await assertSucceeds(deleteDoc(doc(as(ALICE), "groups/g1/live/bob")), "organizer clears it when deleting the group");
 });
+
+test("group money: one collector with a real InstaPay link, own orders only", async () => {
+  const settings = (db) => doc(db, "groups/g1/money/settings");
+  const mine = (uid, name, extra = {}) => ({
+    collectorUid: uid, collectorName: name, payLink: "https://ipn.eg/S/bob/instapay/Ab12",
+    payTo: "bob@instapay", extraPct: 0, updatedAt: serverTimestamp(), ...extra,
+  });
+  await assertFails(setDoc(settings(as(EVE)), mine(EVE, "Eve")), "outsider");
+  await assertFails(setDoc(settings(as(BOB)), mine(ALICE, "Alice")), "can't make someone else collector");
+  await assertFails(setDoc(settings(as(BOB)), mine(BOB, "Bob", { payLink: "https://evil.com/ipn.eg/S/x" })), "fake link");
+  await assertFails(setDoc(settings(as(BOB)), mine(BOB, "Bob", { payTo: "12345" })), "bad number");
+  await assertSucceeds(setDoc(settings(as(BOB)), mine(BOB, "Bob")));
+  await assertFails(setDoc(settings(as(CAROL)), mine(CAROL, "Carol")), "not a member");
+  // Alice (organizer) may set the service %, keeping Bob's details.
+  await assertSucceeds(setDoc(settings(as(ALICE)), mine(BOB, "Bob", { extraPct: 12 })));
+  await assertFails(setDoc(settings(as(ALICE)), mine(BOB, "Bob", { extraPct: 50 })), "too much");
+  await assertFails(setDoc(settings(as(ALICE)), mine(BOB, "Bob", { payTo: "alice@instapay" })), "can't change Bob's details");
+  await assertSucceeds(setDoc(settings(as(ALICE)), mine(ALICE, "Alice", { payTo: "alice@instapay" })), "organizer takes over");
+
+  const orders = (db) => collection(db, "groups/g1/orders");
+  const order = { uid: BOB, name: "Bob", item: "Tea", price: 35, qty: 2, shared: false, place: null, createdAt: serverTimestamp() };
+  await assertSucceeds(addDoc(orders(as(BOB)), order));
+  await assertFails(addDoc(orders(as(BOB)), { ...order, uid: ALICE }), "not for others");
+  await assertFails(addDoc(orders(as(BOB)), { ...order, price: -5 }));
+  await assertFails(addDoc(orders(as(BOB)), { ...order, qty: 1.5 }));
+  await assertFails(addDoc(orders(as(EVE)), { ...order, uid: EVE, name: "Eve" }));
+  await assertSucceeds(getDocs(orders(as(ALICE))));
+  await assertFails(getDocs(orders(as(EVE))));
+
+  // Paid: yourself, or the collector (now Alice) for you.
+  const paid = (db, uid) => setDoc(doc(db, `groups/g1/paid/${uid}`), { amount: 70, at: serverTimestamp() });
+  await assertSucceeds(paid(as(BOB), BOB));
+  await assertSucceeds(paid(as(ALICE), BOB), "collector marks Bob paid");
+  await assertFails(paid(as(BOB), ALICE), "not for others");
+  await assertFails(paid(as(EVE), EVE));
+});
+
+test("starting points: members share their own, rounded spot", async () => {
+  const origin = (db, uid) => setDoc(doc(db, `groups/g1/origins/${uid}`),
+    { lat: 30.04, lng: 31.24, label: "Maadi", updatedAt: serverTimestamp() });
+  await assertSucceeds(origin(as(BOB), BOB));
+  await assertFails(origin(as(BOB), ALICE), "not for others");
+  await assertFails(origin(as(EVE), EVE), "outsider");
+  await assertSucceeds(getDocs(collection(as(ALICE), "groups/g1/origins")));
+  await assertFails(getDocs(collection(as(EVE), "groups/g1/origins")));
+  await assertSucceeds(deleteDoc(doc(as(ALICE), "groups/g1/origins/bob")), "organizer can clear");
+});
