@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/i18n.dart';
@@ -85,8 +86,8 @@ class _HelpScreenState extends State<HelpScreen> {
       for (final q in HelpScreen.questions)
         if (_q.isEmpty || '${tr(q.$2)} ${tr(q.$3)}'.toLowerCase().contains(_q)) q,
     ];
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Help & questions'))),
+    return KScaffold(
+      title: Text(tr('Help & questions')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: [

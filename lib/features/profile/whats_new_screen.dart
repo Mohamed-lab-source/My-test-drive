@@ -1,5 +1,6 @@
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 
 import '../../app/theme.dart';
 import 'about_screen.dart' show appVersion;
@@ -9,6 +10,8 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('⚫', 'Mono', 'A new black-and-white look with one red signal dot, dot-matrix numbers and a new icon. Pick other colors in Look & colors.'),
+    ('📱', 'Smoother everywhere', 'Big titles that slide into a see-through bar, soft bounce at the end of lists and cleaner menus.'),
     ('🛰️', 'Live map', 'Share your live location with your group for up to 4 hours: see who is on the way and who has arrived.'),
     ('🤝', 'Meet in the middle', 'Real places halfway between everyone sharing; suggest one in the chat or make it the meeting point.'),
     ('🥾', 'Track my outing', 'Record your route, distance and time. Saved only on your phone.'),
@@ -82,8 +85,8 @@ class WhatsNewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(title: Text(tr("What's new"))),
+    return KScaffold(
+      title: Text(tr("What's new")),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: [

@@ -68,7 +68,7 @@ class SignInScreen extends ConsumerWidget {
                 const SizedBox(height: KSpace.lg),
                 FadeSlideIn(
                   index: 1,
-                  child: Text(tr('Khroga'), style: text.displaySmall?.copyWith(color: k.onHero, fontSize: 44)),
+                  child: KhrogaWordmark(size: 50, color: k.onHero),
                 ),
                 const SizedBox(height: KSpace.sm),
                 FadeSlideIn(

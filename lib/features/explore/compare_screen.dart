@@ -1,5 +1,6 @@
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/helpers.dart';
@@ -42,8 +43,8 @@ class CompareScreen extends ConsumerWidget {
     ];
     final km = distanceKm(pa, pb);
     final text = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Compare'))),
+    return KScaffold(
+      title: Text(tr('Compare')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: [

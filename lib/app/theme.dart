@@ -33,6 +33,12 @@ class AccentTheme {
 }
 
 const accentThemes = <AccentTheme>[
+  // The default: black and white with a red signal color, flat (no
+  // gradients). Calm, like a well-made device.
+  AccentTheme(
+      id: 'mono', name: 'Mono',
+      light: Color(0xFF111111), light2: Color(0xFF111111),
+      dark: Color(0xFFF2F2F2), dark2: Color(0xFFF2F2F2)),
   AccentTheme(
       id: 'coral', name: 'Coral',
       light: Color(0xFFC93D1B), light2: Color(0xFFB8174F),
@@ -89,7 +95,16 @@ class KPalette extends ThemeExtension<KPalette> {
     required this.onHero,
     required this.shadow,
     required this.isDark,
+    required this.signal,
+    required this.flat,
   });
+
+  /// The red "signal" color for live things: recording, sharing, the dot
+  /// under the selected tab. Use it sparingly.
+  final Color signal;
+
+  /// True for the Mono theme: solid colors instead of gradients.
+  final bool flat;
 
   final Color accent;
 
@@ -137,25 +152,30 @@ class KPalette extends ThemeExtension<KPalette> {
 
   /// [pureBlack] = true black background (saves battery on OLED screens).
   factory KPalette.of(AccentTheme theme, Brightness brightness, {bool pureBlack = false}) {
+    final flat = theme.light == theme.light2 && theme.dark == theme.dark2;
     if (brightness == Brightness.dark) {
+      // Neutral greys, like a phone's own dark mode.
       final accent = theme.dark;
-      final surface = pureBlack ? const Color(0xFF121212) : const Color(0xFF171A22);
+      final surface = pureBlack ? const Color(0xFF121212) : const Color(0xFF1C1C1E);
+      final high = pureBlack ? const Color(0xFF1C1C1C) : const Color(0xFF2C2C2E);
       return KPalette(
         accent: accent,
         accent2: theme.dark2,
-        onAccent: const Color(0xFF111318),
-        accentSoft: Color.alphaBlend(accent.withValues(alpha: 0.20), surface),
-        ink: const Color(0xFFF4F6FA),
-        inkMuted: const Color(0xFFB3BAC7),
-        line: pureBlack ? const Color(0xFF2C2C2C) : const Color(0xFF2A2F3A),
+        onAccent: const Color(0xFF111111),
+        accentSoft: Color.alphaBlend(accent.withValues(alpha: flat ? 0.14 : 0.20), surface),
+        ink: const Color(0xFFF5F5F7),
+        inkMuted: const Color(0xFFAEAEB2),
+        line: pureBlack ? const Color(0xFF2C2C2C) : const Color(0xFF38383A),
         surface: surface,
-        surfaceHigh: pureBlack ? const Color(0xFF1C1C1C) : const Color(0xFF1F232D),
-        background: pureBlack ? Colors.black : const Color(0xFF0D0F14),
-        heroStart: Color.alphaBlend(accent.withValues(alpha: 0.36), surface),
-        heroEnd: Color.alphaBlend(theme.dark2.withValues(alpha: 0.24), surface),
-        onHero: const Color(0xFFF4F6FA),
-        shadow: Colors.black.withValues(alpha: 0.35),
+        surfaceHigh: high,
+        background: pureBlack ? Colors.black : const Color(0xFF0A0A0B),
+        heroStart: flat ? high : Color.alphaBlend(accent.withValues(alpha: 0.36), surface),
+        heroEnd: flat ? surface : Color.alphaBlend(theme.dark2.withValues(alpha: 0.24), surface),
+        onHero: const Color(0xFFF5F5F7),
+        shadow: Colors.black.withValues(alpha: 0.4),
         isDark: true,
+        signal: const Color(0xFFFF453A),
+        flat: flat,
       );
     }
     final accent = theme.light;
@@ -163,18 +183,20 @@ class KPalette extends ThemeExtension<KPalette> {
       accent: accent,
       accent2: theme.light2,
       onAccent: Colors.white,
-      accentSoft: Color.alphaBlend(accent.withValues(alpha: 0.12), Colors.white),
-      ink: const Color(0xFF15171C),
-      inkMuted: const Color(0xFF4E5461),
-      line: const Color(0xFFE3E0DA),
+      accentSoft: Color.alphaBlend(accent.withValues(alpha: flat ? 0.08 : 0.12), Colors.white),
+      ink: const Color(0xFF111113),
+      inkMuted: const Color(0xFF5B5B60),
+      line: const Color(0xFFDCDCE1),
       surface: Colors.white,
-      surfaceHigh: const Color(0xFFF0EEEA),
-      background: const Color(0xFFF6F4F1),
+      surfaceHigh: const Color(0xFFEDEDF1),
+      background: const Color(0xFFF2F2F7),
       heroStart: accent,
       heroEnd: theme.light2,
       onHero: Colors.white,
-      shadow: const Color(0xFF2B2118).withValues(alpha: 0.08),
+      shadow: const Color(0xFF000000).withValues(alpha: 0.07),
       isDark: false,
+      signal: const Color(0xFFD71921),
+      flat: flat,
     );
   }
 
@@ -195,6 +217,8 @@ class KPalette extends ThemeExtension<KPalette> {
     Color? onHero,
     Color? shadow,
     bool? isDark,
+    Color? signal,
+    bool? flat,
   }) =>
       KPalette(
         accent: accent ?? this.accent,
@@ -212,6 +236,8 @@ class KPalette extends ThemeExtension<KPalette> {
         onHero: onHero ?? this.onHero,
         shadow: shadow ?? this.shadow,
         isDark: isDark ?? this.isDark,
+        signal: signal ?? this.signal,
+        flat: flat ?? this.flat,
       );
 
   @override
@@ -234,6 +260,8 @@ class KPalette extends ThemeExtension<KPalette> {
       onHero: l(onHero, other.onHero),
       shadow: l(shadow, other.shadow),
       isDark: t < 0.5 ? isDark : other.isDark,
+      signal: l(signal, other.signal),
+      flat: t < 0.5 ? flat : other.flat,
     );
   }
 }
@@ -265,6 +293,11 @@ class KFont {
   KFont._();
   static const display = 'Alexandria';
   static const body = 'ReadexPro';
+
+  /// Dot-matrix face for the wordmark and big Latin numbers. It has no
+  /// Arabic, so always pair it with [dotsFallback].
+  static const dots = 'Doto';
+  static const dotsFallback = [display];
 }
 
 /// Shared animation timings, so things feel like one app.
@@ -278,12 +311,12 @@ class KMotion {
 
 ThemeData buildTheme({
   AccentTheme accent = const AccentTheme(
-      id: 'coral',
-      name: 'Coral',
-      light: Color(0xFFC93D1B),
-      dark: Color(0xFFFF8A65),
-      light2: Color(0xFFB8174F),
-      dark2: Color(0xFFFF7AA8)),
+      id: 'mono',
+      name: 'Mono',
+      light: Color(0xFF111111),
+      light2: Color(0xFF111111),
+      dark: Color(0xFFF2F2F2),
+      dark2: Color(0xFFF2F2F2)),
   Brightness brightness = Brightness.dark,
   bool pureBlack = false,
 }) {
@@ -338,8 +371,18 @@ ThemeData buildTheme({
       elevation: 0,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
-      centerTitle: false,
-      titleTextStyle: display(21, FontWeight.w700),
+      // Like a phone's own screens: a small, centered title.
+      centerTitle: true,
+      titleTextStyle: body(17, FontWeight.w600, p.ink, height: 1.2),
+    ),
+    // A slim chevron for "back" (mirrors itself in Arabic).
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (context) => Icon(
+        Directionality.of(context) == TextDirection.rtl
+            ? Icons.arrow_forward_ios_rounded
+            : Icons.arrow_back_ios_new_rounded,
+        size: 20,
+      ),
     ),
     textTheme: TextTheme(
       displaySmall: display(34, FontWeight.w800, height: 1.12),

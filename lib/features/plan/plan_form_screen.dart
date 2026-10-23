@@ -20,6 +20,7 @@ import '../../models/plan.dart';
 import '../../planner/services.dart' show aiResting;
 import '../../planner/planner.dart' show compactRadiusKm, planNeeds;
 import '../../widgets/common.dart';
+import '../../widgets/large_title.dart';
 import '../../widgets/motion.dart';
 import '../profile/about_screen.dart' show appVersion;
 import '../profile/theme_sheet.dart';
@@ -274,8 +275,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
     final malls = ref.watch(mallsProvider(city)).value ?? const [];
     final mallStillValid = malls.any((m) => m.id == _mallId);
 
-    return Scaffold(
-      appBar: AppBar(
+    return KScaffold(
         title: const KhrogaWordmark(),
         actions: [
           IconButton(
@@ -294,7 +294,6 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             onPressed: () => context.push('/profile'),
           ),
         ],
-      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 120),
         children: [
@@ -874,21 +873,6 @@ class _GlassChip extends StatelessWidget {
   }
 }
 
-/// "Khroga" in the theme's gradient, for the home tab's top bar.
-class KhrogaWordmark extends StatelessWidget {
-  const KhrogaWordmark({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final k = context.k;
-    return ShaderMask(
-      blendMode: BlendMode.srcIn,
-      shaderCallback: (r) => k.accentGradient.createShader(r),
-      child: Text(tr('Khroga'),
-          style: const TextStyle(fontFamily: KFont.display, fontSize: 25, fontWeight: FontWeight.w800)),
-    );
-  }
-}
 
 class _Stepper extends StatelessWidget {
   const _Stepper({

@@ -9,7 +9,7 @@ import 'theme.dart';
 class ThemeSettings {
   const ThemeSettings({
     this.mode = ThemeMode.dark,
-    this.accentId = 'coral',
+    this.accentId = 'mono',
     this.textScale = 1.0,
     this.followSun = false,
   });
@@ -55,7 +55,7 @@ class ThemeSettingsNotifier extends Notifier<ThemeSettings> {
     final scale = prefs?.getDouble(_scaleKey) ?? 1.0;
     return ThemeSettings(
       mode: mode,
-      accentId: prefs?.getString(_accentKey) ?? 'coral',
+      accentId: prefs?.getString(_accentKey) ?? 'mono',
       textScale: textScales.containsKey(scale) ? scale : 1.0,
       followSun: prefs?.getBool(_sunKey) ?? false,
     );

@@ -1987,4 +1987,8 @@ const arabic = <String, String>{
   'Record your route, distance and time. Saved only on your phone.': 'سجّل مسارك والمسافة والوقت. بيتحفظ على موبايلك بس.',
   'A cleaner place page': 'صفحة مكان أنضف',
   'Big buttons for what you do most, and tidy icon grids for everything else.': 'زراير كبيرة للحاجات اللي بتعملها كتير، وأيقونات مترتبة لباقي الحاجات.',
+  'Mono': 'أبيض وأسود',
+  'A new black-and-white look with one red signal dot, dot-matrix numbers and a new icon. Pick other colors in Look & colors.': 'شكل جديد أبيض وأسود بنقطة حمرا واحدة، وأرقام بالنقط وأيقونة جديدة. تقدر تختار ألوان تانية من الشكل والألوان.',
+  'Smoother everywhere': 'أنعم في كل حتة',
+  'Big titles that slide into a see-through bar, soft bounce at the end of lists and cleaner menus.': 'عناوين كبيرة بتصغر في شريط شفاف، وارتداد ناعم في آخر القوائم، وقوائم أنضف.',
 };

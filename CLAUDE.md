@@ -315,6 +315,19 @@ How the code enforces it (keep it this way):
   while tracking/sharing. Place page: `_QuickActions` + `_ActionGrid`
   sections instead of a pile of buttons; cards there get bottom margins.
 
+- 1.6 launch look: default theme `mono` (first in `accentThemes`; flat =
+  light == light2: solid colors, monochrome `IconTile`s, dot texture
+  `DotGrid` in `HeroCard`/`GradientBackdrop`) with a red `signal` token
+  (section dots, the dot under the selected tab, wordmark dot). Neutral
+  Apple-like greys for every theme. Doto (dot-matrix, Latin only, always
+  with `KFont.dotsFallback`) for `KhrogaWordmark` (common.dart) and
+  `DotNumber`. `KScaffold` (lib/widgets/large_title.dart): large title that
+  collapses into a see-through blurred bar (CupertinoSliverNavigationBar),
+  takes a ListView body; standard AppBars are centered with a chevron back
+  icon; app-wide bouncing scroll (`_SoftScroll` in main.dart). Icon, splash
+  (#0C0C0C) and store graphics in the Mono style (make_icon.py,
+  make_store_graphic.py).
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,
@@ -329,7 +342,7 @@ Without the secret it still builds a "not connected" test APK.
 
 ```
 lib/
-  app/theme.dart        themes: 6 accent themes x light/dark. Screens read colors
+  app/theme.dart        themes: 9 accent themes (Mono default) x light/dark. Screens read colors
                         with `context.k.<color>` (never fixed colors); test/theme_test.dart
                         checks text contrast for every theme
   app/theme_settings.dart  saved look (dark by default), shared_preferences

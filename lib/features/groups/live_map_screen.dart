@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -56,8 +57,8 @@ class LiveMapScreen extends ConsumerWidget {
       for (final s in spots) MapPin(lat: s.lat, lng: s.lng, label: s.name, initials: initials(s.name)),
     ];
 
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Live map'))),
+    return KScaffold(
+      title: Text(tr('Live map')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: [

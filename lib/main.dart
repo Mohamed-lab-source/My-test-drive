@@ -77,6 +77,7 @@ class KhrogaApp extends ConsumerWidget {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       title: tr('Khroga'),
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const _SoftScroll(),
       theme: buildTheme(accent: look.accent, brightness: Brightness.light),
       darkTheme: buildTheme(
           accent: look.accent,
@@ -199,4 +200,12 @@ void _catchErrors(SharedPreferences? prefs) {
     report(error, stack);
     return false; // let Flutter handle it as usual too
   };
+}
+
+/// Lists bounce softly at the ends instead of the usual stretch.
+class _SoftScroll extends MaterialScrollBehavior {
+  const _SoftScroll();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) => const BouncingScrollPhysics();
 }

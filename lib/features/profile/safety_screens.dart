@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -130,8 +131,8 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Report a problem or idea'))),
+    return KScaffold(
+      title: Text(tr('Report a problem or idea')),
       body: ListView(
         padding: const EdgeInsets.all(KSpace.lg),
         children: [

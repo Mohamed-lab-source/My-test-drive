@@ -1,5 +1,6 @@
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -38,8 +39,8 @@ class ProfileScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final auth = ref.read(authRepositoryProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Profile'))),
+    return KScaffold(
+      title: Text(tr('Profile')),
       body: ListView(
         padding: const EdgeInsets.all(KSpace.md),
         children: [
@@ -444,7 +445,7 @@ class _Stats extends ConsumerWidget {
                 Text(emoji, style: const TextStyle(fontSize: 22)),
                 n == null
                     ? Text('–', style: Theme.of(context).textTheme.titleLarge)
-                    : CountUp(n, style: Theme.of(context).textTheme.titleLarge),
+                    : DotNumber(n, size: 26),
                 Text(tr(label), style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
               ],
             ),

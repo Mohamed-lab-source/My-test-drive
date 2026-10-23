@@ -182,12 +182,20 @@ class SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: KSpace.sm, top: KSpace.lg - 4),
       child: Row(
         children: [
-          Container(
-            width: 4,
-            height: 18,
-            margin: const EdgeInsetsDirectional.only(end: KSpace.sm),
-            decoration: ShapeDecoration(shape: const StadiumBorder(), gradient: context.k.accentGradient),
-          ),
+          // Mono: a small red dot, like a recording light. Others: a color bar.
+          context.k.flat
+              ? Container(
+                  width: 7,
+                  height: 7,
+                  margin: const EdgeInsetsDirectional.only(end: KSpace.sm + 2),
+                  decoration: BoxDecoration(color: context.k.signal, shape: BoxShape.circle),
+                )
+              : Container(
+                  width: 4,
+                  height: 18,
+                  margin: const EdgeInsetsDirectional.only(end: KSpace.sm),
+                  decoration: ShapeDecoration(shape: const StadiumBorder(), gradient: context.k.accentGradient),
+                ),
           Expanded(
             child: Text(text,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -489,18 +497,22 @@ class HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(KRadius.sheet),
         gradient: k.heroGradient,
-        border: k.isDark ? Border.all(color: k.accent.withValues(alpha: 0.25)) : null,
+        border: k.isDark ? Border.all(color: k.flat ? k.line : k.accent.withValues(alpha: 0.25)) : null,
         boxShadow: [
           BoxShadow(
-            color: k.accent.withValues(alpha: k.isDark ? 0.18 : 0.28),
+            color: k.flat ? k.shadow : k.accent.withValues(alpha: k.isDark ? 0.18 : 0.28),
             blurRadius: 28,
             offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Stack(children: [
-        PositionedDirectional(top: -60, end: -40, child: glow(200, k.isDark ? 0.10 : 0.22)),
-        PositionedDirectional(bottom: -80, start: -50, child: glow(180, k.isDark ? 0.06 : 0.14)),
+        if (k.flat)
+          Positioned.fill(child: DotGrid(color: k.onHero.withValues(alpha: k.isDark ? 0.07 : 0.10)))
+        else ...[
+          PositionedDirectional(top: -60, end: -40, child: glow(200, k.isDark ? 0.10 : 0.22)),
+          PositionedDirectional(bottom: -80, start: -50, child: glow(180, k.isDark ? 0.06 : 0.14)),
+        ],
         Padding(
           padding: padding,
           child: DefaultTextStyle.merge(
@@ -510,6 +522,48 @@ class HeroCard extends StatelessWidget {
         ),
       ]),
     );
+  }
+}
+
+/// "KHROGA" in dot-matrix letters with a red signal dot (the app's name
+/// as a logo). In Arabic it uses the display font.
+class KhrogaWordmark extends StatelessWidget {
+  const KhrogaWordmark({super.key, this.size = 28, this.color});
+
+  final double size;
+
+  /// Defaults to the theme (ink in Mono, the accent gradient otherwise).
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    final name = tr('Khroga');
+    final latin = !RegExp(r'[\u0600-\u06FF]').hasMatch(name);
+    // Latin: a dot-matrix wordmark with a red signal dot. Arabic keeps the
+    // display font (the dot face has no Arabic letters).
+    final text = Text(
+      latin ? name.toUpperCase() : name,
+      style: latin
+          ? TextStyle(
+              fontFamily: KFont.dots, fontFamilyFallback: KFont.dotsFallback, fontSize: size, fontWeight: FontWeight.w900)
+          : TextStyle(fontFamily: KFont.display, fontSize: size * 0.9, fontWeight: FontWeight.w800),
+    );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      k.flat || color != null
+          ? DefaultTextStyle.merge(style: TextStyle(color: color ?? k.ink), child: text)
+          : ShaderMask(
+              blendMode: BlendMode.srcIn,
+              shaderCallback: (r) => k.accentGradient.createShader(r),
+              child: text,
+            ),
+      Container(
+        width: size / 4,
+        height: size / 4,
+        margin: EdgeInsetsDirectional.only(start: size / 7, top: size / 2.8),
+        decoration: BoxDecoration(color: k.signal, shape: BoxShape.circle),
+      ),
+    ]);
   }
 }
 
@@ -532,6 +586,7 @@ class GradientBackdrop extends StatelessWidget {
         ),
       ),
       child: Stack(children: [
+        if (k.flat) Positioned.fill(child: DotGrid(color: k.onHero.withValues(alpha: k.isDark ? 0.06 : 0.09))),
         PositionedDirectional(
           top: -120,
           end: -100,
@@ -555,6 +610,64 @@ class GradientBackdrop extends StatelessWidget {
   }
 }
 
+/// A quiet grid of dots (a dot-matrix texture) behind header cards.
+class DotGrid extends StatelessWidget {
+  const DotGrid({super.key, required this.color, this.gap = 14, this.radius = 1.1});
+
+  final Color color;
+  final double gap;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) =>
+      IgnorePointer(child: CustomPaint(painter: _DotGridPainter(color, gap, radius)));
+}
+
+class _DotGridPainter extends CustomPainter {
+  _DotGridPainter(this.color, this.gap, this.radius);
+
+  final Color color;
+  final double gap;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    for (var y = gap / 2; y < size.height; y += gap) {
+      for (var x = gap / 2; x < size.width; x += gap) {
+        canvas.drawCircle(Offset(x, y), radius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotGridPainter old) => old.color != color || old.gap != gap || old.radius != radius;
+}
+
+/// A big number in the dot-matrix face (counts up once), e.g. stats.
+class DotNumber extends StatelessWidget {
+  const DotNumber(this.value, {super.key, this.size = 30, this.color, this.suffix = ''});
+
+  final int value;
+  final double size;
+  final Color? color;
+  final String suffix;
+
+  @override
+  Widget build(BuildContext context) => CountUp(
+        value,
+        suffix: suffix,
+        style: TextStyle(
+          fontFamily: KFont.dots,
+          fontFamilyFallback: KFont.dotsFallback,
+          fontWeight: FontWeight.w900,
+          fontSize: size,
+          height: 1.05,
+          color: color ?? context.k.ink,
+        ),
+      );
+}
+
 /// A small rounded, colored square behind a menu icon. Each icon gets its own
 /// color (picked from the icon, so it's always the same one).
 class IconTile extends StatelessWidget {
@@ -570,13 +683,18 @@ class IconTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final k = context.k;
     final h = hue ?? (icon.codePoint * 47) % 360.0;
-    final bg = k.isDark ? HSLColor.fromAHSL(1, h, 0.45, 0.22) : HSLColor.fromAHSL(1, h, 0.75, 0.93);
-    final fg = k.isDark ? HSLColor.fromAHSL(1, h, 0.85, 0.78) : HSLColor.fromAHSL(1, h, 0.7, 0.32);
+    // The Mono theme keeps icons monochrome too.
+    final bg = k.flat
+        ? k.surfaceHigh
+        : (k.isDark ? HSLColor.fromAHSL(1, h, 0.45, 0.22) : HSLColor.fromAHSL(1, h, 0.75, 0.93)).toColor();
+    final fg = k.flat
+        ? k.ink
+        : (k.isDark ? HSLColor.fromAHSL(1, h, 0.85, 0.78) : HSLColor.fromAHSL(1, h, 0.7, 0.32)).toColor();
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: bg.toColor(), borderRadius: BorderRadius.circular(size * 0.32)),
-      child: Icon(icon, size: size * 0.55, color: fg.toColor()),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(size * 0.32)),
+      child: Icon(icon, size: size * 0.55, color: fg),
     );
   }
 }
@@ -635,7 +753,13 @@ class GradientButton extends StatelessWidget {
           gradient: enabled ? k.accentGradient : null,
           color: enabled ? null : k.line,
           shadows: enabled
-              ? [BoxShadow(color: k.accent.withValues(alpha: 0.35), blurRadius: 20, offset: const Offset(0, 8))]
+              ? [
+                  BoxShadow(
+                    color: k.flat ? k.shadow : k.accent.withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
               : const [],
         ),
         child: Material(

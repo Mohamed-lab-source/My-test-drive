@@ -1,6 +1,6 @@
-"""Draws the Khroga app icon (a white map pin with a sparkle on a warm
-coral-to-magenta gradient, the app's default theme) and writes every size
-Android needs.
+"""Draws the Khroga app icon (a white dot-matrix map pin with a red signal
+dot on black, the app's default Mono theme) and writes every size Android
+needs.
 
 Run:  pip install pillow && python3 tool/make_icon.py
 Nothing here is downloaded; the icon is drawn from simple shapes.
@@ -45,6 +45,49 @@ def sparkle(draw, cx, cy, r, fill):
         rad = r if i % 2 == 0 else r * 0.32
         pts.append((cx + rad * math.cos(ang), cy + rad * math.sin(ang)))
     draw.polygon(pts, fill=fill)
+
+
+BLACK = (12, 12, 12)
+SIGNAL = (215, 25, 33, 255)  # #D71921
+
+
+def mono_bg(size):
+    """Near-black."""
+    return Image.new('RGBA', (size, size), BLACK + (255,))
+
+
+def dot_pin(size, scale):
+    """The pin drawn as a grid of white dots, with a red dot at its top end."""
+    # A classic pin: the solid shape with a round hole (no sparkle: in dots
+    # it would read as a face).
+    solid = pin_layer(size, scale).getchannel('A').point(lambda v: 255 if v > 0 else 0)
+    h0 = size * scale
+    r0 = h0 / 2.75
+    hole = Image.new('L', (size, size), 0)
+    hcx, hcy = size / 2, size / 2 - h0 / 2 + r0
+    ImageDraw.Draw(hole).ellipse([hcx - r0 * 0.42, hcy - r0 * 0.42, hcx + r0 * 0.42, hcy + r0 * 0.42], fill=255)
+    solid = Image.composite(Image.new('L', (size, size), 0), solid, hole)
+    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    step = size / 24
+    r = step * 0.38
+    px = solid.load()
+    # Line the dots up on the pin's centre so it comes out symmetric.
+    start = (size / 2) % step
+    y = start
+    while y < size:
+        x = start
+        while x < size:
+            if px[int(x), int(y)] > 128:
+                d.ellipse([x - r, y - r, x + r, y + r], fill=WHITE)
+            x += step
+        y += step
+    h = size * scale
+    pr = h / 2.75
+    cx, cy = size / 2 + pr * 0.95, size / 2 - h / 2 + pr * 0.15
+    sr = step * 0.85
+    d.ellipse([cx - sr, cy - sr, cx + sr, cy + sr], fill=SIGNAL)
+    return img
 
 
 def pin_layer(size, scale, hole=False):
@@ -103,10 +146,10 @@ def save(img, path, px):
 
 def main():
     big = 1024
-    bg = gradient(big)
+    bg = mono_bg(big)
     # Full icon (older phones, and the in-app logo).
     full = bg.copy()
-    full.alpha_composite(with_shadow(pin_layer(big, 0.62), big))
+    full.alpha_composite(dot_pin(big, 0.62))
     legacy = rounded(full, 0.22)
     round_icon = full.copy()
     m = Image.new('L', (big, big), 0)
@@ -115,7 +158,7 @@ def main():
 
     # Adaptive icon layers (Android 8+): 108dp canvas, keep the pin in the
     # 66dp safe zone so any mask shape (circle, squircle) looks right.
-    fg = with_shadow(pin_layer(big, 0.47), big)
+    fg = dot_pin(big, 0.47)
     mono = pin_layer(big, 0.47, hole=True)
 
     for name, k in DENSITIES.items():

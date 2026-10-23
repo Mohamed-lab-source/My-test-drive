@@ -1,10 +1,11 @@
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 
 import '../../app/theme.dart';
 import '../../widgets/launchers.dart';
 
-const appVersion = '1.5.0';
+const appVersion = '1.6.0';
 
 /// What Khroga is, where its facts come from, and that it's free.
 class AboutScreen extends StatelessWidget {
@@ -34,8 +35,8 @@ class AboutScreen extends StatelessWidget {
           ),
         );
 
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('About Khroga'))),
+    return KScaffold(
+      title: Text(tr('About Khroga')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.lg, 0, KSpace.lg, KSpace.xl),
         children: [

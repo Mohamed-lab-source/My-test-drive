@@ -1,7 +1,7 @@
 name: khroga
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.5.0+18
+version: 1.6.0+19
 
 environment:
   sdk: ^3.13.5
@@ -42,8 +42,9 @@ flutter:
   assets:
     - assets/data/places.json
     - assets/icon/khroga.png
-  # Free fonts (SIL Open Font License, see assets/fonts/*-OFL.txt). Both have
-  # Arabic and Latin letters drawn to match.
+  # Free fonts (SIL Open Font License, see assets/fonts/*-OFL.txt). Alexandria
+  # and Readex Pro draw Arabic and Latin; Doto is a dot-matrix face for Latin
+  # numbers and the wordmark only.
   fonts:
     - family: Alexandria
       fonts:
@@ -55,6 +56,12 @@ flutter:
           weight: 700
         - asset: assets/fonts/Alexandria_800ExtraBold.ttf
           weight: 800
+    - family: Doto
+      fonts:
+        - asset: assets/fonts/Doto_700Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Doto_900Black.ttf
+          weight: 900
     - family: ReadexPro
       fonts:
         - asset: assets/fonts/ReadexPro_400Regular.ttf

@@ -319,7 +319,7 @@ class _NavBar extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.xs, KSpace.md, KSpace.xs),
           child: Container(
-            height: 70,
+            height: 74,
             decoration: BoxDecoration(
               color: k.surfaceHigh,
               borderRadius: BorderRadius.circular(26),
@@ -382,7 +382,7 @@ class _NavItem extends StatelessWidget {
               decoration: ShapeDecoration(
                 shape: const StadiumBorder(),
                 gradient: selected ? k.accentGradient : null,
-                shadows: selected
+                shadows: selected && !k.flat
                     ? [BoxShadow(color: k.accent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))]
                     : const [],
               ),
@@ -407,6 +407,17 @@ class _NavItem extends StatelessWidget {
                 color: selected ? k.ink : k.inkMuted,
               ),
               child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(height: 3),
+            AnimatedScale(
+              scale: selected ? 1 : 0,
+              duration: KMotion.medium,
+              curve: Curves.easeOutBack,
+              child: Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(color: k.signal, shape: BoxShape.circle),
+              ),
             ),
           ],
         ),

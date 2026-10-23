@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/large_title.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -25,8 +26,8 @@ class TrackScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final c = ref.read(trackProvider.notifier);
     final trail = [for (final p in track.points) (p.lat, p.lng)];
-    return Scaffold(
-      appBar: AppBar(title: Text(tr('Track my outing'))),
+    return KScaffold(
+      title: Text(tr('Track my outing')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: [
@@ -148,14 +149,20 @@ class _LiveStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = context.k;
-    final text = Theme.of(context).textTheme;
     return StreamBuilder<int>(
       stream: Stream.periodic(const Duration(seconds: 1), (i) => i),
       builder: (context, _) {
         final elapsed = DateTime.now().difference(track.started!);
         Widget stat(String value, String label) => Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(value, style: text.headlineSmall?.copyWith(color: k.onHero)),
+                Text(value,
+                    style: TextStyle(
+                      fontFamily: KFont.dots,
+                      fontFamilyFallback: KFont.dotsFallback,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 28,
+                      color: k.onHero,
+                    )),
                 Text(label, style: TextStyle(color: k.onHero.withValues(alpha: 0.85), fontSize: 13)),
               ]),
             );

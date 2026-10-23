@@ -2,6 +2,20 @@
 
 Keep each under 500 characters.
 
+## 1.6.0
+
+<en-US>
+• A new look: black and white with one red dot, dot-matrix numbers and a new icon
+• Big titles that slide into a see-through bar, and soft scrolling everywhere
+• Other color themes are still in Look & colors
+</en-US>
+
+<ar>
+• شكل جديد: أبيض وأسود بنقطة حمرا واحدة، أرقام بالنقط وأيقونة جديدة
+• عناوين كبيرة بتصغر في شريط شفاف، وتمرير ناعم في كل حتة
+• باقي الألوان لسه موجودة في الشكل والألوان
+</ar>
+
 ## 1.5.0
 
 <en-US>
