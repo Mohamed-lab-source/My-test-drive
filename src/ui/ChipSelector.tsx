@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { ScrollView, Text } from 'react-native';
+import { PressableScale } from './PressableScale';
 import * as Haptics from '../utils/haptics';
 import { useTheme } from '../theme/ThemeProvider';
 import { Icon } from './Icon';
@@ -25,8 +26,10 @@ export function ChipSelector({ options, selectedId, onSelect }: ChipSelectorProp
         const selected = opt.id === selectedId;
         const color = opt.color ?? colors.blue;
         return (
-          <Pressable
+          <PressableScale
             key={opt.id}
+            haptic="none"
+            scaleTo={0.94}
             onPress={() => {
               Haptics.selectionAsync();
               onSelect(opt.id);
@@ -34,7 +37,7 @@ export function ChipSelector({ options, selectedId, onSelect }: ChipSelectorProp
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: selected ? color : colors.fill,
+              backgroundColor: selected ? color : colors.tertiaryFill,
               borderRadius: radius.pill,
               paddingHorizontal: 14,
               paddingVertical: 8,
@@ -52,7 +55,7 @@ export function ChipSelector({ options, selectedId, onSelect }: ChipSelectorProp
             >
               {opt.label}
             </Text>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </ScrollView>

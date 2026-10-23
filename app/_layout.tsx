@@ -22,7 +22,6 @@ import {
 import { rescheduleExtraReminders } from '../src/notifications/extras';
 import { applyAutoRoutines } from '../src/utils/autoRoutines';
 
-import { BiometricLockGate } from '../src/auth/BiometricLockGate';
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
 import { setAsrMadhab, setPrayerAdjustments } from '../src/utils/prayerTimes';
 import { setUse24hClock } from '../src/utils/date';
@@ -147,10 +146,10 @@ function AppShell() {
 
   const content = (
     <>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
+      <Stack screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="search" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="review" />
         <Stack.Screen name="reminders" />
         <Stack.Screen name="whats-new" />
@@ -164,7 +163,7 @@ function AppShell() {
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      {status === 'signedIn' ? <BiometricLockGate>{content}</BiometricLockGate> : content}
+      {content}
     </>
   );
 }

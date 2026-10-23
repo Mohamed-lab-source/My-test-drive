@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
+import Animated from 'react-native-reanimated';
+import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
 import { SegmentedControl } from '../../../src/ui/SegmentedControl';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { Card } from '../../../src/ui/Card';
@@ -45,6 +47,7 @@ const SEGMENTS = ['Today', 'Backlog', 'All', 'Done', 'Waiting'];
 export default function TasksScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const { scrollY, onScroll } = useScrollY();
   const router = useRouter();
   const { action, project } = useLocalSearchParams<{ action?: string; project?: string }>();
   const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask, rescheduleTask } = useProductivityStore();
@@ -183,8 +186,11 @@ export default function TasksScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
         <ScreenHeader
+          scrollY={scrollY}
           title="Tasks"
           subtitle="Your personal secretary"
           trailing={
@@ -460,7 +466,8 @@ export default function TasksScreen() {
             </Card>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      <CompactHeader title="Tasks" scrollY={scrollY} />
       <FAB onPress={() => setAddVisible(true)} />
       <AddTaskSheet visible={addVisible} onClose={() => setAddVisible(false)} />
       <PlanDaySheet visible={planVisible} onClose={() => setPlanVisible(false)} />

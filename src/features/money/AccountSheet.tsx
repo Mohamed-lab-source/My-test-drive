@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Switch } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
+import { Switch } from '../../ui/Switch';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
 import { ChipSelector } from '../../ui/ChipSelector';

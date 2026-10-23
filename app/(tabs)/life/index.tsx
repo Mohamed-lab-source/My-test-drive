@@ -6,6 +6,10 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useLifeStore } from '../../../src/store/lifeStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
+import Animated from 'react-native-reanimated';
+import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
+import { PressableScale } from '../../../src/ui/PressableScale';
+import { Appear } from '../../../src/ui/Appear';
 import { Card } from '../../../src/ui/Card';
 import { ProgressRing } from '../../../src/ui/ProgressRing';
 import { Icon } from '../../../src/ui/Icon';
@@ -19,20 +23,26 @@ import { IconCircle } from '../../../src/ui/IconCircle';
 import { formatMoney } from '../../../src/utils/money';
 
 function LifeLink({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
-  const { colors, typography, spacing } = useTheme();
+  const { colors, typography, spacing, radius, shadow } = useTheme();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        backgroundColor: colors.secondarySystemGroupedBackground,
-        borderRadius: 16,
-        paddingVertical: spacing.sm,
-        marginHorizontal: 4,
-      }}
+      scaleTo={0.93}
+      style={[
+        {
+          flex: 1,
+          alignItems: 'center',
+          backgroundColor: colors.secondarySystemGroupedBackground,
+          borderRadius: radius.lg,
+          borderCurve: 'continuous',
+          paddingVertical: spacing.sm,
+          paddingHorizontal: 4,
+          marginHorizontal: 4,
+        },
+        shadow.card,
+      ]}
     >
-      <IconCircle name={icon} color={color} size={40} />
+      <IconCircle name={icon} color={color} size={36} filled />
       <Text
         style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}
         numberOfLines={1}
@@ -40,7 +50,7 @@ function LifeLink({ icon, label, color, onPress }: { icon: string; label: string
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -48,6 +58,7 @@ export default function LifeScreen() {
   const [qadaKey, setQadaKey] = React.useState(0);
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const { scrollY, onScroll } = useScrollY();
   const router = useRouter();
   const { savingsGoals } = useFinanceStore();
   const { wishlist } = useLifeStore();
@@ -57,12 +68,14 @@ export default function LifeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
-        <ScreenHeader title="Life" subtitle="Faith, goals & ideas" />
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
+        <ScreenHeader scrollY={scrollY} title="Life" subtitle="Faith, goals & ideas" />
 
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+        <Appear index={0} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <PrayerTracker />
-        </View>
+        </Appear>
 
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
           <LifeLink icon="flame.fill" label="Habits" color={colors.orange} onPress={() => router.push('/life/habits')} />
@@ -155,7 +168,8 @@ export default function LifeScreen() {
             </Card>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      <CompactHeader title="Life" scrollY={scrollY} />
     </View>
   );
 }

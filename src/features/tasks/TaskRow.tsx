@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ActionMenu } from '../../ui/ActionMenu';
 import * as Haptics from '../../utils/haptics';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { PressableScale } from '../../ui/PressableScale';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Icon } from '../../ui/Icon';
 import { Badge } from '../../ui/Badge';
@@ -62,16 +64,25 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
           },
         ]}
       >
-        <Pressable
+        <PressableScale
+          haptic="none"
+          scaleTo={0.75}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            if (isDone) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             toggleTaskDone(task.id, !isDone);
           }}
           hitSlop={8}
           style={{ marginRight: spacing.sm }}
         >
-          <Icon name={isDone ? 'checkmark.circle.fill' : 'circle'} size={24} color={isDone ? colors.green : colors.gray3} />
-        </Pressable>
+          {isDone ? (
+            <Animated.View key="done" entering={ZoomIn.springify().damping(12).stiffness(260)}>
+              <Icon name="checkmark.circle.fill" size={25} color={colors.green} />
+            </Animated.View>
+          ) : (
+            <Icon name="circle" size={25} color={colors.gray3} />
+          )}
+        </PressableScale>
         <Pressable style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={onPress} onLongPress={quickMenu} delayLongPress={350}>
           <View style={{ flex: 1 }}>
             <Text

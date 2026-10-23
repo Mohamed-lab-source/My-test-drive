@@ -174,7 +174,6 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Customize Home: hide any card you don't use
 - Next-prayer countdown chip under the title
 - Global search also covers notes, books, shopping and countdowns
-- Biometric lock timeout (immediately / 1 / 5 / 15 minutes)
 - Today rings on Home (prayers · tasks · water), pull-to-refresh on Home and Money
 - Settings → Upcoming reminders (every scheduled notification) and What's in Anchor (feature tour)
 - Day recap, achievements, larger text option, and a "Your data" summary
@@ -194,13 +193,19 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Light/Dark/System appearance
 - Currency selection, manual exchange rates for foreign-currency accounts
 - Local notifications for meeting and bill-due reminders
-- Biometric (Face ID / fingerprint) app lock
 - JSON export/import backup, CSV export, full reset
 - Card payment due reminders (3 days before and on the due day) and an optional 9:30 PM spending digest
 - 24-hour clock and whole-number amounts (Settings → Appearance); recent searches
 - Big-spending-day alert, weekend days (Fri–Sat / Sat–Sun) and the day your week starts
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
+
+**Design**
+- Apple-style look throughout: Inter (the closest open match to San Francisco) on Android with real weights and SF-style tracking, the system font on iOS, and Apple's exact label greys
+- Large titles that zoom when you pull down and hand over to a compact title bar as you scroll; iOS-style slide transitions on Android
+- Wallet-style gradient net-worth card with a smooth sparkline and balances that count up; Fitness-style concentric activity rings
+- Springy press feedback on cards, tiles, chips and buttons; sections rise into place on open; tab icons bounce when selected; task checkmarks pop
+- Settings-style filled icon tiles, green toggles, soft layered shadows (none in dark mode), continuous rounded corners, refined sheets, text fields and empty states
 
 **Cards from every bank**
 - Bank SMS reads alerts from any bank you add (CIB, NBE, Banque Misr, QNB, AAIB, AlexBank, Emirates NBD, ADCB, FAB, Mashreq, Al Rajhi, SNB, Telda, valU and more), in English or Arabic, including line-by-line formats like "Card: *7766 / At: JARIR"
@@ -220,7 +225,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Expo SDK 57 (React Native 0.86, React 19), TypeScript, Expo Router
 - SQLite via `expo-sqlite`, hand-rolled repositories (no ORM)
 - Firebase Authentication + Firestore via `@react-native-firebase/*` (native SDK, offline-first)
-- `expo-notifications` for local reminders, `expo-local-authentication` for biometric app lock, `expo-image-picker` for receipt photos
+- `expo-notifications` for local reminders, `expo-image-picker` for receipt photos
 - Zustand for app state
 - `react-native-reanimated` + `react-native-gesture-handler` for animations (sheets, swipe actions, spring transitions)
 - Custom iOS-styled design system (colors, typography, spacing) in `src/theme`

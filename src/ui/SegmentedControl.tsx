@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutChangeEvent } from 'react-native';
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import * as Haptics from '../utils/haptics';
 import { useTheme } from '../theme/ThemeProvider';
 
@@ -11,12 +11,12 @@ interface SegmentedControlProps {
 }
 
 export function SegmentedControl({ options, selectedIndex, onChange }: SegmentedControlProps) {
-  const { colors, typography, radius, spacing } = useTheme();
+  const { colors, typography, radius, spacing, scheme } = useTheme();
   const [width, setWidth] = useState(0);
   const segmentWidth = width / options.length;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: withTiming(segmentWidth * selectedIndex, { duration: 220 }) }],
+    transform: [{ translateX: withSpring(segmentWidth * selectedIndex, { damping: 22, stiffness: 260, mass: 0.7 }) }],
     width: segmentWidth,
   }));
 
@@ -27,7 +27,7 @@ export function SegmentedControl({ options, selectedIndex, onChange }: Segmented
       onLayout={onLayout}
       style={[
         styles.container,
-        { backgroundColor: colors.fill, borderRadius: radius.md, padding: 2 },
+        { backgroundColor: colors.tertiaryFill, borderRadius: radius.sm + 2, padding: 2 },
       ]}
     >
       {width > 0 ? (
@@ -39,12 +39,10 @@ export function SegmentedControl({ options, selectedIndex, onChange }: Segmented
               top: 2,
               bottom: 2,
               left: 0,
-              backgroundColor: colors.secondarySystemGroupedBackground,
+              backgroundColor: scheme === 'dark' ? '#636366' : '#FFFFFF',
               borderRadius: radius.sm,
-              shadowColor: '#000',
-              shadowOpacity: 0.1,
-              shadowOffset: { width: 0, height: 1 },
-              shadowRadius: 2,
+              borderCurve: 'continuous',
+              boxShadow: '0px 3px 8px rgba(0, 0, 0, 0.12), 0px 3px 1px rgba(0, 0, 0, 0.04)',
             },
           ]}
         />

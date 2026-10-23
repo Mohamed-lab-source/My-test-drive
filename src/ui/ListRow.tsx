@@ -28,7 +28,7 @@ export function ListRow({
   const { colors, typography, spacing } = useTheme();
 
   const content = (
-    <View style={[styles.row, { paddingVertical: spacing.sm, paddingHorizontal: spacing.md }]}>
+    <View style={[styles.row, { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, minHeight: 50 }]}>
       {leading ? <View style={styles.leading}>{leading}</View> : null}
       <View style={styles.textCol}>
         <Text
@@ -47,7 +47,7 @@ export function ListRow({
         ) : null}
       </View>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
-      {showChevron ? <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} /> : null}
+      {showChevron ? <Icon name="chevron.right" size={15} color={colors.gray2} /> : null}
     </View>
   );
 
@@ -62,7 +62,8 @@ export function ListRow({
               }
             : undefined
         }
-        style={({ pressed }) => [pressed && onPress ? { opacity: 0.6 } : null]}
+        // iOS highlights a tapped row with a grey wash rather than fading it.
+        style={({ pressed }) => [pressed && onPress ? { backgroundColor: colors.tertiaryFill } : null]}
       >
         {content}
       </Pressable>

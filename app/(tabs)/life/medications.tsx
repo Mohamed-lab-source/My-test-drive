@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Switch, Alert, Pressable } from 'react-native';
+import { View, Text, ScrollView, Alert, Pressable } from 'react-native';
+import { Switch } from '../../../src/ui/Switch';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';

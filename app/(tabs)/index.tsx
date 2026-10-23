@@ -36,20 +36,49 @@ import { formatMoney } from '../../src/utils/money';
 import { convertToBase } from '../../src/db/repositories/fx';
 import { reconstructNetWorthTrend } from '../../src/utils/networth';
 import { formatHijri, toHijri } from '../../src/utils/hijri';
+import Animated from 'react-native-reanimated';
+import { PressableScale } from '../../src/ui/PressableScale';
+import { Appear } from '../../src/ui/Appear';
+import { AnimatedNumber } from '../../src/ui/AnimatedNumber';
+import { GradientCard } from '../../src/ui/GradientCard';
+import { Sparkline } from '../../src/ui/Sparkline';
+import { CompactHeader, useLargeTitleZoom, useScrollY } from '../../src/ui/CollapsingHeader';
+import { heroGradient } from '../../src/theme/shade';
 import { formatRelativeDay, formatTime, isOverdue, localDateKey } from '../../src/utils/date';
 import { todayKey } from '../../src/db/client';
 
 const SPARKLINE_DAYS = 14;
 
 function QuickAction({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
-  const { colors, typography } = useTheme();
+  const { colors, typography, radius, shadow } = useTheme();
   return (
-    <Pressable onPress={onPress} style={{ flex: 1, alignItems: 'center' }}>
-      <IconCircle name={icon} color={color} size={48} />
-      <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>{label}</Text>
-    </Pressable>
+    <PressableScale
+      onPress={onPress}
+      haptic="light"
+      scaleTo={0.92}
+      style={[
+        {
+          flex: 1,
+          alignItems: 'center',
+          marginHorizontal: 4,
+          paddingVertical: 12,
+          borderRadius: radius.lg,
+          borderCurve: 'continuous',
+          backgroundColor: colors.secondarySystemGroupedBackground,
+        },
+        shadow.card,
+      ]}
+    >
+      <IconCircle name={icon} color={color} size={38} filled />
+      <Text style={[typography.caption1, { color: colors.label, marginTop: 7, fontWeight: '600' }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </PressableScale>
   );
 }
+
+const todayLine = (offset: number) =>
+  `${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })} · ${formatHijri(new Date(), offset)}`;
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -75,6 +104,9 @@ function occasionGreeting(offset: number): string | null {
 export default function HomeScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const { scrollY, onScroll } = useScrollY();
+  const zoom = useLargeTitleZoom(scrollY);
+  const accent = colors.blue;
   const { refreshing, onRefresh } = usePullToRefresh();
   const router = useRouter();
   const currency = useSettingsStore((s) => s.currency);
@@ -146,9 +178,42 @@ export default function HomeScreen() {
   const sparkMax = Math.max(...sparkline);
   const sparkRange = Math.max(1, sparkMax - sparkMin);
 
+  const sparkChange = sparkline.length > 1 ? sparkline[sparkline.length - 1] - sparkline[0] : 0;
+  const heroCard = show('networth') ? (
+    <Appear index={2} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+      <PressableScale onPress={() => router.push('/money')} scaleTo={0.98}>
+        <GradientCard colors={heroGradient(accent)}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[typography.subhead, { color: 'rgba(255,255,255,0.85)', fontWeight: '600', flex: 1 }]}>Net worth</Text>
+            {sparkChange !== 0 ? (
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                <Text style={[typography.caption1, { color: '#fff', fontWeight: '700' }]}>
+                  {sparkChange > 0 ? '▲' : '▼'} {balance(Math.abs(sparkChange), currency)} · 2 wks
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <AnimatedNumber value={netWorth} format={(n) => balance(n, currency)} style={[typography.display, { color: '#fff', marginTop: 4 }]} numberOfLines={1} />
+          <View style={{ marginTop: spacing.sm, marginHorizontal: -4 }}>
+            <Sparkline values={sparkline} color="#FFFFFF" height={46} />
+          </View>
+          {openDebts.length > 0 ? (
+            <Text style={[typography.footnote, { color: 'rgba(255,255,255,0.85)', marginTop: spacing.xs }]}>
+              {openDebts.length} open debt{openDebts.length > 1 ? 's' : ''} · this month {balance(monthSpend, currency)} spent
+            </Text>
+          ) : (
+            <Text style={[typography.footnote, { color: 'rgba(255,255,255,0.85)', marginTop: spacing.xs }]}>This month {balance(monthSpend, currency)} spent</Text>
+          )}
+        </GradientCard>
+      </PressableScale>
+    </Appear>
+  ) : null;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={insets.top} />}
       >
@@ -162,27 +227,34 @@ export default function HomeScreen() {
             paddingBottom: spacing.md,
           }}
         >
-          <View>
+          <Animated.View style={[{ flex: 1, transformOrigin: 'left bottom' }, zoom]}>
             <Pressable onPress={() => router.push('/life/hijri-calendar')} hitSlop={6}>
-              <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
-                {greeting()}{displayName.trim() ? `, ${displayName.trim()}` : ''} · {formatHijri(new Date(), hijriOffset)}
+              <Text style={[typography.footnote, { color: colors.secondaryLabel, textTransform: 'uppercase', fontWeight: '600', letterSpacing: 0.4 }]} numberOfLines={1}>
+                {todayLine(hijriOffset)}
               </Text>
             </Pressable>
+            <Text style={[typography.largeTitle, { color: colors.label }]} numberOfLines={1} adjustsFontSizeToFit>
+              {greeting()}
+              {displayName.trim() ? `, ${displayName.trim().split(' ')[0]}` : ''}
+            </Text>
             {occasionGreeting(hijriOffset) ? (
               <Text style={[typography.subhead, { color: colors.green, fontWeight: '600' }]}>{occasionGreeting(hijriOffset)}</Text>
             ) : null}
-            <Text style={[typography.largeTitle, { color: colors.label }]}>Anchor</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               <NextPrayerChip />
               <NextMeetingChip />
             </View>
-          </View>
-          <Pressable onPress={() => router.push('/search')} hitSlop={10} style={{ paddingBottom: 8 }}>
-            <Icon name="magnifyingglass" size={22} color={colors.secondaryLabel} />
-          </Pressable>
+          </Animated.View>
+          <PressableScale
+            onPress={() => router.push('/search')}
+            hitSlop={10}
+            style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.tertiaryFill, marginBottom: 6 }}
+          >
+            <Icon name="magnifyingglass" size={19} color={colors.label} />
+          </PressableScale>
         </View>
 
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+        <Appear index={1} style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           {quickActions.map((a) => (
             <QuickAction
               key={a.id}
@@ -200,10 +272,11 @@ export default function HomeScreen() {
               }
             />
           ))}
-        </View>
+        </Appear>
         {show('spent') ? <SpentTodayLine /> : null}
+        {heroCard}
 
-        <View style={{ paddingHorizontal: spacing.lg }}>
+        <Appear index={3} style={{ paddingHorizontal: spacing.lg }}>
           <GettingStartedCard />
           <RamadanCard />
           {show('seasons') ? <SeasonCountdownCard /> : null}
@@ -217,47 +290,13 @@ export default function HomeScreen() {
           {show('gratitude') ? <GratitudeMemoryCard /> : null}
           {show('insight') ? <InsightOfDayCard /> : null}
           {show('water') ? <WaterCard /> : null}
-        </View>
-
-        {show('networth') ? (
-<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <Pressable onPress={() => router.push('/money')}>
-            <Card>
-              <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>Net worth</Text>
-              <Text style={[typography.title1, { color: colors.label, marginTop: 4 }]}>{balance(netWorth, currency)}</Text>
-              {openDebts.length > 0 ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
-                  <Icon name="exclamationmark.triangle.fill" size={14} color={colors.orange} />
-                  <Text style={[typography.footnote, { color: colors.orange, marginLeft: 4 }]}>
-                    {openDebts.length} open debt{openDebts.length > 1 ? 's' : ''}
-                  </Text>
-                </View>
-              ) : null}
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 28, marginTop: spacing.sm }}>
-                {sparkline.map((v, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      flex: 1,
-                      marginHorizontal: 1,
-                      borderRadius: 2,
-                      backgroundColor: colors.blue,
-                      opacity: 0.35 + 0.65 * ((v - sparkMin) / sparkRange),
-                      height: Math.max(2, ((v - sparkMin) / sparkRange) * 28),
-                    }}
-                  />
-                ))}
-              </View>
-            </Card>
-          </Pressable>
-        </View>
-        ) : null}
+        </Appear>
 
         {show('stats') ? (
 <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
             <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>This month</Text>
-            <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{balance(monthSpend, currency)}</Text>
+            <AnimatedNumber value={monthSpend} format={(n) => balance(n, currency)} style={[typography.headline, { color: colors.label, marginTop: 2 }]} numberOfLines={1} />
           </Card>
           <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
             <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Due today</Text>
@@ -265,7 +304,7 @@ export default function HomeScreen() {
           </Card>
           <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
             <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Prayer streak</Text>
-            <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{prayerStreak}</Text>
+            <AnimatedNumber value={prayerStreak} format={(n) => String(n)} style={[typography.headline, { color: colors.label, marginTop: 2 }]} />
           </Card>
         </View>
         ) : null}
@@ -400,7 +439,8 @@ export default function HomeScreen() {
         <Pressable onPress={() => setCustomizeVisible(true)} style={{ alignSelf: 'center', marginTop: spacing.lg, padding: spacing.sm }}>
           <Text style={[typography.subhead, { color: colors.blue }]}>Customize Home</Text>
         </Pressable>
-      </ScrollView>
+      </Animated.ScrollView>
+      <CompactHeader title="Today" scrollY={scrollY} />
       <CustomizeHomeSheet visible={customizeVisible} onClose={() => setCustomizeVisible(false)} />
       <AddTransactionSheet visible={expenseVisible} onClose={() => setExpenseVisible(false)} />
       <AddTransactionSheet visible={incomeVisible} initialType="income" onClose={() => setIncomeVisible(false)} />

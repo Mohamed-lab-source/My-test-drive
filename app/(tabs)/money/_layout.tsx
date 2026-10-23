@@ -8,6 +8,9 @@ export default function MoneyLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
+        // The iOS push: slides in from the right with the old screen parallaxing away.
+        animation: 'ios_from_right',
+        fullScreenGestureEnabled: true,
         contentStyle: { backgroundColor: colors.systemGroupedBackground },
       }}
     >

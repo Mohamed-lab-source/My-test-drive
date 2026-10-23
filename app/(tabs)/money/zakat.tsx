@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
+import { Switch } from '../../../src/ui/Switch';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';

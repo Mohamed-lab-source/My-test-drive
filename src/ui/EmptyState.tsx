@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeProvider';
 import { Icon } from './Icon';
 
@@ -13,32 +14,26 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, message, action }: EmptyStateProps) {
   const { colors, typography, spacing } = useTheme();
   return (
-    <View style={{ alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.xl }}>
-      <View
+    <Animated.View entering={FadeIn.duration(350)} style={{ alignItems: 'center', paddingVertical: spacing.xxl, paddingHorizontal: spacing.xl }}>
+      <Animated.View
+        entering={ZoomIn.springify().damping(14).stiffness(180)}
         style={{
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          backgroundColor: colors.fill,
+          width: 76,
+          height: 76,
+          borderRadius: 38,
+          backgroundColor: colors.blue + '18',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: spacing.md,
         }}
       >
-        <Icon name={icon} size={30} color={colors.secondaryLabel} />
-      </View>
-      <Text style={[typography.headline, { color: colors.label, textAlign: 'center' }]}>{title}</Text>
+        <Icon name={icon} size={34} color={colors.blue} />
+      </Animated.View>
+      <Text style={[typography.title3, { color: colors.label, textAlign: 'center' }]}>{title}</Text>
       {message ? (
-        <Text
-          style={[
-            typography.subhead,
-            { color: colors.secondaryLabel, textAlign: 'center', marginTop: 4 },
-          ]}
-        >
-          {message}
-        </Text>
+        <Text style={[typography.subhead, { color: colors.secondaryLabel, textAlign: 'center', marginTop: 6, maxWidth: 320 }]}>{message}</Text>
       ) : null}
       {action ? <View style={{ marginTop: spacing.md }}>{action}</View> : null}
-    </View>
+    </Animated.View>
   );
 }

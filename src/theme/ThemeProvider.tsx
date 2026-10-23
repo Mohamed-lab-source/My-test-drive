@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
+import * as SystemUI from 'expo-system-ui';
 import { palette, type ColorScheme, type ThemeColors } from './colors';
 import { typography } from './typography';
 import { spacing, radius, shadow } from './spacing';
@@ -56,10 +57,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       typography: scaleTypography(textScale),
       spacing,
       radius,
-      shadow,
+      // Dark mode lifts cards with colour, not shadows (as iOS does).
+      shadow: scheme === 'dark' ? { ...shadow, card: shadow.none } : shadow,
     }),
     [scheme, textScale, accent, softDark]
   );
+
+  // The window behind every screen matches the theme, so transitions never
+  // flash white in dark mode.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(theme.colors.systemGroupedBackground).catch(() => {});
+  }, [theme.colors.systemGroupedBackground]);
 
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
 }

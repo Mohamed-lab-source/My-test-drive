@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { ZoomIn, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from '../utils/haptics';
 import { useTheme } from '../theme/ThemeProvider';
 import { Icon } from './Icon';
@@ -16,13 +16,14 @@ export function FAB({ onPress, icon = 'plus' }: FABProps) {
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <Animated.View style={[styles.wrapper, animatedStyle, shadow.floating]}>
+    <Animated.View entering={ZoomIn.delay(150).springify().damping(14)} style={styles.wrapper}>
+    <Animated.View style={[animatedStyle, shadow.floating, { borderRadius: 29 }]}>
       <Pressable
         onPressIn={() => {
-          scale.value = withTiming(0.92, { duration: 90 });
+          scale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
         }}
         onPressOut={() => {
-          scale.value = withTiming(1, { duration: 120 });
+          scale.value = withSpring(1, { damping: 12, stiffness: 300 });
         }}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -30,8 +31,9 @@ export function FAB({ onPress, icon = 'plus' }: FABProps) {
         }}
         style={[styles.button, { backgroundColor: colors.blue }]}
       >
-        <Icon name={icon} size={26} color="#fff" />
+        <Icon name={icon} size={30} color="#fff" />
       </Pressable>
+    </Animated.View>
     </Animated.View>
   );
 }
@@ -39,9 +41,9 @@ export function FAB({ onPress, icon = 'plus' }: FABProps) {
 const styles = StyleSheet.create({
   wrapper: { position: 'absolute', right: 20, bottom: 24 },
   button: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
   },

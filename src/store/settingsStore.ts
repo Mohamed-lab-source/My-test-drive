@@ -83,8 +83,6 @@ interface SettingsState {
   setBedtime: (v: string | null) => void;
   topTask: { id: string; date: string } | null;
   setTopTask: (v: { id: string; date: string } | null) => void;
-  lockTimeoutMinutes: number;
-  setLockTimeoutMinutes: (v: number) => void;
   roundUpSince: string | null;
   setRoundUpSince: (v: string | null) => void;
   hideBalances: boolean;
@@ -263,8 +261,6 @@ export const useSettingsStore = create<SettingsState>()(
       setBedtime: (v) => set({ bedtime: v }),
       topTask: null,
       setTopTask: (v) => set({ topTask: v }),
-      lockTimeoutMinutes: 0,
-      setLockTimeoutMinutes: (v) => set({ lockTimeoutMinutes: v }),
       roundUpSince: null,
       setRoundUpSince: (v) => set({ roundUpSince: v }),
       hideBalances: false,

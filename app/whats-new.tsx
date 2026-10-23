@@ -68,11 +68,12 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Everywhere',
     emoji: '✨',
     items: [
+      'A new Apple-style design: large titles that collapse as you scroll, Wallet-style net worth, activity rings and springy animations',
       'Search (top of Home) covers money, tasks, notes, books and more',
       'Customize Home at the bottom of the Home screen; pull down to refresh',
       'Settings → Upcoming reminders lists every scheduled notification',
       'Morning briefing, evening check-in, water and bedtime reminders',
-      'Biometric lock with a timeout; everything syncs to your account',
+      'Everything syncs to your account',
       'Larger text (Settings → Appearance), achievements and a daily recap (tap the rings on Home)',
       'Mood check-in and Ramadan/Eid countdown on Home; 24-hour clock, whole-number amounts, nightly spending digest',
       'Insight of the day, search by amount, monthly report and a backup reminder in Settings',

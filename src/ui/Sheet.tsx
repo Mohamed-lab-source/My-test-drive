@@ -12,6 +12,8 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../theme/ThemeProvider';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+// Close to UIKit's sheet spring: quick, with no visible overshoot.
+const SPRING = { damping: 28, stiffness: 300, mass: 0.9 };
 
 interface SheetProps {
   visible: boolean;
@@ -27,7 +29,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
 
   useEffect(() => {
     if (visible) {
-      translateY.value = withSpring(0, { damping: 22, stiffness: 220 });
+      translateY.value = withSpring(0, SPRING);
       backdropOpacity.value = withTiming(1, { duration: 200 });
     } else {
       translateY.value = withTiming(SCREEN_HEIGHT, { duration: 220 });
@@ -47,7 +49,7 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
         backdropOpacity.value = withTiming(0, { duration: 200 });
         runOnJS(close)();
       } else {
-        translateY.value = withSpring(0, { damping: 22, stiffness: 220 });
+        translateY.value = withSpring(0, SPRING);
       }
     });
 
@@ -61,7 +63,11 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
       <View style={StyleSheet.absoluteFill}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
           <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
-            <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+            {Platform.OS === 'ios' ? (
+              <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+            ) : (
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
+            )}
           </Animated.View>
         </Pressable>
         <KeyboardAvoidingView
@@ -73,12 +79,18 @@ export function Sheet({ visible, onClose, children }: SheetProps) {
             style={[
               styles.sheet,
               sheetStyle,
-              { backgroundColor: colors.secondarySystemGroupedBackground, borderTopLeftRadius: radius.xxl, borderTopRightRadius: radius.xxl },
+              {
+                backgroundColor: colors.secondarySystemGroupedBackground,
+                borderTopLeftRadius: radius.xxl,
+                borderTopRightRadius: radius.xxl,
+                borderCurve: 'continuous',
+                boxShadow: '0px -4px 30px rgba(0, 0, 0, 0.18)',
+              },
             ]}
           >
             <GestureDetector gesture={pan}>
               <View style={styles.handleArea}>
-                <View style={[styles.handle, { backgroundColor: colors.gray3 }]} />
+                <View style={[styles.handle, { backgroundColor: colors.gray3, opacity: 0.8 }]} />
               </View>
             </GestureDetector>
             {children}
@@ -93,5 +105,5 @@ const styles = StyleSheet.create({
   kav: { flex: 1, justifyContent: 'flex-end' },
   sheet: { maxHeight: '90%', paddingBottom: 24 },
   handleArea: { alignItems: 'center', paddingVertical: 10 },
-  handle: { width: 36, height: 5, borderRadius: 3 },
+  handle: { width: 38, height: 5, borderRadius: 2.5 },
 });

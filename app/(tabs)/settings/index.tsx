@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Share, Alert, TextInput, Switch, Platform, Pressable } from 'react-native';
+import { View, Text, ScrollView, Share, Alert, TextInput, Platform, Pressable } from 'react-native';
+import { Switch } from '../../../src/ui/Switch';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +11,8 @@ import { useProductivityStore } from '../../../src/store/productivityStore';
 import { useLifeStore } from '../../../src/store/lifeStore';
 import { useHabitsStore } from '../../../src/store/habitsStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
+import Animated from 'react-native-reanimated';
+import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
 import { Icon } from '../../../src/ui/Icon';
 import { Card } from '../../../src/ui/Card';
 import { ListRow } from '../../../src/ui/ListRow';
@@ -29,13 +32,11 @@ import {
   rescheduleOccasionReminders,
   sendTestNotification,
 } from '../../../src/notifications/scheduler';
-import { lockNow } from '../../../src/auth/BiometricLockGate';
 import { clearHandledSmsText } from '../../../src/db/repositories/smsImports';
 import { rescheduleExtraReminders } from '../../../src/notifications/extras';
 import { setAsrMadhab as applyAsrMadhab, setPrayerAdjustments } from '../../../src/utils/prayerTimes';
 import { PRAYER_CITIES } from '../../../src/utils/prayerTimes';
 import { formatHijri } from '../../../src/utils/hijri';
-import { isBiometricLockEnabled, setBiometricLockEnabled, isBiometricAvailable } from '../../../src/auth/biometricLock';
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { buildMonthlyReport } from '../../../src/utils/monthlyReport';
 import { fetchLiveRates } from '../../../src/utils/liveRates';
@@ -77,6 +78,7 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'KWD', 'QAR
 export default function SettingsScreen() {
   const { colors, typography, spacing, radius, scheme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { scrollY, onScroll } = useScrollY();
   const router = useRouter();
   const {
     appearance,
@@ -104,8 +106,6 @@ export default function SettingsScreen() {
     waterReminders,
     setWaterReminders,
     smsImportEnabled,
-    lockTimeoutMinutes,
-    setLockTimeoutMinutes,
     occasionReminders,
     setOccasionReminders,
     monThuReminders,
@@ -243,13 +243,7 @@ export default function SettingsScreen() {
   const [importVisible, setImportVisible] = useState(false);
   const [importText, setImportText] = useState('');
   const [busy, setBusy] = useState(false);
-  const [biometricOn, setBiometricOn] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
 
-  useEffect(() => {
-    isBiometricLockEnabled().then(setBiometricOn);
-    isBiometricAvailable().then(setBiometricAvailable);
-  }, []);
 
   const appearanceIndex = APPEARANCE_OPTIONS.indexOf(appearance);
 
@@ -300,10 +294,6 @@ export default function SettingsScreen() {
     await rescheduleExtraReminders();
   };
 
-  const handleToggleBiometric = async (value: boolean) => {
-    await setBiometricLockEnabled(value);
-    setBiometricOn(value);
-  };
 
   // Typing RESET guards against a stray tap wiping everything.
   const handleReset = () => {
@@ -318,22 +308,24 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
-        <ScreenHeader title="Settings" />
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
+        <ScreenHeader scrollY={scrollY} title="Settings" />
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Card padded={false}>
             <ListRow
               title="Achievements"
               subtitle="Milestones you've reached"
-              leading={<IconCircle name="star.fill" color={colors.yellow} size={32} />}
+              leading={<IconCircle filled name="star.fill" color={colors.yellow} size={32} />}
               onPress={() => router.push('/achievements')}
               showChevron
             />
             <ListRow
               title="Today's recap"
               subtitle="Your day at a glance — also tap the rings on Home"
-              leading={<IconCircle name="chart.bar.fill" color={colors.green} size={32} />}
+              leading={<IconCircle filled name="chart.bar.fill" color={colors.green} size={32} />}
               onPress={() => router.push('/recap')}
               showChevron
             />
@@ -341,7 +333,7 @@ export default function SettingsScreen() {
               title="What's in Anchor"
               subtitle="A quick tour of every feature and where to find it"
               isLast
-              leading={<IconCircle name="sparkles" color={colors.purple} size={32} />}
+              leading={<IconCircle filled name="sparkles" color={colors.purple} size={32} />}
               onPress={() => router.push('/whats-new')}
               showChevron
             />
@@ -356,7 +348,7 @@ export default function SettingsScreen() {
             <ListRow
               title={user?.name || 'Anchor account'}
               subtitle={user?.email}
-              leading={<IconCircle name="person.fill" color={colors.indigo} size={32} />}
+              leading={<IconCircle filled name="person.fill" color={colors.indigo} size={32} />}
             />
             <ListRow title="Sign out" destructive isLast onPress={signOut} />
           </Card>
@@ -695,13 +687,13 @@ export default function SettingsScreen() {
             <ListRow
               title="Reminders"
               subtitle="Meeting and bill-due notifications"
-              leading={<IconCircle name="bell.fill" color={colors.red} size={32} />}
+              leading={<IconCircle filled name="bell.fill" color={colors.red} size={32} />}
               trailing={<Switch value={notificationsEnabled} onValueChange={handleToggleNotifications} />}
             />
             <ListRow
               title="Send a test notification"
               subtitle="Check that alerts reach you"
-              leading={<IconCircle name="bell.fill" color={colors.orange} size={32} />}
+              leading={<IconCircle filled name="bell.fill" color={colors.orange} size={32} />}
               onPress={async () => {
                 if (!(await sendTestNotification())) Alert.alert('Notifications are off', 'Turn on Reminders above and allow notifications for Anchor.');
               }}
@@ -709,38 +701,38 @@ export default function SettingsScreen() {
             <ListRow
               title="Upcoming reminders"
               subtitle="Everything Anchor has scheduled"
-              leading={<IconCircle name="clock.fill" color={colors.blue} size={32} />}
+              leading={<IconCircle filled name="clock.fill" color={colors.blue} size={32} />}
               onPress={() => router.push('/reminders')}
               showChevron
             />
             <ListRow
               title="Morning briefing"
               subtitle="8 AM: today's tasks, meetings and bills"
-              leading={<IconCircle name="sun.max.fill" color={colors.orange} size={32} />}
+              leading={<IconCircle filled name="sun.max.fill" color={colors.orange} size={32} />}
               trailing={<Switch value={morningBriefing} onValueChange={(v) => toggleWithPermission(v, setMorningBriefing)} />}
             />
             <ListRow
               title="Card payment due"
               subtitle="3 days before and on each credit card's due day"
-              leading={<IconCircle name="creditcard.fill" color={colors.purple} size={32} />}
+              leading={<IconCircle filled name="creditcard.fill" color={colors.purple} size={32} />}
               trailing={<Switch value={cardDueReminders} onValueChange={(v) => toggleWithPermission(v, setCardDueReminders)} />}
             />
             <ListRow
               title="Monthly recap"
               subtitle="10 AM on the 1st: last month in review"
-              leading={<IconCircle name="calendar" color={colors.indigo} size={32} />}
+              leading={<IconCircle filled name="calendar" color={colors.indigo} size={32} />}
               trailing={<Switch value={monthlyRecapReminder} onValueChange={(v) => toggleWithPermission(v, setMonthlyRecapReminder)} />}
             />
             <ListRow
               title="Weekly review"
               subtitle="8 PM on the last day of your week"
-              leading={<IconCircle name="chart.bar.fill" color={colors.purple} size={32} />}
+              leading={<IconCircle filled name="chart.bar.fill" color={colors.purple} size={32} />}
               trailing={<Switch value={weeklyReviewReminder} onValueChange={(v) => toggleWithPermission(v, setWeeklyReviewReminder)} />}
             />
             <ListRow
               title="Tahajjud"
               subtitle="At the last third of the night (needs your city)"
-              leading={<IconCircle name="moon.stars.fill" color={colors.indigo} size={32} />}
+              leading={<IconCircle filled name="moon.stars.fill" color={colors.indigo} size={32} />}
               trailing={<Switch value={tahajjudReminder} onValueChange={(v) => toggleWithPermission(v, setTahajjudReminder)} />}
             />
             <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
@@ -766,20 +758,20 @@ export default function SettingsScreen() {
             <ListRow
               title="Nightly spending digest"
               subtitle="9:30 PM: what you spent today, and how much on credit"
-              leading={<IconCircle name="chart.bar.fill" color={colors.teal} size={32} />}
+              leading={<IconCircle filled name="chart.bar.fill" color={colors.teal} size={32} />}
               trailing={<Switch value={spendDigest} onValueChange={(v) => toggleWithPermission(v, setSpendDigest)} />}
             />
             <ListRow
               title="Water reminders"
               subtitle="Every 2 hours, 9 AM – 9 PM"
-              leading={<IconCircle name="drop.fill" color={colors.cyan} size={32} />}
+              leading={<IconCircle filled name="drop.fill" color={colors.cyan} size={32} />}
               trailing={<Switch value={waterReminders} onValueChange={(v) => toggleWithPermission(v, setWaterReminders)} />}
             />
             {Platform.OS === 'android' ? (
               <ListRow
                 title="Bank SMS"
                 subtitle={smsImportEnabled ? 'On — debits wait for review in Money' : 'Read debit alerts (e.g. HSBC) from SMS'}
-                leading={<IconCircle name="banknote.fill" color={colors.green} size={32} />}
+                leading={<IconCircle filled name="banknote.fill" color={colors.green} size={32} />}
                 onPress={() => router.push('/money/sms-inbox')}
                 showChevron
               />
@@ -787,37 +779,10 @@ export default function SettingsScreen() {
             <ListRow
               title="Evening check-in"
               subtitle="9 PM: log your mood and gratitude"
-              isLast={!biometricAvailable}
-              leading={<IconCircle name="text.book.closed.fill" color={colors.indigo} size={32} />}
+              isLast
+              leading={<IconCircle filled name="text.book.closed.fill" color={colors.indigo} size={32} />}
               trailing={<Switch value={eveningJournal} onValueChange={(v) => toggleWithPermission(v, setEveningJournal)} />}
             />
-            {biometricAvailable ? (
-              <ListRow
-                title="Biometric lock"
-                subtitle="Require Face ID / fingerprint to open Anchor"
-                isLast
-                leading={<IconCircle name="lock.fill" color={colors.gray} size={32} />}
-                trailing={<Switch value={biometricOn} onValueChange={handleToggleBiometric} />}
-              />
-            ) : null}
-            {biometricAvailable && biometricOn ? (
-              <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
-                <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6 }]}>Lock again after</Text>
-                <ChipSelector
-                  options={[
-                    { id: '0', label: 'Immediately' },
-                    { id: '1', label: '1 min' },
-                    { id: '5', label: '5 min' },
-                    { id: '15', label: '15 min' },
-                  ]}
-                  selectedId={String(lockTimeoutMinutes)}
-                  onSelect={(id) => setLockTimeoutMinutes(Number(id))}
-                />
-                <Pressable onPress={lockNow} style={{ marginTop: spacing.sm }}>
-                  <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>🔒 Lock now</Text>
-                </Pressable>
-              </View>
-            ) : null}
           </Card>
         </View>
 
@@ -828,7 +793,7 @@ export default function SettingsScreen() {
           <Card padded={false}>
             <ListRow
               title="Categories"
-              leading={<IconCircle name="chart.pie.fill" color={colors.blue} size={32} />}
+              leading={<IconCircle filled name="chart.pie.fill" color={colors.blue} size={32} />}
               showChevron
               onPress={() => router.push('/settings/categories')}
             />
@@ -850,35 +815,35 @@ export default function SettingsScreen() {
                     ? 'Last backup today'
                     : `Last backup ${backupDays} day${backupDays === 1 ? '' : 's'} ago${backupDays > 30 ? ' — time for a new one' : ''}`
               }
-              leading={<IconCircle name="square.and.arrow.up" color={backupDays === null || backupDays > 30 ? colors.orange : colors.green} size={32} />}
+              leading={<IconCircle filled name="square.and.arrow.up" color={backupDays === null || backupDays > 30 ? colors.orange : colors.green} size={32} />}
               onPress={handleExport}
             />
             <ListRow
               title="Share monthly report"
               subtitle="Money, tasks, prayers, habits and mood this month"
-              leading={<IconCircle name="chart.bar.fill" color={colors.indigo} size={32} />}
+              leading={<IconCircle filled name="chart.bar.fill" color={colors.indigo} size={32} />}
               onPress={async () => Share.share({ message: await buildMonthlyReport() })}
             />
             <ListRow
               title="Export transactions (CSV)"
-              leading={<IconCircle name="doc.text.fill" color={colors.teal} size={32} />}
+              leading={<IconCircle filled name="doc.text.fill" color={colors.teal} size={32} />}
               onPress={handleExportCsv}
             />
             <ListRow
               title="Export tasks (CSV)"
-              leading={<IconCircle name="checklist" color={colors.blue} size={32} />}
+              leading={<IconCircle filled name="checklist" color={colors.blue} size={32} />}
               onPress={async () => Share.share({ message: await exportTasksCsv(), title: 'Anchor tasks.csv' })}
             />
             <ListRow
               title="Restore from backup"
-              leading={<IconCircle name="square.and.arrow.down" color={colors.orange} size={32} />}
+              leading={<IconCircle filled name="square.and.arrow.down" color={colors.orange} size={32} />}
               onPress={() => setImportVisible(true)}
             />
             {Platform.OS === 'android' ? (
               <ListRow
                 title="Clear bank SMS text"
                 subtitle="Erase the stored text of messages you've already handled"
-                leading={<IconCircle name="banknote.fill" color={colors.gray} size={32} />}
+                leading={<IconCircle filled name="banknote.fill" color={colors.gray} size={32} />}
                 onPress={() =>
                   Alert.alert('Clear SMS text?', 'Messages waiting for review are kept. Handled ones keep their amount and merchant but lose the original text.', [
                     { text: 'Cancel', style: 'cancel' },
@@ -898,7 +863,7 @@ export default function SettingsScreen() {
               title="Reset all data"
               destructive
               isLast
-              leading={<IconCircle name="trash.fill" color={colors.red} size={32} />}
+              leading={<IconCircle filled name="trash.fill" color={colors.red} size={32} />}
               onPress={handleReset}
             />
           </Card>
@@ -909,7 +874,8 @@ export default function SettingsScreen() {
             Anchor {Constants.expoConfig?.version ?? ''} · everything stays on this device
           </Text>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      <CompactHeader title="Settings" scrollY={scrollY} />
 
       <Sheet visible={resetVisible} onClose={() => setResetVisible(false)}>
         <View style={{ paddingHorizontal: spacing.lg }}>

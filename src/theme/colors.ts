@@ -40,9 +40,10 @@ export interface ThemeColors {
 export const palette: Record<'light' | 'dark', ThemeColors> = {
   light: {
     label: '#000000',
-    secondaryLabel: '#3C3C43',
-    tertiaryLabel: '#3C3C43',
-    quaternaryLabel: '#3C3C43',
+    // Apple's secondary/tertiary labels are the same grey at 60% / 30% / 18%.
+    secondaryLabel: '#3C3C4399',
+    tertiaryLabel: '#3C3C434D',
+    quaternaryLabel: '#3C3C432E',
     placeholderText: '#3C3C4399',
     systemBackground: '#FFFFFF',
     secondarySystemBackground: '#F2F2F7',
@@ -78,9 +79,9 @@ export const palette: Record<'light' | 'dark', ThemeColors> = {
   },
   dark: {
     label: '#FFFFFF',
-    secondaryLabel: '#EBEBF5',
-    tertiaryLabel: '#EBEBF5',
-    quaternaryLabel: '#EBEBF5',
+    secondaryLabel: '#EBEBF599',
+    tertiaryLabel: '#EBEBF54D',
+    quaternaryLabel: '#EBEBF52E',
     placeholderText: '#EBEBF599',
     systemBackground: '#000000',
     secondarySystemBackground: '#1C1C1E',

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, { useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeProvider';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -21,7 +21,7 @@ export function ProgressRing({ progress, size = 72, strokeWidth = 8, color, labe
   const animatedProgress = useSharedValue(0);
 
   useEffect(() => {
-    animatedProgress.value = withTiming(Math.max(0, Math.min(1, progress)), { duration: 700 });
+    animatedProgress.value = withTiming(Math.max(0, Math.min(1, progress)), { duration: 900, easing: Easing.out(Easing.cubic) });
   }, [progress]);
 
   const animatedProps = useAnimatedProps(() => ({
@@ -35,7 +35,8 @@ export function ProgressRing({ progress, size = 72, strokeWidth = 8, color, labe
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={colors.fill}
+          stroke={color ?? colors.blue}
+          strokeOpacity={0.18}
           strokeWidth={strokeWidth}
           fill="none"
         />

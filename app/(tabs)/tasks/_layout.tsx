@@ -5,7 +5,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 export default function TasksLayout() {
   const { colors } = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="meetings" />
       <Stack.Screen name="projects" />

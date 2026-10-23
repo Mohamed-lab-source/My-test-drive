@@ -1,3 +1,5 @@
+import type { ViewStyle } from 'react-native';
+
 export const spacing = {
   xxs: 4,
   xs: 8,
@@ -12,25 +14,20 @@ export const spacing = {
 export const radius = {
   sm: 8,
   md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 28,
+  lg: 18,
+  xl: 22,
+  xxl: 30,
   pill: 999,
 };
 
-export const shadow = {
+// Soft, layered shadows in the style of iOS widgets. boxShadow renders the
+// same on Android and iOS (no Material elevation look).
+export const shadow: Record<'card' | 'floating' | 'none', ViewStyle> = {
   card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.04), 0px 6px 20px rgba(0, 0, 0, 0.05)',
   },
   floating: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
+    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.10), 0px 16px 36px rgba(0, 0, 0, 0.16)',
   },
+  none: {},
 };

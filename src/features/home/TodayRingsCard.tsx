@@ -1,10 +1,9 @@
 import React, { useCallback } from 'react';
 import { View, Text } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
-import { ProgressRing } from '../../ui/ProgressRing';
+import { ActivityRings } from '../../ui/ActivityRings';
 import { useLifeStore } from '../../store/lifeStore';
 import { useProductivityStore } from '../../store/productivityStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -36,21 +35,22 @@ export function TodayRingsCard() {
   const taskTotal = doneToday + openToday;
 
   const rings = [
-    { label: 'Prayers', value: `${prayers}/5`, progress: prayers / 5, color: colors.green },
-    { label: 'Tasks', value: taskTotal ? `${doneToday}/${taskTotal}` : '—', progress: taskTotal ? doneToday / taskTotal : 0, color: colors.blue },
+    { label: 'Prayers', value: `${prayers}/5`, progress: prayers / 5, color: colors.pink },
+    { label: 'Tasks', value: taskTotal ? `${doneToday}/${taskTotal}` : '—', progress: taskTotal ? doneToday / taskTotal : 0, color: colors.green },
     { label: 'Water', value: `${water}/${waterGoal}`, progress: Math.min(1, water / waterGoal), color: colors.cyan },
   ];
 
   return (
-    <Pressable onPress={() => router.push('/recap')}>
-      <Card style={{ marginBottom: spacing.md, flexDirection: 'row', justifyContent: 'space-around' }}>
+    <Card onPress={() => router.push('/recap')} style={{ marginBottom: spacing.md, flexDirection: 'row', alignItems: 'center' }}>
+      <ActivityRings rings={rings} size={118} stroke={14} />
+      <View style={{ flex: 1, marginLeft: spacing.lg }}>
         {rings.map((r) => (
-          <View key={r.label} style={{ alignItems: 'center' }}>
-            <ProgressRing progress={r.progress} color={r.color} size={64} strokeWidth={7} label={r.value} />
-            <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>{r.label}</Text>
+          <View key={r.label} style={{ marginBottom: 6 }}>
+            <Text style={[typography.footnote, { color: colors.label, fontWeight: '600' }]}>{r.label}</Text>
+            <Text style={[typography.title3, { color: r.color, fontVariant: ['tabular-nums'] }]}>{r.value}</Text>
           </View>
         ))}
-      </Card>
-    </Pressable>
+      </View>
+    </Card>
   );
 }

@@ -7,6 +7,11 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
+import Animated from 'react-native-reanimated';
+import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
+import { PressableScale } from '../../../src/ui/PressableScale';
+import { Appear } from '../../../src/ui/Appear';
+import { AnimatedNumber } from '../../../src/ui/AnimatedNumber';
 import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
@@ -28,21 +33,26 @@ import { Icon } from '../../../src/ui/Icon';
 import type { Transaction } from '../../../src/db/types';
 
 function QuickLink({ icon, label, color, onPress, badge }: { icon: string; label: string; color: string; onPress: () => void; badge?: number }) {
-  const { colors, typography, spacing, radius } = useTheme();
+  const { colors, typography, spacing, radius, shadow } = useTheme();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        backgroundColor: colors.secondarySystemGroupedBackground,
-        borderRadius: radius.lg,
-        paddingVertical: spacing.sm,
-        marginHorizontal: 4,
-      }}
+      scaleTo={0.93}
+      style={[
+        {
+          flex: 1,
+          alignItems: 'center',
+          backgroundColor: colors.secondarySystemGroupedBackground,
+          borderRadius: radius.lg,
+          borderCurve: 'continuous',
+          paddingVertical: spacing.sm,
+          marginHorizontal: 4,
+        },
+        shadow.card,
+      ]}
     >
       <View>
-        <IconCircle name={icon} color={color} size={40} />
+        <IconCircle name={icon} color={color} size={36} filled />
         {badge ? (
           <View
             style={{
@@ -63,13 +73,14 @@ function QuickLink({ icon, label, color, onPress, badge }: { icon: string; label
         ) : null}
       </View>
       <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 export default function MoneyScreen() {
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
+  const { scrollY, onScroll } = useScrollY();
   const { refreshing, onRefresh } = usePullToRefresh();
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
@@ -102,23 +113,23 @@ export default function MoneyScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} progressViewOffset={insets.top} />}
       >
-        <ScreenHeader title="Money" />
+        <ScreenHeader scrollY={scrollY} title="Money" />
 
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+        <Appear index={0} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[typography.subhead, { color: colors.secondaryLabel, flex: 1 }]}>Net worth</Text>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel, flex: 1, fontWeight: '600' }]}>Net worth</Text>
               <Pressable onPress={() => setHideBalances(!hideBalances)} hitSlop={10}>
                 <Icon name={hideBalances ? 'eye.slash' : 'eye'} size={18} color={colors.secondaryLabel} />
               </Pressable>
             </View>
-            <Text style={[typography.largeTitle, { color: colors.label, marginTop: 4 }]}>
-              {balance(netWorth, currency)}
-            </Text>
+            <AnimatedNumber value={netWorth} format={(n) => balance(n, currency)} style={[typography.display, { color: colors.label, marginTop: 4 }]} numberOfLines={1} />
             {(() => {
               // Change since the snapshot closest to a month ago.
               const target = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -198,7 +209,7 @@ export default function MoneyScreen() {
               ))}
             </ScrollView>
           </Card>
-        </View>
+        </Appear>
 
         {smsPending > 0 ? (
           <Pressable onPress={() => router.push('/money/sms-inbox')} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
@@ -281,7 +292,8 @@ export default function MoneyScreen() {
             </Card>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      <CompactHeader title="Money" scrollY={scrollY} />
 
       <FAB onPress={() => setAddVisible(true)} />
       <AddTransactionSheet visible={addVisible} onClose={() => setAddVisible(false)} />

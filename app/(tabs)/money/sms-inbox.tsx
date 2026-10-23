@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Platform, Switch } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
+import { Switch } from '../../../src/ui/Switch';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';

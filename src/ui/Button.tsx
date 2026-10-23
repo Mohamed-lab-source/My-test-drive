@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, Pressable, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from '../utils/haptics';
 import { useTheme } from '../theme/ThemeProvider';
 
@@ -28,25 +28,23 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
       : variant === 'destructive'
         ? colors.red
         : variant === 'secondary'
-          ? colors.fill
+          ? colors.blue + '1F'
           : 'transparent';
 
   const textColor =
     variant === 'primary' || variant === 'destructive'
       ? '#FFFFFF'
-      : variant === 'secondary'
-        ? colors.label
-        : colors.blue;
+      : colors.blue;
 
   return (
     <Animated.View style={animatedStyle}>
       <Pressable
         disabled={disabled || loading}
         onPressIn={() => {
-          scale.value = withTiming(0.96, { duration: 90 });
+          scale.value = withSpring(0.96, { damping: 18, stiffness: 320, mass: 0.6 });
         }}
         onPressOut={() => {
-          scale.value = withTiming(1, { duration: 120 });
+          scale.value = withSpring(1, { damping: 18, stiffness: 320, mass: 0.6 });
         }}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -56,7 +54,9 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading,
           styles.base,
           {
             backgroundColor: bg,
-            borderRadius: radius.md,
+            borderRadius: radius.md + 2,
+            borderCurve: 'continuous',
+            minHeight: variant === 'plain' ? undefined : 50,
             paddingVertical: variant === 'plain' ? spacing.xs : spacing.sm,
             paddingHorizontal: variant === 'plain' ? spacing.xs : spacing.lg,
             opacity: disabled ? 0.4 : 1,
