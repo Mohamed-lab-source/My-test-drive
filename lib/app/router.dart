@@ -42,6 +42,7 @@ import '../features/groups/money_screen.dart';
 import '../features/groups/start_points_screen.dart';
 import '../features/tools/track_screen.dart';
 import '../features/plan/plan_form_screen.dart';
+import '../features/plan/plans_hub_screen.dart';
 import '../features/plan/plan_result_screen.dart';
 import '../features/plan/saved_plans_screen.dart';
 import '../features/profile/about_screen.dart';
@@ -99,6 +100,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/plan', builder: (_, _) => const PlanFormScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/plans', builder: (_, _) => const PlansHubScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/explore', builder: (_, _) => const ExploreScreen()),
@@ -254,7 +258,8 @@ class _Shell extends ConsumerWidget {
           shell.goBranch(i, initialLocation: i == shell.currentIndex);
         },
         items: [
-          (Icons.auto_awesome_outlined, Icons.auto_awesome, tr('Plan'), 0),
+          (Icons.auto_awesome_outlined, Icons.auto_awesome, tr('Home'), 0),
+          (Icons.event_note_outlined, Icons.event_note, tr('My plans'), 0),
           (Icons.explore_outlined, Icons.explore, tr('Explore'), 0),
           (Icons.forum_outlined, Icons.forum, tr('Groups'), 0),
           (Icons.people_outline, Icons.people, tr('Friends'), requests),

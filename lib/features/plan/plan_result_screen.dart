@@ -25,6 +25,7 @@ import '../../widgets/khroga_map.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/launchers.dart';
 import '../groups/create_group_sheet.dart';
+import 'plan_actions.dart' show sendPlanToGroup, showPlanActions;
 import 'plan_extras.dart';
 import 'plan_form_screen.dart';
 
@@ -82,6 +83,7 @@ class PlanResultScreen extends ConsumerWidget {
             ),
         ],
       ),
+      bottomNavigationBar: loaded == null || loaded.stops.isEmpty ? null : _ActionBar(plan: loaded),
       body: AsyncView<OutingPlan?>(
         value: plan,
         onRetry: () => ref.invalidate(planProvider(planId)),
@@ -118,43 +120,7 @@ Future<void> _menu(BuildContext context, WidgetRef ref, OutingPlan plan, String 
     case 'earlier':
       await _editStops(context, ref, plan, shiftTimes(plan.stops, -30));
     case 'group':
-      final uid = ref.read(uidProvider);
-      final groups = await ref.read(myGroupsProvider.future);
-      if (uid == null || !context.mounted) return;
-      if (groups.isEmpty) {
-        showMessage(context, tr("You're not in any group yet."));
-        return;
-      }
-      final picked = await showModalBottomSheet<String>(
-        context: context,
-        useSafeArea: true,
-        builder: (sheetContext) => ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(KSpace.md),
-          children: [
-            Text(tr('Send to which group?'), style: Theme.of(sheetContext).textTheme.titleLarge),
-            for (final g in groups)
-              ListTile(
-                leading: const Icon(Icons.forum_outlined),
-                title: Text(g.name),
-                onTap: () => Navigator.pop(sheetContext, g.id),
-              ),
-          ],
-        ),
-      );
-      if (picked == null) return;
-      final text = planShareText(plan);
-      try {
-        await ref.read(groupsRepositoryProvider).sendMessage(
-              groupId: picked,
-              uid: uid,
-              name: ref.read(myProfileProvider).value?.displayName ?? 'Someone',
-              text: text.length > 1000 ? text.substring(0, 1000) : text,
-            );
-        if (context.mounted) showMessage(context, tr('Sent to the group'));
-      } catch (e) {
-        if (context.mounted) showError(context, e);
-      }
+      await sendPlanToGroup(context, ref, plan);
     case 'duplicate':
       final uid = ref.read(uidProvider);
       if (uid == null) return;
@@ -239,21 +205,7 @@ class _PlanBody extends ConsumerWidget {
               Pill(trf('⏱ {t} at stops', {'t': _StopTile._duration(totalStopMinutes(plan.stops.map((s) => s.durationMinutes)))})),
           ],
         ),
-        if (plan.stops.isNotEmpty && plan.stops.first.hasLocation) ...[
-          const SizedBox(height: KSpace.md),
-          GradientButton(
-            onPressed: () =>
-                openDirections(lat: plan.stops.first.lat!, lng: plan.stops.first.lng!),
-            icon: Icons.navigation_outlined,
-            label: trf('Go to the first stop: {name}', {'name': plan.stops.first.name}),
-          ),
-          const SizedBox(height: KSpace.sm),
-          OutlinedButton.icon(
-            onPressed: () => context.push(Uri(path: '/track', queryParameters: {'title': plan.title}).toString()),
-            icon: const Icon(Icons.route),
-            label: Text(tr('Track this outing')),
-          ),
-        ],
+
         if (plan.stops.length < plan.request.stops) ...[
           const SizedBox(height: KSpace.md),
           _InfoBanner(
@@ -1414,3 +1366,61 @@ class _StopWeather extends ConsumerWidget {
     );
   }
 }
+
+/// Always at the bottom of a plan: go to the next stop, track the outing,
+/// send it to a group, and everything else.
+class _ActionBar extends ConsumerWidget {
+  const _ActionBar({required this.plan});
+
+  final OutingPlan plan;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final k = context.k;
+    final now = DateTime.now();
+    final day = plan.request.day;
+    final isToday = day.year == now.year && day.month == now.month && day.day == now.day;
+    // On the day: the next stop; otherwise the first one.
+    final nextIndex = isToday ? (currentAndNext(plan.stops, now).next ?? 0) : 0;
+    final target = plan.stops[nextIndex.clamp(0, plan.stops.length - 1)];
+    Widget round(IconData icon, String tip, VoidCallback onTap) => Padding(
+          padding: const EdgeInsetsDirectional.only(start: KSpace.sm),
+          child: IconButton.filledTonal(
+            tooltip: tip,
+            style: IconButton.styleFrom(backgroundColor: k.surfaceHigh, foregroundColor: k.ink, fixedSize: const Size(52, 52)),
+            icon: Icon(icon),
+            onPressed: onTap,
+          ),
+        );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: k.background,
+        border: Border(top: BorderSide(color: k.line.withValues(alpha: 0.6), width: 0.5)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.sm, KSpace.md, KSpace.sm),
+          child: Row(children: [
+            Expanded(
+              child: GradientButton(
+                icon: Icons.navigation_outlined,
+                label: target.hasLocation
+                    ? trf('Go: {name}', {'name': target.name})
+                    : tr('Open the first stop'),
+                onPressed: target.hasLocation
+                    ? () => openDirections(lat: target.lat!, lng: target.lng!)
+                    : () => context.push('/place/${target.placeId}'),
+              ),
+            ),
+            round(Icons.route, tr('Track this outing'),
+                () => context.push(Uri(path: '/track', queryParameters: {'title': plan.title}).toString())),
+            round(Icons.forum_outlined, tr('Send to a group chat'), () => sendPlanToGroup(context, ref, plan)),
+            round(Icons.more_horiz, tr('More'), () => showPlanActions(context, ref, plan, fromPlan: true)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+

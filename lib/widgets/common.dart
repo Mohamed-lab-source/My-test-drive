@@ -610,6 +610,40 @@ class GradientBackdrop extends StatelessWidget {
   }
 }
 
+/// A numbered step title ("1  When?"), for forms that go step by step.
+class StepTitle extends StatelessWidget {
+  const StepTitle(this.step, this.text, {super.key});
+
+  final int step;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.lg, bottom: KSpace.sm),
+      child: Row(children: [
+        Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: k.accent, shape: BoxShape.circle),
+          child: Text('$step', style: TextStyle(color: k.onAccent, fontWeight: FontWeight.w800, fontSize: 13)),
+        ),
+        const SizedBox(width: KSpace.sm + 2),
+        Expanded(
+          child: Text(text,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontFamily: KFont.display,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  )),
+        ),
+      ]),
+    );
+  }
+}
+
 /// A quiet grid of dots (a dot-matrix texture) behind header cards.
 class DotGrid extends StatelessWidget {
   const DotGrid({super.key, required this.color, this.gap = 14, this.radius = 1.1});

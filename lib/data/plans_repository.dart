@@ -177,6 +177,15 @@ class PlansRepository {
     return doc.id;
   }
 
+  /// Moves the outing to another day ([day] null = any day). The old weather
+  /// note is cleared, since it was for the old day.
+  Future<void> setDay(String uid, String planId, DateTime? day) => _plans(uid).doc(planId).update({
+        'request.date': day == null
+            ? null
+            : '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
+        'weatherNote': null,
+      });
+
   Future<void> delete(String uid, String planId) =>
       _plans(uid).doc(planId).delete();
 

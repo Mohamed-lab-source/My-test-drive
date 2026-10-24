@@ -2,6 +2,20 @@
 
 Keep each under 500 characters.
 
+## 1.8.0
+
+<en-US>
+• New "My plans" tab: today's outing, upcoming, saved and all plans
+• Move a plan to another day, rename, copy, plan again or delete in one tap
+• Simpler planning in four steps; Go, Track and Send to group always at hand
+</en-US>
+
+<ar>
+• تبويب جديد "خططي": خروجة النهارده والجاية والمحفوظة وكل الخطط
+• انقل الخطة ليوم تاني، غيّر اسمها، اعمل نسخة، خطط تاني أو امسحها بدوسة
+• تخطيط أسهل في أربع خطوات؛ ويلا وسجّل وابعت للجروب دايماً قدامك
+</ar>
+
 ## 1.7.0
 
 <en-US>

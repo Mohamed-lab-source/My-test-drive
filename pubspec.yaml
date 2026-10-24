@@ -1,7 +1,7 @@
 name: khroga
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.7.0+20
+version: 1.8.0+21
 
 environment:
   sdk: ^3.13.5

@@ -58,6 +58,19 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
   (double, double, String)? _anchor;
   double _radius = PlanRequest.defaultRadiusKm;
   bool _locating = false;
+  bool _more = false;
+
+  /// The extra choices that differ from the usual, in a few words.
+  String _moreSummary() => [
+        trf('{n} stops', {'n': _stops}),
+        if (_budget.text.isNotEmpty) trf('{n} EGP', {'n': _budget.text}),
+        if (_mallId != null) tr('🛍️ One mall'),
+        if (_useAi) '✨ AI',
+        for (final n in _needs) tr(planNeeds[n] ?? n),
+        if (!_onlyOpen) tr('Closed places too'),
+        if (_skipVisited) tr("Skip places I've been"),
+        if (_notes.text.trim().isNotEmpty) tr('Note added'),
+      ].join(' · ');
 
   Future<void> _pickArea(String city) async {
     final areas = await ref.read(areaCentersProvider(city).future);
@@ -324,19 +337,6 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               ),
             ),
           ),
-          for (final (i, card) in const <Widget>[
-            _TodayStrip(),
-            _IdeaForNow(),
-            WeatherHeadsUp(),
-            BestTimeCard(),
-            OnThisDayCard(),
-            PlaceOfDayCard(),
-            ChallengeCard(),
-            _WhatsNewCard(),
-            _NextOutingCard(),
-            _RecentPlans(),
-          ].indexed)
-            FadeSlideIn(index: i + 1, child: card),
           SectionTitle(tr('Quick start'),
               trailing: TextButton(onPressed: _reset, child: Text(tr('Reset')))),
           Wrap(
@@ -371,7 +371,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 ),
             ],
           ),
-          SectionTitle(tr('When?')),
+          StepTitle(1, tr('When?')),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
@@ -429,12 +429,69 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               ),
             ],
           ),
+          const SizedBox(height: KSpace.sm),
+          Wrap(
+            spacing: KSpace.sm,
+            runSpacing: KSpace.sm,
+            children: [
+              for (final e in TimesOfDay.all.entries)
+                ChoiceChip(
+                  label: Text(tr(e.value)),
+                  selected: _time == e.key,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _time = e.key),
+                ),
+            ],
+          ),
           _DayFacts(day: _date ?? DateTime.now(), city: ref.watch(cityProvider)),
           _BestDay(
             city: ref.watch(cityProvider),
             onPick: (d) => setState(() => _date = sameDay(d, DateTime.now()) ? null : d),
           ),
-          SectionTitle(tr('City')),
+          StepTitle(2, tr('Who\'s coming?')),
+          Row(
+            children: [
+              _Stepper(
+                value: _people,
+                min: 1,
+                max: 20,
+                onChanged: (v) => setState(() => _people = v),
+              ),
+              const SizedBox(width: KSpace.sm),
+              Expanded(
+                child: Wrap(
+                  spacing: KSpace.xs,
+                  children: [
+                    for (final n in const [2, 4, 6, 10])
+                      ChoiceChip(
+                        label: Text('$n'),
+                        selected: _people == n,
+                        showCheckmark: false,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (_) => setState(() => _people = n),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          StepTitle(3, tr('The vibe')),
+          Wrap(
+            spacing: KSpace.sm,
+            runSpacing: KSpace.sm,
+            children: [
+              for (final e in Vibes.all.entries)
+                FilterChip(
+                  label: Text(tr(e.value)),
+                  selected: _vibes.contains(e.key),
+                  showCheckmark: false,
+                  onSelected: (on) => setState(() {
+                    on ? _vibes.add(e.key) : _vibes.remove(e.key);
+                  }),
+                ),
+            ],
+          ),
+          StepTitle(4, tr('Where?')),
           SegmentedButton<String>(
             showSelectedIcon: false,
             segments: [
@@ -450,7 +507,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               });
             },
           ),
-          SectionTitle(trf('Where in {city}?', {'city': tr(Cities.all[city] ?? city)})),
+          const SizedBox(height: KSpace.sm),
           Wrap(
             spacing: KSpace.sm,
             runSpacing: KSpace.sm,
@@ -502,63 +559,21 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               ],
             ),
           ],
-          SectionTitle(tr('How many people?')),
-          Row(
-            children: [
-              _Stepper(
-                value: _people,
-                min: 1,
-                max: 20,
-                onChanged: (v) => setState(() => _people = v),
-              ),
-              const SizedBox(width: KSpace.sm),
-              Expanded(
-                child: Wrap(
-                  spacing: KSpace.xs,
-                  children: [
-                    for (final n in const [2, 4, 6, 10])
-                      ChoiceChip(
-                        label: Text('$n'),
-                        selected: _people == n,
-                        showCheckmark: false,
-                        visualDensity: VisualDensity.compact,
-                        onSelected: (_) => setState(() => _people = n),
-                      ),
-                  ],
-                ),
-              ),
-            ],
+          const SizedBox(height: KSpace.lg),
+          _MoreOptionsHeader(
+            open: _more,
+            summary: _moreSummary(),
+            onTap: () => setState(() => _more = !_more),
           ),
-          SectionTitle(tr('Vibe')),
-          Wrap(
-            spacing: KSpace.sm,
-            runSpacing: KSpace.sm,
-            children: [
-              for (final e in Vibes.all.entries)
-                FilterChip(
-                  label: Text(tr(e.value)),
-                  selected: _vibes.contains(e.key),
-                  showCheckmark: false,
-                  onSelected: (on) => setState(() {
-                    on ? _vibes.add(e.key) : _vibes.remove(e.key);
-                  }),
-                ),
-            ],
-          ),
-          SectionTitle(tr('Time of day')),
-          Wrap(
-            spacing: KSpace.sm,
-            runSpacing: KSpace.sm,
-            children: [
-              for (final e in TimesOfDay.all.entries)
-                ChoiceChip(
-                  label: Text(tr(e.value)),
-                  selected: _time == e.key,
-                  showCheckmark: false,
-                  onSelected: (_) => setState(() => _time = e.key),
-                ),
-            ],
-          ),
+          AnimatedSize(
+            duration: KMotion.medium,
+            curve: KMotion.curve,
+            alignment: Alignment.topCenter,
+            child: !_more
+                ? const SizedBox(width: double.infinity)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
           SectionTitle(tr('Budget per person (optional)')),
           TextField(
             controller: _budget,
@@ -675,6 +690,9 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
             ],
           ),
           const SizedBox(height: KSpace.md),
+                    ],
+                  ),
+          ),
           _ChoicesSummary(text: [
             _people == 1 ? tr('1 person') : trf('{n} people', {'n': _people}),
             _vibes.map((v) => tr(Vibes.all[v] ?? v)).join(' + '),
@@ -688,6 +706,20 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           const SizedBox(height: KSpace.md),
           Text('💡 ${tipOfTheDay(DateTime.now())}',
               style: text.bodySmall?.copyWith(color: context.k.inkMuted)),
+          SectionTitle(tr('For you today')),
+          for (final (i, card) in const <Widget>[
+            _TodayStrip(),
+            _IdeaForNow(),
+            WeatherHeadsUp(),
+            BestTimeCard(),
+            OnThisDayCard(),
+            PlaceOfDayCard(),
+            ChallengeCard(),
+            _WhatsNewCard(),
+            _NextOutingCard(),
+            _RecentPlans(),
+          ].indexed)
+            FadeSlideIn(index: i + 1, child: card),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -840,6 +872,35 @@ class _OrbitState extends State<_Orbit> with SingleTickerProviderStateMixin {
           child: const Text('✨', style: TextStyle(fontSize: 34)),
         ),
       ]),
+    );
+  }
+}
+
+/// "More options": the extra choices, folded away until you want them.
+class _MoreOptionsHeader extends StatelessWidget {
+  const _MoreOptionsHeader({required this.open, required this.summary, required this.onTap});
+
+  final bool open;
+  final String summary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = context.k;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: const IconTile(Icons.tune),
+        title: Text(tr('More options')),
+        subtitle: Text(open ? tr('Budget, stops, must-haves, AI, notes') : summary,
+            maxLines: 2, overflow: TextOverflow.ellipsis),
+        trailing: AnimatedRotation(
+          turns: open ? 0.5 : 0,
+          duration: KMotion.medium,
+          child: Icon(Icons.expand_more, color: k.inkMuted),
+        ),
+        onTap: onTap,
+      ),
     );
   }
 }

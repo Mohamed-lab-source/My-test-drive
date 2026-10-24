@@ -343,6 +343,17 @@ How the code enforces it (keep it this way):
   copy). `fairCenter` = geometric median (one far person doesn't drag the
   spot); "Plan an outing near everyone" opens /new-plan anchored there.
 
+- 1.8 easy plans: 5 tabs (Home `/plan`, My plans `/plans`, Explore, Groups,
+  Friends). `PlansHubScreen` (features/plan/plans_hub_screen.dart): today
+  card, Upcoming/Saved/All (`lib/app/plan_list.dart`, tested), `PlanCard`
+  with a date badge; `showPlanActions` (plan_actions.dart: change day via
+  `PlansRepository.setDay` — rules allow only request.date + clearing
+  weatherNote —, rename, save, copy, plan again, share, send to group,
+  delete with undo). Plan form: `StepTitle` 1–4 (When, Who, Vibe, Where),
+  extras folded under "More options" (`_more`), home cards below under "For
+  you today". Plan result: sticky `_ActionBar` (Go to the next stop on the
+  day, Track, Send to group, More).
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,
@@ -361,7 +372,7 @@ lib/
                         with `context.k.<color>` (never fixed colors); test/theme_test.dart
                         checks text contrast for every theme
   app/theme_settings.dart  saved look (dark by default), shared_preferences
-  app/router.dart       go_router, 4 tabs: Plan, Explore, Groups, Friends
+  app/router.dart       go_router, 5 tabs: Home, My plans, Explore, Groups, Friends
   models/               place.dart, plan.dart, social.dart
   planner/planner.dart  pure planning logic (tested in test/planner_test.dart)
   planner/services.dart Open-Meteo + Gemini calls

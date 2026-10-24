@@ -19,6 +19,8 @@ import 'package:khroga/features/tools/ideas_screen.dart';
 import 'package:khroga/features/tools/tools_screen.dart';
 import 'package:khroga/features/tools/track_screen.dart';
 import 'package:khroga/features/groups/live_map_screen.dart';
+import 'package:khroga/features/plan/plans_hub_screen.dart';
+import 'package:khroga/models/plan.dart';
 import 'package:khroga/features/groups/money_screen.dart';
 import 'package:khroga/features/groups/start_points_screen.dart';
 import 'package:khroga/data/money_providers.dart';
@@ -72,7 +74,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('Money & InstaPay'), findsOneWidget);
+    expect(find.text('My plans'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -226,6 +228,43 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('Plan close to everyone'), findsOneWidget);
     expect(find.text('Where I am now'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('my plans: today, upcoming and plan cards fit a small phone', (tester) async {
+    final now = DateTime.now();
+    String ymd(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    OutingPlan plan(String id, DateTime? day) => OutingPlan(
+          id: id,
+          title: 'Test plan with a fairly long title $id',
+          summary: '',
+          stops: const [
+            PlanStop(placeId: 'a', name: 'Test Cafe', category: 'cafe', startTime: '18:00', area: 'Test Area'),
+            PlanStop(placeId: 'b', name: 'Test Park', category: 'park', startTime: '19:30'),
+          ],
+          request: PlanRequest(
+              city: 'cairo', groupSize: 2, vibes: const ['chill'], timeOfDay: 'evening', stops: 2,
+              date: day == null ? null : ymd(day)),
+          tips: const [],
+        );
+    await tester.pumpWidget(ProviderScope(
+      key: UniqueKey(),
+      overrides: [
+        uidProvider.overrideWith((_) => 'me'),
+        historyPlansProvider(40).overrideWith((_) => Stream.value([
+              plan('today', now),
+              plan('soon', now.add(const Duration(days: 3))),
+              plan('undated', null),
+            ])),
+        savedPlansProvider.overrideWith((_) => Stream.value(const [])),
+      ],
+      child: _router(const PlansHubScreen()),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.byType(PlanCard), findsNWidgets(2), reason: 'upcoming: today and in 3 days');
     expect(tester.takeException(), isNull);
   });
 }

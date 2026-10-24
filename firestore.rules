@@ -46,6 +46,14 @@ service cloud.firestore {
           && newData().stops is list && newData().stops.size() <= 5
           && newData().title is string && newData().title.size() > 0
           && newData().title.size() <= 80;
+        // Owner moves the outing to another day (or "any day"); the old
+        // weather note goes, since it was for the old day.
+        allow update: if isMe(uid)
+          && changed().hasOnly(['request', 'weatherNote'])
+          && newData().request.diff(resource.data.request).affectedKeys().hasOnly(['date'])
+          && (newData().request.get('date', null) == null
+              || (newData().request.date is string && newData().request.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+          && newData().get('weatherNote', null) == null;
       }
 
       // Places you've been to: just a place id and when.

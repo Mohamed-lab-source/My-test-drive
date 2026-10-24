@@ -58,6 +58,18 @@ test("plans: owner creates and saves; can't fake or edit content", async () => {
   await assertSucceeds(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { saved: true }));
   await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { request: { city: "giza" } }));
   await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"), { weatherNote: "sunny" }));
+  // Moving to another day: only the date (and clearing the old weather note).
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await updateDoc(doc(ctx.firestore(), "users/alice/plans/plan1"), { request: { city: "cairo", date: "2026-10-30" }, weatherNote: "Sunny" });
+  });
+  await assertSucceeds(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"),
+    { request: { city: "cairo", date: "2026-11-02" }, weatherNote: null }));
+  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"),
+    { request: { city: "giza", date: "2026-11-03" }, weatherNote: null }), "only the date");
+  await assertFails(updateDoc(doc(as(ALICE), "users/alice/plans/plan1"),
+    { request: { city: "cairo", date: "next week" }, weatherNote: null }), "a real date");
+  await assertFails(updateDoc(doc(as(BOB), "users/alice/plans/plan1"),
+    { request: { city: "cairo", date: "2026-11-04" }, weatherNote: null }), "not Bob's plan");
   await assertFails(getDoc(doc(as(BOB), "users/alice/plans/plan1")));
   await assertFails(getDoc(doc(anon(), "users/alice/plans/plan1")));
 });

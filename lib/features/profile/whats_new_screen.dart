@@ -10,6 +10,10 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('📅', 'My plans', 'A new tab: today\'s outing up top, then your upcoming, saved and past plans.'),
+    ('🗓️', 'Change the day', 'Move any plan to another day; weather and opening hours follow.'),
+    ('🧭', 'Easier planning', 'Four simple steps, with the extra choices folded under More options.'),
+    ('🚀', 'One-tap actions', 'Go, track, send to a group and more, always at the bottom of a plan.'),
     ('💸', 'Money & InstaPay', 'Everyone adds what they ordered with the price, one person collects, and the rest pay them with InstaPay in one tap.'),
     ('📍', 'Where we start', 'Everyone adds where they start from, and Khroga plans an outing close to all of you.'),
     ('⚫', 'Mono', 'A new black-and-white look with one red signal dot, dot-matrix numbers and a new icon. Pick other colors in Look & colors.'),
