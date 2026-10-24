@@ -7,9 +7,11 @@ import { useFinanceStore } from '../../../src/store/financeStore';
 import { useLifeStore } from '../../../src/store/lifeStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
 import Animated from 'react-native-reanimated';
+import { AmbientGlow } from '../../../src/ui/AmbientGlow';
 import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
 import { PressableScale } from '../../../src/ui/PressableScale';
 import { Appear } from '../../../src/ui/Appear';
+import { ShortcutGrid } from '../../../src/ui/ShortcutGrid';
 import { Card } from '../../../src/ui/Card';
 import { ProgressRing } from '../../../src/ui/ProgressRing';
 import { Icon } from '../../../src/ui/Icon';
@@ -68,6 +70,7 @@ export default function LifeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
+      <AmbientGlow colors={[colors.mint, colors.indigo]} />
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
@@ -77,43 +80,49 @@ export default function LifeScreen() {
           <PrayerTracker />
         </Appear>
 
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <LifeLink icon="flame.fill" label="Habits" color={colors.orange} onPress={() => router.push('/life/habits')} />
-          <LifeLink icon="text.book.closed.fill" label="Journal" color={colors.indigo} onPress={() => router.push('/life/journal')} />
-          <LifeLink icon="hands.sparkles.fill" label="Tasbih" color={colors.mint} onPress={() => router.push('/life/tasbih')} />
-          <LifeLink icon="book.fill" label="Quran" color={colors.green} onPress={() => router.push('/life/quran')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <LifeLink icon="moon.fill" label="Fasting" color={colors.purple} onPress={() => router.push('/life/fasting')} />
-          <LifeLink icon="gift.fill" label="Occasions" color={colors.pink} onPress={() => router.push('/life/occasions')} />
-          <LifeLink icon="safari.fill" label="Prayer times" color={colors.teal} onPress={() => router.push('/life/prayer-times')} />
-          <LifeLink icon="sun.haze.fill" label="Adhkar" color={colors.yellow} onPress={() => router.push('/life/adhkar')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <LifeLink icon="calendar.badge.clock" label="Hijri calendar" color={colors.brown} onPress={() => router.push('/life/hijri-calendar')} />
-          <LifeLink icon="drop.fill" label="Health" color={colors.cyan} onPress={() => router.push('/life/health')} />
-          <LifeLink icon="sparkles" label="Sunnah prayers" color={colors.green} onPress={() => router.push('/life/sunnah-prayers')} />
-          <LifeLink icon="bookmark.fill" label="Reading" color={colors.orange} onPress={() => router.push('/life/books')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
-          <LifeLink icon="hourglass" label="Countdowns" color={colors.indigo} onPress={() => router.push('/life/countdowns')} />
-          <LifeLink icon="doc.text.fill" label="Notes" color={colors.gray} onPress={() => router.push('/life/notes')} />
-          <LifeLink icon="heart.fill" label="Medications" color={colors.red} onPress={() => router.push('/life/medications')} />
-          <LifeLink icon="hands.sparkles.fill" label="Duas" color={colors.teal} onPress={() => router.push('/life/duas')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <LifeLink icon="book.closed.fill" label="Hifz" color={colors.green} onPress={() => router.push('/life/hifz')} />
-          <LifeLink icon="gift.fill" label="Zakat al-Fitr" color={colors.mint} onPress={() => router.push('/money/zakat')} />
-          <LifeLink icon="sparkles" label="99 Names" color={colors.indigo} onPress={() => router.push('/life/names')} />
-          <LifeLink icon="moon.stars.fill" label="Seasons" color={colors.purple} onPress={() => router.push('/life/seasons')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
-          <LifeLink icon="chart.xyaxis.line" label="Insights" color={colors.teal} onPress={() => router.push('/life/insights')} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
-        </View>
-
+        <Appear index={1} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
+          <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Faith</Text>
+          <ShortcutGrid
+            items={[
+              { icon: 'safari.fill', label: 'Prayer times', color: colors.teal, onPress: () => router.push('/life/prayer-times') },
+              { icon: 'book.fill', label: 'Quran', color: colors.green, onPress: () => router.push('/life/quran') },
+              { icon: 'sun.haze.fill', label: 'Adhkar', color: colors.orange, onPress: () => router.push('/life/adhkar') },
+              { icon: 'hands.sparkles.fill', label: 'Tasbih', color: colors.mint, onPress: () => router.push('/life/tasbih') },
+              { icon: 'hands.sparkles.fill', label: 'Duas', color: colors.cyan, onPress: () => router.push('/life/duas') },
+              { icon: 'sparkles', label: 'Sunnah prayers', color: colors.green, onPress: () => router.push('/life/sunnah-prayers') },
+              { icon: 'moon.fill', label: 'Fasting', color: colors.purple, onPress: () => router.push('/life/fasting') },
+              { icon: 'book.closed.fill', label: 'Hifz', color: colors.indigo, onPress: () => router.push('/life/hifz') },
+              { icon: 'sparkles', label: '99 Names', color: colors.indigo, onPress: () => router.push('/life/names') },
+              { icon: 'moon.stars.fill', label: 'Seasons', color: colors.purple, onPress: () => router.push('/life/seasons') },
+              { icon: 'calendar.badge.clock', label: 'Hijri calendar', color: colors.brown, onPress: () => router.push('/life/hijri-calendar') },
+              { icon: 'gift.fill', label: 'Zakat al-Fitr', color: colors.mint, onPress: () => router.push('/money/zakat') },
+            ]}
+          />
+        </Appear>
+        <Appear index={2} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
+          <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Wellbeing</Text>
+          <ShortcutGrid
+            items={[
+              { icon: 'flame.fill', label: 'Habits', color: colors.orange, onPress: () => router.push('/life/habits') },
+              { icon: 'drop.fill', label: 'Health', color: colors.cyan, onPress: () => router.push('/life/health') },
+              { icon: 'heart.fill', label: 'Medications', color: colors.red, onPress: () => router.push('/life/medications') },
+              { icon: 'text.book.closed.fill', label: 'Journal', color: colors.indigo, onPress: () => router.push('/life/journal') },
+              { icon: 'chart.xyaxis.line', label: 'Insights', color: colors.teal, onPress: () => router.push('/life/insights') },
+              { icon: 'bookmark.fill', label: 'Reading', color: colors.orange, onPress: () => router.push('/life/books') },
+            ]}
+          />
+        </Appear>
+        <Appear index={3} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm }}>
+          <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Plans & ideas</Text>
+          <ShortcutGrid
+            items={[
+              { icon: 'hourglass', label: 'Countdowns', color: colors.indigo, onPress: () => router.push('/life/countdowns') },
+              { icon: 'gift.fill', label: 'Occasions', color: colors.pink, onPress: () => router.push('/life/occasions') },
+              { icon: 'doc.text.fill', label: 'Notes', color: colors.gray, onPress: () => router.push('/life/notes') },
+            ]}
+          />
+        </Appear>
+        <View style={{ height: spacing.sm }} />
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <PrayerHistory />
         </View>

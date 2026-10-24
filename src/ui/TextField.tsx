@@ -23,7 +23,8 @@ export function TextField({ label, style, onFocus, onBlur, ...rest }: TextFieldP
           styles.input,
           {
             color: colors.label,
-            backgroundColor: colors.tertiarySystemGroupedBackground,
+            // A translucent grey fill reads on both white cards and the grey page.
+            backgroundColor: colors.tertiaryFill,
             borderRadius: radius.md,
             borderCurve: 'continuous',
             paddingHorizontal: spacing.md,

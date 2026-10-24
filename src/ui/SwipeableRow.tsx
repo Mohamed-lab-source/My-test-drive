@@ -41,10 +41,13 @@ export function SwipeableRow({ children, actions }: SwipeableRowProps) {
     });
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
+  // The actions stay hidden until the row moves, so their colour can't show
+  // around a card's rounded corners.
+  const actionsStyle = useAnimatedStyle(() => ({ opacity: translateX.value < -1 ? 1 : 0 }));
 
   return (
     <View style={styles.container}>
-      <View style={[styles.actions, { width: ACTION_WIDTH * actions.length }]}>
+      <Animated.View style={[styles.actions, { width: ACTION_WIDTH * actions.length }, actionsStyle]}>
         {actions.map((action) => (
           <Pressable
             key={action.label}
@@ -58,7 +61,7 @@ export function SwipeableRow({ children, actions }: SwipeableRowProps) {
             <Text style={[typography.footnote, { color: '#fff', fontWeight: '600' }]}>{action.label}</Text>
           </Pressable>
         ))}
-      </View>
+      </Animated.View>
       <GestureDetector gesture={pan}>
         <Animated.View style={[styles.rowForeground, { backgroundColor: colors.secondarySystemGroupedBackground }, rowStyle]}>
           {children}

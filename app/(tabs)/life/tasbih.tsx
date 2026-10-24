@@ -127,7 +127,7 @@ export default function TasbihScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Tasbih" />
-      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, paddingBottom: 120 }}>
         <View style={{ marginBottom: spacing.xl }}>
           <ChipSelector
             options={[...TARGETS.map((t) => ({ id: String(t), label: `${t}` })), { id: 'salah', label: 'After salah' }]}

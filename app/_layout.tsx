@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, AppState } from 'react-native';
+import { View, ActivityIndicator, AppState, Platform } from 'react-native';
+import { seedPreviewData } from '../src/dev/previewSeed';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -85,7 +86,9 @@ function AppShell() {
 
   useEffect(() => {
     initNotifications();
-    Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()])
+    // The web build is a design preview: give it sample data to show.
+    (Platform.OS === 'web' ? seedPreviewData().catch(() => {}) : Promise.resolve())
+      .then(() => Promise.all([hydrateFinance(), hydrateProductivity(), hydrateLife(), hydrateHabits()]))
       .then(async () => {
         setDataReady(true);
         await settingsHydrated();
@@ -97,6 +100,8 @@ function AppShell() {
           .getState()
           .scan()
           .catch((e) => console.warn('Bank SMS scan failed', e));
+        // Local notifications don't exist on web.
+        if (Platform.OS === 'web') return;
         await rescheduleAllReminders(
           useProductivityStore.getState().meetings,
           useFinanceStore.getState().recurringRules,

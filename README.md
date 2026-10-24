@@ -201,6 +201,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
 **Design**
+- Inspired by Apple's devices: an iOS 26-style floating glass tab bar with a sliding lens, soft colour glows behind each screen's title, Home Screen-style widgets on Home, a Wallet card stack for accounts, Reminders-style smart lists in Tasks, Shortcuts-style gradient tiles in Life, an Apple Account-style card in Settings, and Dynamic Island-style confirmations
 - Apple-style look throughout: Inter (the closest open match to San Francisco) on Android with real weights and SF-style tracking, the system font on iOS, and Apple's exact label greys
 - Large titles that zoom when you pull down and hand over to a compact title bar as you scroll; iOS-style slide transitions on Android
 - Wallet-style gradient net-worth card with a smooth sparkline and balances that count up; Fitness-style concentric activity rings

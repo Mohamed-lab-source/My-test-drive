@@ -3,6 +3,8 @@ import { Pressable, StyleSheet } from 'react-native';
 import Animated, { ZoomIn, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from '../utils/haptics';
 import { useTheme } from '../theme/ThemeProvider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { tabBarClearance } from './GlassTabBar';
 import { Icon } from './Icon';
 
 interface FABProps {
@@ -12,11 +14,12 @@ interface FABProps {
 
 export function FAB({ onPress, icon = 'plus' }: FABProps) {
   const { colors, shadow } = useTheme();
+  const insets = useSafeAreaInsets();
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <Animated.View entering={ZoomIn.delay(150).springify().damping(14)} style={styles.wrapper}>
+    <Animated.View entering={ZoomIn.delay(150).springify().damping(14)} style={[styles.wrapper, { bottom: tabBarClearance(insets.bottom) - 4 }]}>
     <Animated.View style={[animatedStyle, shadow.floating, { borderRadius: 29 }]}>
       <Pressable
         onPressIn={() => {

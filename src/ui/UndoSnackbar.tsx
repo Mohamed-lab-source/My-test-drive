@@ -1,54 +1,83 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Text, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as Haptics from '../utils/haptics';
 import { useTheme } from '../theme/ThemeProvider';
 import { useUndoStore } from '../store/undoStore';
+import { Icon } from './Icon';
 
+const PILL = 126;
+const SPRING = { damping: 17, stiffness: 210, mass: 0.8 };
+
+// Confirmations grow out of a Dynamic Island-style pill at the top of the
+// screen and shrink back into it.
 export function UndoSnackbar() {
-  const { colors, typography, spacing, radius } = useTheme();
+  const { typography, colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { message, onUndo, hide } = useUndoStore();
+  const [shown, setShown] = useState<string | null>(null);
+  const grow = useSharedValue(0);
+  const full = Math.min(width - 24, 420);
 
-  if (!message) return null;
+  useEffect(() => {
+    if (message) {
+      setShown(message);
+      grow.value = withSpring(1, SPRING);
+    } else if (shown) {
+      grow.value = withTiming(0, { duration: 260 }, (done) => {
+        if (done) runOnJS(setShown)(null);
+      });
+    }
+  }, [message]);
 
+  const pill = useAnimatedStyle(() => ({
+    width: PILL + (full - PILL) * grow.value,
+    height: 37 + 21 * grow.value,
+    borderRadius: 19 + 10 * grow.value,
+    opacity: Math.min(1, grow.value * 3),
+    transform: [{ translateY: -6 * (1 - grow.value) }],
+  }));
+  const content = useAnimatedStyle(() => ({ opacity: Math.max(0, (grow.value - 0.55) / 0.45) }));
+
+  if (!shown) return null;
   return (
     <Animated.View
-      entering={FadeInDown}
-      exiting={FadeOutDown}
-      style={{
-        position: 'absolute',
-        left: spacing.lg,
-        right: spacing.lg,
-        bottom: insets.bottom + 90,
-        backgroundColor: colors.label,
-        borderRadius: radius.md,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        shadowColor: '#000',
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 6,
-      }}
+      style={[
+        {
+          position: 'absolute',
+          top: insets.top + 6,
+          alignSelf: 'center',
+          backgroundColor: '#000000',
+          flexDirection: 'row',
+          alignItems: 'center',
+          overflow: 'hidden',
+          boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.35)',
+          zIndex: 100,
+        },
+        pill,
+      ]}
     >
-      <Text style={[typography.subhead, { color: colors.systemGroupedBackground, flex: 1 }]} numberOfLines={1}>
-        {message}
-      </Text>
-      <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onUndo?.();
-          hide();
-        }}
-        hitSlop={8}
-      >
-        <Text style={[typography.subhead, { color: colors.blue, fontWeight: '700', marginLeft: spacing.md }]}>Undo</Text>
-      </Pressable>
+      <Animated.View style={[{ flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }, content]}>
+        <Icon name="checkmark.circle.fill" size={22} color={colors.green} />
+        <Text style={[typography.subhead, { color: '#FFFFFF', flex: 1, marginLeft: 10, fontWeight: '600' }]} numberOfLines={1}>
+          {shown}
+        </Text>
+        {onUndo ? (
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onUndo?.();
+              hide();
+            }}
+            hitSlop={10}
+            style={{ backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5 }}
+          >
+            <Text style={[typography.subhead, { color: '#FFFFFF', fontWeight: '700' }]}>Undo</Text>
+          </Pressable>
+        ) : null}
+      </Animated.View>
     </Animated.View>
   );
 }

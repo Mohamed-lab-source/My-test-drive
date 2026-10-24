@@ -6,7 +6,10 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
 import Animated from 'react-native-reanimated';
+import { AmbientGlow } from '../../../src/ui/AmbientGlow';
 import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
+import { PressableScale } from '../../../src/ui/PressableScale';
+import { SmartLists } from '../../../src/features/tasks/SmartLists';
 import { SegmentedControl } from '../../../src/ui/SegmentedControl';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { Card } from '../../../src/ui/Card';
@@ -137,6 +140,18 @@ export default function TasksScreen() {
     return tasks.filter((t) => t.status !== 'backlog' && t.status !== 'done');
   }, [tasks, segment, todayStr]);
 
+  // Counts for the smart-list tiles, using the same rules as bySegment.
+  const segmentCounts = useMemo(
+    () => [
+      tasks.filter((t) => t.status !== 'done' && (t.scheduled_date === todayStr || t.status === 'in_progress' || t.due_date === todayStr)).length,
+      tasks.filter((t) => t.status === 'backlog').length,
+      tasks.filter((t) => t.status !== 'backlog' && t.status !== 'done').length,
+      tasks.filter((t) => t.status === 'done').length,
+      tasks.filter((t) => t.status !== 'done' && !!t.waiting_on).length,
+    ],
+    [tasks, todayStr]
+  );
+
   // A deleted project falls back to showing everything.
   const activeProject = projectFilter === 'all' || projectFilter === 'none' || projects.some((p) => p.id === projectFilter) ? projectFilter : 'all';
   const filtered = useMemo(() => {
@@ -186,6 +201,7 @@ export default function TasksScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
+      <AmbientGlow colors={[colors.blue, colors.indigo]} />
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
@@ -195,21 +211,24 @@ export default function TasksScreen() {
           subtitle="Your personal secretary"
           trailing={
             <View style={{ flexDirection: 'row' }}>
-              <Pressable onPress={() => router.push('/tasks/board')} hitSlop={8} style={{ marginRight: spacing.md }}>
-                <Icon name="square.grid.2x2" size={22} color={colors.blue} />
-              </Pressable>
-              <Pressable onPress={() => router.push('/tasks/routines')} hitSlop={8} style={{ marginRight: spacing.md }}>
-                <Icon name="list.star" size={22} color={colors.blue} />
-              </Pressable>
-              <Pressable onPress={() => router.push('/tasks/focus')} hitSlop={8} style={{ marginRight: spacing.md }}>
-                <Icon name="timer" size={22} color={colors.blue} />
-              </Pressable>
-              <Pressable onPress={() => router.push('/tasks/agenda')} hitSlop={8} style={{ marginRight: spacing.md }}>
-                <Icon name="calendar" size={22} color={colors.blue} />
-              </Pressable>
-              <Pressable onPress={() => router.push('/tasks/projects')} hitSlop={8}>
-                <Icon name="folder.fill" size={22} color={colors.blue} />
-              </Pressable>
+              {(
+                [
+                  ['square.grid.2x2', '/tasks/board'],
+                  ['list.star', '/tasks/routines'],
+                  ['timer', '/tasks/focus'],
+                  ['calendar', '/tasks/agenda'],
+                  ['folder.fill', '/tasks/projects'],
+                ] as const
+              ).map(([icon, route]) => (
+                <PressableScale
+                  key={route}
+                  onPress={() => router.push(route)}
+                  hitSlop={6}
+                  style={{ width: 34, height: 34, borderRadius: 17, marginLeft: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.tertiaryFill }}
+                >
+                  <Icon name={icon} size={18} color={colors.blue} />
+                </PressableScale>
+              ))}
             </View>
           }
         />
@@ -257,7 +276,22 @@ export default function TasksScreen() {
               {quick.deadline ? ` · 📅 by ${formatDateKey(quick.deadline)}` : ''} — press return to add
             </Text>
           ) : null}
-          <SegmentedControl options={SEGMENTS} selectedIndex={segment} onChange={setSegment} />
+          <SmartLists
+            selected={segment}
+            onSelect={setSegment}
+            lists={[
+              { index: 0, label: 'Today', icon: 'calendar', color: colors.blue, count: segmentCounts[0] },
+              { index: 2, label: 'All', icon: 'tray.fill', color: '#5B5B61', count: segmentCounts[2] },
+              { index: 1, label: 'Backlog', icon: 'archivebox.fill', color: colors.orange, count: segmentCounts[1] },
+              { index: 4, label: 'Waiting', icon: 'hourglass', color: colors.purple, count: segmentCounts[4] },
+            ]}
+          />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+            <Text style={[typography.title3, { color: colors.label }]}>{SEGMENTS[segment]}</Text>
+            <Pressable onPress={() => setSegment(segment === 3 ? 0 : 3)} hitSlop={8}>
+              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>{segment === 3 ? 'Hide completed' : `Completed (${segmentCounts[3]})`}</Text>
+            </Pressable>
+          </View>
           {segment !== 0 && segment !== 3 ? (
             <View style={{ marginTop: spacing.sm }}>
               <ChipSelector

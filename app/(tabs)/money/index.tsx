@@ -8,10 +8,12 @@ import { useFinanceStore } from '../../../src/store/financeStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
 import Animated from 'react-native-reanimated';
+import { AmbientGlow } from '../../../src/ui/AmbientGlow';
 import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
 import { PressableScale } from '../../../src/ui/PressableScale';
 import { Appear } from '../../../src/ui/Appear';
 import { AnimatedNumber } from '../../../src/ui/AnimatedNumber';
+import { WalletStack } from '../../../src/features/money/WalletStack';
 import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
@@ -113,6 +115,7 @@ export default function MoneyScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
+      <AmbientGlow colors={[colors.green, colors.teal]} />
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -178,38 +181,22 @@ export default function MoneyScreen() {
                 <Text style={[typography.footnote, { color: colors.blue }]}>Set a net worth goal</Text>
               </Pressable>
             )}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }}>
-              {accounts.filter((a) => !a.is_archived).map((a) => (
-                <Pressable
-                  key={a.id}
-                  onPress={() => router.push({ pathname: '/money/account/[id]', params: { id: a.id } })}
-                  style={{
-                    backgroundColor: a.color + '18',
-                    borderRadius: 14,
-                    padding: spacing.sm,
-                    marginRight: spacing.sm,
-                    minWidth: 140,
-                  }}
-                >
-                  <IconCircle name={a.icon} color={a.color} size={28} />
-                  <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 8 }]}>{a.name}</Text>
-                  {a.type === 'credit' ? (
-                    <>
-                      <Text style={[typography.headline, { color: a.balance < 0 ? colors.red : colors.label }]}>
-                        {balance(Math.max(0, -a.balance), a.currency)}
-                      </Text>
-                      <Text style={[typography.caption2, { color: colors.secondaryLabel }]}>
-                        owed{a.credit_limit ? ` · ${Math.round((Math.max(0, -a.balance) / a.credit_limit) * 100)}% of limit` : ''}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text style={[typography.headline, { color: colors.label }]}>{balance(a.balance, a.currency)}</Text>
-                  )}
-                </Pressable>
-              ))}
-            </ScrollView>
           </Card>
         </Appear>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+            <Text style={[typography.title2, { color: colors.label }]}>Wallet</Text>
+            <Pressable onPress={() => router.push('/money/accounts')} hitSlop={8}>
+              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>All accounts</Text>
+            </Pressable>
+          </View>
+          <WalletStack
+            accounts={accounts.filter((a) => !a.is_archived)}
+            balance={balance}
+            onOpen={(a) => router.push({ pathname: '/money/account/[id]', params: { id: a.id } })}
+          />
+        </View>
 
         {smsPending > 0 ? (
           <Pressable onPress={() => router.push('/money/sms-inbox')} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

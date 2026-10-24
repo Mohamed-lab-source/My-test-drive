@@ -19,6 +19,8 @@ export function Card({ style, inset, padded = true, children, onPress, onLongPre
       borderRadius: inset ? 0 : radius.lg,
       borderCurve: 'continuous',
       padding: padded ? spacing.md : 0,
+      // Rows inside an unpadded card follow its rounded corners.
+      overflow: padded ? undefined : 'hidden',
     },
     !inset && shadow.card,
     style,

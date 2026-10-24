@@ -37,6 +37,7 @@ import { convertToBase } from '../../src/db/repositories/fx';
 import { reconstructNetWorthTrend } from '../../src/utils/networth';
 import { formatHijri, toHijri } from '../../src/utils/hijri';
 import Animated from 'react-native-reanimated';
+import { AmbientGlow } from '../../src/ui/AmbientGlow';
 import { PressableScale } from '../../src/ui/PressableScale';
 import { Appear } from '../../src/ui/Appear';
 import { AnimatedNumber } from '../../src/ui/AnimatedNumber';
@@ -44,6 +45,9 @@ import { GradientCard } from '../../src/ui/GradientCard';
 import { Sparkline } from '../../src/ui/Sparkline';
 import { CompactHeader, useLargeTitleZoom, useScrollY } from '../../src/ui/CollapsingHeader';
 import { heroGradient } from '../../src/theme/shade';
+import { Widget } from '../../src/ui/Widget';
+import { ActivityRings } from '../../src/ui/ActivityRings';
+import { useWaterStore } from '../../src/store/waterStore';
 import { formatRelativeDay, formatTime, isOverdue, localDateKey } from '../../src/utils/date';
 import { todayKey } from '../../src/db/client';
 
@@ -124,6 +128,9 @@ export default function HomeScreen() {
   const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory, postRecurring } = useFinanceStore();
   const { tasks, meetings } = useProductivityStore();
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
+  const prayersToday = useLifeStore((s) => s.todayPrayerLogs.filter((l) => l.completed).length);
+  const water = useWaterStore((s) => s.count);
+  const waterGoal = useSettingsStore((s) => s.waterGoal);
 
   const excluded = useSettingsStore((s) => s.excludedAccounts);
   const netWorth = accounts.filter((a) => !excluded.includes(a.id)).reduce(
@@ -154,6 +161,10 @@ export default function HomeScreen() {
   );
   const openDebts = debts.filter((d) => d.status !== 'paid');
 
+  const tasksDoneToday = tasks.filter((t) => t.status === 'done' && t.completed_at && localDateKey(t.completed_at) === todayStr).length;
+  const todaySpend = transactions
+    .filter((t) => t.type === 'expense' && localDateKey(t.date) === todayStr)
+    .reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0);
   const monthStart = todayStr.slice(0, 8) + '01';
   const monthSpend = useMemo(
     () =>
@@ -211,6 +222,7 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
+      <AmbientGlow colors={[colors.blue, colors.purple]} />
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -254,7 +266,53 @@ export default function HomeScreen() {
           </PressableScale>
         </View>
 
-        <Appear index={1} style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
+        {heroCard}
+        {show('stats') ? (
+          <Appear index={3} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+            <View style={{ flexDirection: 'row', marginBottom: spacing.sm + 2 }}>
+              <Widget
+                icon="creditcard.fill"
+                tint={colors.blue}
+                title="Spending"
+                value={<AnimatedNumber value={monthSpend} format={(n) => balance(n, currency)} style={[typography.title2, { color: colors.label }]} numberOfLines={1} />}
+                caption={`This month · ${balance(todaySpend, currency)} today`}
+                onPress={() => router.push('/money/insights')}
+              />
+              <View style={{ width: spacing.sm + 2 }} />
+              <Widget
+                icon="moon.stars.fill"
+                tint={colors.green}
+                title="Prayers"
+                value={`${prayersToday}/5`}
+                caption={prayerStreak > 0 ? `${prayerStreak}-day streak` : 'Today'}
+                accessory={<ActivityRings rings={[{ progress: prayersToday / 5, color: colors.green }]} size={40} stroke={7} />}
+                onPress={() => router.push('/life/prayer-times')}
+              />
+            </View>
+            <View style={{ flexDirection: 'row' }}>
+              <Widget
+                icon="checkmark.circle.fill"
+                tint={colors.orange}
+                title="Tasks"
+                value={String(todayTasks.length)}
+                caption={todayTasks.length ? `left for today${tasksDoneToday ? ` · ${tasksDoneToday} done` : ''}` : tasksDoneToday ? `All done · ${tasksDoneToday} finished` : 'Nothing due today'}
+                onPress={() => router.push('/tasks')}
+              />
+              <View style={{ width: spacing.sm + 2 }} />
+              <Widget
+                icon="drop.fill"
+                tint={colors.cyan}
+                title="Water"
+                value={`${water}/${waterGoal}`}
+                caption="glasses today"
+                accessory={<ActivityRings rings={[{ progress: water / Math.max(1, waterGoal), color: colors.cyan }]} size={40} stroke={7} />}
+                onPress={() => router.push('/life/health')}
+              />
+            </View>
+          </Appear>
+        ) : null}
+
+        <Appear index={4} style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           {quickActions.map((a) => (
             <QuickAction
               key={a.id}
@@ -273,14 +331,13 @@ export default function HomeScreen() {
             />
           ))}
         </Appear>
-        {show('spent') ? <SpentTodayLine /> : null}
-        {heroCard}
+        {show('spent') && !show('stats') ? <SpentTodayLine /> : null}
 
-        <Appear index={3} style={{ paddingHorizontal: spacing.lg }}>
+        <Appear index={5} style={{ paddingHorizontal: spacing.lg }}>
           <GettingStartedCard />
           <RamadanCard />
           {show('seasons') ? <SeasonCountdownCard /> : null}
-          {show('rings') ? <TodayRingsCard /> : null}
+          {show('rings') && !show('stats') ? <TodayRingsCard /> : null}
           {show('friday') ? <FridayCard /> : null}
           {show('countdown') ? <CountdownCard /> : null}
           {show('mood') ? <MoodCheckinCard /> : null}
@@ -291,23 +348,6 @@ export default function HomeScreen() {
           {show('insight') ? <InsightOfDayCard /> : null}
           {show('water') ? <WaterCard /> : null}
         </Appear>
-
-        {show('stats') ? (
-<View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
-          <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
-            <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>This month</Text>
-            <AnimatedNumber value={monthSpend} format={(n) => balance(n, currency)} style={[typography.headline, { color: colors.label, marginTop: 2 }]} numberOfLines={1} />
-          </Card>
-          <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
-            <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Due today</Text>
-            <Text style={[typography.headline, { color: colors.label, marginTop: 2 }]}>{todayTasks.length}</Text>
-          </Card>
-          <Card style={{ flex: 1, marginHorizontal: 4, alignItems: 'center' }}>
-            <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Prayer streak</Text>
-            <AnimatedNumber value={prayerStreak} format={(n) => String(n)} style={[typography.headline, { color: colors.label, marginTop: 2 }]} />
-          </Card>
-        </View>
-        ) : null}
 
         {show('review') ? (
 <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>

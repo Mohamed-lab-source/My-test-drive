@@ -23,14 +23,17 @@ export function MiniBars({
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height }}>
         {data.map((d, i) => (
-          <View key={d.key} style={{ flex: 1, alignItems: 'center' }}>
+          <View key={d.key} style={{ flex: 1, alignItems: 'center', height, justifyContent: 'flex-end' }}>
+            {/* A faint full-height track behind each bar, as in Health. */}
+            <View style={{ position: 'absolute', top: 0, bottom: 0, width: '56%', borderRadius: 7, backgroundColor: colors.quaternaryFill }} />
             <View
               style={{
-                width: '60%',
-                borderRadius: 3,
-                height: d.value > 0 ? Math.max(3, (Math.min(d.value, top) / top) * height) : 3,
-                backgroundColor: d.value > 0 ? color : colors.quaternaryFill,
-                opacity: highlightLast && i !== data.length - 1 ? 0.65 : 1,
+                width: '56%',
+                borderRadius: 7,
+                borderCurve: 'continuous',
+                height: d.value > 0 ? Math.max(8, (Math.min(d.value, top) / top) * height) : 0,
+                backgroundColor: color,
+                opacity: highlightLast && i !== data.length - 1 ? 0.55 : 1,
               }}
             />
           </View>
@@ -38,7 +41,7 @@ export function MiniBars({
       </View>
       <View style={{ flexDirection: 'row', marginTop: 4 }}>
         {data.map((d) => (
-          <Text key={d.key} style={[typography.caption2, { flex: 1, textAlign: 'center', color: colors.secondaryLabel }]}>
+          <Text key={d.key} style={[typography.caption2, { flex: 1, textAlign: 'center', color: colors.secondaryLabel, fontWeight: '600' }]}>
             {d.label}
           </Text>
         ))}

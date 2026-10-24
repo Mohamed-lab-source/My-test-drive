@@ -12,7 +12,11 @@ import { useLifeStore } from '../../../src/store/lifeStore';
 import { useHabitsStore } from '../../../src/store/habitsStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
 import Animated from 'react-native-reanimated';
+import { AmbientGlow } from '../../../src/ui/AmbientGlow';
 import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
+import { Appear } from '../../../src/ui/Appear';
+import { GradientCard } from '../../../src/ui/GradientCard';
+import { heroGradient } from '../../../src/theme/shade';
 import { Icon } from '../../../src/ui/Icon';
 import { Card } from '../../../src/ui/Card';
 import { ListRow } from '../../../src/ui/ListRow';
@@ -308,10 +312,34 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
+      <AmbientGlow colors={[colors.gray, colors.blue]} />
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
         <ScreenHeader scrollY={scrollY} title="Settings" />
+
+        <Appear index={0} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md }}>
+            <GradientCard colors={heroGradient(colors.blue)} style={{ width: 62, height: 62, borderRadius: 31, padding: 0, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={[typography.title2, { color: '#FFFFFF' }]}>
+                {(user?.name || displayName || user?.email || 'A')
+                  .split(/\s+/)
+                  .map((w) => w[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </Text>
+            </GradientCard>
+            <View style={{ flex: 1, marginLeft: spacing.md }}>
+              <Text style={[typography.title3, { color: colors.label }]} numberOfLines={1}>
+                {user?.name || displayName || 'Anchor account'}
+              </Text>
+              <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]} numberOfLines={1}>
+                {user?.email ? `${user.email} · ` : ''}Sync & backup
+              </Text>
+            </View>
+          </Card>
+        </Appear>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Card padded={false}>
@@ -345,11 +373,6 @@ export default function SettingsScreen() {
             Account
           </Text>
           <Card padded={false}>
-            <ListRow
-              title={user?.name || 'Anchor account'}
-              subtitle={user?.email}
-              leading={<IconCircle filled name="person.fill" color={colors.indigo} size={32} />}
-            />
             <ListRow title="Sign out" destructive isLast onPress={signOut} />
           </Card>
         </View>

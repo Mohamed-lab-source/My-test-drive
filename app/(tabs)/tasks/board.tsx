@@ -34,7 +34,7 @@ export default function BoardScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Board" />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg, paddingRight: spacing.xl }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: spacing.lg, paddingRight: spacing.xl, paddingBottom: 110 }}>
         {COLUMNS.map((col, ci) => {
           const items = tasks
             .filter((t) => t.status === col.status)
