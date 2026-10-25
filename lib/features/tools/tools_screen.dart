@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../widgets/large_title.dart';
+import '../../widgets/motion.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -24,29 +25,97 @@ import '../../models/plan.dart';
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
+  /// Every tool: emoji, short name, and the tool itself (opened in a sheet).
+  static List<(String, String, Widget)> _tools() => [
+        ('🎯', tr('Decide for us'), const _DecideCard()),
+        ('🪙', tr('Flip a coin'), const _CoinCard()),
+        ('🙋', tr('Who pays? Who picks?'), const _WhoCard()),
+        ('🧑‍🤝‍🧑', tr('Make teams'), const _TeamsCard()),
+        ('🎲', tr('Roll the dice'), const _DiceCard()),
+        ('💬', tr('Conversation starters'), const _StarterCard()),
+        ('🧾', tr('Split a bill'), const _SplitCard()),
+        ('🧮', tr('Split by what each ordered'), const _SplitByItemsCard()),
+        ('🚶', tr('How long to walk?'), const _WalkCard()),
+        ('🌤️', tr('Weather this week'), const _WeekCard()),
+        ('🌇', tr('Sunrise and sunset today'), const _SunCard()),
+        ('🕌', tr('Prayer times today'), const _PrayerCard()),
+        ('⏳', tr('Coming up'), const _CountdownCard()),
+        ('🇪🇬', tr('Holidays'), const _HolidaysCard()),
+        ('🗣️', tr('Arabic phrases'), const _PhrasebookCard()),
+        ('🆘', tr('Emergency numbers'), const _EmergencyCard()),
+      ];
+
+  static void _open(BuildContext context, Widget tool) => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (sheet) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          builder: (_, controller) => ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
+            children: [tool],
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final tools = _tools();
+    final k = context.k;
     return KScaffold(
       title: Text(tr('Outing tools')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
-        children: const [
-          _EmergencyCard(),
-          _CountdownCard(),
-          _DecideCard(),
-          _CoinCard(),
-          _WhoCard(),
-          _TeamsCard(),
-          _DiceCard(),
-          _StarterCard(),
-          _PhrasebookCard(),
-          _SplitCard(),
-          _SplitByItemsCard(),
-          _WalkCard(),
-          _WeekCard(),
-          _SunCard(),
-          _PrayerCard(),
-          _HolidaysCard(),
+        children: [
+          Text(tr('Tap a tool to open it.'), style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: KSpace.md),
+          LayoutBuilder(builder: (context, c) {
+            final perRow = c.maxWidth > 520 ? 4 : 3;
+            final w = (c.maxWidth - (perRow - 1) * KSpace.sm) / perRow;
+            return Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+              for (final (i, (emoji, name, tool)) in tools.indexed)
+                FadeSlideIn(
+                  index: i < 9 ? i : 0,
+                  child: SizedBox(
+                    width: w,
+                    height: 112,
+                    child: Pressable(
+                      child: Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () => _open(context, tool),
+                          child: Padding(
+                            padding: const EdgeInsets.all(KSpace.sm),
+                            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                              Container(
+                                width: 46,
+                                height: 46,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: k.surfaceHigh,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(name,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(height: 1.2)),
+                            ]),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ]);
+          }),
         ],
       ),
     );

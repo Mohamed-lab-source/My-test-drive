@@ -354,6 +354,14 @@ How the code enforces it (keep it this way):
   you today". Plan result: sticky `_ActionBar` (Go to the next stop on the
   day, Track, Send to group, More).
 
+- 1.9 smoother: tabs fade (`_FadingTabs` via StatefulShellRoute
+  navigatorContainerBuilder, still with Reduce motion); Tools is a tile grid
+  opening each tool in a sheet; `TileGrid` (common.dart) for Profile
+  shortcuts; `PlanCard` swipes (start→end change day, end→start delete with
+  undo); the plan's old ⋮ menu lives in the More sheet (`extras` of
+  `showPlanActions`); `GradientButton` gives a light haptic when "Vibrate on
+  taps" is on.
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

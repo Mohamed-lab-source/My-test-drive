@@ -9,6 +9,7 @@ import '../../app/theme.dart';
 import '../../data/providers.dart';
 import '../../models/social.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import 'create_group_sheet.dart';
 import 'group_detail_screen.dart' show countdownText;
 
@@ -126,10 +127,10 @@ class _GroupTile extends ConsumerWidget {
     final sub = [
       if (group.scheduledAt != null)
         '${countdownText(group.scheduledAt!)} · ${DateFormat('EEE d MMM, h:mm a').format(group.scheduledAt!)}',
-      '${group.memberUids.length} members',
-      if (going > 0) '$going going',
+      trf('{n} members', {'n': group.memberUids.length}),
+      if (going > 0) trf('{n} going', {'n': going}),
     ].join(' · ');
-    return Card(
+    return Pressable(child: Card(
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding:
@@ -161,7 +162,7 @@ class _GroupTile extends ConsumerWidget {
             : const Icon(Icons.chevron_right),
         onTap: () => context.push('/group/${group.id}'),
       ),
-    );
+    ));
   }
 }
 

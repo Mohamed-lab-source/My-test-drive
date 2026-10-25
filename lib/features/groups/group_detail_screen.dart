@@ -123,8 +123,10 @@ class _GroupViewState extends ConsumerState<_GroupView> {
                 children: [
                   Text(group.name, overflow: TextOverflow.ellipsis),
                   Text(
-                    '${group.memberUids.length} member${group.memberUids.length == 1 ? '' : 's'}'
-                    '${group.scheduledAt == null ? '' : ' · ${DateFormat('EEE d MMM').format(group.scheduledAt!)}'}',
+                    [
+                      trf('{n} members', {'n': group.memberUids.length}),
+                      if (group.scheduledAt != null) DateFormat('EEE d MMM').format(group.scheduledAt!),
+                    ].join(' · '),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

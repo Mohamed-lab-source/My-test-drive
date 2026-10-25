@@ -1,6 +1,7 @@
 import '../app/i18n.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -610,6 +611,62 @@ class GradientBackdrop extends StatelessWidget {
   }
 }
 
+/// A grid of shortcuts (three to a row): an icon tile and a short name.
+/// [items] are (icon, name, longer description shown on long press, onTap).
+class TileGrid extends StatelessWidget {
+  const TileGrid({super.key, required this.items, this.title});
+
+  final List<(IconData, String, String, VoidCallback)> items;
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      if (title != null)
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: KSpace.sm, bottom: KSpace.sm, top: KSpace.sm),
+          child: Text(title!.toUpperCase(),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: isArabic ? null : 0.6)),
+        ),
+      LayoutBuilder(builder: (context, c) {
+        final perRow = c.maxWidth > 520 ? 4 : 3;
+        final w = (c.maxWidth - (perRow - 1) * KSpace.sm) / perRow;
+        return Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+          for (final (icon, name, about, onTap) in items)
+            SizedBox(
+              width: w,
+              height: 104,
+              child: Tooltip(
+                message: about,
+                triggerMode: TooltipTriggerMode.longPress,
+                child: Pressable(
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: onTap,
+                      child: Padding(
+                        padding: const EdgeInsets.all(KSpace.sm),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          IconTile(icon, size: 42),
+                          const SizedBox(height: 6),
+                          Text(name,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(height: 1.2)),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ]);
+      }),
+    ]);
+  }
+}
+
 /// A numbered step title ("1  When?"), for forms that go step by step.
 class StepTitle extends StatelessWidget {
   const StepTitle(this.step, this.text, {super.key});
@@ -800,7 +857,17 @@ class GradientButton extends StatelessWidget {
           type: MaterialType.transparency,
           child: InkWell(
             customBorder: const StadiumBorder(),
-            onTap: onPressed,
+            onTap: onPressed == null
+                ? null
+                : () {
+                    // A light tap feel for the main buttons (Profile → Vibrate on taps).
+                    try {
+                      if (ProviderScope.containerOf(context, listen: false).read(phoneSettingsProvider).haptics) {
+                        HapticFeedback.lightImpact();
+                      }
+                    } catch (_) {}
+                    onPressed!();
+                  },
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 58),
               child: Padding(

@@ -87,15 +87,12 @@ void main() {
     await tester.pumpWidget(_app(const ToolsScreen()));
     await tester.pump();
     expect(find.text('Decide for us'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Flip'), 300, scrollable: find.byType(Scrollable).first);
-    await tester.ensureVisible(find.text('Flip'));
-    await tester.pump();
+    expect(find.text('Holidays'), findsOneWidget);
+    await tester.tap(find.text('Flip a coin'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Flip'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.textContaining(RegExp('Heads|Tails')), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Coming public holidays'), 400,
-        scrollable: find.byType(Scrollable).first);
-    expect(find.text('Coming public holidays'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -145,9 +142,8 @@ void main() {
   testWidgets('new party tools work', (tester) async {
     await tester.pumpWidget(_app(const ToolsScreen()));
     await tester.pump();
-    await tester.scrollUntilVisible(find.text('Give us a question'), 300, scrollable: find.byType(Scrollable).first);
-    await tester.ensureVisible(find.text('Give us a question'));
-    await tester.pump();
+    await tester.tap(find.text('Conversation starters'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Give us a question'));
     await tester.pump();
     expect(find.text('Another one'), findsWidgets);

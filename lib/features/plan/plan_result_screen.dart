@@ -63,24 +63,6 @@ class PlanResultScreen extends ConsumerWidget {
                 PopupMenuItem(value: 'text', child: Text(tr('Share as text'))),
               ],
             ),
-          if (loaded != null)
-            PopupMenuButton<String>(
-              onSelected: (v) => _menu(context, ref, loaded, v),
-              itemBuilder: (_) => [
-                PopupMenuItem(value: 'mystery', child: Text(tr('🎁 Mystery mode: reveal stop by stop'))),
-                PopupMenuItem(value: 'mysterySend', child: Text(tr('🎁 Send as a surprise to a friend'))),
-                PopupMenuItem(value: 'backup', child: Text(tr('☔ Indoor backup ideas'))),
-                PopupMenuItem(value: 'safety', child: Text(tr('🛟 Share with someone I trust'))),
-                PopupMenuItem(value: 'copy', child: Text(tr('Copy plan as text'))),
-                PopupMenuItem(value: 'calendar', child: Text(tr('Add to Google Calendar'))),
-                PopupMenuItem(value: 'duplicate', child: Text(tr('Make a copy'))),
-                PopupMenuItem(value: 'group', child: Text(tr('Send to a group chat'))),
-                const PopupMenuDivider(),
-                PopupMenuItem(value: 'now', child: Text(tr('Start now'))),
-                PopupMenuItem(value: 'later', child: Text(tr('Everything 30 min later'))),
-                PopupMenuItem(value: 'earlier', child: Text(tr('Everything 30 min earlier'))),
-              ],
-            ),
         ],
       ),
       bottomNavigationBar: loaded == null || loaded.stops.isEmpty ? null : _ActionBar(plan: loaded),
@@ -986,7 +968,11 @@ Future<void> _editLength(BuildContext context, WidgetRef ref, OutingPlan plan, i
         for (final m in options)
           SimpleDialogOption(
             onPressed: () => Navigator.pop(dialogContext, m),
-            child: Text(m < 60 ? '$m min' : m % 60 == 0 ? '${m ~/ 60} h' : '${m ~/ 60} h ${m % 60} min'),
+            child: Text(m < 60
+                ? trf('{m} min', {'m': m})
+                : m % 60 == 0
+                    ? trf('{n} h', {'n': m ~/ 60})
+                    : trf('{h} h {m} min', {'h': m ~/ 60, 'm': m % 60})),
           ),
       ],
     ),
@@ -1414,7 +1400,20 @@ class _ActionBar extends ConsumerWidget {
             round(Icons.route, tr('Track this outing'),
                 () => context.push(Uri(path: '/track', queryParameters: {'title': plan.title}).toString())),
             round(Icons.forum_outlined, tr('Send to a group chat'), () => sendPlanToGroup(context, ref, plan)),
-            round(Icons.more_horiz, tr('More'), () => showPlanActions(context, ref, plan, fromPlan: true)),
+            round(Icons.more_horiz, tr('More'), () => showPlanActions(context, ref, plan, fromPlan: true, extras: [
+                  (Icons.play_circle_outline, tr('Start now'), () => _menu(context, ref, plan, 'now')),
+                  (Icons.update, tr('Everything 30 min later'), () => _menu(context, ref, plan, 'later')),
+                  (Icons.history, tr('Everything 30 min earlier'), () => _menu(context, ref, plan, 'earlier')),
+                  (Icons.umbrella_outlined, tr('☔ Indoor backup ideas'), () => _menu(context, ref, plan, 'backup')),
+                  (Icons.auto_awesome_outlined, tr('🎁 Mystery mode: reveal stop by stop'),
+                      () => _menu(context, ref, plan, 'mystery')),
+                  (Icons.card_giftcard, tr('🎁 Send as a surprise to a friend'),
+                      () => _menu(context, ref, plan, 'mysterySend')),
+                  (Icons.health_and_safety_outlined, tr('🛟 Share with someone I trust'),
+                      () => _menu(context, ref, plan, 'safety')),
+                  (Icons.content_copy, tr('Copy plan as text'), () => _menu(context, ref, plan, 'copy')),
+                  (Icons.event_available, tr('Add to Google Calendar'), () => _menu(context, ref, plan, 'calendar')),
+                ])),
           ]),
         ),
       ),

@@ -2,6 +2,20 @@
 
 Keep each under 500 characters.
 
+## 1.9.0
+
+<en-US>
+• Outing tools as a grid of tiles: tap one to open it
+• Swipe a plan to change its day or delete it
+• Softer tab changes, one tidy menu per plan, shortcuts in Profile
+</en-US>
+
+<ar>
+• أدوات الخروج كمربعات: دوس على أي واحدة تفتحها
+• اسحب الخطة عشان تغيّر يومها أو تمسحها
+• تنقّل أنعم بين التبويبات، قائمة واحدة مرتبة لكل خطة، واختصارات في حسابي
+</ar>
+
 ## 1.8.0
 
 <en-US>

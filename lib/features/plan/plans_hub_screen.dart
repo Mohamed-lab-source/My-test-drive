@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -122,7 +123,7 @@ class _PlansHubScreenState extends ConsumerState<PlansHubScreen> {
               ),
           ],
           const SizedBox(height: KSpace.md),
-          Text(tr('Tip: press and hold a plan for everything you can do with it.'),
+          Text(tr('Tip: swipe a plan to change its day or delete it; press and hold for everything else.'),
               textAlign: TextAlign.center, style: text.bodySmall),
         ],
       ),
@@ -209,7 +210,35 @@ class PlanCard extends ConsumerWidget {
     final emojis = plan.stops.take(4).map((s) => Categories.emoji(s.category)).join(' ');
     final area = plan.stops.map((s) => s.area).whereType<String>().firstOrNull;
     final countdown = dated ? daysUntilText(day, DateTime.now()) : null;
-    return Padding(
+    Widget swipeBg(IconData icon, String label, Color bg, Color fg, AlignmentGeometry align) => Container(
+          margin: const EdgeInsets.only(bottom: KSpace.sm + 2),
+          padding: const EdgeInsets.symmetric(horizontal: KSpace.lg),
+          alignment: align,
+          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(KRadius.card)),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, color: fg),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 12)),
+          ]),
+        );
+    final err = Theme.of(context).colorScheme;
+    // Swipe to act: towards the end = change the day, towards the start = delete.
+    return Dismissible(
+      key: ValueKey('swipe_${plan.id}'),
+      background: swipeBg(Icons.event_outlined, tr('Change the day'), k.accentSoft, k.ink,
+          AlignmentDirectional.centerStart),
+      secondaryBackground: swipeBg(Icons.delete_outline, tr('Delete'), err.errorContainer, err.onErrorContainer,
+          AlignmentDirectional.centerEnd),
+      confirmDismiss: (direction) async {
+        HapticFeedback.selectionClick();
+        if (direction == DismissDirection.startToEnd) {
+          await changePlanDay(context, ref, plan);
+          return false;
+        }
+        await deletePlan(context, ref, plan);
+        return true;
+      },
+      child: Padding(
       padding: const EdgeInsets.only(bottom: KSpace.sm + 2),
       child: Pressable(
         child: Card(
@@ -283,6 +312,7 @@ class PlanCard extends ConsumerWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

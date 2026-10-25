@@ -14,7 +14,8 @@ import 'plan_form_screen.dart' show runPlanGeneration;
 
 /// Everything you can do with a plan, in one tidy sheet (from "My plans",
 /// or "More" on a plan).
-Future<void> showPlanActions(BuildContext context, WidgetRef ref, OutingPlan plan, {bool fromPlan = false}) {
+Future<void> showPlanActions(BuildContext context, WidgetRef ref, OutingPlan plan,
+    {bool fromPlan = false, List<(IconData, String, VoidCallback)> extras = const []}) {
   Widget row(IconData icon, String label, VoidCallback onTap, {bool danger = false}) => ListTile(
         leading: IconTile(icon, hue: danger ? 0 : null),
         title: Text(label, style: danger ? TextStyle(color: Theme.of(context).colorScheme.error) : null),
@@ -36,6 +37,12 @@ Future<void> showPlanActions(BuildContext context, WidgetRef ref, OutingPlan pla
           Text(plan.title,
               style: Theme.of(sheet).textTheme.titleLarge, maxLines: 2, overflow: TextOverflow.ellipsis),
           const SizedBox(height: KSpace.md),
+          if (extras.isNotEmpty) ...[
+            MenuGroup(title: tr('This plan'), children: [
+              for (final (icon, label, onTap) in extras) row(icon, label, () => then(() async => onTap())),
+            ]),
+            const SizedBox(height: KSpace.md),
+          ],
           MenuGroup(children: [
             if (!fromPlan) row(Icons.open_in_new, tr('Open'), () => then(() async => context.push('/plan/${plan.id}'))),
             row(Icons.event_outlined, tr('Change the day'), () => then(() => changePlanDay(context, ref, plan))),

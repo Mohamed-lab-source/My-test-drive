@@ -95,8 +95,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (context, state, shell) => _Shell(shell: shell),
+        navigatorContainerBuilder: (context, shell, children) =>
+            _FadingTabs(index: shell.currentIndex, children: children),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/plan', builder: (_, _) => const PlanFormScreen()),
@@ -267,6 +269,44 @@ class _Shell extends ConsumerWidget {
       ),
       ]),
     );
+  }
+}
+
+/// The tabs, kept alive, with a short fade (and a tiny lift) when you
+/// switch between them. Still when "Reduce motion" is on.
+class _FadingTabs extends StatelessWidget {
+  const _FadingTabs({required this.index, required this.children});
+
+  final int index;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.of(context).disableAnimations;
+    final duration = still ? Duration.zero : const Duration(milliseconds: 220);
+    return Stack(fit: StackFit.expand, children: [
+      for (final (i, child) in children.indexed)
+        IgnorePointer(
+          ignoring: i != index,
+          child: ExcludeSemantics(
+            excluding: i != index,
+            child: TickerMode(
+              enabled: i == index,
+              child: AnimatedOpacity(
+                opacity: i == index ? 1 : 0,
+                duration: duration,
+                curve: Curves.easeOut,
+                child: AnimatedSlide(
+                  offset: i == index ? Offset.zero : const Offset(0, 0.015),
+                  duration: duration,
+                  curve: KMotion.curve,
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ]);
   }
 }
 

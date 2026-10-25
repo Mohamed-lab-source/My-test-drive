@@ -77,9 +77,9 @@ class ProfileScreen extends ConsumerWidget {
           const BadgesSummaryCard(),
           const _VisitedBreakdown(),
           const SizedBox(height: KSpace.md),
-          MenuGroup(
+          TileGrid(
             title: tr('Your outings'),
-              children: [
+              items: [
                 for (final (icon, title, sub, path) in [
                   (Icons.auto_stories_outlined, tr('My timeline'), tr('Every place you\'ve been, by date'), '/timeline'),
                   (Icons.celebration_outlined, tr('My recap'), tr('Your month or year on Khroga, and your outing personality'), '/recap'),
@@ -93,15 +93,7 @@ class ProfileScreen extends ConsumerWidget {
                   (Icons.handyman_outlined, tr('Outing tools'), tr('Decide for us, who pays, sunset, holidays'), '/tools'),
                   (Icons.lightbulb_outline, tr('Outing ideas'), tr('Ready-made plans to start from'), '/ideas'),
                   (Icons.holiday_village_outlined, tr('Areas'), tr('Every neighbourhood we have places in'), '/areas'),
-                ]) ...[
-                  ListTile(
-                    leading: IconTile(icon),
-                    title: Text(title),
-                    subtitle: Text(sub),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push(path),
-                  ),
-                ],
+                ]) (icon, title, sub, () => context.push(path)),
               ],
           ),
           const SizedBox(height: KSpace.md),

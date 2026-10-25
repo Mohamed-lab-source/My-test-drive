@@ -10,6 +10,9 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🧰', 'Tools at a glance', 'All outing tools as tiles; tap one to open just that tool.'),
+    ('👆', 'Swipe your plans', 'In My plans, swipe a plan to change its day or delete it.'),
+    ('✨', 'Smoother everywhere', 'Tabs fade softly, one tidy menu on each plan, and shortcuts in Profile.'),
     ('📅', 'My plans', 'A new tab: today\'s outing up top, then your upcoming, saved and past plans.'),
     ('🗓️', 'Change the day', 'Move any plan to another day; weather and opening hours follow.'),
     ('🧭', 'Easier planning', 'Four simple steps, with the extra choices folded under More options.'),
