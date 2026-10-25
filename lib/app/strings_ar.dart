@@ -2098,4 +2098,7 @@ const arabic = <String, String>{
   'Swipe your plans': 'اسحب خططك',
   'In My plans, swipe a plan to change its day or delete it.': 'في خططي، اسحب الخطة عشان تغيّر يومها أو تمسحها.',
   'Tabs fade softly, one tidy menu on each plan, and shortcuts in Profile.': 'التبويبات بتظهر بنعومة، قائمة واحدة مرتبة في كل خطة، واختصارات في حسابي.',
+  '{n} maybe': '{n} يمكن',
+  "{n} can't": '{n} مش هيقدروا',
+  '{n} no answer': '{n} لسه مردوش',
 };

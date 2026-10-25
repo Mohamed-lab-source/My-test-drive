@@ -515,10 +515,10 @@ class _Header extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       [
-                        '✅ $going going',
-                        if (maybe > 0) '🤔 $maybe maybe',
-                        if (cant > 0) "❌ $cant can't",
-                        if (waiting > 0) '⏳ $waiting no answer',
+                        '✅ ${trf('{n} going', {'n': going})}',
+                        if (maybe > 0) '🤔 ${trf('{n} maybe', {'n': maybe})}',
+                        if (cant > 0) "❌ ${trf("{n} can't", {'n': cant})}",
+                        if (waiting > 0) '⏳ ${trf('{n} no answer', {'n': waiting})}',
                       ].join('  '),
                       style: text.bodySmall,
                     ),

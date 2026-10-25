@@ -2,6 +2,16 @@
 
 Keep each under 500 characters.
 
+## 1.9.2
+
+<en-US>
+• Group outings show who's going, maybe or can't in Arabic too
+</en-US>
+
+<ar>
+• الجروب بيقولك مين رايح ومين يمكن ومين مش هيقدر بالعربي كمان
+</ar>
+
 ## 1.9.1
 
 <en-US>
