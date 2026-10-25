@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/extras.dart';
-import '../../app/helpers.dart' show sameDay, totalStopMinutes, showTime, walkingMinutes, weatherIcon;
+import '../../app/helpers.dart' show sameDay, totalStopMinutes, showTime, timeRange, walkingMinutes, weatherIcon;
 import '../../app/local_prefs.dart';
 import '../../app/review.dart';
 import '../../app/share_texts.dart';
@@ -181,7 +181,7 @@ class _PlanBody extends ConsumerWidget {
             if (_daysAway(plan.request.day) case final d? when d > 0)
               Pill(d == 1 ? tr('⏳ Tomorrow') : trf('⏳ In {n} days', {'n': d})),
             if (endsAt != null && plan.stops.first.startTime != null)
-              Pill('🕘 ${showTime(plan.stops.first.startTime, clock24: clock24)}–${showTime(endsAt, clock24: clock24)}'),
+              Pill('🕘 ${timeRange(showTime(plan.stops.first.startTime, clock24: clock24), showTime(endsAt, clock24: clock24))}'),
             if (walkable) Pill(tr('🚶 Walkable route')),
             if (totalStopMinutes(plan.stops.map((s) => s.durationMinutes)) > 0)
               Pill(trf('⏱ {t} at stops', {'t': _StopTile._duration(totalStopMinutes(plan.stops.map((s) => s.durationMinutes)))})),
@@ -450,7 +450,7 @@ class _StopTile extends StatelessWidget {
     final end = stopEndTime(stop);
     final start = showTime(stop.startTime, clock24: clock24);
     final meta = [
-      if (stop.startTime != null) end == null ? start : '$start–${showTime(end, clock24: clock24)}',
+      if (stop.startTime != null) end == null ? start : timeRange(start, showTime(end, clock24: clock24)),
       if (stop.durationMinutes != null) _duration(stop.durationMinutes!),
       if (stop.area != null) stop.area!,
       if (stop.cuisine != null) stop.cuisine!,
@@ -641,10 +641,10 @@ class _StopTile extends StatelessWidget {
   }
 
   static String _duration(int minutes) {
-    if (minutes < 60) return '$minutes min';
+    if (minutes < 60) return trf('{m} min', {'m': minutes});
     final h = minutes ~/ 60;
     final m = minutes % 60;
-    return m == 0 ? '${h}h' : '${h}h ${m}m';
+    return m == 0 ? trf('{n} h', {'n': h}) : trf('{h} h {m} min', {'h': h, 'm': m});
   }
 }
 

@@ -2,6 +2,18 @@
 
 Keep each under 500 characters.
 
+## 1.9.1
+
+<en-US>
+• Times like 18:00–21:30 now read the right way round in Arabic
+• Stop lengths are shown in Arabic too
+</en-US>
+
+<ar>
+• المواعيد زي 18:00–21:30 بقت بتتقري صح بالعربي
+• مدة كل محطة بقت بالعربي كمان
+</ar>
+
 ## 1.9.0
 
 <en-US>

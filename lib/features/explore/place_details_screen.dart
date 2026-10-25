@@ -131,7 +131,7 @@ class _Details extends ConsumerWidget {
           child: FadeSlideIn(index: 1, child: Text(place.shownName, style: text.headlineLarge)),
         ),
         if (todaysHours(place, DateTime.now()) case final today?)
-          Text(trf('Today: {hours}', {'hours': tr(today)}), style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+          Text(trf('Today: {hours}', {'hours': '\u2066${tr(today)}\u2069'}), style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
         if (place.otherName != null)
           Text(place.otherName!, style: text.titleMedium?.copyWith(color: context.k.inkMuted)),
         const SizedBox(height: KSpace.sm),
@@ -934,7 +934,7 @@ class _HoursTable extends StatelessWidget {
                           color: i == today ? context.k.accent : context.k.ink)),
                 ),
                 Expanded(
-                  child: Text(hours,
+                  child: Text('\u2066$hours\u2069',
                       style: TextStyle(
                           fontWeight: i == today ? FontWeight.w700 : FontWeight.w400,
                           color: hours == tr('Closed') ? context.k.inkMuted : context.k.ink)),

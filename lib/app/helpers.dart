@@ -286,3 +286,8 @@ IconData weatherIcon(String note) {
   if (RegExp(r'(3[5-9]|4\d)°').hasMatch(note)) return Icons.thermostat;
   return Icons.wb_sunny_outlined;
 }
+
+/// "18:00–21:30" that reads left to right even inside Arabic text (without
+/// this, the two times swap places in right-to-left lines).
+String timeRange(String from, String to) => '\u2066$from–$to\u2069';
+
