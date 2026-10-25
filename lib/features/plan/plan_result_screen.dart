@@ -1405,9 +1405,7 @@ class _ActionBar extends ConsumerWidget {
             Expanded(
               child: GradientButton(
                 icon: Icons.navigation_outlined,
-                label: target.hasLocation
-                    ? trf('Go: {name}', {'name': target.name})
-                    : tr('Open the first stop'),
+                label: target.hasLocation ? tr('Go') : tr('Open'),
                 onPressed: target.hasLocation
                     ? () => openDirections(lat: target.lat!, lng: target.lng!)
                     : () => context.push('/place/${target.placeId}'),

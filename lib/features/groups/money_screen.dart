@@ -80,7 +80,7 @@ class MoneyScreen extends ConsumerWidget {
                         style: TextStyle(color: k.onHero.withValues(alpha: 0.9))),
                     const SizedBox(height: KSpace.md),
                     FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: k.surface, foregroundColor: k.ink),
+                      style: FilledButton.styleFrom(backgroundColor: k.onHero, foregroundColor: k.isDark ? k.background : k.ink),
                       onPressed: () => _collectSheet(context, ref, group, uid, settings),
                       child: Text(tr("I'll collect")),
                     ),
@@ -120,7 +120,7 @@ class MoneyScreen extends ConsumerWidget {
                           ]),
                           const SizedBox(height: KSpace.md),
                           FilledButton.icon(
-                            style: FilledButton.styleFrom(backgroundColor: k.surface, foregroundColor: k.ink),
+                            style: FilledButton.styleFrom(backgroundColor: k.onHero, foregroundColor: k.isDark ? k.background : k.ink),
                             onPressed: () => payWithInstapay(context, settings, mine),
                             icon: const Icon(Icons.send_rounded),
                             label: Text(tr('Pay with InstaPay')),

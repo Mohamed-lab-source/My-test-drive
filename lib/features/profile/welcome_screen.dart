@@ -130,7 +130,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: k.surface, foregroundColor: k.ink),
+                  style: FilledButton.styleFrom(backgroundColor: k.onHero, foregroundColor: k.isDark ? k.background : k.ink),
                   onPressed: last
                       ? _done
                       : () => _pages.nextPage(

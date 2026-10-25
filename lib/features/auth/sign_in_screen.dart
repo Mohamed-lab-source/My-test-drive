@@ -21,8 +21,8 @@ class SignInScreen extends ConsumerWidget {
     final onGradient = theme.copyWith(
       filledButtonTheme: FilledButtonThemeData(
         style: theme.filledButtonTheme.style?.copyWith(
-          backgroundColor: WidgetStatePropertyAll(k.surface),
-          foregroundColor: WidgetStatePropertyAll(k.ink),
+          backgroundColor: WidgetStatePropertyAll(k.onHero),
+          foregroundColor: WidgetStatePropertyAll(k.isDark ? k.background : k.ink),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(

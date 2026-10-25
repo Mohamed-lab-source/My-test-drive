@@ -316,7 +316,7 @@ class Pill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: ShapeDecoration(
         shape: const StadiumBorder(),
-        color: color ?? context.k.background,
+        color: color ?? context.k.surfaceHigh,
       ),
       child: Text(
         text,

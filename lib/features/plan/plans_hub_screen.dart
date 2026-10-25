@@ -169,7 +169,7 @@ class _TodayCard extends StatelessWidget {
         Row(children: [
           Expanded(
             child: FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: k.surface, foregroundColor: k.ink),
+              style: FilledButton.styleFrom(backgroundColor: k.onHero, foregroundColor: k.isDark ? k.background : k.ink),
               onPressed: () => context.push('/plan/${plan.id}'),
               child: Text(tr('Open')),
             ),

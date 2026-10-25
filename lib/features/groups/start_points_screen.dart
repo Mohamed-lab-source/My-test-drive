@@ -141,7 +141,7 @@ class _StartPointsScreenState extends ConsumerState<StartPointsScreen> {
                     ),
                     const SizedBox(height: KSpace.md),
                     FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: k.surface, foregroundColor: k.ink),
+                      style: FilledButton.styleFrom(backgroundColor: k.onHero, foregroundColor: k.isDark ? k.background : k.ink),
                       icon: const Icon(Icons.auto_awesome),
                       label: Text(tr('Plan an outing near everyone')),
                       onPressed: () {
