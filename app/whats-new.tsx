@@ -69,6 +69,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     emoji: '✨',
     items: [
       'Apple-style design: floating glass tab bar, Home widgets, Wallet card stack, Reminders-style smart lists, Shortcuts-style Life tiles and Dynamic Island confirmations',
+      'The + beside the tab bar adds anything from anywhere; swipe tasks right to finish; hold rows and cards for quick menus; Jump back in on Home',
       'Search (top of Home) covers money, tasks, notes, books and more',
       'Customize Home at the bottom of the Home screen; pull down to refresh',
       'Settings → Upcoming reminders lists every scheduled notification',

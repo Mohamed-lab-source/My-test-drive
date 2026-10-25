@@ -319,7 +319,8 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
           keyboardType="decimal-pad"
           value={amount}
           onChangeText={setAmount}
-          style={{ fontSize: 28, fontWeight: '700', height: 60 }}
+          // A big, centred figure, as in Apple Pay.
+          style={{ fontSize: 44, fontWeight: '700', height: 84, textAlign: 'center', letterSpacing: -1, fontVariant: ['tabular-nums'] }}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: -spacing.sm, marginBottom: spacing.md }}>
           {['+', '−', '×', '÷'].map((op) => (

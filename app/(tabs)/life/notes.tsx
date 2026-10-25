@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, Share } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -31,6 +32,11 @@ export default function NotesScreen() {
   };
   const [query, setQuery] = useState('');
 
+  // Opened from the + menu's "Note": start a new one straight away.
+  const { action } = useLocalSearchParams<{ action?: string }>();
+  useEffect(() => {
+    if (action === 'new') setEditing('new');
+  }, [action]);
   const load = useCallback(() => repo.listNotes().then(setNotes), []);
   useEffect(() => {
     load();

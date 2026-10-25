@@ -10,6 +10,7 @@ interface ListRowProps {
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
   showChevron?: boolean;
   isLast?: boolean;
   destructive?: boolean;
@@ -21,6 +22,7 @@ export function ListRow({
   leading,
   trailing,
   onPress,
+  onLongPress,
   showChevron,
   isLast,
   destructive,
@@ -63,7 +65,9 @@ export function ListRow({
             : undefined
         }
         // iOS highlights a tapped row with a grey wash rather than fading it.
-        style={({ pressed }) => [pressed && onPress ? { backgroundColor: colors.tertiaryFill } : null]}
+        onLongPress={onLongPress}
+        delayLongPress={350}
+        style={({ pressed }) => [pressed && (onPress || onLongPress) ? { backgroundColor: colors.tertiaryFill } : null]}
       >
         {content}
       </Pressable>

@@ -48,6 +48,7 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
 
   return (
     <SwipeableRow
+      leading={{ label: isDone ? 'Undo' : 'Done', color: isDone ? colors.gray : colors.green, icon: isDone ? 'arrow.clockwise' : 'checkmark.circle.fill', onPress: () => toggleTaskDone(task.id, !isDone) }}
       actions={[
         ...(isDone ? [] : [{ label: 'Tomorrow', color: colors.orange, onPress: () => rescheduleTask(task.id, 'tomorrow') }]),
         { label: 'Delete', color: colors.red, onPress: handleDelete },
@@ -158,19 +159,20 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
         title={task.title}
         onClose={() => setMenuOpen(false)}
         actions={[
-          { label: isDone ? 'Mark not done' : 'Mark done', onPress: () => toggleTaskDone(task.id, !isDone) },
+          { label: isDone ? 'Mark not done' : 'Mark done', icon: isDone ? 'arrow.clockwise' : 'checkmark.circle.fill', onPress: () => toggleTaskDone(task.id, !isDone) },
           ...(isDone
             ? []
             : [
-                { label: 'Do today', onPress: () => rescheduleTask(task.id, 'today') },
-                { label: 'Tomorrow', onPress: () => rescheduleTask(task.id, 'tomorrow') },
-                { label: 'Next week', onPress: () => rescheduleTask(task.id, 'next_week') },
+                { label: 'Do today', icon: 'sun.max.fill', section: true, onPress: () => rescheduleTask(task.id, 'today') },
+                { label: 'Tomorrow', icon: 'sunrise.fill', onPress: () => rescheduleTask(task.id, 'tomorrow') },
+                { label: 'Next week', icon: 'calendar', onPress: () => rescheduleTask(task.id, 'next_week') },
                 {
                   label: task.priority === 'high' ? 'Lower priority' : 'Make high priority',
+                  icon: 'flag.fill',
                   onPress: () => updateTask(task.id, { priority: task.priority === 'high' ? 'medium' : 'high' }),
                 },
               ]),
-          { label: 'Delete', destructive: true, onPress: handleDelete },
+          { label: 'Delete', icon: 'trash.fill', destructive: true, section: true, onPress: handleDelete },
         ]}
       />
     </SwipeableRow>

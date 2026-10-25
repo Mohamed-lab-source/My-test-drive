@@ -499,6 +499,11 @@ export default function TasksScreen() {
               ))}
             </Card>
           )}
+          {filtered.length > 0 && segment !== 3 ? (
+            <Text style={[typography.caption1, { color: colors.tertiaryLabel, textAlign: 'center', marginTop: spacing.sm }]}>
+              Swipe right to finish · swipe left to move or delete · hold for more
+            </Text>
+          ) : null}
         </View>
       </Animated.ScrollView>
       <CompactHeader title="Tasks" scrollY={scrollY} />

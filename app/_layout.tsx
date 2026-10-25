@@ -4,7 +4,8 @@ import { seedPreviewData } from '../src/dev/previewSeed';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
+import { DESTINATIONS } from '../src/navigation/destinations';
 import * as Notifications from 'expo-notifications';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeProvider';
 import { useFinanceStore } from '../src/store/financeStore';
@@ -83,6 +84,12 @@ function AppShell() {
 
   useProtectedRoute(status);
   useNotificationLinks(status === 'signedIn' && dataReady);
+
+  // Remember screens as they're opened, for "Jump back in" on Home.
+  const pathname = usePathname();
+  useEffect(() => {
+    if (DESTINATIONS[pathname]) useSettingsStore.getState().addRecentScreen(pathname);
+  }, [pathname]);
 
   useEffect(() => {
     initNotifications();

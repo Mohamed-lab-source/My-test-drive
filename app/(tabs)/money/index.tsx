@@ -265,6 +265,11 @@ export default function MoneyScreen() {
             <Text style={[typography.subhead, { color: colors.blue }]}>See all</Text>
           </Pressable>
         </View>
+        {transactions.length > 0 ? (
+          <Text style={[typography.caption1, { color: colors.tertiaryLabel, paddingHorizontal: spacing.lg, marginTop: -4, marginBottom: spacing.sm }]}>
+            Hold a transaction to duplicate, flag or delete it · hold a card for quick adds
+          </Text>
+        ) : null}
 
         <View style={{ paddingHorizontal: spacing.lg }}>
           {transactions.length === 0 ? (

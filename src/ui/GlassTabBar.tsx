@@ -34,7 +34,7 @@ function TabButton({ focused, label, icon, color, onPress, onLongPress }: { focu
 
 // The iOS 26 tab bar: a floating capsule of frosted glass with a lens that
 // slides to the selected tab.
-export function GlassTabBar({ state, descriptors, navigation }: TabBarProps) {
+export function GlassTabBar({ state, descriptors, navigation, accessory }: TabBarProps & { accessory?: React.ReactNode }) {
   const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
   const [width, setWidth] = useState(0);
@@ -54,6 +54,7 @@ export function GlassTabBar({ state, descriptors, navigation }: TabBarProps) {
         onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
         style={[
           styles.bar,
+          { flex: 1 },
           {
             borderColor: dark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.9)',
             boxShadow: dark ? '0px 10px 30px rgba(0,0,0,0.5)' : '0px 10px 30px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,0,0,0.06)',
@@ -98,12 +99,13 @@ export function GlassTabBar({ state, descriptors, navigation }: TabBarProps) {
           );
         })}
       </View>
+      {accessory}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 16, right: 16 },
+  wrap: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', alignItems: 'center' },
   bar: {
     height: TAB_BAR_HEIGHT,
     borderRadius: TAB_BAR_HEIGHT / 2,

@@ -35,6 +35,9 @@ interface SettingsState {
   setSadaqahGoal: (v: number) => void;
   waterGoal: number;
   sleepGoal: number;
+  // Screens opened most recently, newest first, for "Jump back in".
+  recentScreens: string[];
+  addRecentScreen: (path: string) => void;
   // Your own names for cards, keyed by their last digits ("Wife's card").
   cardNicknames: Record<string, string>;
   setCardNickname: (last4: string, name: string) => void;
@@ -207,6 +210,8 @@ export const useSettingsStore = create<SettingsState>()(
       waterGoal: 8,
       setWaterGoal: (v) => set({ waterGoal: v }),
       sleepGoal: 8,
+      recentScreens: [],
+      addRecentScreen: (path) => set((st) => ({ recentScreens: [path, ...st.recentScreens.filter((p) => p !== path)].slice(0, 8) })),
       cardNicknames: {},
       setCardNickname: (last4, name) =>
         set((st) => {

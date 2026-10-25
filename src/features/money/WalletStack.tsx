@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ActionMenu } from '../../ui/ActionMenu';
+import { useQuickAddStore } from '../../store/quickAddStore';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { GradientCard } from '../../ui/GradientCard';
@@ -25,16 +27,33 @@ export function WalletStack({
   onOpen: (a: Account) => void;
 }) {
   const { typography } = useTheme();
+  const [menuFor, setMenuFor] = useState<Account | null>(null);
+  const quick = useQuickAddStore((s) => s.open);
   if (!accounts.length) return null;
   return (
     <View style={{ height: CARD_HEIGHT + (accounts.length - 1) * PEEK }}>
+      <ActionMenu
+        visible={!!menuFor}
+        title={menuFor?.name}
+        onClose={() => setMenuFor(null)}
+        actions={
+          menuFor
+            ? [
+                { label: 'Open', icon: 'chevron.right', onPress: () => onOpen(menuFor) },
+                { label: 'Add expense', icon: 'arrow.up.circle.fill', onPress: () => quick('expense', menuFor.id), section: true },
+                { label: 'Add income', icon: 'arrow.down.circle.fill', onPress: () => quick('income', menuFor.id) },
+                { label: 'Transfer from here', icon: 'arrow.left.arrow.right', onPress: () => quick('transfer', menuFor.id) },
+              ]
+            : []
+        }
+      />
       {accounts.map((a, i) => {
         const front = i === accounts.length - 1;
         const owed = Math.max(0, -a.balance);
         const base = /^#[0-9a-f]{6}$/i.test(a.color) ? a.color : '#007AFF';
         return (
           <Appear key={a.id} index={i + 1} style={{ position: 'absolute', left: 0, right: 0, top: i * PEEK }}>
-            <PressableScale onPress={() => onOpen(a)} scaleTo={0.98}>
+            <PressableScale onPress={() => onOpen(a)} onLongPress={() => setMenuFor(a)} delayLongPress={350} scaleTo={0.98}>
               <GradientCard colors={[shade(base, 0.12), shade(base, -0.42)]} style={{ height: CARD_HEIGHT, paddingTop: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>

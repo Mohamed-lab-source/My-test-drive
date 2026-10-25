@@ -3,6 +3,8 @@ import { Tabs, usePathname, useRouter } from 'expo-router';
 import { settingsHydrated, useSettingsStore } from '../../src/store/settingsStore';
 import { Icon } from '../../src/ui/Icon';
 import { GlassTabBar } from '../../src/ui/GlassTabBar';
+import { QuickAddButton } from '../../src/features/quickadd/QuickAddButton';
+import { GlobalSheets } from '../../src/features/quickadd/GlobalSheets';
 
 // Opening on a tab other than Home happens once per app launch.
 let startTabApplied = false;
@@ -22,9 +24,11 @@ export default function TabsLayout() {
   }, []);
 
   return (
+    <>
     <Tabs
-      tabBar={(props) => <GlassTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <GlassTabBar {...props} accessory={<QuickAddButton />} />}
+      // A quick cross-fade between tabs.
+      screenOptions={{ headerShown: false, animation: 'fade' }}
     >
       <Tabs.Screen
         name="index"
@@ -62,5 +66,7 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    <GlobalSheets />
+    </>
   );
 }

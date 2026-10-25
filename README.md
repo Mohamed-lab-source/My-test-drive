@@ -200,6 +200,13 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
+**Easier to use**
+- A round + beside the tab bar on every screen: it adds whatever the screen is about (a note, a habit, a task…), and holding it (or tapping it where there's nothing to add) opens a menu for an expense, income, transfer, task, note, journal entry, a glass of water or search
+- "Jump back in" on Home: the screens you used most recently, one tap away
+- Swipe a task right to finish it (with a haptic click when it's armed); swipe left for Tomorrow / Delete; tick tasks off straight from Home with an undo
+- iOS-style long-press menus with icons: on tasks, on transactions (edit, duplicate for today, flag, delete with undo) and on Wallet cards (add an expense or income, or transfer from that account)
+- Big centred amount when logging money; cross-fade between tabs; confirmations in the Dynamic Island pill
+
 **Design**
 - Inspired by Apple's devices: an iOS 26-style floating glass tab bar with a sliding lens, soft colour glows behind each screen's title, Home Screen-style widgets on Home, a Wallet card stack for accounts, Reminders-style smart lists in Tasks, Shortcuts-style gradient tiles in Life, an Apple Account-style card in Settings, and Dynamic Island-style confirmations
 - Apple-style look throughout: Inter (the closest open match to San Francisco) on Android with real weights and SF-style tracking, the system font on iOS, and Apple's exact label greys

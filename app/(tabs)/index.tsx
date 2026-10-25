@@ -40,12 +40,15 @@ import Animated from 'react-native-reanimated';
 import { AmbientGlow } from '../../src/ui/AmbientGlow';
 import { PressableScale } from '../../src/ui/PressableScale';
 import { Appear } from '../../src/ui/Appear';
+import { useUndoStore } from '../../src/store/undoStore';
+import * as Haptics from '../../src/utils/haptics';
 import { AnimatedNumber } from '../../src/ui/AnimatedNumber';
 import { GradientCard } from '../../src/ui/GradientCard';
 import { Sparkline } from '../../src/ui/Sparkline';
 import { CompactHeader, useLargeTitleZoom, useScrollY } from '../../src/ui/CollapsingHeader';
 import { heroGradient } from '../../src/theme/shade';
 import { Widget } from '../../src/ui/Widget';
+import { JumpBackIn } from '../../src/features/home/JumpBackIn';
 import { ActivityRings } from '../../src/ui/ActivityRings';
 import { useWaterStore } from '../../src/store/waterStore';
 import { formatRelativeDay, formatTime, isOverdue, localDateKey } from '../../src/utils/date';
@@ -312,6 +315,9 @@ export default function HomeScreen() {
           </Appear>
         ) : null}
 
+        <Appear index={4}>
+          <JumpBackIn />
+        </Appear>
         <Appear index={4} style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
           {quickActions.map((a) => (
             <QuickAction
@@ -403,25 +409,29 @@ export default function HomeScreen() {
                 </View>
               ))}
               {todayTasks.slice(0, 5).map((t, i, arr) => (
-                <View
+                // Tap the circle to tick it off right here.
+                <Pressable
                   key={t.id}
-                  style={{
+                  onPress={() => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    useProductivityStore.getState().toggleTaskDone(t.id, true);
+                    useUndoStore.getState().show(`Done: ${t.title}`, () => useProductivityStore.getState().toggleTaskDone(t.id, false));
+                  }}
+                  style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
                     padding: spacing.md,
                     borderBottomWidth: i === arr.length - 1 ? 0 : 0.5,
                     borderBottomColor: colors.separator,
-                  }}
+                    backgroundColor: pressed ? colors.tertiaryFill : 'transparent',
+                  })}
                 >
-                  {t.id === topTaskId ? (
-                    <Text style={{ fontSize: 16 }}>🐸</Text>
-                  ) : (
-                    <Icon name="circle" size={18} color={colors.gray3} />
-                  )}
-                  <Text style={[typography.body, { color: colors.label, marginLeft: spacing.sm }]} numberOfLines={1}>
+                  <Icon name="circle" size={22} color={t.priority === 'high' ? colors.red : colors.gray3} />
+                  <Text style={[typography.body, { color: colors.label, marginLeft: spacing.sm, flex: 1 }]} numberOfLines={1}>
+                    {t.id === topTaskId ? '🐸 ' : ''}
                     {t.title}
                   </Text>
-                </View>
+                </Pressable>
               ))}
             </Card>
           )}
