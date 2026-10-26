@@ -702,3 +702,26 @@ export async function sendTestNotification(): Promise<boolean> {
   });
   return true;
 }
+
+const ALLOWANCE_ID = 'morning-allowance';
+
+// 8:30 AM: how much you can spend today under your spending plan. The
+// figure changes with each day's spending, so this is one notification for
+// the next morning, re-armed whenever Anchor is opened.
+export async function scheduleMorningAllowance(today: number, tomorrow: number, monthLeft: number): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(ALLOWANCE_ID).catch(() => {});
+  const { morningAllowance, currency } = useSettingsStore.getState();
+  if (!morningAllowance || !(await areNotificationsEnabled())) return;
+  const now = new Date();
+  const at = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 30);
+  const isToday = now.getTime() < at.getTime();
+  if (!isToday) at.setDate(at.getDate() + 1);
+  const amount = isToday ? today : tomorrow;
+  await scheduleAt(
+    ALLOWANCE_ID,
+    at,
+    amount > 0 ? `You can spend ${formatMoney(amount, currency)} today` : 'No spending room today',
+    amount > 0 ? `${formatMoney(Math.max(0, monthLeft), currency)} left for the rest of the month. Tap for your plan.` : "You've used this month's spending money — try a no-spend day.",
+    '/money/plan'
+  );
+}

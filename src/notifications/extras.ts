@@ -20,7 +20,9 @@ import {
   rescheduleDeadlineReminders,
   scheduleTahajjudReminders,
   scheduleWeeklyReviewReminder,
+  scheduleMorningAllowance,
 } from './scheduler';
+import { computePlan } from '../features/money/plan';
 import { listMedications, medicationTimes } from '../db/repositories/health';
 
 export async function rescheduleExtraReminders(): Promise<void> {
@@ -41,4 +43,14 @@ export async function rescheduleExtraReminders(): Promise<void> {
   await rescheduleDeadlineReminders(tasks);
   await scheduleTahajjudReminders();
   await scheduleWeeklyReviewReminder();
+  await rescheduleMorningAllowance();
+}
+
+// Tomorrow's figure: what's left of the month spread over the days after
+// today (a new month starts from its full limit).
+export async function rescheduleMorningAllowance(): Promise<void> {
+  const plan = await computePlan();
+  const lastDay = plan.daysLeft <= 1;
+  const tomorrow = lastDay ? Math.floor(plan.monthly.limit / 30) : Math.max(0, Math.floor(plan.monthly.left / (plan.daysLeft - 1)));
+  await scheduleMorningAllowance(plan.daily.limit - plan.daily.spent, tomorrow, plan.monthly.left);
 }

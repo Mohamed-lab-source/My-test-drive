@@ -200,6 +200,13 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
+**Spending plan & limits**
+- Money → Plan works out, from your income (or the average of the last 3 months), bills and savings goals, how much to save each month (the larger of what your goals need and your chosen share of income) and how much you can spend this month, this week and today
+- Daily, weekly and monthly limits: the plan suggests them, or set your own; progress rings and bars, an on-track / watch / over status with the month-end projection, and how much less to spend a day to finish on budget
+- Alerts as an expense crosses 80% and 100% of a daily, weekly or monthly limit, of an account's own monthly limit, and 30% / 70% / 90% of a card's credit limit (only the most important one is sent); an optional 8:30 AM "you can spend X today" notification
+- Money → Limits (Cards & accounts): totals across all credit cards (owed, available, total limit, overall utilisation) and, per card, utilisation, current-cycle spending, due date countdown, minimum payment, monthly interest if carried over and how long the minimum takes to clear it; per account, this month vs the same time last month and how long the balance lasts at the current pace
+- Each account and card can have its own monthly limit, interest rate, minimum payment % and card digits (which also match bank SMS charges to it)
+
 **Easier to use**
 - A round + beside the tab bar on every screen: it adds whatever the screen is about (a note, a habit, a task…), and holding it (or tapping it where there's nothing to add) opens a menu for an expense, income, transfer, task, note, journal entry, a glass of water or search
 - "Jump back in" on Home: the screens you used most recently, one tap away

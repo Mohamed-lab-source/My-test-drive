@@ -24,6 +24,9 @@ import {
   scheduleSpendDigest,
 } from '../notifications/scheduler';
 import { settingsHydrated, useSettingsStore } from './settingsStore';
+import { computePlan } from '../features/money/plan';
+import { limitCrossing } from '../utils/spendingPlan';
+import { convertToBase } from '../db/repositories/fx';
 import { todayKey } from '../db/client';
 import { formatMoney } from '../utils/money';
 
@@ -180,25 +183,12 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       }
     }
 
-    // Weekly limit and daily spending alerts: fire once, when this expense
-    // takes the total over the line.
-    const { weeklyLimit, dailySpendAlert, weekStart, currency: base } = useSettingsStore.getState();
-    if (input.type === 'expense' && input.currency === base && (weeklyLimit > 0 || dailySpendAlert > 0)) {
-      const d = new Date();
-      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const weekStartDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() - weekStart + 7) % 7));
-      if (weeklyLimit > 0) {
-        const after = await repo.getSpendSince(weekStartDate.toISOString(), base);
-        if (after - input.amount < weeklyLimit && after >= weeklyLimit) {
-          notifyNow('Weekly limit reached', `${formatMoney(after, base)} spent this week — your limit is ${formatMoney(weeklyLimit, base)}.`);
-        }
-      }
-      if (dailySpendAlert > 0) {
-        const after = await repo.getSpendSince(dayStart.toISOString(), base);
-        if (after - input.amount < dailySpendAlert && after >= dailySpendAlert) {
-          notifyNow('Big spending day', `You've spent ${formatMoney(after, base)} today.`);
-        }
-      }
+    // Spending limits (daily / weekly / monthly, from Settings or the
+    // spending plan), your own limit on this account, and credit used.
+    // Each fires once, as this expense crosses 80% or 100%; only the most
+    // important one is sent.
+    if (input.type === 'expense' && useSettingsStore.getState().limitAlerts) {
+      await checkSpendingAlerts(input, accountBefore, get).catch(() => {});
     }
 
     if (budget && budget.monthly_limit > 0) {
@@ -332,3 +322,73 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().refreshFxRates();
   },
 }));
+
+type Getter = () => { accounts: Account[]; fxRates: FxRate[] };
+
+async function checkSpendingAlerts(
+  input: Parameters<typeof repo.createTransaction>[0],
+  accountBefore: Account | undefined,
+  get: Getter
+): Promise<void> {
+  const settings = useSettingsStore.getState();
+  const base = settings.currency;
+  const alerts: { rank: number; title: string; body: string }[] = [];
+  const now = new Date();
+  const when = new Date(input.date);
+
+  if (!input.recurring_id) {
+    const plan = await computePlan(now);
+    const amount = convertToBase(input.amount, input.currency, base, get().fxRates);
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(dayStart.getTime() - ((now.getDay() - settings.weekStart + 7) % 7) * 86400000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const periods = [
+      { key: 'monthly' as const, start: monthStart, word: 'this month', name: 'Monthly', rank: 3 },
+      { key: 'weekly' as const, start: weekStart, word: 'this week', name: 'Weekly', rank: 2 },
+      { key: 'daily' as const, start: dayStart, word: 'today', name: 'Daily', rank: 1 },
+    ];
+    for (const p of periods) {
+      if (when < p.start) continue;
+      const l = plan[p.key];
+      const crossed = limitCrossing(l.spent - amount, l.spent, l.limit);
+      if (crossed === 'over') {
+        alerts.push({ rank: 10 + p.rank, title: `${p.name} limit reached`, body: `${formatMoney(l.spent, base)} spent ${p.word} — your limit is ${formatMoney(l.limit, base)}.` });
+      } else if (crossed === 'warn') {
+        alerts.push({ rank: p.rank, title: `80% of your ${p.name.toLowerCase()} limit`, body: `${formatMoney(Math.max(0, l.left), base)} left ${p.word} of ${formatMoney(l.limit, base)}.` });
+      }
+    }
+  }
+
+  const account = get().accounts.find((a) => a.id === input.account_id);
+  if (account?.monthly_limit) {
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const txs = await repo.listTransactionsInRange(monthStart, new Date(now.getTime() + 86400000).toISOString());
+    const spent = txs.filter((t) => t.type === 'expense' && t.account_id === account.id && t.currency === account.currency).reduce((s, t) => s + t.amount, 0);
+    const amount = input.currency === account.currency ? input.amount : 0;
+    const crossed = limitCrossing(spent - amount, spent, account.monthly_limit);
+    if (crossed) {
+      alerts.push({
+        rank: crossed === 'over' ? 9 : 5,
+        title: crossed === 'over' ? `${account.name}: monthly limit reached` : `${account.name}: 80% of your limit`,
+        body: `${formatMoney(spent, account.currency)} of ${formatMoney(account.monthly_limit, account.currency)} this month.`,
+      });
+    }
+  }
+
+  // Credit used on a card, at 30% (where scores start to suffer), 70% and 90%.
+  if (account?.type === 'credit' && account.credit_limit && accountBefore) {
+    const before = Math.max(0, -accountBefore.balance) / account.credit_limit;
+    const after = Math.max(0, -account.balance) / account.credit_limit;
+    const line = [0.9, 0.7, 0.3].find((x) => before < x && after >= x);
+    if (line) {
+      alerts.push({
+        rank: line === 0.9 ? 8 : line === 0.7 ? 6 : 4,
+        title: `${account.name} is at ${Math.round(after * 100)}% of its limit`,
+        body: `${formatMoney(Math.max(0, account.credit_limit + account.balance), account.currency)} available of ${formatMoney(account.credit_limit, account.currency)}.`,
+      });
+    }
+  }
+
+  const top = alerts.sort((a, b) => b.rank - a.rank)[0];
+  if (top) await notifyNow(top.title, top.body, '/money/plan');
+}

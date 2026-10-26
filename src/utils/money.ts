@@ -27,6 +27,17 @@ export function formatMoney(amountMinor: number, currency: string = 'USD'): stri
   return f.format(wholeUnits ? Math.round(fromMinorUnits(amountMinor)) : fromMinorUnits(amountMinor));
 }
 
+// Whole units, for figures in tight spaces (limits, allowances, totals).
+export function formatMoneyWhole(amountMinor: number, currency: string = 'USD'): string {
+  const key = `${currency}|0`;
+  let f = formatterCache.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    formatterCache.set(key, f);
+  }
+  return f.format(Math.round(fromMinorUnits(amountMinor)));
+}
+
 export function formatMoneySigned(amountMinor: number, currency: string, type: 'income' | 'expense' | 'transfer'): string {
   const formatted = formatMoney(Math.abs(amountMinor), currency);
   if (type === 'income') return `+${formatted}`;

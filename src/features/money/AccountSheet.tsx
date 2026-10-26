@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
+import { setCardLink } from '../../db/repositories/cardLinks';
+import { useSmsStore } from '../../sms/smsStore';
 import { Switch } from '../../ui/Switch';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
@@ -38,6 +40,10 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
   const [limit, setLimit] = useState('');
   const [statementDay, setStatementDay] = useState('');
   const [dueDay, setDueDay] = useState('');
+  const [monthlyLimit, setMonthlyLimit] = useState('');
+  const [apr, setApr] = useState('');
+  const [minPct, setMinPct] = useState('');
+  const [last4, setLast4] = useState('');
   const isCredit = type === 'credit';
 
   useEffect(() => {
@@ -51,6 +57,10 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
     setLimit(editing?.credit_limit ? String(fromMinorUnits(editing.credit_limit)) : '');
     setStatementDay(editing?.statement_day ? String(editing.statement_day) : '');
     setDueDay(editing?.due_day ? String(editing.due_day) : '');
+    setMonthlyLimit(editing?.monthly_limit ? String(fromMinorUnits(editing.monthly_limit)) : '');
+    setApr(editing?.apr ? String(editing.apr) : '');
+    setMinPct(editing?.min_payment_pct ? String(editing.min_payment_pct) : '');
+    setLast4(editing?.card_last4 ?? '');
     setColor(editing?.color ?? accentColors[0]);
     setArchived(!!editing?.is_archived);
   }, [visible, editing?.id]);
@@ -77,11 +87,22 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
         credit_limit: isCredit && Number(limit) > 0 ? toMinorUnits(Number(limit)) : null,
         statement_day: isCredit ? day(statementDay) : null,
         due_day: isCredit ? day(dueDay) : null,
+        monthly_limit: Number(monthlyLimit) > 0 ? toMinorUnits(Number(monthlyLimit)) : null,
+        apr: isCredit && Number(apr) > 0 ? Number(apr) : null,
+        min_payment_pct: isCredit && Number(minPct) > 0 ? Number(minPct) : null,
+        card_last4: /^\d{3,4}$/.test(last4.trim()) ? last4.trim() : null,
       };
+      let id = editing?.id;
       if (editing) {
         await updateAccount(editing.id, { ...fields, is_archived: archived ? 1 : 0 });
       } else {
         await addAccount({ ...fields, sort_order: accounts.length });
+        id = useFinanceStore.getState().accounts.find((a) => a.name === fields.name && a.type === fields.type)?.id;
+      }
+      // Bank SMS charges with these digits are posted to this account.
+      if (id && fields.card_last4) {
+        await setCardLink(fields.card_last4, id, isCredit ? 'credit' : 'debit');
+        await useSmsStore.getState().loadLinks();
       }
       onClose();
     } finally {
@@ -128,8 +149,29 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
             <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.sm, marginBottom: spacing.md }]}>
               Day of the month your statement closes and your payment is due. Used for statements and a payment reminder.
             </Text>
+            <View style={{ flexDirection: 'row' }}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
+                <TextField label="Interest rate % / year" placeholder="e.g. 36" keyboardType="decimal-pad" value={apr} onChangeText={setApr} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <TextField label="Minimum payment %" placeholder="e.g. 5" keyboardType="decimal-pad" value={minPct} onChangeText={setMinPct} />
+              </View>
+            </View>
           </>
         ) : null}
+        <View style={{ flexDirection: 'row' }}>
+          <View style={{ flex: 1, marginRight: spacing.sm }}>
+            <TextField label="My monthly limit" placeholder="Optional" keyboardType="decimal-pad" value={monthlyLimit} onChangeText={setMonthlyLimit} />
+          </View>
+          {type === 'bank' || isCredit ? (
+            <View style={{ flex: 1 }}>
+              <TextField label="Card last 4 digits" placeholder="e.g. 4521" keyboardType="number-pad" maxLength={4} value={last4} onChangeText={setLast4} />
+            </View>
+          ) : null}
+        </View>
+        <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.sm, marginBottom: spacing.md }]}>
+          Get alerts at 80% and 100% of your own monthly limit for this {isCredit ? 'card' : 'account'}. Card digits match bank SMS charges to it.
+        </Text>
         <Text style={labelStyle}>Currency</Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector options={CURRENCIES.map((c) => ({ id: c, label: c }))} selectedId={currency} onSelect={setCurrency} />

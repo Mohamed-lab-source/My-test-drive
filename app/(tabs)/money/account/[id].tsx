@@ -16,6 +16,7 @@ import { formatMoney } from '../../../../src/utils/money';
 import { useBalanceFormatter } from '../../../../src/ui/useMoney';
 import { formatDateShort, localDateKey } from '../../../../src/utils/date';
 import { buildStatement, statementPeriods } from '../../../../src/utils/statement';
+import { DEFAULT_MIN_PCT, minimumPayment, monthlyInterest, payoffMonths } from '../../../../src/utils/cardMath';
 import type { Transaction } from '../../../../src/db/types';
 
 export default function AccountDetailScreen() {
@@ -166,6 +167,42 @@ export default function AccountDetailScreen() {
             <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>
               Add your statement and due days (Edit) to see statements by billing cycle and get a payment reminder.
             </Text>
+          ) : null}
+          {isCredit && owed > 0 ? (
+            <View style={{ marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+              <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                Minimum payment {formatMoney(minimumPayment(owed, account.min_payment_pct), account.currency)} ({account.min_payment_pct || DEFAULT_MIN_PCT}%)
+                {account.apr ? ` · about ${formatMoney(monthlyInterest(owed, account.apr), account.currency)} interest a month if carried over` : ''}
+              </Text>
+              {account.apr ? (
+                <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+                  {(() => {
+                    const m = payoffMonths(owed, account.apr, minimumPayment(owed, account.min_payment_pct));
+                    return m === null ? 'The minimum alone never clears this balance.' : `At the minimum, it's paid off in about ${m} month${m === 1 ? '' : 's'}.`;
+                  })()}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+          {account.monthly_limit ? (
+            (() => {
+              const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+              const spent = rows
+                .filter((t) => t.type === 'expense' && t.account_id === account.id && new Date(t.date).getTime() >= monthStart)
+                .reduce((sum, t) => sum + t.amount, 0);
+              const u = spent / account.monthly_limit;
+              return (
+                <View style={{ marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>My monthly limit</Text>
+                    <Text style={[typography.footnote, { color: u >= 1 ? colors.red : colors.label, fontWeight: '600' }]}>
+                      {formatMoney(spent, account.currency)} of {formatMoney(account.monthly_limit, account.currency)}
+                    </Text>
+                  </View>
+                  <ProgressBar progress={u} color={u >= 1 ? colors.red : u >= 0.8 ? colors.orange : colors.blue} height={6} />
+                </View>
+              );
+            })()
           ) : null}
         </Card>
 

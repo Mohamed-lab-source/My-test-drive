@@ -51,8 +51,8 @@ export function accountForImport(item: SmsImport, accounts: Account[], links: Re
   if (item.kind !== 'card_payment' && item.card_last4) {
     const linked = open.find((a) => a.id === links[item.card_last4!]?.account_id);
     if (linked) return linked;
-    // An account named with the card's digits ("CIB Credit Card ••4521").
-    const named = open.find((a) => a.name.includes(item.card_last4!));
+    // An account you gave these card digits, or one named with them.
+    const named = open.find((a) => a.card_last4 === item.card_last4) ?? open.find((a) => a.name.includes(item.card_last4!));
     if (named) return named;
   }
   if (item.kind !== 'card_payment' && item.card_type === 'credit') {

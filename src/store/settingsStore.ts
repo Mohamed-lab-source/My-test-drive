@@ -35,6 +35,18 @@ interface SettingsState {
   setSadaqahGoal: (v: number) => void;
   waterGoal: number;
   sleepGoal: number;
+  // Spending plan: monthly income (0 = estimate from history), the share of
+  // income to save, a monthly limit (0 = the plan's figure) and alerts.
+  monthlyIncome: number;
+  setMonthlyIncome: (v: number) => void;
+  savingsPct: number;
+  setSavingsPct: (v: number) => void;
+  monthlyLimit: number;
+  setMonthlyLimit: (v: number) => void;
+  limitAlerts: boolean;
+  setLimitAlerts: (v: boolean) => void;
+  morningAllowance: boolean;
+  setMorningAllowance: (v: boolean) => void;
   // Screens opened most recently, newest first, for "Jump back in".
   recentScreens: string[];
   addRecentScreen: (path: string) => void;
@@ -210,6 +222,16 @@ export const useSettingsStore = create<SettingsState>()(
       waterGoal: 8,
       setWaterGoal: (v) => set({ waterGoal: v }),
       sleepGoal: 8,
+      monthlyIncome: 0,
+      setMonthlyIncome: (v) => set({ monthlyIncome: v }),
+      savingsPct: 20,
+      setSavingsPct: (v) => set({ savingsPct: v }),
+      monthlyLimit: 0,
+      setMonthlyLimit: (v) => set({ monthlyLimit: v }),
+      limitAlerts: true,
+      setLimitAlerts: (v) => set({ limitAlerts: v }),
+      morningAllowance: false,
+      setMorningAllowance: (v) => set({ morningAllowance: v }),
       recentScreens: [],
       addRecentScreen: (path) => set((st) => ({ recentScreens: [path, ...st.recentScreens.filter((p) => p !== path)].slice(0, 8) })),
       cardNicknames: {},

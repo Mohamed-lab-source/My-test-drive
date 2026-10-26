@@ -5,9 +5,11 @@ import * as productivity from '../db/repositories/productivity';
 import * as life from '../db/repositories/life';
 import { setWater } from '../db/repositories/health';
 import { todayKey } from '../db/client';
+import { useSettingsStore } from '../store/settingsStore';
 
 export async function seedPreviewData(): Promise<void> {
   if ((await finance.listAccounts()).length > 0) return;
+  useSettingsStore.getState().setCurrency('EGP');
   const day = (n: number, h = 13) => {
     const d = new Date();
     d.setDate(d.getDate() - n);
@@ -33,7 +35,11 @@ export async function seedPreviewData(): Promise<void> {
   for (const [n, amount, note, re, account] of spends) {
     await finance.createTransaction({ type: 'expense', amount, currency: 'EGP', account_id: account, transfer_to_account_id: null, category_id: cat(re), recurring_id: null, note, date: day(n) });
   }
-  await finance.createTransaction({ type: 'income', amount: 4500000, currency: 'EGP', account_id: bank, transfer_to_account_id: null, category_id: cat(/salary/i), recurring_id: null, note: 'Salary', date: day(9, 9) });
+  for (const n of [9, 40, 71]) {
+    await finance.createTransaction({ type: 'income', amount: 4500000, currency: 'EGP', account_id: bank, transfer_to_account_id: null, category_id: cat(/salary/i), recurring_id: null, note: 'Salary', date: day(n, 9) });
+  }
+  await finance.updateAccount(card, { apr: 36, min_payment_pct: 5, statement_day: 25, due_day: 15, card_last4: '4521', monthly_limit: 2000000 });
+  await finance.updateAccount(bank, { monthly_limit: 1500000, card_last4: '0131' });
   await finance.createSavingsGoal({ name: 'Umrah trip', target_amount: 9000000, currency: 'EGP', target_date: null, icon: 'airplane', color: '#5856D6', notes: null });
   const t = todayKey();
   const tasks: [string, Task['priority'], string | null, Task['status']][] = [

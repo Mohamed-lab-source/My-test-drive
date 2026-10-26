@@ -21,7 +21,7 @@ import {
   rescheduleAllReminders,
   rescheduleOccasionReminders,
 } from '../src/notifications/scheduler';
-import { rescheduleExtraReminders } from '../src/notifications/extras';
+import { rescheduleExtraReminders, rescheduleMorningAllowance } from '../src/notifications/extras';
 import { applyAutoRoutines } from '../src/utils/autoRoutines';
 
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
@@ -134,6 +134,7 @@ function AppShell() {
         useSmsStore.getState().scan().catch(() => {});
         // A new day may have started while Anchor was in the background.
         applyAutoRoutines().catch(() => 0);
+        if (Platform.OS !== 'web') rescheduleMorningAllowance().catch(() => {});
       }
     });
     return () => sub.remove();

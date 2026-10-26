@@ -48,6 +48,7 @@ import { Sparkline } from '../../src/ui/Sparkline';
 import { CompactHeader, useLargeTitleZoom, useScrollY } from '../../src/ui/CollapsingHeader';
 import { heroGradient } from '../../src/theme/shade';
 import { Widget } from '../../src/ui/Widget';
+import { useSpendingPlan } from '../../src/features/money/plan';
 import { JumpBackIn } from '../../src/features/home/JumpBackIn';
 import { ActivityRings } from '../../src/ui/ActivityRings';
 import { useWaterStore } from '../../src/store/waterStore';
@@ -131,6 +132,7 @@ export default function HomeScreen() {
   const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory, postRecurring } = useFinanceStore();
   const { tasks, meetings } = useProductivityStore();
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
+  const plan = useSpendingPlan();
   const prayersToday = useLifeStore((s) => s.todayPrayerLogs.filter((l) => l.completed).length);
   const water = useWaterStore((s) => s.count);
   const waterGoal = useSettingsStore((s) => s.waterGoal);
@@ -276,10 +278,20 @@ export default function HomeScreen() {
               <Widget
                 icon="creditcard.fill"
                 tint={colors.blue}
-                title="Spending"
-                value={<AnimatedNumber value={monthSpend} format={(n) => balance(n, currency)} style={[typography.title2, { color: colors.label }]} numberOfLines={1} />}
-                caption={`This month · ${balance(todaySpend, currency)} today`}
-                onPress={() => router.push('/money/insights')}
+                title={plan && plan.daily.limit > 0 ? 'Spend today' : 'Spending'}
+                value={
+                  plan && plan.daily.limit > 0 ? (
+                    <AnimatedNumber value={Math.max(0, plan.daily.left)} format={(n) => balance(n, currency)} style={[typography.title2, { color: plan.daily.left > 0 ? colors.label : colors.red }]} numberOfLines={1} />
+                  ) : (
+                    <AnimatedNumber value={monthSpend} format={(n) => balance(n, currency)} style={[typography.title2, { color: colors.label }]} numberOfLines={1} />
+                  )
+                }
+                caption={
+                  plan && plan.daily.limit > 0
+                    ? `left today · ${balance(Math.max(0, plan.monthly.left), currency)} this month`
+                    : `This month · ${balance(todaySpend, currency)} today`
+                }
+                onPress={() => router.push('/money/plan')}
               />
               <View style={{ width: spacing.sm + 2 }} />
               <Widget

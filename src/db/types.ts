@@ -25,6 +25,13 @@ export interface Account {
   credit_limit?: number | null;
   statement_day?: number | null;
   due_day?: number | null;
+  // Your own monthly spending limit for this account or card.
+  monthly_limit?: number | null;
+  // Credit cards: annual interest rate (%) and minimum payment (% of balance).
+  apr?: number | null;
+  min_payment_pct?: number | null;
+  // The card's last digits, so bank SMS charges land here.
+  card_last4?: string | null;
 }
 
 export type RecurringFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';

@@ -17,6 +17,8 @@ export const DESTINATIONS: Record<string, Destination> = {
   '/money/bills-calendar': { label: 'Bills', icon: 'calendar', color: 'indigo' },
   '/money/sms-inbox': { label: 'Bank SMS', icon: 'banknote.fill', color: 'red' },
   '/money/cards': { label: 'Cards', icon: 'creditcard.fill', color: 'purple' },
+  '/money/plan': { label: 'Plan', icon: 'target', color: 'green' },
+  '/money/limits': { label: 'Limits', icon: 'creditcard.fill', color: 'indigo' },
   '/money/accounts': { label: 'Accounts', icon: 'building.columns.fill', color: 'blue' },
   '/money/shopping': { label: 'Shopping', icon: 'cart.badge.plus', color: 'green' },
   '/money/zakat': { label: 'Zakat', icon: 'hands.sparkles.fill', color: 'mint' },

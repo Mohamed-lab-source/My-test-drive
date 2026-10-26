@@ -646,15 +646,15 @@ export default function SettingsScreen() {
               </Text>
               <View style={{ marginTop: spacing.md }}>
                 <TextField
-                  label={`Big spending day alert (${currency})`}
-                  placeholder="Off — e.g. 2000"
+                  label={`Daily spending limit (${currency})`}
+                  placeholder="From your plan — e.g. 500"
                   keyboardType="decimal-pad"
                   value={dailyAlertInput}
                   onChangeText={setDailyAlertInput}
                   onBlur={() => setDailySpendAlert(Math.round((Number(dailyAlertInput) || 0) * 100))}
                 />
                 <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: -spacing.sm }]}>
-                  A notification when today's spending passes this amount.
+                  Blank uses your spending plan. Alerts at 80% and 100% — set weekly and monthly limits in Money → Plan.
                 </Text>
               </View>
               <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: spacing.md, marginBottom: spacing.xs }]}>Weekend</Text>

@@ -14,6 +14,7 @@ import { PressableScale } from '../../../src/ui/PressableScale';
 import { Appear } from '../../../src/ui/Appear';
 import { AnimatedNumber } from '../../../src/ui/AnimatedNumber';
 import { WalletStack } from '../../../src/features/money/WalletStack';
+import { PlanSummaryCard } from '../../../src/features/money/PlanSummaryCard';
 import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
@@ -184,11 +185,15 @@ export default function MoneyScreen() {
           </Card>
         </Appear>
 
+        <Appear index={1} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <PlanSummaryCard />
+        </Appear>
+
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <Text style={[typography.title2, { color: colors.label }]}>Wallet</Text>
-            <Pressable onPress={() => router.push('/money/accounts')} hitSlop={8}>
-              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>All accounts</Text>
+            <Pressable onPress={() => router.push('/money/limits')} hitSlop={8}>
+              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Limits & details</Text>
             </Pressable>
           </View>
           <WalletStack
@@ -256,7 +261,9 @@ export default function MoneyScreen() {
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md, marginTop: -spacing.sm }}>
           <QuickLink icon="chart.line.uptrend.xyaxis" label="Year" color={colors.indigo} onPress={() => router.push('/money/year')} />
-          <View style={{ flex: 3, marginHorizontal: 12 }} />
+          <QuickLink icon="target" label="Plan" color={colors.green} onPress={() => router.push('/money/plan')} />
+          <QuickLink icon="creditcard.fill" label="Limits" color={colors.purple} onPress={() => router.push('/money/limits')} />
+          <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}>
