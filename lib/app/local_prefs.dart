@@ -267,3 +267,46 @@ final planPresetsProvider =
 /// Weekly challenges you finished (week key → challenge id), on the phone.
 final challengesDoneProvider =
     NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('challenges.done'));
+
+// ---- 2.0: more phone-only extras (no Firestore) ----
+
+/// Small 2.0 settings: nickname, start tab, home sections, recent and
+/// favourite tools (key → value).
+final pocketPrefsProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('pocket'));
+
+/// A label on a plan (plan id → tag key from planTags), on this phone.
+final planTagsProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('plan.tags'));
+
+/// Your private note on a plan (plan id → text), on this phone.
+final planNotesProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('plan.notes'));
+
+/// Plans pinned to the top of My plans (plan id → when pinned, ISO).
+final pinnedPlansProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('plan.pins'));
+
+/// How many times you've been to a place (place id → "count|last ISO date").
+final timesBeenProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('place.times'));
+
+/// Groups you muted (no unread dot) or pinned, and your own emoji for a
+/// group (group id → value), on this phone.
+final mutedGroupsProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('group.muted'));
+final pinnedGroupsProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('group.pins'));
+final groupEmojiProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('group.emoji'));
+
+/// Your own quick chat replies (index → text, up to 6).
+final quickRepliesProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('chat.quick'));
+
+/// Score keeper players (name → score) and your own countdown dates
+/// (name → yyyy-mm-dd).
+final scoresProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('tool.scores'));
+final myDatesProvider =
+    NotifierProvider<StringMapPref, Map<String, String>>(() => StringMapPref('tool.dates'));

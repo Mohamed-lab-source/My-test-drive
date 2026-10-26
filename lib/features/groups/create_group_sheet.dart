@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import '../../app/i18n.dart';
+import '../../app/pocket.dart' show groupNameIdeas;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -84,7 +87,17 @@ class _CreateGroupSheetState extends ConsumerState<_CreateGroupSheet> {
             autofocus: true,
             maxLength: 40,
             textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(hintText: tr('e.g. Friday squad')),
+            decoration: InputDecoration(
+              hintText: tr('e.g. Friday squad'),
+              suffixIcon: IconButton(
+                tooltip: tr('Name ideas'),
+                icon: const Icon(Icons.lightbulb_outline),
+                onPressed: () {
+                  final ideas = groupNameIdeas();
+                  _name.text = ideas[math.Random().nextInt(ideas.length)];
+                },
+              ),
+            ),
           ),
           // A quick emoji at the start of the name, so groups are easy to spot.
           Wrap(

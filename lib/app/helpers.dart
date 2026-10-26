@@ -6,6 +6,7 @@ import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../models/place.dart';
 import 'i18n.dart';
+import 'pocket.dart' show plusCode;
 
 /// "Good evening, Mohamed" — from the phone's clock.
 String greeting(int hour, String? name) {
@@ -274,6 +275,7 @@ String placeInfoText(Place p) => [
       if (p.openingHours != null) '${tr('Opening hours')}: ${p.openingHours}',
       if (p.hasLocation)
         Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '${p.lat},${p.lng}'}).toString(),
+      if (p.hasLocation) '${tr('Plus code')}: ${plusCode(p.lat!, p.lng!)}',
     ].join('\n');
 
 /// When the bundled place data was built (set by the GitHub build).

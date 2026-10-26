@@ -1335,6 +1335,44 @@ class _Composer extends ConsumerStatefulWidget {
 }
 
 class _ComposerState extends ConsumerState<_Composer> {
+  /// Up to 6 replies of your own, kept on this phone.
+  Future<void> _editQuickReplies(BuildContext context) async {
+    final saved = ref.read(quickRepliesProvider).values.toList();
+    final controllers = [for (var i = 0; i < 6; i++) TextEditingController(text: i < saved.length ? saved[i] : '')];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(tr('My quick replies')),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(tr('They show first above the message box. Only on this phone.'),
+                style: Theme.of(c).textTheme.bodySmall),
+            for (final (i, ctl) in controllers.indexed)
+              TextField(
+                controller: ctl,
+                maxLength: 60,
+                decoration: InputDecoration(hintText: trf('Reply {n}', {'n': i + 1}), counterText: ''),
+              ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: Text(tr('Save'))),
+        ],
+      ),
+    );
+    if (ok == true) {
+      final pref = ref.read(quickRepliesProvider.notifier);
+      final texts = [for (final c in controllers) c.text.trim()].where((t) => t.isNotEmpty).toList();
+      for (var i = 0; i < 6; i++) {
+        pref.set('$i', i < texts.length ? texts[i] : null);
+      }
+    }
+    for (final c in controllers) {
+      c.dispose();
+    }
+  }
+
   final _controller = TextEditingController();
   bool _sending = false;
 
@@ -1445,16 +1483,28 @@ class _ComposerState extends ConsumerState<_Composer> {
           ),
           SizedBox(
             height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _quickReplies.length,
-              separatorBuilder: (_, _) => const SizedBox(width: KSpace.xs),
-              itemBuilder: (_, i) => ActionChip(
-                visualDensity: VisualDensity.compact,
-                label: Text(tr(_quickReplies[i])),
-                onPressed: _sending ? null : () => _send(tr(_quickReplies[i])),
-              ),
-            ),
+            child: Builder(builder: (context) {
+              // Your own replies first (saved on the phone), then the usual ones.
+              final mine = ref.watch(quickRepliesProvider).values.toList();
+              final all = [...mine, for (final q in _quickReplies) tr(q)];
+              return ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: all.length + 1,
+                separatorBuilder: (_, _) => const SizedBox(width: KSpace.xs),
+                itemBuilder: (_, i) => i == all.length
+                    ? ActionChip(
+                        visualDensity: VisualDensity.compact,
+                        avatar: const Icon(Icons.edit_outlined, size: 16),
+                        label: Text(tr('My replies')),
+                        onPressed: () => _editQuickReplies(context),
+                      )
+                    : ActionChip(
+                        visualDensity: VisualDensity.compact,
+                        label: Text(all[i]),
+                        onPressed: _sending ? null : () => _send(all[i]),
+                      ),
+              );
+            }),
           ),
           Row(
         children: [

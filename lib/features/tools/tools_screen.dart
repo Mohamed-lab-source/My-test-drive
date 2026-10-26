@@ -11,8 +11,9 @@ import '../../app/extras.dart';
 import '../../app/fun.dart' show makeTeams, conversationStarters, emergencyNumbers, phrasebook, splitByItems;
 import '../../widgets/launchers.dart' show callPhone;
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
-import '../../widgets/common.dart' show showMessage;
-import '../../app/helpers.dart' show billTotal, walkingMinutes, tapFeedback;
+import '../../widgets/common.dart' show showMessage, SectionTitle;
+import 'more_tools.dart';
+import '../../app/helpers.dart' show billTotal, walkingMinutes, tapFeedback, normalizeSearch;
 import '../../app/i18n.dart';
 import '../../app/local_prefs.dart';
 import '../../app/theme.dart';
@@ -25,25 +26,47 @@ import '../../models/plan.dart';
 class ToolsScreen extends StatelessWidget {
   const ToolsScreen({super.key});
 
-  /// Every tool: emoji, short name, and the tool itself (opened in a sheet).
-  static List<(String, String, Widget)> _tools() => [
-        ('🎯', tr('Decide for us'), const _DecideCard()),
-        ('🪙', tr('Flip a coin'), const _CoinCard()),
-        ('🙋', tr('Who pays? Who picks?'), const _WhoCard()),
-        ('🧑‍🤝‍🧑', tr('Make teams'), const _TeamsCard()),
-        ('🎲', tr('Roll the dice'), const _DiceCard()),
-        ('💬', tr('Conversation starters'), const _StarterCard()),
-        ('🧾', tr('Split a bill'), const _SplitCard()),
-        ('🧮', tr('Split by what each ordered'), const _SplitByItemsCard()),
-        ('🚶', tr('How long to walk?'), const _WalkCard()),
-        ('🌤️', tr('Weather this week'), const _WeekCard()),
-        ('🌇', tr('Sunrise and sunset today'), const _SunCard()),
-        ('🕌', tr('Prayer times today'), const _PrayerCard()),
-        ('⏳', tr('Coming up'), const _CountdownCard()),
-        ('🇪🇬', tr('Holidays'), const _HolidaysCard()),
-        ('🗣️', tr('Arabic phrases'), const _PhrasebookCard()),
-        ('🆘', tr('Emergency numbers'), const _EmergencyCard()),
-      ];
+  /// Every tool: section, emoji, short name, and the tool itself (opened in a sheet).
+  static List<(String, String, String, Widget)> _tools() {
+    final play = tr('Decide and play'), money = tr('Money'), time = tr('Time and place'), info = tr('Good to know');
+    return [
+      (play, '🎯', tr('Decide for us'), const _DecideCard()),
+      (play, '🪙', tr('Flip a coin'), const _CoinCard()),
+      (play, '🙋', tr('Who pays? Who picks?'), const _WhoCard()),
+      (play, '🧑‍🤝‍🧑', tr('Make teams'), const _TeamsCard()),
+      (play, '🎲', tr('Roll the dice'), const _DiceCard()),
+      (play, '🔢', tr('Pick a number'), const PickNumberCard()),
+      (play, '🔀', tr('Turn order'), const TurnOrderCard()),
+      (play, '🍾', tr('Spin the bottle'), const BottleCard()),
+      (play, '✊', tr('Rock paper scissors'), const RpsCard()),
+      (play, '🤔', tr('Would you rather…'), const WouldYouRatherCard()),
+      (play, '🎭', tr('Charades'), const CharadesCard()),
+      (play, '💬', tr('Conversation starters'), const _StarterCard()),
+      (play, '🏆', tr('Score keeper'), const ScoreCard()),
+      (play, '⏱️', tr('Game timer'), const GameTimerCard()),
+      (play, '⏲️', tr('Stopwatch'), const StopwatchCard()),
+      (play, '🏷️', tr('Group name ideas'), const GroupNamesCard()),
+      (money, '🧾', tr('Split a bill'), const _SplitCard()),
+      (money, '🧮', tr('Split by what each ordered'), const _SplitByItemsCard()),
+      (money, '💁', tr('Tip calculator'), const TipCard()),
+      (money, '🚗', tr('Car trip split'), const CarSplitCard()),
+      (time, '🚶', tr('How long to walk?'), const _WalkCard()),
+      (time, '👟', tr('Steps for a walk'), const WalkStatsCard()),
+      (time, '🚪', tr('When should I leave?'), const LeaveAtCard()),
+      (time, '🌤️', tr('Weather this week'), const _WeekCard()),
+      (time, '🌇', tr('Sunrise and sunset today'), const _SunCard()),
+      (time, '🕌', tr('Prayer times today'), const _PrayerCard()),
+      (time, '🧭', tr('Qibla direction'), const QiblaCard()),
+      (time, '🌙', tr('Hijri date'), const HijriCard()),
+      (time, '⏳', tr('Coming up'), const _CountdownCard()),
+      (time, '📆', tr('My countdowns'), const MyDatesCard()),
+      (time, '➕', tr('My plus code'), const PlusCodeCard()),
+      (info, '🇪🇬', tr('Holidays'), const _HolidaysCard()),
+      (info, '🗣️', tr('Arabic phrases'), const _PhrasebookCard()),
+      (info, '📏', tr('Unit converter'), const ConvertCard()),
+      (info, '🆘', tr('Emergency numbers'), const _EmergencyCard()),
+    ];
+  }
 
   static void _open(BuildContext context, Widget tool) => showModalBottomSheet<void>(
         context: context,
@@ -63,59 +86,158 @@ class ToolsScreen extends StatelessWidget {
       );
 
   @override
+  Widget build(BuildContext context) => const _ToolsBody();
+}
+
+/// The grid: search, your starred tools, the ones you opened lately, then
+/// every tool by section. Stars and "lately" are kept on this phone.
+class _ToolsBody extends ConsumerStatefulWidget {
+  const _ToolsBody();
+
+  @override
+  ConsumerState<_ToolsBody> createState() => _ToolsBodyState();
+}
+
+class _ToolsBodyState extends ConsumerState<_ToolsBody> {
+  String _query = '';
+
+  List<String> _listPref(String key) =>
+      (ref.watch(pocketPrefsProvider)[key] ?? '').split('|').where((s) => s.isNotEmpty).toList();
+
+  void _opened(String name, Widget tool) {
+    final recent = [name, ..._listPref('tools.recent').where((n) => n != name)].take(4).join('|');
+    final pref = ref.read(pocketPrefsProvider.notifier);
+    pref.set('tools.recent', recent);
+    final key = tool.runtimeType.toString();
+    final seen = _listPref('tools.seen');
+    if (!seen.contains(key)) pref.set('tools.seen', [...seen, key].join('|'));
+  }
+
+  /// Tools added in 2.0 get a small "New" mark until you open them once.
+  static const _newTools = {
+    'PickNumberCard', 'TurnOrderCard', 'BottleCard', 'RpsCard', 'WouldYouRatherCard', 'CharadesCard',
+    'ScoreCard', 'GameTimerCard', 'StopwatchCard', 'GroupNamesCard', 'TipCard', 'CarSplitCard',
+    'WalkStatsCard', 'LeaveAtCard', 'QiblaCard', 'HijriCard', 'MyDatesCard', 'PlusCodeCard', 'ConvertCard',
+  };
+
+  void _toggleStar(String name) {
+    final stars = _listPref('tools.stars');
+    final next = stars.contains(name) ? (stars..remove(name)) : [...stars, name];
+    ref.read(pocketPrefsProvider.notifier).set('tools.stars', next.join('|'));
+    showMessage(context, stars.contains(name) ? tr('Removed from starred tools') : tr('Added to starred tools'));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final tools = _tools();
+    final tools = ToolsScreen._tools();
     final k = context.k;
+    final text = Theme.of(context).textTheme;
+    final stars = _listPref('tools.stars');
+    final recent = _listPref('tools.recent');
+    final seen = _listPref('tools.seen');
+    final q = normalizeSearch(_query);
+    final shown = q.isEmpty ? tools : tools.where((t) => normalizeSearch(t.$3).contains(q)).toList();
+    final sections = <String, List<(String, String, String, Widget)>>{};
+    if (q.isEmpty) {
+      final starred = [for (final n in stars) ...tools.where((t) => t.$3 == n)];
+      final lately = [for (final n in recent) ...tools.where((t) => t.$3 == n && !stars.contains(n))];
+      if (starred.isNotEmpty) sections[tr('Starred')] = starred;
+      if (lately.isNotEmpty) sections[tr('Used lately')] = lately;
+    }
+    for (final t in shown) {
+      (sections[q.isEmpty ? t.$1 : tr('Results')] ??= []).add(t);
+    }
+
+    Widget tile((String, String, String, Widget) t, double w, int i) => FadeSlideIn(
+          index: i < 9 ? i : 0,
+          child: SizedBox(
+            width: w,
+            height: 112,
+            child: Pressable(
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () {
+                    _opened(t.$3, t.$4);
+                    ToolsScreen._open(context, t.$4);
+                  },
+                  onLongPress: () => _toggleStar(t.$3),
+                  child: Stack(children: [
+                    Padding(
+                      padding: const EdgeInsets.all(KSpace.sm),
+                      child: Center(
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: k.surfaceHigh, borderRadius: BorderRadius.circular(14)),
+                            child: Text(t.$2, style: const TextStyle(fontSize: 24)),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(t.$3,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.labelMedium?.copyWith(height: 1.2)),
+                        ]),
+                      ),
+                    ),
+                    if (_newTools.contains(t.$4.runtimeType.toString()) &&
+                        !seen.contains(t.$4.runtimeType.toString()))
+                      PositionedDirectional(
+                        top: 6,
+                        start: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: ShapeDecoration(color: k.signal, shape: const StadiumBorder()),
+                          child: Text(tr('New'),
+                              style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 10, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    if (stars.contains(t.$3))
+                      PositionedDirectional(
+                        top: 6,
+                        end: 6,
+                        child: Icon(Icons.star_rounded, size: 16, color: k.signal),
+                      ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        );
+
     return KScaffold(
       title: Text(tr('Outing tools')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.xl),
         children: [
-          Text(tr('Tap a tool to open it.'), style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: KSpace.md),
-          LayoutBuilder(builder: (context, c) {
-            final perRow = c.maxWidth > 520 ? 4 : 3;
-            final w = (c.maxWidth - (perRow - 1) * KSpace.sm) / perRow;
-            return Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
-              for (final (i, (emoji, name, tool)) in tools.indexed)
-                FadeSlideIn(
-                  index: i < 9 ? i : 0,
-                  child: SizedBox(
-                    width: w,
-                    height: 112,
-                    child: Pressable(
-                      child: Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: () => _open(context, tool),
-                          child: Padding(
-                            padding: const EdgeInsets.all(KSpace.sm),
-                            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              Container(
-                                width: 46,
-                                height: 46,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: k.surfaceHigh,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Text(emoji, style: const TextStyle(fontSize: 24)),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(name,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(height: 1.2)),
-                            ]),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ]);
-          }),
+          TextField(
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: trf('Search {n} tools', {'n': tools.length}),
+              isDense: true,
+            ),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+          const SizedBox(height: KSpace.sm),
+          Text(tr('Tap a tool to open it. Press and hold to star it.'), style: text.bodySmall),
+          if (shown.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: KSpace.lg),
+              child: Text(tr('No tool with that name.'), textAlign: TextAlign.center),
+            ),
+          for (final e in sections.entries) ...[
+            SectionTitle(e.key),
+            LayoutBuilder(builder: (context, c) {
+              final perRow = c.maxWidth > 520 ? 4 : 3;
+              final w = (c.maxWidth - (perRow - 1) * KSpace.sm) / perRow;
+              return Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+                for (final (i, t) in e.value.indexed) tile(t, w, i),
+              ]);
+            }),
+          ],
         ],
       ),
     );
@@ -266,6 +388,7 @@ class _CoinCard extends ConsumerStatefulWidget {
 class _CoinCardState extends ConsumerState<_CoinCard> {
   String? _side;
   int _flips = 0;
+  int _heads = 0;
 
   @override
   Widget build(BuildContext context) => _ToolCard(
@@ -277,7 +400,9 @@ class _CoinCardState extends ConsumerState<_CoinCard> {
               tapFeedback(ref.read(phoneSettingsProvider).haptics);
               setState(() {
                 _flips++;
-                _side = math.Random().nextBool() ? tr('Heads') : tr('Tails');
+                final heads = math.Random().nextBool();
+                if (heads) _heads++;
+                _side = heads ? tr('Heads') : tr('Tails');
               });
             },
             child: Text(tr('Flip')),
@@ -289,6 +414,10 @@ class _CoinCardState extends ConsumerState<_CoinCard> {
               child: Text('$_side!',
                   key: ValueKey(_flips), style: Theme.of(context).textTheme.headlineSmall),
             ),
+          const Spacer(),
+          if (_flips > 1)
+            Text(trf('Heads {h} · Tails {t}', {'h': _heads, 't': _flips - _heads}),
+                style: Theme.of(context).textTheme.bodySmall),
         ]),
       );
 }
@@ -530,10 +659,10 @@ class _DiceCardState extends ConsumerState<_DiceCard> {
           const SizedBox(width: KSpace.sm),
           TextButton(
             onPressed: () => setState(() {
-              _count = _count == 1 ? 2 : 1;
+              _count = _count % 3 + 1;
               _roll = const [];
             }),
-            child: Text(_count == 1 ? tr('1 die') : tr('2 dice')),
+            child: Text(_count == 1 ? tr('1 die') : trf('{n} dice', {'n': _count})),
           ),
           const Spacer(),
           if (_roll.isNotEmpty)

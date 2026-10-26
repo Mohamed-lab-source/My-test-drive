@@ -26,6 +26,7 @@ import '../../widgets/share_card.dart';
 import '../../widgets/launchers.dart';
 import '../groups/create_group_sheet.dart';
 import 'plan_actions.dart' show sendPlanToGroup, showPlanActions;
+import 'plan_glance.dart';
 import 'plan_extras.dart';
 import 'plan_form_screen.dart';
 
@@ -208,6 +209,7 @@ class _PlanBody extends ConsumerWidget {
         ],
         NowBanner(plan: plan),
         LeaveByCard(plan: plan),
+        PlanGlance(plan: plan),
         if (plan.source == 'fallback') ...[
           const SizedBox(height: KSpace.md),
           _InfoBanner(
@@ -1412,6 +1414,8 @@ class _ActionBar extends ConsumerWidget {
                   (Icons.health_and_safety_outlined, tr('🛟 Share with someone I trust'),
                       () => _menu(context, ref, plan, 'safety')),
                   (Icons.content_copy, tr('Copy plan as text'), () => _menu(context, ref, plan, 'copy')),
+                  (Icons.checklist, tr('Copy as a checklist'), () => copyChecklist(context, ref, plan)),
+                  (Icons.remove_done, tr('Untick all stops'), () => resetTicks(ref, plan)),
                   (Icons.event_available, tr('Add to Google Calendar'), () => _menu(context, ref, plan, 'calendar')),
                 ])),
           ]),

@@ -29,3 +29,12 @@ List<OutingPlan> otherPlans(List<OutingPlan> all, DateTime now) {
       if (!upcoming.contains(p.id)) p,
   ];
 }
+
+/// Plans whose day has passed, most recent first.
+List<OutingPlan> pastPlans(List<OutingPlan> all, DateTime now) {
+  final today = _dayOf(now);
+  return [
+    for (final p in all)
+      if (p.request.date != null && _dayOf(p.request.day).isBefore(today)) p,
+  ]..sort((a, b) => b.request.day.compareTo(a.request.day));
+}

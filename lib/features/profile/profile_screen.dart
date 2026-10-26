@@ -1,3 +1,4 @@
+import '../../app/pocket.dart' show exportPhoneData;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/large_title.dart';
@@ -564,13 +565,107 @@ class _AppSettingsCard extends ConsumerWidget {
               ),
             ]);
           }),
-          SwitchListTile(
-            secondary: const IconTile(Icons.explore_outlined),
-            title: Text(tr('Open the app on Explore')),
-            subtitle: Text(tr('Instead of Plan (next time you open it)')),
-            value: s.startOnExplore,
-            onChanged: n.setStartOnExplore,
-          ),
+          Consumer(builder: (context, ref, _) {
+            final pocket = ref.watch(pocketPrefsProvider);
+            final pp = ref.read(pocketPrefsProvider.notifier);
+            final start = pocket['start'] ?? (s.startOnExplore ? 'explore' : 'plan');
+            final nick = pocket['nickname'];
+            return Column(children: [
+              ListTile(
+                leading: const IconTile(Icons.home_outlined),
+                title: Text(tr('Open the app on')),
+                subtitle: Text(tr('Next time you open it')),
+                trailing: DropdownButton<String>(
+                  value: start,
+                  underline: const SizedBox.shrink(),
+                  items: [
+                    DropdownMenuItem(value: 'plan', child: Text(tr('Home'))),
+                    DropdownMenuItem(value: 'plans', child: Text(tr('My plans'))),
+                    DropdownMenuItem(value: 'explore', child: Text(tr('Explore'))),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    pp.set('start', v);
+                    n.setStartOnExplore(v == 'explore');
+                  },
+                ),
+              ),
+              const Divider(indent: 68),
+              ListTile(
+                leading: const IconTile(Icons.waving_hand_outlined),
+                title: Text(tr('Nickname for the greeting')),
+                subtitle: Text(nick ?? tr('Uses your profile name')),
+                trailing: const Icon(Icons.edit_outlined),
+                onTap: () async {
+                  final c = TextEditingController(text: nick ?? '');
+                  final v = await showDialog<String>(
+                    context: context,
+                    builder: (d) => AlertDialog(
+                      title: Text(tr('Nickname')),
+                      content: TextField(
+                        controller: c,
+                        autofocus: true,
+                        maxLength: 20,
+                        decoration: InputDecoration(hintText: tr('Only shown to you, on this phone')),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(d), child: Text(tr('Cancel'))),
+                        FilledButton(onPressed: () => Navigator.pop(d, c.text.trim()), child: Text(tr('Save'))),
+                      ],
+                    ),
+                  );
+                  c.dispose();
+                  if (v != null) pp.set('nickname', v.isEmpty ? null : v);
+                },
+              ),
+              const Divider(indent: 68),
+              ListTile(
+                leading: const IconTile(Icons.cleaning_services_outlined),
+                title: Text(tr('Clear my tool data')),
+                subtitle: Text(tr('Scores, countdowns, quick replies, starred tools')),
+                onTap: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (d) => AlertDialog(
+                      title: Text(tr('Clear my tool data?')),
+                      content: Text(tr('This only removes them from this phone.')),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(d, false), child: Text(tr('Cancel'))),
+                        FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(tr('Clear'))),
+                      ],
+                    ),
+                  );
+                  if (ok != true) return;
+                  final prefs = ref.read(sharedPrefsProvider);
+                  for (final k in ['tool.scores', 'tool.dates', 'chat.quick']) {
+                    await prefs?.remove(k);
+                  }
+                  for (final k in ['tools.stars', 'tools.recent']) {
+                    pp.set(k, null);
+                  }
+                  ref.invalidate(scoresProvider);
+                  ref.invalidate(myDatesProvider);
+                  ref.invalidate(quickRepliesProvider);
+                  if (context.mounted) showMessage(context, tr('Cleared'));
+                },
+              ),
+              const Divider(indent: 68),
+              ListTile(
+                leading: const IconTile(Icons.download_outlined),
+                title: Text(tr('Export my phone data')),
+                subtitle: Text(tr('Your settings, lists and notes kept on this phone, as a file to save')),
+                onTap: () {
+                  final prefs = ref.read(sharedPrefsProvider);
+                  if (prefs == null) return;
+                  final data = {for (final k in prefs.getKeys()) k: prefs.get(k)};
+                  SharePlus.instance.share(ShareParams(
+                    text: exportPhoneData(data),
+                    subject: tr('My Khroga phone data'),
+                  ));
+                },
+              ),
+            ]);
+          }),
         ],
     );
   }

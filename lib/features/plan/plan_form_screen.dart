@@ -2,6 +2,8 @@ import '../fun/place_of_day.dart';
 import '../fun/timeline_screen.dart' show OnThisDayCard;
 import 'plan_extras.dart' show BestTimeCard, WeatherHeadsUp;
 import '../../app/i18n.dart';
+import '../tools/more_tools.dart' show MyDatesStrip;
+import '../../app/pocket.dart' show hijriText;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -316,8 +318,13 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(greeting(DateTime.now().hour, ref.watch(myProfileProvider).value?.displayName),
+                  Text(
+                      greeting(DateTime.now().hour,
+                          _nickname(ref) ?? ref.watch(myProfileProvider).value?.displayName),
                       style: text.titleMedium?.copyWith(color: context.k.onHero.withValues(alpha: 0.9))),
+                  if (ref.watch(pocketPrefsProvider)['home.hijri'] == '1')
+                    Text('${DateFormat('EEEE d MMMM').format(DateTime.now())} · ${hijriText(DateTime.now())}',
+                        style: text.bodySmall?.copyWith(color: context.k.onHero.withValues(alpha: 0.75))),
                   const SizedBox(height: KSpace.xs),
                   Text(tr("Where are we going?"),
                       style: text.headlineLarge?.copyWith(color: context.k.onHero)),
@@ -706,18 +713,17 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           const SizedBox(height: KSpace.md),
           Text('💡 ${tipOfTheDay(DateTime.now())}',
               style: text.bodySmall?.copyWith(color: context.k.inkMuted)),
-          SectionTitle(tr('For you today')),
-          for (final (i, card) in const <Widget>[
-            _TodayStrip(),
-            _IdeaForNow(),
-            WeatherHeadsUp(),
-            BestTimeCard(),
-            OnThisDayCard(),
-            PlaceOfDayCard(),
-            ChallengeCard(),
-            _WhatsNewCard(),
-            _NextOutingCard(),
-            _RecentPlans(),
+          SectionTitle(
+            tr('For you today'),
+            trailing: IconButton(
+              tooltip: tr('Choose what shows here'),
+              icon: const Icon(Icons.tune, size: 20),
+              onPressed: () => _customizeHome(context, ref),
+            ),
+          ),
+          for (final (i, card) in [
+            for (final (key, _, card) in _homeCards())
+              if (!_hiddenHomeCards(ref).contains(key)) card,
           ].indexed)
             FadeSlideIn(index: i + 1, child: card),
         ],
@@ -1032,7 +1038,7 @@ class _WhatsNewCard extends ConsumerWidget {
         child: ListTile(
           leading: const Text('🎁', style: TextStyle(fontSize: 26)),
           title: Text(trf("What's new in {v}", {'v': appVersion})),
-          subtitle: Text(tr('New Cairo, Maadi, Heliopolis, Dokki and more areas')),
+          subtitle: Text(tr('19 new tools, plan search, labels, notes and more')),
           trailing: IconButton(
             tooltip: tr('Hide'),
             icon: const Icon(Icons.close),
@@ -1283,3 +1289,65 @@ class _IdeaForNow extends ConsumerWidget {
     );
   }
 }
+
+/// Your nickname for the greeting (set in Profile), if any.
+String? _nickname(WidgetRef ref) {
+  final n = ref.watch(pocketPrefsProvider)['nickname']?.trim();
+  return n == null || n.isEmpty ? null : n;
+}
+
+/// The "For you today" cards: key, label, card.
+List<(String, String, Widget)> _homeCards() => [
+      ('today', tr("Today's plan"), const _TodayStrip()),
+      ('idea', tr('Idea for right now'), const _IdeaForNow()),
+      ('mydates', tr('My countdowns'), const MyDatesStrip()),
+      ('weather', tr('Weather heads-up'), const WeatherHeadsUp()),
+      ('besttime', tr('Best time today'), const BestTimeCard()),
+      ('onthisday', tr('On this day'), const OnThisDayCard()),
+      ('placeofday', tr('Place of the day'), const PlaceOfDayCard()),
+      ('challenge', tr('Weekly challenge'), const ChallengeCard()),
+      ('whatsnew', tr("What's new"), const _WhatsNewCard()),
+      ('nextouting', tr('Next group outing'), const _NextOutingCard()),
+      ('recent', tr('Recent plans'), const _RecentPlans()),
+    ];
+
+Set<String> _hiddenHomeCards(WidgetRef ref) =>
+    (ref.watch(pocketPrefsProvider)['home.hidden'] ?? '').split('|').where((s) => s.isNotEmpty).toSet();
+
+/// Turn Home cards on or off (saved on this phone).
+Future<void> _customizeHome(BuildContext context, WidgetRef ref) => showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (sheet) => Consumer(builder: (context, ref, _) {
+        final hidden = _hiddenHomeCards(ref);
+        final pref = ref.read(pocketPrefsProvider.notifier);
+        return ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.lg),
+          children: [
+            Text(tr('For you today'), style: Theme.of(context).textTheme.titleLarge),
+            Text(tr('Choose what shows on Home.'), style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: KSpace.sm),
+            for (final (key, label, _) in _homeCards())
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(label),
+                value: !hidden.contains(key),
+                onChanged: (on) {
+                  final next = {...hidden};
+                  on ? next.remove(key) : next.add(key);
+                  pref.set('home.hidden', next.join('|'));
+                },
+              ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(tr('Show the Hijri date')),
+              subtitle: Text(tr('Calculated, can be a day off')),
+              value: ref.watch(pocketPrefsProvider)['home.hijri'] == '1',
+              onChanged: (on) => pref.set('home.hijri', on ? '1' : null),
+            ),
+          ],
+        );
+      }),
+    );

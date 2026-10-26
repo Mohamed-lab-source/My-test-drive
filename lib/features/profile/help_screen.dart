@@ -70,6 +70,21 @@ class HelpScreen extends StatefulWidget {
       'How do I delete my data?',
       'Profile → Delete my account removes everything: plans, reviews, messages and your sign-in. You can export a copy first.',
     ),
+    (
+      '🧰',
+      'What are the outing tools?',
+      'Over 30 small helpers in Profile → Outing tools: decide for us, games, a score keeper, timers, tip and car-trip splits, qibla, Hijri date and more. Press and hold a tool to star it.',
+    ),
+    (
+      '🏷️',
+      'Can I label, pin or add notes to plans?',
+      'Yes. Open a plan\'s menu (or "More" on the plan) for Label, Private note and Pin to the top. These stay on your phone only.',
+    ),
+    (
+      '🔕',
+      'Can I mute or pin a group?',
+      'Press and hold a group in the Groups tab to pin it, mute it (no new-message dot) or give it your own emoji. Only on your phone.',
+    ),
   ];
 
   @override

@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 2.0.0
+
+<en-US>
+• 19 new outing tools: tip and car-trip split, score keeper, timers, charades, qibla, Hijri date and more
+• Search, sort and pin your plans; labels and private notes
+• Plan at a glance: time out, distance, steps and what's after sunset
+• Mute and pin groups, your own quick replies, and a Home you can arrange
+</en-US>
+
+<ar>
+• 19 أداة جديدة: البقشيش ومشوار العربية، عدّاد النقط، تايمرات، بانتومايم، القبلة، التاريخ الهجري وأكتر
+• دوّر في خططك ورتبها وثبّتها، وحط علامات وملحوظات خاصة
+• الخطة في لمحة: هتبقى برّه قد إيه، المسافة، الخطوات وإيه اللي بعد الغروب
+• كتم وتثبيت الجروبات، ردودك السريعة، ورئيسية على مزاجك
+</ar>
+
 ## 1.9.2
 
 <en-US>

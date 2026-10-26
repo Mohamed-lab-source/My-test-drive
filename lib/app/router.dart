@@ -65,7 +65,13 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _StreamListenable(auth.authChanges());
   ref.onDispose(refresh.dispose);
 
-  final start = ref.read(appSettingsProvider).startOnExplore ? '/explore' : '/plan';
+  // Where the app opens: Home, My plans or Explore (phone setting).
+  final start = switch (ref.read(pocketPrefsProvider)['start']) {
+    'plans' => '/plans',
+    'explore' => '/explore',
+    'plan' => '/plan',
+    _ => ref.read(appSettingsProvider).startOnExplore ? '/explore' : '/plan',
+  };
   return GoRouter(
     initialLocation: start,
     refreshListenable: refresh,
@@ -237,6 +243,15 @@ class _Shell extends ConsumerWidget {
         .length;
     final share = ref.watch(liveShareProvider);
     final track = ref.watch(trackProvider);
+    // Groups with new messages (not muted). Uses the group list the app
+    // already listens to, so no extra reads.
+    final opened = ref.watch(groupOpenedProvider);
+    final muted = ref.watch(mutedGroupsProvider);
+    final unreadGroups = (ref.watch(myGroupsProvider).value ?? const []).where((g) {
+      if (muted.containsKey(g.id) || g.lastMessageAt == null || g.lastMessage == null) return false;
+      final seen = DateTime.tryParse(opened[g.id] ?? '');
+      return seen == null || g.lastMessageAt!.isAfter(seen);
+    }).length;
     return Scaffold(
       body: shell,
       bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -263,7 +278,7 @@ class _Shell extends ConsumerWidget {
           (Icons.auto_awesome_outlined, Icons.auto_awesome, tr('Home'), 0),
           (Icons.event_note_outlined, Icons.event_note, tr('My plans'), 0),
           (Icons.explore_outlined, Icons.explore, tr('Explore'), 0),
-          (Icons.forum_outlined, Icons.forum, tr('Groups'), 0),
+          (Icons.forum_outlined, Icons.forum, tr('Groups'), unreadGroups),
           (Icons.people_outline, Icons.people, tr('Friends'), requests),
         ],
       ),

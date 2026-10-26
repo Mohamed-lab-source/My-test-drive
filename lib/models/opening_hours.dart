@@ -153,6 +153,15 @@ class OpeningHours {
     return null;
   }
 
+  /// Minutes until it opens later today, when closed now and the hours say;
+  /// else null (open, closed all day, or hours unknown).
+  int? minutesUntilOpen(DateTime now) {
+    if (alwaysOpen || isOpenAt(now) != false) return null;
+    final minute = now.hour * 60 + now.minute;
+    final starts = [for (final (s, _) in _week[now.weekday] ?? const <(int, int)>[]) if (s > minute) s]..sort();
+    return starts.isEmpty ? null : starts.first - minute;
+  }
+
   /// One line per weekday for a table, e.g. ("Mon", "10:00–23:00").
   /// Null when the hours don't cover the whole week.
   List<(String, String)>? weekTable() {

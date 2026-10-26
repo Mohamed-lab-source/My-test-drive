@@ -11,6 +11,8 @@ import '../../data/providers.dart';
 import '../../models/plan.dart';
 import '../../widgets/common.dart';
 import 'plan_form_screen.dart' show runPlanGeneration;
+import 'plan_glance.dart';
+import '../../app/local_prefs.dart' show pinnedPlansProvider;
 
 /// Everything you can do with a plan, in one tidy sheet (from "My plans",
 /// or "More" on a plan).
@@ -47,6 +49,11 @@ Future<void> showPlanActions(BuildContext context, WidgetRef ref, OutingPlan pla
             if (!fromPlan) row(Icons.open_in_new, tr('Open'), () => then(() async => context.push('/plan/${plan.id}'))),
             row(Icons.event_outlined, tr('Change the day'), () => then(() => changePlanDay(context, ref, plan))),
             row(Icons.edit_outlined, tr('Rename'), () => then(() => renamePlan(context, ref, plan))),
+            row(Icons.label_outline, tr('Label'), () => then(() => choosePlanTag(context, ref, plan))),
+            row(Icons.sticky_note_2_outlined, tr('Private note'), () => then(() => editPlanNote(context, ref, plan))),
+            row(ref.read(pinnedPlansProvider).containsKey(plan.id) ? Icons.push_pin : Icons.push_pin_outlined,
+                ref.read(pinnedPlansProvider).containsKey(plan.id) ? tr('Unpin') : tr('Pin to the top'),
+                () => then(() async => togglePinPlan(context, ref, plan))),
             row(plan.saved ? Icons.bookmark_remove_outlined : Icons.bookmark_add_outlined,
                 plan.saved ? tr('Remove from saved') : tr('Save'), () => then(() async {
               final uid = ref.read(uidProvider);

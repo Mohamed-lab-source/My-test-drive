@@ -362,6 +362,24 @@ How the code enforces it (keep it this way):
   `showPlanActions`); `GradientButton` gives a light haptic when "Vibrate on
   taps" is on.
 
+- 2.0 pocket extras (no Firestore at all; `lib/app/pocket.dart` pure,
+  tested in test/pocket_test.dart; prefs at the end of local_prefs.dart):
+  19 new tools in `features/tools/more_tools.dart` (tip, car split, score
+  keeper, game timer, stopwatch, RPS, would you rather, charades, pick a
+  number, turn order, spin the bottle, group names, qibla = great-circle
+  bearing, Hijri = arithmetic calendar shown as approximate, steps for a
+  walk, plus code = OLC encode, my countdowns, unit converter, when to
+  leave). Tools grid has sections, search, stars and "used lately"
+  (`pocketPrefsProvider` keys tools.*), "New" marks until opened. Plans:
+  `PlanGlance` (plan_glance.dart: span, km + rough steps/kcal, kinds,
+  after sunset, ticked progress), labels `planTagsProvider`, private notes
+  `planNotesProvider`, pins `pinnedPlansProvider`, copy as checklist; My
+  plans has search/sort/Past tab/label filter. Place page: plus code, opens
+  in, times been (`timesBeenProvider`). Groups: mute/pin/emoji (phone),
+  custom quick replies, unread badge on the tab (from the group list the
+  app already listens to). Home cards can be hidden (`home.hidden`),
+  Hijri line, nickname, start tab (`start`), export phone data.
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

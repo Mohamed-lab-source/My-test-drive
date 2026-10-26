@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart' show DateFormat;
+import '../../app/pocket.dart' show plusCode;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -181,6 +183,8 @@ class _Details extends ConsumerWidget {
                   icon: Icons.my_location,
                   text: '${place.lat!.toStringAsFixed(5)}, ${place.lng!.toStringAsFixed(5)}',
                   what: 'Coordinates'),
+            if (place.hasLocation)
+              _CopyRow(icon: Icons.add_location_alt_outlined, text: plusCode(place.lat!, place.lng!), what: 'Plus code'),
           ]),
         ],
         if (place.hasLocation) ...[
@@ -225,6 +229,10 @@ class _Details extends ConsumerWidget {
             runSpacing: KSpace.sm,
             children: [for (final l in facts.labels) Pill(l)],
           ),
+        ],
+        if (place.hours?.minutesUntilOpen(DateTime.now()) case final m? when m <= 120) ...[
+          const SizedBox(height: KSpace.sm),
+          Pill(m < 60 ? trf('⏰ Opens in {n} min', {'n': m}) : trf('⏰ Opens in {t}', {'t': durationText(m)})),
         ],
         if (place.hours?.minutesUntilClose(DateTime.now()) case final m? when m <= 60) ...[
           const SizedBox(height: KSpace.sm),
@@ -832,6 +840,8 @@ class _VisitedAndNote extends ConsumerWidget {
             },
           ),
           const Divider(),
+          _TimesBeen(placeId: place.id),
+          const Divider(),
           ListTile(
             leading: const Text('📝', style: TextStyle(fontSize: 22)),
             title: Text(note == null ? tr('Add a private note') : tr('Your note')),
@@ -1228,6 +1238,9 @@ class _CheckInCard extends ConsumerWidget {
                               friendUids: ref.read(friendUidsProvider),
                             );
                         await ref.read(personalRepositoryProvider).setVisited(uid, place.id, true);
+                        // Count the visit on this phone too.
+                        final times = int.tryParse((ref.read(timesBeenProvider)[place.id] ?? '').split('|').first) ?? 0;
+                        ref.read(timesBeenProvider.notifier).set(place.id, '${times + 1}|${DateTime.now().toIso8601String()}');
                         tapFeedback(ref.read(phoneSettingsProvider).haptics);
                         if (context.mounted) showMessage(context, tr('Checked in. Have fun!'));
                       } catch (e) {
@@ -1399,6 +1412,46 @@ class _WikiCardState extends ConsumerState<_WikiCard> {
           ]),
         ),
       ),
+    );
+  }
+}
+
+/// How many times you've been here, counted on this phone only.
+class _TimesBeen extends ConsumerWidget {
+  const _TimesBeen({required this.placeId});
+
+  final String placeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final raw = ref.watch(timesBeenProvider)[placeId];
+    final parts = (raw ?? '').split('|');
+    final count = int.tryParse(parts.first) ?? 0;
+    final last = parts.length > 1 ? DateTime.tryParse(parts[1]) : null;
+    final pref = ref.read(timesBeenProvider.notifier);
+    return ListTile(
+      leading: const Text('🔁', style: TextStyle(fontSize: 22)),
+      title: Text(count == 0
+          ? tr('Times I\'ve been')
+          : count == 1
+              ? tr('Been here once')
+              : trf('Been here {n} times', {'n': count})),
+      subtitle: Text(last == null
+          ? tr('Only counted on this phone')
+          : trf('Last time: {day}', {'day': DateFormat('d MMM y').format(last)})),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (count > 0)
+          IconButton(
+            tooltip: tr('Minus one'),
+            icon: const Icon(Icons.remove_circle_outline),
+            onPressed: () => pref.set(placeId, count <= 1 ? null : '${count - 1}|${parts.length > 1 ? parts[1] : ''}'),
+          ),
+        IconButton(
+          tooltip: tr('Plus one'),
+          icon: const Icon(Icons.add_circle_outline),
+          onPressed: () => pref.set(placeId, '${count + 1}|${DateTime.now().toIso8601String()}'),
+        ),
+      ]),
     );
   }
 }

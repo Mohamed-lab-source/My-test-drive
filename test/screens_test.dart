@@ -74,7 +74,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('My plans'), findsOneWidget);
+    expect(find.text('19 new tools'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -87,7 +87,12 @@ void main() {
     await tester.pumpWidget(_app(const ToolsScreen()));
     await tester.pump();
     expect(find.text('Decide for us'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'holi');
+    await tester.pump();
     expect(find.text('Holidays'), findsOneWidget);
+    expect(find.text('Decide for us'), findsNothing);
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
     await tester.tap(find.text('Flip a coin'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Flip'));
@@ -142,12 +147,45 @@ void main() {
   testWidgets('new party tools work', (tester) async {
     await tester.pumpWidget(_app(const ToolsScreen()));
     await tester.pump();
+    await tester.enterText(find.byType(TextField), 'conversation');
+    await tester.pump();
     await tester.tap(find.text('Conversation starters'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Give us a question'));
     await tester.pump();
     expect(find.text('Another one'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('2.0 tools open and work on a small phone', (tester) async {
+    for (final (name, button) in [
+      ('Would you rather…', 'Next question'),
+      ('Tip calculator', null),
+      ('Rock paper scissors', null),
+      ('Charades', 'Get a word'),
+      ('Pick a number', 'Pick'),
+      ('Hijri date', null),
+      ('Unit converter', null),
+      ('When should I leave?', null),
+      ('Steps for a walk', null),
+      ('Group name ideas', 'Another one'),
+      ('Score keeper', null),
+      ('Turn order', 'Shuffle'),
+    ]) {
+      await tester.pumpWidget(KeyedSubtree(key: UniqueKey(), child: _app(const ToolsScreen())));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField).first, name);
+      await tester.pumpAndSettle();
+      // (find.text also matches the search box, so tap the tile itself.)
+      await tester.tap(find.descendant(of: find.byType(Card), matching: find.text(name)).first);
+      await tester.pumpAndSettle();
+      if (button != null) {
+        expect(find.text(button), findsWidgets, reason: '$name: $button');
+        await tester.tap(find.text(button).last);
+        await tester.pump();
+      }
+      expect(tester.takeException(), isNull, reason: name);
+    }
   });
 
   testWidgets('help screen fits and searches', (tester) async {

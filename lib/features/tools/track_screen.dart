@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/i18n.dart';
+import '../../app/pocket.dart' show roughSteps, roughKcal;
 import '../../app/live.dart';
 import '../../app/theme.dart';
 import '../../data/live_share.dart';
@@ -174,6 +175,12 @@ class _LiveStats extends StatelessWidget {
             stat(trackDuration(elapsed), tr('time')),
             stat(averageKmh(track.points)?.toStringAsFixed(1) ?? '–', tr('km/h')),
           ]),
+          const SizedBox(height: KSpace.sm),
+          Text(
+            trf('About {steps} steps and {kcal} kcal so far (rough)',
+                {'steps': roughSteps(trailKm(track.points)), 'kcal': roughKcal(trailKm(track.points))}),
+            style: TextStyle(color: k.onHero.withValues(alpha: 0.85), fontSize: 13),
+          ),
         ]);
       },
     );

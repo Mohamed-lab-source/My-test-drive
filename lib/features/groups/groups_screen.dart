@@ -94,6 +94,12 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                       g.scheduledAt != null && g.scheduledAt!.isAfter(now) ? g.scheduledAt! : far;
                   shown.sort((a, b) => key(a).compareTo(key(b)));
                 }
+                // Your pinned groups (on this phone) stay on top.
+                final pins = ref.watch(pinnedGroupsProvider);
+                final pinned = [for (final g in shown) if (pins.containsKey(g.id)) g];
+                shown
+                  ..removeWhere((g) => pins.containsKey(g.id))
+                  ..insertAll(0, pinned);
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 100),
                   itemCount: shown.length + 1,
@@ -120,7 +126,11 @@ class _GroupTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final opened = DateTime.tryParse(ref.watch(groupOpenedProvider)[group.id] ?? '');
-    final unread = group.lastMessage != null &&
+    final muted = ref.watch(mutedGroupsProvider).containsKey(group.id);
+    final pinned = ref.watch(pinnedGroupsProvider).containsKey(group.id);
+    final emoji = ref.watch(groupEmojiProvider)[group.id];
+    final unread = !muted &&
+        group.lastMessage != null &&
         group.lastMessageAt != null &&
         (opened == null || group.lastMessageAt!.isAfter(opened));
     final going = group.rsvp.values.where((r) => r == Rsvp.going).length;
@@ -138,13 +148,28 @@ class _GroupTile extends ConsumerWidget {
         leading: CircleAvatar(
           backgroundColor: context.k.accentSoft,
           child: Text(
-            group.name.isEmpty ? '?' : group.name.characters.first.toUpperCase(),
-            style: TextStyle(
-                color: context.k.accent, fontWeight: FontWeight.w700),
+            emoji ?? (group.name.isEmpty ? '?' : group.name.characters.first.toUpperCase()),
+            style: emoji != null
+                ? const TextStyle(fontSize: 20)
+                : TextStyle(color: context.k.accent, fontWeight: FontWeight.w700),
           ),
         ),
-        title: Text(group.name,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Row(children: [
+          Flexible(
+            child: Text(group.name,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          if (pinned)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 4),
+              child: Icon(Icons.push_pin, size: 15, color: context.k.signal),
+            ),
+          if (muted)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 4),
+              child: Icon(Icons.notifications_off_outlined, size: 15, color: context.k.inkMuted),
+            ),
+        ]),
         subtitleTextStyle: unread
             ? Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)
             : null,
@@ -161,9 +186,67 @@ class _GroupTile extends ConsumerWidget {
               )
             : const Icon(Icons.chevron_right),
         onTap: () => context.push('/group/${group.id}'),
+        onLongPress: () => _groupMenu(context, ref, group),
       ),
     ));
   }
+}
+
+/// Pin, mute or give a group your own emoji. All on this phone only.
+Future<void> _groupMenu(BuildContext context, WidgetRef ref, Group group) async {
+  final muted = ref.read(mutedGroupsProvider).containsKey(group.id);
+  final pinned = ref.read(pinnedGroupsProvider).containsKey(group.id);
+  const emojis = ['🎉', '☕', '🍔', '🏖️', '🎬', '⚽', '💼', '👨‍👩‍👧', '❤️', '🎮', '🌙', '🧳'];
+  await showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    builder: (sheet) => Padding(
+      padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.lg),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(group.name, style: Theme.of(sheet).textTheme.titleLarge),
+        const SizedBox(height: KSpace.sm),
+        MenuGroup(children: [
+          ListTile(
+            leading: Icon(pinned ? Icons.push_pin : Icons.push_pin_outlined),
+            title: Text(pinned ? tr('Unpin') : tr('Pin to the top')),
+            onTap: () {
+              ref.read(pinnedGroupsProvider.notifier).set(group.id, pinned ? null : '1');
+              Navigator.pop(sheet);
+            },
+          ),
+          ListTile(
+            leading: Icon(muted ? Icons.notifications_active_outlined : Icons.notifications_off_outlined),
+            title: Text(muted ? tr('Unmute') : tr('Mute (no new-message dot)')),
+            onTap: () {
+              ref.read(mutedGroupsProvider.notifier).set(group.id, muted ? null : '1');
+              Navigator.pop(sheet);
+            },
+          ),
+        ]),
+        const SizedBox(height: KSpace.md),
+        Text(tr('Your emoji for this group (only you see it)'), style: Theme.of(sheet).textTheme.bodySmall),
+        const SizedBox(height: KSpace.xs),
+        Wrap(spacing: KSpace.xs, runSpacing: KSpace.xs, children: [
+          for (final e in emojis)
+            ActionChip(
+              label: Text(e, style: const TextStyle(fontSize: 20)),
+              onPressed: () {
+                ref.read(groupEmojiProvider.notifier).set(group.id, e);
+                Navigator.pop(sheet);
+              },
+            ),
+          if (ref.read(groupEmojiProvider).containsKey(group.id))
+            ActionChip(
+              label: Text(tr('No emoji')),
+              onPressed: () {
+                ref.read(groupEmojiProvider.notifier).set(group.id, null);
+                Navigator.pop(sheet);
+              },
+            ),
+        ]),
+      ]),
+    ),
+  );
 }
 
 void _showJoinSheet(BuildContext context) {

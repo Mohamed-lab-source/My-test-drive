@@ -24,5 +24,6 @@ void main() {
     expect(upcomingPlans(all, now).map((p) => p.id), ['today-early', 'today-late', 'later']);
     expect(todaysPlans(all, now).map((p) => p.id), ['today-early', 'today-late']);
     expect(otherPlans(all, now).map((p) => p.id), ['past', 'any']);
+    expect(pastPlans([...all, _plan('older', '2026-10-01')], now).map((p) => p.id), ['past', 'older']);
   });
 }

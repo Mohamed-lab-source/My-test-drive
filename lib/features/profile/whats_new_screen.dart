@@ -10,6 +10,12 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🧰', '19 new tools', 'Tip calculator, car trip split, score keeper, game timer, stopwatch, charades, would you rather, rock paper scissors, spin the bottle, qibla, Hijri date, plus code, your own countdowns and more. Search them and star your favourites.'),
+    ('🔍', 'Find any plan', 'Search My plans, sort them, see past outings, and pin the ones you care about to the top.'),
+    ('🏷️', 'Labels and notes', 'Give a plan a label (date, birthday, family…) and a private note. Only on your phone.'),
+    ('👀', 'Plan at a glance', 'How long you\'re out, the distance with rough steps, the kinds of stops, what\'s after sunset and how many stops are done.'),
+    ('🔕', 'Mute and pin groups', 'Press and hold a group to pin it, mute it or give it your own emoji. A dot on the Groups tab shows new messages.'),
+    ('🏠', 'Your Home, your way', 'Choose which cards show on Home, add the Hijri date, set a nickname and pick the tab the app opens on.'),
     ('🧰', 'Tools at a glance', 'All outing tools as tiles; tap one to open just that tool.'),
     ('👆', 'Swipe your plans', 'In My plans, swipe a plan to change its day or delete it.'),
     ('✨', 'Smoother everywhere', 'Tabs fade softly, one tidy menu on each plan, and shortcuts in Profile.'),
