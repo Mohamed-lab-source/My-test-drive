@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Platform, Linking, Alert } from 'react-native';
 import { Icon } from '../../../src/ui/Icon';
+import { meetingCountdown, meetingLink } from '../../../src/utils/meetingInfo';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
@@ -60,12 +61,25 @@ export default function MeetingsScreen() {
                     <Text style={[typography.headline, { color: colors.label }]}>{m.title}</Text>
                     <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
                       {formatDateLong(m.start_at)} · {formatTime(m.start_at)}
+                      {meetingCountdown(m.start_at, m.end_at) ? (
+                        <Text style={{ color: meetingCountdown(m.start_at, m.end_at) === 'Now' ? colors.green : colors.orange, fontWeight: '700' }}>
+                          {'  '}
+                          {meetingCountdown(m.start_at, m.end_at)}
+                        </Text>
+                      ) : null}
                     </Text>
                     {m.location ? (
                       <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>{m.location}</Text>
                     ) : null}
                   </View>
-                  {m.location ? (
+                  {meetingLink(m) && tab === 0 ? (
+                    <Pressable
+                      onPress={() => Linking.openURL(meetingLink(m)!).catch(() => {})}
+                      style={{ backgroundColor: colors.green, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, marginLeft: spacing.sm }}
+                    >
+                      <Text style={[typography.subhead, { color: '#fff', fontWeight: '700' }]}>Join</Text>
+                    </Pressable>
+                  ) : m.location ? (
                     <Pressable onPress={() => openLocation(m.location!)} hitSlop={10} style={{ marginLeft: spacing.sm }}>
                       <Icon name={/^https?:\/\//i.test(m.location) ? 'link' : 'map.fill'} size={22} color={colors.blue} />
                     </Pressable>

@@ -12,6 +12,9 @@ import { MiniBars, lastDays } from '../../../src/ui/MiniBars';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { useSettingsStore } from '../../../src/store/settingsStore';
+import { useLocalSearchParams } from 'expo-router';
+import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
+import { Button } from '../../../src/ui/Button';
 
 const DAYS = 7;
 const CHART_HEIGHT = 100;
@@ -24,6 +27,16 @@ export default function FocusStatsScreen() {
   const projects = useProductivityStore((s) => s.projects);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
   const { focusGoal, setFocusGoal } = useSettingsStore();
+  // Opened from a task's "Focus on this": start the timer on that task.
+  const { task: taskParam } = useLocalSearchParams<{ task?: string }>();
+  const [timerTask, setTimerTask] = useState<string | null>(null);
+  const [timerOpen, setTimerOpen] = useState(false);
+  useEffect(() => {
+    if (taskParam) {
+      setTimerTask(taskParam);
+      setTimerOpen(true);
+    }
+  }, [taskParam]);
 
   useEffect(() => {
     const since = new Date();
@@ -105,6 +118,14 @@ export default function FocusStatsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Focus" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <Button
+          title="Start a focus session"
+          onPress={() => {
+            setTimerTask(null);
+            setTimerOpen(true);
+          }}
+          style={{ marginBottom: spacing.md }}
+        />
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={[typography.headline, { color: colors.label }]}>Daily focus goal</Text>
           {focusGoal > 0 ? (
@@ -213,6 +234,7 @@ export default function FocusStatsScreen() {
           )}
         </Card>
       </ScrollView>
+      <FocusTimer task={tasks.find((t) => t.id === timerTask) ?? null} visible={timerOpen} onClose={() => setTimerOpen(false)} />
     </View>
   );
 }

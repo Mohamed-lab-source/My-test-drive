@@ -7,6 +7,7 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChipSelector } from '../../ui/ChipSelector';
 import { DEADLINE_OPTIONS, ESTIMATE_OPTIONS, deadlineFromOption, deadlineLabel } from '../../utils/estimate';
 import { Button } from '../../ui/Button';
+import { ProgressBar } from '../../ui/ProgressBar';
 import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useProductivityStore } from '../../store/productivityStore';
@@ -153,9 +154,50 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
   return (
     <Sheet visible={visible} onClose={onClose}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
-        <Text style={[typography.title2, { color: colors.label, marginBottom: spacing.md }]}>Task</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+          <Text style={[typography.title2, { color: colors.label, flex: 1 }]}>Task</Text>
+          <Pressable
+            onPress={async () => {
+              const done = task.status !== 'done';
+              if (done) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              await useProductivityStore.getState().toggleTaskDone(task.id, done);
+              onClose();
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 16,
+              backgroundColor: task.status === 'done' ? colors.tertiaryFill : colors.green,
+            }}
+          >
+            <Icon name={task.status === 'done' ? 'arrow.clockwise' : 'checkmark.circle.fill'} size={16} color={task.status === 'done' ? colors.label : '#fff'} />
+            <Text style={[typography.subhead, { color: task.status === 'done' ? colors.label : '#fff', fontWeight: '600', marginLeft: 5 }]}>
+              {task.status === 'done' ? 'Not done' : 'Done'}
+            </Text>
+          </Pressable>
+        </View>
         <TextField label="Title" value={title} onChangeText={setTitle} />
         <TextField label="Notes" placeholder="Optional details" value={notes} onChangeText={setNotes} multiline />
+        {notes.split('\n').filter((l) => l.trim()).length >= 2 ? (
+          <Pressable
+            onPress={async () => {
+              // Each line of the notes becomes a checklist step.
+              const lines = notes
+                .split('\n')
+                .map((l) => l.replace(/^\s*([-*•]|\[ ?\]|\d+[.)])\s*/, '').trim())
+                .filter(Boolean);
+              for (const l of lines) await repo.createSubtask(task.id, l);
+              setNotes('');
+              await refreshSubtasks();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }}
+            style={{ marginTop: -spacing.sm, marginBottom: spacing.md }}
+          >
+            <Text style={[typography.footnote, { color: colors.blue, fontWeight: '600' }]}>Turn these note lines into checklist steps</Text>
+          </Pressable>
+        ) : null}
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Schedule · {scheduleLabel(task)}
@@ -210,11 +252,43 @@ export function TaskDetailSheet({ task, visible, onClose, onStartFocus }: TaskDe
         </Text>
         <View style={{ marginBottom: spacing.md }}>
           <ChipSelector options={REPEAT_OPTIONS} selectedId={repeat} onSelect={(id) => setRepeat(id as RecurringFrequency | 'none')} />
+          {repeat !== 'none' ? (
+            <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 6 }]}>
+              When you finish it, it comes back{' '}
+              {(() => {
+                const base = task.scheduled_date ? new Date(task.scheduled_date + 'T12:00:00') : new Date();
+                const next = new Date(base);
+                if (repeat === 'daily') next.setDate(next.getDate() + 1);
+                else if (repeat === 'weekly') next.setDate(next.getDate() + 7);
+                else if (repeat === 'monthly') next.setMonth(next.getMonth() + 1);
+                else next.setFullYear(next.getFullYear() + 1);
+                return next.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+              })()}
+            </Text>
+          ) : null}
         </View>
 
-        <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
-          Checklist
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, textTransform: 'uppercase', flex: 1 }]}>
+            Checklist{subtasks.length ? ` · ${subtasks.filter((x) => x.is_done).length}/${subtasks.length}` : ''}
+          </Text>
+          {subtasks.some((x) => !x.is_done) && subtasks.length > 1 ? (
+            <Pressable
+              onPress={async () => {
+                for (const x of subtasks.filter((y) => !y.is_done)) await repo.toggleSubtaskDone(x.id, true);
+                await refreshSubtasks();
+              }}
+              hitSlop={8}
+            >
+              <Text style={[typography.footnote, { color: colors.blue, fontWeight: '600' }]}>Tick all</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {subtasks.length ? (
+          <View style={{ marginBottom: spacing.xs }}>
+            <ProgressBar progress={subtasks.filter((x) => x.is_done).length / subtasks.length} color={colors.green} height={5} />
+          </View>
+        ) : null}
         <View style={{ marginBottom: spacing.md }}>
           {subtasks.map((sub) => (
             <View key={sub.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>

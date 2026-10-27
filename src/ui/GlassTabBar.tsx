@@ -13,8 +13,8 @@ export const TAB_BAR_HEIGHT = 64;
 // Space to leave at the bottom of a screen so nothing hides under the bar.
 export const tabBarClearance = (bottomInset: number) => TAB_BAR_HEIGHT + Math.max(bottomInset, 12) + 16;
 
-function TabButton({ focused, label, icon, color, onPress, onLongPress }: { focused: boolean; label: string; icon: React.ReactNode; color: string; onPress: () => void; onLongPress: () => void }) {
-  const { typography } = useTheme();
+function TabButton({ focused, label, icon, color, badge, onPress, onLongPress }: { focused: boolean; label: string; icon: React.ReactNode; color: string; badge?: string | number; onPress: () => void; onLongPress: () => void }) {
+  const { typography, colors } = useTheme();
   const scale = useSharedValue(1);
   useEffect(() => {
     if (focused) scale.value = withSequence(withTiming(0.86, { duration: 90 }), withSpring(1, { damping: 10, stiffness: 280 }));
@@ -23,7 +23,27 @@ function TabButton({ focused, label, icon, color, onPress, onLongPress }: { focu
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={styles.tab} accessibilityRole="tab" accessibilityState={{ selected: focused }}>
       <Animated.View style={[{ alignItems: 'center' }, style]}>
-        {icon}
+        <View>
+          {icon}
+          {badge ? (
+            <View
+              style={{
+                position: 'absolute',
+                top: -4,
+                right: -10,
+                minWidth: 17,
+                height: 17,
+                borderRadius: 9,
+                paddingHorizontal: 4,
+                backgroundColor: colors.red,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 10.5, fontWeight: '700' }}>{badge}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={[typography.caption2, { color, fontSize: 10.5, fontWeight: focused ? '700' : '500', marginTop: 2 }]} numberOfLines={1}>
           {label}
         </Text>
@@ -87,6 +107,7 @@ export function GlassTabBar({ state, descriptors, navigation, accessory }: TabBa
               label={label}
               color={color}
               icon={options.tabBarIcon?.({ focused, color, size: 24 })}
+              badge={options.tabBarBadge ?? undefined}
               onPress={() => {
                 const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                 if (!focused && !event.defaultPrevented) {

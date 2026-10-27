@@ -392,9 +392,14 @@ export default function HomeScreen() {
 <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <Text style={[typography.title3, { color: colors.label }]}>Today</Text>
-            <Pressable onPress={() => router.push('/tasks')}>
-              <Text style={[typography.subhead, { color: colors.blue }]}>See all</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row' }}>
+              <Pressable onPress={() => setTaskVisible(true)} hitSlop={8} style={{ marginRight: spacing.md }}>
+                <Text style={[typography.subhead, { color: colors.blue }]}>+ Add</Text>
+              </Pressable>
+              <Pressable onPress={() => router.push('/tasks')}>
+                <Text style={[typography.subhead, { color: colors.blue }]}>See all</Text>
+              </Pressable>
+            </View>
           </View>
           {todayTasks.length === 0 && todayMeetings.length === 0 ? (
             <Card>

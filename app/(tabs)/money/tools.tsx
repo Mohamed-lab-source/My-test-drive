@@ -18,7 +18,11 @@ import {
   TimeToSaveCalculator,
   TipSplitCalculator,
   UnitPriceCalculator,
+  CostPerUseCalculator,
+  CardPayoffCalculator,
+  FiftyThirtyTwentyCalculator,
 } from '../../../src/features/money/Calculators';
+import { useSpendingPlan } from '../../../src/features/money/plan';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 
 export default function ToolsScreen() {
@@ -41,6 +45,7 @@ export default function ToolsScreen() {
   const a = Number(amount) || 0;
   const converted = rateFor ? (direction === 'toBase' ? a * rateFor : a / rateFor) : null;
 
+  const toolsPlan = useSpendingPlan();
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Money tools" />
@@ -79,6 +84,9 @@ export default function ToolsScreen() {
           <AmortisationTable principal={p} annualRate={Number(rate) || 0} months={n} payment={monthly} currency={currency} />
         </Card>
 
+        <CardPayoffCalculator currency={currency} />
+        <FiftyThirtyTwentyCalculator currency={currency} income={toolsPlan?.income ?? 0} />
+        <CostPerUseCalculator currency={currency} />
         <VatCalculator currency={currency} />
         <SalaryCalculator currency={currency} />
         <TipSplitCalculator currency={currency} />

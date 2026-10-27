@@ -16,6 +16,10 @@ export interface ParsedTask {
   repeat: 'daily' | 'weekly' | 'monthly' | null;
   // "by friday" / "by tomorrow" / "due next week": a deadline (YYYY-MM-DD).
   deadline: string | null;
+  // "~30m" / "~1h" / "~1.5h": how long it should take, in minutes.
+  estimate: number | null;
+  // "@Ahmed": who you're waiting on.
+  waitingOn: string | null;
 }
 
 const PRIORITY_TOKENS: Record<string, QuickPriority> = {
@@ -64,6 +68,8 @@ export function parseQuickTask(
   let remindTime: string | null = null;
   let repeat: ParsedTask['repeat'] = null;
   let deadline: string | null = null;
+  let estimate: number | null = null;
+  let waitingOn: string | null = null;
 
   // A day word, as used after "by"/"due": today, tomorrow, a weekday, "next week".
   const dayFrom = (w: string | undefined, w2: string | undefined): { key: string; used: number } | null => {
@@ -80,6 +86,62 @@ export function parseQuickTask(
     const raw = words[i];
     const word = raw.toLowerCase();
     const next = words[i + 1]?.toLowerCase();
+
+    // "~30m", "~1h", "~1.5h", "~90"
+    const est = word.match(/^~(\d+(?:\.\d+)?)(m|min|h|hr)?$/);
+    if (est) {
+      const n = Number(est[1]);
+      estimate = Math.round(est[2] === 'h' || est[2] === 'hr' ? n * 60 : n);
+      continue;
+    }
+    if (word.startsWith('@') && word.length > 1) {
+      waitingOn = raw.slice(1).replace(/_/g, ' ');
+      continue;
+    }
+    // "in 3 days", "in 2 weeks"
+    if (word === 'in' && next && /^\d+$/.test(next) && /^(day|days|week|weeks)$/.test(words[i + 2]?.toLowerCase() ?? '')) {
+      const n = Number(next) * (words[i + 2].toLowerCase().startsWith('week') ? 7 : 1);
+      scheduledDate = dateKey(addDays(now, n));
+      backlog = false;
+      i += 2;
+      continue;
+    }
+    // "next monday": the one in the coming week, never today.
+    if (word === 'next' && next && WEEKDAYS[next] !== undefined) {
+      scheduledDate = dateKey(addDays(now, (WEEKDAYS[next] - now.getDay() + 7) % 7 || 7));
+      backlog = false;
+      i++;
+      continue;
+    }
+    // "every friday": weekly, starting on the next Friday.
+    if (word === 'every' && next && WEEKDAYS[next] !== undefined) {
+      repeat = 'weekly';
+      scheduledDate = dateKey(addDays(now, (WEEKDAYS[next] - now.getDay() + 7) % 7));
+      backlog = false;
+      i++;
+      continue;
+    }
+    if (word === 'weekend' || (word === 'this' && next === 'weekend')) {
+      scheduledDate = dateKey(addDays(now, now.getDay() === 6 || now.getDay() === 0 ? 0 : 6 - now.getDay()));
+      backlog = false;
+      if (word === 'this') i++;
+      continue;
+    }
+    if (word === 'tonight') {
+      scheduledDate = dateKey(now);
+      backlog = false;
+      if (!remindTime) remindTime = '20:00';
+      continue;
+    }
+    // "25/12" or "25-12": that day this year, or next year if it's passed.
+    const dm = word.match(/^(\d{1,2})[/-](\d{1,2})$/);
+    if (dm && Number(dm[1]) <= 31 && Number(dm[2]) >= 1 && Number(dm[2]) <= 12) {
+      let d = new Date(now.getFullYear(), Number(dm[2]) - 1, Number(dm[1]));
+      if (d < new Date(now.getFullYear(), now.getMonth(), now.getDate())) d = new Date(now.getFullYear() + 1, Number(dm[2]) - 1, Number(dm[1]));
+      scheduledDate = dateKey(d);
+      backlog = false;
+      continue;
+    }
 
     if (PRIORITY_TOKENS[word]) {
       priority = PRIORITY_TOKENS[word];
@@ -103,6 +165,8 @@ export function parseQuickTask(
       if (m[3] === 'am' && h === 12) h = 0;
       // A bare "at 5" in the afternoon/evening range means 5 PM.
       if (!m[3] && h >= 1 && h <= 7) h += 12;
+      // After "tonight", any bare hour is in the evening.
+      if (!m[3] && h >= 1 && h < 12 && /\btonight\b/i.test(text)) h += 12;
       if (h < 24 && min < 60) {
         remindTime = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
         i++;
@@ -157,5 +221,5 @@ export function parseQuickTask(
     titleWords.push(raw);
   }
 
-  return { title: titleWords.join(' '), priority, scheduledDate, backlog, projectId, projectName, remindTime, repeat, deadline };
+  return { title: titleWords.join(' '), priority, scheduledDate, backlog, projectId, projectName, remindTime, repeat, deadline, estimate, waitingOn };
 }

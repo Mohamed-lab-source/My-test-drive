@@ -20,8 +20,18 @@ export async function searchAll(query: string): Promise<SearchResult[]> {
   // A number like "125.50" or "1,250" also finds transactions of that
   // amount (to the unit), so a bank charge can be found by its price.
   const amount = /^[\d,.]+$/.test(trimmed) ? Number(trimmed.replace(/,/g, '')) : NaN;
-  const amountClause = amount > 0 ? ' OR (amount >= ? AND amount < ?)' : '';
-  const amountArgs = amount > 0 ? [Math.floor(amount) * 100, (Math.floor(amount) + 1) * 100] : [];
+  // ">500", "<100" and "100-300" search by amount range too.
+  const cmp = trimmed.replace(/,/g, '').match(/^([<>])\s*(\d+(?:\.\d+)?)$/);
+  const range = trimmed.replace(/,/g, '').match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
+  let amountClause = amount > 0 ? ' OR (amount >= ? AND amount < ?)' : '';
+  let amountArgs: number[] = amount > 0 ? [Math.floor(amount) * 100, (Math.floor(amount) + 1) * 100] : [];
+  if (cmp) {
+    amountClause = cmp[1] === '>' ? ' OR amount > ?' : ' OR amount < ?';
+    amountArgs = [Math.round(Number(cmp[2]) * 100)];
+  } else if (range) {
+    amountClause = ' OR (amount >= ? AND amount <= ?)';
+    amountArgs = [Math.round(Number(range[1]) * 100), Math.round(Number(range[2]) * 100)];
+  }
 
   const [transactions, tasks, meetings, wishlist, notes, books, shopping, countdowns, journal] = await Promise.all([
     db.getAllAsync<Transaction>(`SELECT * FROM transactions WHERE note LIKE ?${amountClause} ORDER BY date DESC LIMIT 20`, [like, ...amountArgs]),

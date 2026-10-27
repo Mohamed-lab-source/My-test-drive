@@ -5,7 +5,7 @@ import { AddTaskSheet } from '../tasks/AddTaskSheet';
 
 // The add sheets the + menu opens, available on every tab.
 export function GlobalSheets() {
-  const { sheet, open, accountId } = useQuickAddStore();
+  const { sheet, open, accountId, toAccountId, amount } = useQuickAddStore();
   const close = () => open(null);
   return (
     <>
@@ -13,6 +13,8 @@ export function GlobalSheets() {
         visible={sheet === 'expense' || sheet === 'income' || sheet === 'transfer'}
         initialType={sheet === 'income' ? 'income' : sheet === 'transfer' ? 'transfer' : 'expense'}
         initialAccountId={accountId ?? undefined}
+        initialToAccountId={toAccountId ?? undefined}
+        initialAmount={amount ?? undefined}
         onClose={close}
       />
       <AddTaskSheet visible={sheet === 'task'} onClose={close} />

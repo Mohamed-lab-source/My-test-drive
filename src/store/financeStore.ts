@@ -359,6 +359,13 @@ async function checkSpendingAlerts(
     }
   }
 
+  // One big purchase on its own, whatever the limits say.
+  const big = settings.bigExpenseAlert;
+  const amountBase = convertToBase(input.amount, input.currency, base, get().fxRates);
+  if (big > 0 && amountBase >= big) {
+    alerts.push({ rank: 7, title: `Large expense: ${formatMoney(input.amount, input.currency)}`, body: `${input.note ?? 'A purchase'} — over your ${formatMoney(big, base)} alert.` });
+  }
+
   const account = get().accounts.find((a) => a.id === input.account_id);
   if (account?.monthly_limit) {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();

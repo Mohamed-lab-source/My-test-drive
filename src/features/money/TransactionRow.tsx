@@ -9,6 +9,7 @@ import { formatMoneySigned } from '../../utils/money';
 import { formatRelativeDay, formatTime } from '../../utils/date';
 import type { Transaction } from '../../db/types';
 import { ActionMenu } from '../../ui/ActionMenu';
+import { SwipeableRow } from '../../ui/SwipeableRow';
 import { useUndoStore } from '../../store/undoStore';
 
 export function TransactionRow({
@@ -71,13 +72,27 @@ export function TransactionRow({
   const amountColor =
     tx.type === 'income' ? colors.green : tx.type === 'expense' ? colors.label : colors.secondaryLabel;
 
+  const duplicate = async () => {
+    const { id: _id, created_at: _c, receipt_uri: _r, ...rest } = tx;
+    await useFinanceStore.getState().addTransaction({ ...rest, flag: null, date: new Date().toISOString() });
+    useUndoStore.getState().show('Duplicated for today');
+  };
+  const remove = actions.find((a) => a.label === 'Delete')!.onPress;
+
   return (
     <>
+    <SwipeableRow
+      leading={{ label: 'Again', color: colors.blue, icon: 'doc.on.doc', onPress: duplicate }}
+      actions={[
+        { label: tx.flag ? 'Unflag' : 'Flag', color: colors.orange, icon: 'flag.fill', onPress: () => useFinanceStore.getState().updateTransaction(tx.id, { flag: tx.flag ? null : 'review' }) },
+        { label: 'Delete', color: colors.red, onPress: remove },
+      ]}
+    >
     <ListRow
       isLast={isLast}
       leading={<IconCircle name={icon} color={color} />}
       title={title}
-      subtitle={`${account?.name ?? ''} · ${formatRelativeDay(tx.date)} ${formatTime(tx.date)}`}
+      subtitle={`${tx.recurring_id ? '↻ ' : ''}${account?.name ?? ''} · ${formatRelativeDay(tx.date)} ${formatTime(tx.date)}`}
       onPress={onPress}
       onLongPress={() => setMenu(true)}
       trailing={
@@ -95,6 +110,7 @@ export function TransactionRow({
         </View>
       }
     />
+    </SwipeableRow>
     <ActionMenu visible={menu} title={title} actions={actions} onClose={() => setMenu(false)} />
     </>
   );

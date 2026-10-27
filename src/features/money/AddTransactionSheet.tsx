@@ -10,6 +10,9 @@ import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useFinanceStore } from '../../store/financeStore';
+import { useSpendingPlan } from './plan';
+import * as Haptics from '../../utils/haptics';
+import { useUndoStore } from '../../store/undoStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { evalAmount, formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
 import { frequentTransactions, type FrequentTemplate } from '../../utils/frequent';
@@ -90,6 +93,7 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
       const from =
         activeAccounts.find((a) => a.id === initialAccountId)?.id ??
         activeAccounts.find((a) => a.id === defaultAccountId)?.id ??
+        activeAccounts.find((a) => a.id === useSettingsStore.getState().lastTxAccountId)?.id ??
         activeAccounts[0]?.id ??
         null;
       setAccountId(from);
@@ -108,6 +112,13 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
 
   // Typed amounts may be sums like "120+45.5".
   const amountValue = evalAmount(amount);
+  const plan = useSpendingPlan();
+  // The last amount spent at the merchant typed in the note.
+  const lastAtMerchant = useMemo(() => {
+    const n = note.trim().toLowerCase();
+    if (n.length < 3) return null;
+    return transactions.find((t) => t.type === type && t.note?.trim().toLowerCase() === n) ?? null;
+  }, [note, transactions, type]);
   const isExpression = /[+\-*/×÷]/.test(amount.replace(/^-/, ''));
   const splitNames = splitWith
     .split(',')
@@ -217,7 +228,14 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
           onClose();
           return;
         }
-        await addTransaction({ ...fields, currency, recurring_id: null, date: dateIso() });
+        const newId = await addTransaction({ ...fields, currency, recurring_id: null, date: dateIso() });
+        useSettingsStore.getState().setLastTxAccountId(fields.account_id ?? null);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        useUndoStore
+          .getState()
+          .show(`${type === 'income' ? 'Income' : type === 'transfer' ? 'Transfer' : 'Expense'} of ${formatMoney(fields.amount, currency)} added`, () => {
+            useFinanceStore.getState().removeTransaction(newId);
+          });
         // You paid the whole bill; each person now owes you an equal share.
         if (type === 'expense') {
           const label = note || categories.find((c) => c.id === categoryId)?.name || 'a shared bill';
@@ -336,8 +354,38 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
             <Text style={[typography.subhead, { color: isNaN(amountValue) ? colors.red : colors.secondaryLabel, marginLeft: 4 }]}>
               {isNaN(amountValue) ? 'Not a valid sum' : `= ${formatMoney(toMinorUnits(amountValue), currency)}`}
             </Text>
-          ) : null}
+          ) : (
+            // Tap to add round amounts, like a cash register.
+            [10, 50, 100, 500].map((n) => (
+              <Pressable
+                key={n}
+                onPress={() => setAmount((a) => String(Math.round(((Number(a) || 0) + n) * 100) / 100))}
+                style={{ paddingHorizontal: 8, height: 30, borderRadius: 8, marginLeft: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.blue + '18' }}
+              >
+                <Text style={[typography.footnote, { color: colors.blue, fontWeight: '700' }]}>+{n}</Text>
+              </Pressable>
+            ))
+          )}
         </View>
+        {!editing && !amount && lastAtMerchant ? (
+          <Pressable onPress={() => setAmount(String(fromMinorUnits(lastAtMerchant.amount)))} style={{ marginTop: -spacing.xs, marginBottom: spacing.sm }}>
+            <Text style={[typography.footnote, { color: colors.blue }]}>
+              Last time at {lastAtMerchant.note}: {formatMoney(lastAtMerchant.amount, lastAtMerchant.currency)} — tap to use
+            </Text>
+          </Pressable>
+        ) : null}
+        {!editing && type === 'expense' && plan && plan.daily.limit > 0 && amountValue > 0 ? (
+          <Text
+            style={[
+              typography.footnote,
+              { color: plan.daily.left - toMinorUnits(amountValue) < 0 ? colors.red : colors.secondaryLabel, marginTop: -spacing.xs, marginBottom: spacing.sm },
+            ]}
+          >
+            {plan.daily.left - toMinorUnits(amountValue) >= 0
+              ? `Leaves ${formatMoney(plan.daily.left - toMinorUnits(amountValue), currency)} of today's ${formatMoney(plan.daily.limit, currency)}`
+              : `Goes ${formatMoney(toMinorUnits(amountValue) - plan.daily.left, currency)} over today's limit`}
+          </Text>
+        ) : null}
 
         <Text style={[typography.footnote, { color: colors.secondaryLabel, marginBottom: 6, textTransform: 'uppercase' }]}>
           Date · {dateKey === todayKey() ? 'Today' : new Date(Number(dateKey.slice(0, 4)), Number(dateKey.slice(5, 7)) - 1, Number(dateKey.slice(8))).toDateString()}

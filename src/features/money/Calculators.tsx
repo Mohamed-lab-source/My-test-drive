@@ -283,3 +283,86 @@ export function SalaryCalculator({ currency }: { currency: string }) {
     </Section>
   );
 }
+
+// Is it worth it? Price spread over how often you'll use it.
+export function CostPerUseCalculator({ currency }: { currency: string }) {
+  const [price, setPrice] = useState('');
+  const [uses, setUses] = useState('');
+  const [years, setYears] = useState('1');
+  const p = num(price);
+  const u = num(uses);
+  const y = Math.max(1, num(years));
+  return (
+    <Section title="Cost per use">
+      <TextField label="Price" keyboardType="decimal-pad" value={price} onChangeText={setPrice} />
+      <TextField label="Uses a week" keyboardType="decimal-pad" value={uses} onChangeText={setUses} />
+      <TextField label="For how many years" keyboardType="decimal-pad" value={years} onChangeText={setYears} />
+      {p > 0 && u > 0 ? (
+        <Result
+          label="Each use costs"
+          value={formatMoney(toMinorUnits(p / (u * 52 * y)), currency)}
+          note={`${Math.round(u * 52 * y)} uses over ${y} year${y === 1 ? '' : 's'}`}
+        />
+      ) : null}
+    </Section>
+  );
+}
+
+// How long a card balance takes to clear at a fixed monthly payment, and
+// the interest paid on the way.
+export function CardPayoffCalculator({ currency }: { currency: string }) {
+  const [balance, setBalance] = useState('');
+  const [apr, setApr] = useState('');
+  const [payment, setPayment] = useState('');
+  const b = num(balance);
+  const r = num(apr) / 1200;
+  const p = num(payment);
+  let months: number | null = null;
+  if (b > 0 && p > 0) {
+    if (r === 0) months = Math.ceil(b / p);
+    else if (p > b * r) months = Math.ceil(-Math.log(1 - (r * b) / p) / Math.log(1 + r));
+  }
+  return (
+    <Section title="Card payoff">
+      <TextField label="Balance owed" keyboardType="decimal-pad" value={balance} onChangeText={setBalance} />
+      <TextField label="Interest rate % a year" keyboardType="decimal-pad" value={apr} onChangeText={setApr} />
+      <TextField label="Monthly payment" keyboardType="decimal-pad" value={payment} onChangeText={setPayment} />
+      {b > 0 && p > 0 ? (
+        months === null ? (
+          <Result label="Result" value="Never" note="This payment doesn't cover the monthly interest." />
+        ) : (
+          <Result
+            label="Paid off in"
+            value={`${months} month${months === 1 ? '' : 's'}`}
+            note={`About ${formatMoney(toMinorUnits(Math.max(0, months * p - b)), currency)} in interest`}
+          />
+        )
+      ) : null}
+    </Section>
+  );
+}
+
+// The 50/30/20 rule: needs, wants and savings from take-home pay.
+export function FiftyThirtyTwentyCalculator({ currency, income }: { currency: string; income: number }) {
+  const { colors, typography } = useTheme();
+  const [input, setInput] = useState(income > 0 ? String(Math.round(income / 100)) : '');
+  const total = num(input);
+  return (
+    <Section title="50 / 30 / 20 budget">
+      <TextField label="Monthly take-home pay" keyboardType="decimal-pad" value={input} onChangeText={setInput} />
+      {total > 0
+        ? [
+            { label: 'Needs (rent, bills, food)', share: 0.5, color: colors.indigo },
+            { label: 'Wants (eating out, fun)', share: 0.3, color: colors.orange },
+            { label: 'Savings & debt', share: 0.2, color: colors.green },
+          ].map((row) => (
+            <View key={row.label} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: row.color, marginRight: 8 }} />
+              <Text style={[typography.body, { color: colors.label, flex: 1 }]}>{row.label}</Text>
+              <Text style={[typography.body, { color: colors.label, fontWeight: '600' }]}>{formatMoney(toMinorUnits(total * row.share), currency)}</Text>
+            </View>
+          ))
+        : null}
+    </Section>
+  );
+}

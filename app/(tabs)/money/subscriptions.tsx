@@ -134,17 +134,52 @@ export default function SubscriptionsScreen() {
           <EmptyState icon="repeat" title="No recurring items" message="Track subscriptions, rent, salary, or any repeating expense." />
         ) : (
           <>
+          {(() => {
+            const live = recurringRules.filter((r) => r.is_active && !r.is_paused);
+            const out = live.filter((r) => r.type === 'expense').reduce((sum, r) => sum + yearly(r), 0);
+            const inc = live.filter((r) => r.type === 'income').reduce((sum, r) => sum + yearly(r), 0);
+            const week = Date.now() + 7 * 86400000;
+            const soon = live.filter((r) => r.type === 'expense' && new Date(r.next_due_date).getTime() <= week);
+            return (
+              <Card style={{ marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Bills a month</Text>
+                    <Text style={[typography.title3, { color: colors.label }]}>{formatMoney(Math.round(out / 12), currency)}</Text>
+                    <Text style={[typography.caption2, { color: colors.secondaryLabel }]}>{formatMoney(Math.round(out), currency)} a year</Text>
+                  </View>
+                  {inc > 0 ? (
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>Regular income</Text>
+                      <Text style={[typography.title3, { color: colors.green }]}>{formatMoney(Math.round(inc / 12), currency)}</Text>
+                      <Text style={[typography.caption2, { color: colors.secondaryLabel }]}>a month</Text>
+                    </View>
+                  ) : null}
+                </View>
+                {soon.length ? (
+                  <Text style={[typography.footnote, { color: colors.orange, marginTop: spacing.sm, fontWeight: '600' }]}>
+                    {soon.length} due in the next 7 days · {formatMoney(soon.reduce((sum, r) => sum + r.amount, 0), currency)}
+                  </Text>
+                ) : null}
+              </Card>
+            );
+          })()}
           <View style={{ marginBottom: spacing.sm }}>
             <ChipSelector
               options={[
                 { id: 'due', label: 'Next due' },
                 { id: 'cost', label: 'Most expensive' },
+                { id: 'subs', label: 'Subscriptions' },
+                { id: 'bills', label: 'Other bills' },
+                { id: 'income', label: 'Income' },
               ]}
               selectedId={order}
               onSelect={setOrder}
             />
           </View>
-          {sortedRules.map((rule) => (
+          {sortedRules
+            .filter((r) => (order === 'subs' ? r.is_subscription && r.type === 'expense' : order === 'bills' ? !r.is_subscription && r.type === 'expense' : order === 'income' ? r.type === 'income' : true))
+            .map((rule) => (
             <SwipeableRow key={rule.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(rule) }]}>
               <Card style={{ marginBottom: spacing.sm, opacity: rule.is_paused ? 0.5 : 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>

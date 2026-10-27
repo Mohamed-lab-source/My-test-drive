@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, Text, Pressable } from 'react-native';
+import { View, ScrollView, Text, Pressable, Share } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -80,7 +80,7 @@ function periodRange(id: string, weekStart: number): [Date, Date] | null {
 }
 
 export default function TransactionsScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors, spacing, typography } = useTheme();
   const { transactions, accounts, categories, removeTransaction, addTransaction } = useFinanceStore();
   const [typeIndex, setTypeIndex] = useState(0);
   const [accountFilter, setAccountFilter] = useState<string>(ALL);
@@ -111,9 +111,19 @@ export default function TransactionsScreen() {
   const tags = useMemo(() => allTags(transactions.map((t) => t.note)), [transactions]);
 
   // Re-run when the list changes too, so edits/deletes show up in results.
+  // ">500", "<100" or "100-300" searches by amount instead of note.
+  const amountRange = useMemo(() => {
+    const q = query.trim().replace(/,/g, '');
+    let m = q.match(/^([<>])\s*(\d+(?:\.\d+)?)$/);
+    if (m) return m[1] === '>' ? [toMinorUnits(Number(m[2])), Infinity] : [0, toMinorUnits(Number(m[2]))];
+    m = q.match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
+    if (m) return [toMinorUnits(Number(m[1])), toMinorUnits(Number(m[2]))];
+    return null;
+  }, [query]);
+
   useEffect(() => {
     const q = query.trim();
-    if (!q) {
+    if (!q || amountRange) {
       setSearchResults(null);
       return;
     }
@@ -127,7 +137,7 @@ export default function TransactionsScreen() {
       cancelled = true;
       clearTimeout(id);
     };
-  }, [query, transactions]);
+  }, [query, transactions, amountRange]);
 
   const filtered = useMemo(() => {
     const typeFilter = TYPE_FILTERS[typeIndex];
@@ -140,12 +150,13 @@ export default function TransactionsScreen() {
         (accountFilter === ALL || t.account_id === accountFilter || t.transfer_to_account_id === accountFilter) &&
         (categoryFilter === ALL || t.category_id === categoryFilter) &&
         (tagFilter === ALL || extractTags(t.note).includes(tagFilter)) &&
-        (!dupesOnly || duplicates.has(t.id))
+        (!dupesOnly || duplicates.has(t.id)) &&
+        (!amountRange || (t.amount >= amountRange[0] && t.amount <= amountRange[1]))
     );
     if (sort === 'old') return [...list].sort((a, b) => a.date.localeCompare(b.date));
     if (sort === 'big') return [...list].sort((a, b) => b.amount - a.amount);
     return [...list].sort((a, b) => b.date.localeCompare(a.date));
-  }, [transactions, searchResults, periodRows, period, weekStart, minAmount, sort, typeIndex, accountFilter, categoryFilter, tagFilter, dupesOnly, duplicates]);
+  }, [transactions, searchResults, periodRows, period, weekStart, minAmount, sort, typeIndex, accountFilter, categoryFilter, tagFilter, dupesOnly, duplicates, amountRange]);
 
   const totals = useMemo(() => {
     let out = 0;
@@ -178,7 +189,34 @@ export default function TransactionsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <NavHeader title="All Transactions" />
+      <NavHeader
+        title="All Transactions"
+        right={
+          filtered.length ? (
+            <Pressable
+              hitSlop={8}
+              onPress={() => {
+                // Exactly what's on screen, as a spreadsheet.
+                const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+                const rows = filtered.map((t) =>
+                  [
+                    t.date.slice(0, 10),
+                    t.type,
+                    (t.amount / 100).toFixed(2),
+                    t.currency,
+                    esc(accounts.find((a) => a.id === t.account_id)?.name ?? ''),
+                    esc(categories.find((c) => c.id === t.category_id)?.name ?? ''),
+                    esc(t.note ?? ''),
+                  ].join(',')
+                );
+                Share.share({ message: ['Date,Type,Amount,Currency,Account,Category,Note', ...rows].join('\n'), title: 'Anchor transactions.csv' });
+              }}
+            >
+              <Text style={[typography.subhead, { color: colors.blue }]}>Export</Text>
+            </Pressable>
+          ) : undefined
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 60 }}>
         {duplicates.size > 0 || uncategorized > 0 ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm }}>
@@ -196,7 +234,7 @@ export default function TransactionsScreen() {
             ) : null}
           </View>
         ) : null}
-        <TextField placeholder="Search notes" value={query} onChangeText={setQuery} autoCorrect={false} clearButtonMode="while-editing" />
+        <TextField placeholder="Search notes, or an amount like >500 or 100-300" value={query} onChangeText={setQuery} autoCorrect={false} clearButtonMode="while-editing" />
         <View style={{ marginBottom: spacing.sm }}>
           <SegmentedControl options={['All', 'Expense', 'Income', 'Transfer']} selectedIndex={typeIndex} onChange={setTypeIndex} />
         </View>
@@ -249,6 +287,12 @@ export default function TransactionsScreen() {
           {filtered.length} transaction{filtered.length === 1 ? '' : 's'}
           {sort !== 'new' ? ` · ${sort === 'old' ? 'oldest' : 'largest'} first` : ''}
           {minAmount ? ` · ${minAmount}+` : ''} · out {formatMoney(totals.out, currency)} · in {formatMoney(totals.inn, currency)}
+          {totals.inn || totals.out ? (
+            <Text style={{ color: totals.inn - totals.out >= 0 ? colors.green : colors.red, fontWeight: '600' }}>
+              {' '}· net {totals.inn - totals.out >= 0 ? '+' : '−'}
+              {formatMoney(Math.abs(totals.inn - totals.out), currency)}
+            </Text>
+          ) : null}
         </Text>
 
         {filtered.length === 0 ? (

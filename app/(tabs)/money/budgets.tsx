@@ -62,6 +62,7 @@ export default function BudgetsScreen() {
   };
 
   const monthStart = todayKey().slice(0, 8) + '01';
+  const lastMonthStart = todayKey(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
   const nowDate = new Date();
   const daysInMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0).getDate();
   const monthElapsed = nowDate.getDate() / daysInMonth;
@@ -74,11 +75,14 @@ export default function BudgetsScreen() {
         const spend = transactions
           .filter((t) => t.category_id === budget.category_id && t.type === 'expense' && localDateKey(t.date) >= monthStart)
           .reduce((sum, t) => sum + t.amount, 0);
-        return { budget, category, spend, progress: budget.monthly_limit > 0 ? spend / budget.monthly_limit : 0 };
+        const lastMonth = transactions
+          .filter((t) => t.category_id === budget.category_id && t.type === 'expense' && localDateKey(t.date) >= lastMonthStart && localDateKey(t.date) < monthStart)
+          .reduce((sum, t) => sum + t.amount, 0);
+        return { budget, category, spend, lastMonth, progress: budget.monthly_limit > 0 ? spend / budget.monthly_limit : 0 };
       })
         // Closest to (or over) the limit first.
         .sort((a, b) => b.progress - a.progress),
-    [budgets, categories, transactions, monthStart]
+    [budgets, categories, transactions, monthStart, lastMonthStart]
   );
 
   return (
@@ -92,7 +96,28 @@ export default function BudgetsScreen() {
         {rows.length === 0 ? (
           <EmptyState icon="chart.pie.fill" title="No budgets yet" message="Set a monthly limit for a spending category." />
         ) : (
-          rows.map(({ budget, category, spend, progress }) => (
+          <>
+          {(() => {
+            const limit = rows.reduce((s2, r) => s2 + r.budget.monthly_limit, 0);
+            const spent = rows.reduce((s2, r) => s2 + r.spend, 0);
+            const over = rows.filter((r) => r.progress > 1).length;
+            return (
+              <Card style={{ marginBottom: spacing.md }}>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel, fontWeight: '600', textTransform: 'uppercase' }]}>All budgets this month</Text>
+                <Text style={[typography.title2, { color: spent > limit ? colors.red : colors.label, marginTop: 2 }]}>
+                  {formatMoney(spent, currency)} <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>of {formatMoney(limit, currency)}</Text>
+                </Text>
+                <View style={{ marginTop: spacing.sm }}>
+                  <ProgressBar progress={limit ? spent / limit : 0} color={spent > limit ? colors.red : colors.green} />
+                </View>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                  {limit > spent ? `${formatMoney(limit - spent, currency)} left · ${formatMoney(Math.floor((limit - spent) / daysLeft), currency)} a day` : `${formatMoney(spent - limit, currency)} over`}
+                  {over ? ` · ${over} over budget` : ''}
+                </Text>
+              </Card>
+            );
+          })()}
+          {rows.map(({ budget, category, spend, progress, lastMonth }) => (
             <SwipeableRow key={budget.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(budget) }]}>
               <Card style={{ marginBottom: spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -132,9 +157,15 @@ export default function BudgetsScreen() {
                     {daysLeft === 1 ? '' : 's'}
                   </Text>
                 ) : null}
+                <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>
+                  {/* Where this month ends at today's pace. */}
+                  On pace for {formatMoney(Math.round(spend / Math.max(monthElapsed, 1 / daysInMonth)), budget.currency)}
+                  {lastMonth ? ` · last month ${formatMoney(lastMonth, budget.currency)}` : ''}
+                </Text>
               </Card>
             </SwipeableRow>
-          ))
+          ))}
+          </>
         )}
       </ScrollView>
       <FAB onPress={() => setAddVisible(true)} />

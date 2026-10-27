@@ -35,6 +35,12 @@ interface SettingsState {
   setSadaqahGoal: (v: number) => void;
   waterGoal: number;
   sleepGoal: number;
+  // The account last used to add money, when no default is set.
+  lastTxAccountId: string | null;
+  setLastTxAccountId: (v: string | null) => void;
+  // A notification for any single expense at or above this (0 = off).
+  bigExpenseAlert: number;
+  setBigExpenseAlert: (v: number) => void;
   // Spending plan: monthly income (0 = estimate from history), the share of
   // income to save, a monthly limit (0 = the plan's figure) and alerts.
   monthlyIncome: number;
@@ -222,6 +228,10 @@ export const useSettingsStore = create<SettingsState>()(
       waterGoal: 8,
       setWaterGoal: (v) => set({ waterGoal: v }),
       sleepGoal: 8,
+      lastTxAccountId: null,
+      setLastTxAccountId: (v) => set({ lastTxAccountId: v }),
+      bigExpenseAlert: 0,
+      setBigExpenseAlert: (v) => set({ bigExpenseAlert: v }),
       monthlyIncome: 0,
       setMonthlyIncome: (v) => set({ monthlyIncome: v }),
       savingsPct: 20,

@@ -3,6 +3,9 @@ import { Tabs, usePathname, useRouter } from 'expo-router';
 import { settingsHydrated, useSettingsStore } from '../../src/store/settingsStore';
 import { Icon } from '../../src/ui/Icon';
 import { GlassTabBar } from '../../src/ui/GlassTabBar';
+import { useProductivityStore } from '../../src/store/productivityStore';
+import { useSmsStore } from '../../src/sms/smsStore';
+import { todayKey } from '../../src/db/client';
 import { QuickAddButton } from '../../src/features/quickadd/QuickAddButton';
 import { GlobalSheets } from '../../src/features/quickadd/GlobalSheets';
 
@@ -10,6 +13,12 @@ import { GlobalSheets } from '../../src/features/quickadd/GlobalSheets';
 let startTabApplied = false;
 
 export default function TabsLayout() {
+  // Badges: tasks still to do today, and bank SMS waiting for review.
+  const todayLeft = useProductivityStore((st) => {
+    const today = todayKey();
+    return st.tasks.filter((t) => t.status !== 'done' && (t.scheduled_date === today || t.status === 'in_progress')).length;
+  });
+  const smsPending = useSmsStore((st) => st.pending.length);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -41,6 +50,7 @@ export default function TabsLayout() {
         name="money"
         options={{
           title: 'Money',
+          tabBarBadge: smsPending > 0 ? smsPending : undefined,
           tabBarIcon: ({ color, size }) => <Icon name="banknote.fill" color={color as string} size={size - 1} />,
         }}
       />
@@ -48,6 +58,7 @@ export default function TabsLayout() {
         name="tasks"
         options={{
           title: 'Tasks',
+          tabBarBadge: todayLeft > 0 ? todayLeft : undefined,
           tabBarIcon: ({ color, size }) => <Icon name="checkmark.circle.fill" color={color as string} size={size - 1} />,
         }}
       />

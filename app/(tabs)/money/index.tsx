@@ -15,6 +15,7 @@ import { Appear } from '../../../src/ui/Appear';
 import { AnimatedNumber } from '../../../src/ui/AnimatedNumber';
 import { WalletStack } from '../../../src/features/money/WalletStack';
 import { PlanSummaryCard } from '../../../src/features/money/PlanSummaryCard';
+import { WeekSpendCard } from '../../../src/features/money/WeekSpendCard';
 import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
@@ -34,6 +35,8 @@ import { useBalanceFormatter } from '../../../src/ui/useMoney';
 import { TextField } from '../../../src/ui/TextField';
 import { Icon } from '../../../src/ui/Icon';
 import type { Transaction } from '../../../src/db/types';
+
+const HEADLINE_LABEL = ['Net worth', 'Cash on hand', 'Owed on cards'];
 
 function QuickLink({ icon, label, color, onPress, badge }: { icon: string; label: string; color: string; onPress: () => void; badge?: number }) {
   const { colors, typography, spacing, radius, shadow } = useTheme();
@@ -93,8 +96,20 @@ export default function MoneyScreen() {
   const { netWorthGoal, setNetWorthGoal, hideBalances, setHideBalances } = useSettingsStore();
   const balance = useBalanceFormatter();
   const [editingGoal, setEditingGoal] = useState(false);
+  const [headline, setHeadline] = useState(0);
   const [goalInput, setGoalInput] = useState('');
   const smsPending = useSmsStore((s) => s.pending.length);
+  // Budgets already over their limit this month.
+  const overBudgets = useFinanceStore((st) => {
+    const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    return st.budgets.filter(
+      (b) =>
+        b.monthly_limit > 0 &&
+        st.transactions
+          .filter((t) => t.type === 'expense' && t.category_id === b.category_id && new Date(t.date).getTime() >= start)
+          .reduce((sum, t) => sum + t.amount, 0) > b.monthly_limit
+    ).length;
+  });
   const flaggedCount = useFinanceStore((s) => s.transactions.filter((t) => !!t.flag).length);
   const netWorthHistory = useFinanceStore((s) => s.netWorthHistory);
   const refreshSms = useSmsStore((s) => s.refresh);
@@ -113,6 +128,10 @@ export default function MoneyScreen() {
     (sum, a) => sum + convertToBase(a.balance, a.currency, currency, fxRates),
     0
   );
+  const live = accounts.filter((a) => !a.is_archived && !excluded.includes(a.id));
+  // Money you can spend right now (bank and cash), and what's owed on cards.
+  const cashOnHand = live.filter((a) => a.type === 'bank' || a.type === 'cash').reduce((sum, a) => sum + convertToBase(Math.max(0, a.balance), a.currency, currency, fxRates), 0);
+  const cardDebt = live.filter((a) => a.type === 'credit').reduce((sum, a) => sum + convertToBase(Math.max(0, -a.balance), a.currency, currency, fxRates), 0);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -128,12 +147,20 @@ export default function MoneyScreen() {
         <Appear index={0} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[typography.subhead, { color: colors.secondaryLabel, flex: 1, fontWeight: '600' }]}>Net worth</Text>
+              <Text style={[typography.subhead, { color: colors.secondaryLabel, flex: 1, fontWeight: '600' }]}>{HEADLINE_LABEL[headline]}</Text>
               <Pressable onPress={() => setHideBalances(!hideBalances)} hitSlop={10}>
                 <Icon name={hideBalances ? 'eye.slash' : 'eye'} size={18} color={colors.secondaryLabel} />
               </Pressable>
             </View>
-            <AnimatedNumber value={netWorth} format={(n) => balance(n, currency)} style={[typography.display, { color: colors.label, marginTop: 4 }]} numberOfLines={1} />
+            {/* Tap to switch between net worth, cash on hand and card debt. */}
+            <Pressable onPress={() => setHeadline((h) => (h + 1) % 3)}>
+              <AnimatedNumber
+                value={headline === 0 ? netWorth : headline === 1 ? cashOnHand : cardDebt}
+                format={(n) => balance(n, currency)}
+                style={[typography.display, { color: headline === 2 && cardDebt > 0 ? colors.red : colors.label, marginTop: 4 }]}
+                numberOfLines={1}
+              />
+            </Pressable>
             {(() => {
               // Change since the snapshot closest to a month ago.
               const target = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
@@ -187,6 +214,8 @@ export default function MoneyScreen() {
 
         <Appear index={1} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <PlanSummaryCard />
+          <View style={{ height: spacing.md }} />
+          <WeekSpendCard />
         </Appear>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
@@ -242,7 +271,7 @@ export default function MoneyScreen() {
           <QuickLink icon="calendar" label="Bills" color={colors.indigo} onPress={() => router.push('/money/bills-calendar')} />
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <QuickLink icon="chart.pie.fill" label="Budgets" color={colors.orange} onPress={() => router.push('/money/budgets')} />
+          <QuickLink icon="chart.pie.fill" label="Budgets" color={colors.orange} badge={overBudgets} onPress={() => router.push('/money/budgets')} />
           <QuickLink icon="chart.bar.fill" label="Analytics" color={colors.teal} onPress={() => router.push('/money/analytics')} />
           <QuickLink icon="building.columns.fill" label="Accounts" color={colors.blue} onPress={() => router.push('/money/accounts')} />
           <QuickLink icon="hands.sparkles.fill" label="Zakat" color={colors.mint} onPress={() => router.push('/money/zakat')} />

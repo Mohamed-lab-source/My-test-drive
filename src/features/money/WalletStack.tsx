@@ -43,6 +43,20 @@ export function WalletStack({
                 { label: 'Add expense', icon: 'arrow.up.circle.fill', onPress: () => quick('expense', menuFor.id), section: true },
                 { label: 'Add income', icon: 'arrow.down.circle.fill', onPress: () => quick('income', menuFor.id) },
                 { label: 'Transfer from here', icon: 'arrow.left.arrow.right', onPress: () => quick('transfer', menuFor.id) },
+                ...(menuFor.type === 'credit' && menuFor.balance < 0
+                  ? [
+                      {
+                        label: `Pay this card (${balance(-menuFor.balance, menuFor.currency)})`,
+                        icon: 'creditcard.fill',
+                        section: true,
+                        onPress: () =>
+                          quick('transfer', accounts.find((a) => a.type === 'bank')?.id ?? accounts.find((a) => a.type !== 'credit')?.id, {
+                            toAccountId: menuFor.id,
+                            amount: -menuFor.balance,
+                          }),
+                      },
+                    ]
+                  : []),
               ]
             : []
         }

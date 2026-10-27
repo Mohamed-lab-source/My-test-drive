@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Share } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -12,7 +12,7 @@ import { ActivityRings } from '../../../src/ui/ActivityRings';
 import { AnimatedNumber } from '../../../src/ui/AnimatedNumber';
 import { Appear } from '../../../src/ui/Appear';
 import { useSettingsStore } from '../../../src/store/settingsStore';
-import { useSpendingPlan } from '../../../src/features/money/plan';
+import { usePlanExtras, useSpendingPlan } from '../../../src/features/money/plan';
 import { formatMoneyWhole, fromMinorUnits, toMinorUnits } from '../../../src/utils/money';
 import { requestNotificationPermission } from '../../../src/notifications/scheduler';
 import { rescheduleMorningAllowance } from '../../../src/notifications/extras';
@@ -27,6 +27,8 @@ export default function SpendingPlanScreen() {
   const { colors, typography, spacing, radius } = useTheme();
   const router = useRouter();
   const plan = useSpendingPlan();
+  const extras = usePlanExtras(plan);
+  const [bigInput, setBigInput] = useState(useSettingsStore.getState().bigExpenseAlert ? String(fromMinorUnits(useSettingsStore.getState().bigExpenseAlert)) : '');
   const s = useSettingsStore();
   const [editing, setEditing] = useState<LimitKey | null>(null);
   const [limitInput, setLimitInput] = useState('');
@@ -124,7 +126,26 @@ export default function SpendingPlanScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
-      <NavHeader title="Spending plan" />
+      <NavHeader
+        title="Spending plan"
+        right={
+          <Pressable
+            hitSlop={8}
+            onPress={() =>
+              Share.share({
+                message: [
+                  `My spending plan (${new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' })})`,
+                  `Income ${money(plan.income)} · bills ${money(plan.bills)} · save ${money(plan.saveMonthly)}`,
+                  `Spending money ${money(plan.spendable)} (about ${money(plan.spendable / plan.daysInMonth)} a day)`,
+                  `This month: ${money(plan.monthly.spent)} spent, ${money(Math.max(0, plan.monthly.left))} left`,
+                ].join('\n'),
+              })
+            }
+          >
+            <Text style={[typography.subhead, { color: colors.blue }]}>Share</Text>
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         <Appear index={0}>
           <Card style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
@@ -226,6 +247,81 @@ export default function SpendingPlanScreen() {
           </Card>
         </Appear>
 
+        {extras ? (
+          <Appear index={4}>
+            <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>This month at a glance</Text>
+            <Card style={{ marginBottom: spacing.md }}>
+              {extras.daysToPayday !== null ? (
+                <View style={{ flexDirection: 'row', paddingVertical: 5 }}>
+                  <Text style={[typography.body, { color: colors.label, flex: 1 }]}>💰 Next payday</Text>
+                  <Text style={[typography.body, { color: colors.label, fontWeight: '600' }]}>
+                    {extras.daysToPayday === 0 ? 'Today' : `in ${extras.daysToPayday} day${extras.daysToPayday === 1 ? '' : 's'}`}
+                  </Text>
+                </View>
+              ) : null}
+              {extras.daysToPayday ? (
+                <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: -2, marginBottom: 4 }]}>
+                  {money(Math.max(0, plan.monthly.left) / extras.daysToPayday)} a day until then from what's left this month
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: 'row', paddingVertical: 5 }}>
+                <Text style={[typography.body, { color: colors.label, flex: 1 }]}>🌱 No-spend days</Text>
+                <Text style={[typography.body, { color: colors.green, fontWeight: '600' }]}>
+                  {extras.noSpendDays}
+                  {extras.noSpendStreak > 1 ? ` · ${extras.noSpendStreak} in a row` : ''}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', paddingVertical: 5 }}>
+                <Text style={[typography.body, { color: colors.label, flex: 1 }]}>📅 Average day</Text>
+                <Text style={[typography.body, { color: colors.label, fontWeight: '600' }]}>
+                  {money(extras.weekdayAvg)} weekday · {money(extras.weekendAvg)} weekend
+                </Text>
+              </View>
+              {extras.biggest ? (
+                <View style={{ flexDirection: 'row', paddingVertical: 5 }}>
+                  <Text style={[typography.body, { color: colors.label, flex: 1 }]} numberOfLines={1}>
+                    🧾 Biggest: {extras.biggest.note}
+                  </Text>
+                  <Text style={[typography.body, { color: colors.label, fontWeight: '600' }]}>{money(extras.biggest.amount)}</Text>
+                </View>
+              ) : null}
+              {extras.topCategories.length ? (
+                <View style={{ marginTop: spacing.sm }}>
+                  <View style={{ flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: colors.tertiaryFill }}>
+                    {extras.topCategories.map((c) => (
+                      <View key={c.name} style={{ flex: c.share, backgroundColor: c.color }} />
+                    ))}
+                    <View style={{ flex: Math.max(0, 1 - extras.topCategories.reduce((a, c) => a + c.share, 0)) }} />
+                  </View>
+                  {extras.topCategories.map((c) => (
+                    <View key={c.name} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.color, marginRight: 6 }} />
+                      <Text style={[typography.footnote, { color: colors.label, flex: 1 }]}>{c.name}</Text>
+                      <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                        {money(c.total)} · {Math.round(c.share * 100)}%
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              <View style={{ marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 0.5, borderTopColor: colors.separator }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={[typography.subhead, { color: colors.label, fontWeight: '600' }]}>🛟 Emergency fund</Text>
+                  <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                    {money(extras.emergencySaved)} of {money(extras.emergencyTarget)}
+                  </Text>
+                </View>
+                <View style={{ marginTop: 6 }}>
+                  <ProgressBar progress={extras.emergencyTarget ? extras.emergencySaved / extras.emergencyTarget : 0} color={colors.teal} height={6} />
+                </View>
+                <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 4 }]}>
+                  Three months of bills and spending, counted from your savings accounts.
+                </Text>
+              </View>
+            </Card>
+          </Appear>
+        ) : null}
+
         <Appear index={4}>
           <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Saving for goals</Text>
           <Card style={{ marginBottom: spacing.md }}>
@@ -299,6 +395,16 @@ export default function SpendingPlanScreen() {
                   s.setMorningAllowance(v);
                   await rescheduleMorningAllowance();
                 }}
+              />
+            </View>
+            <View style={{ marginTop: spacing.md }}>
+              <TextField
+                label="Alert me for any single expense over"
+                placeholder="Off — e.g. 2000"
+                keyboardType="decimal-pad"
+                value={bigInput}
+                onChangeText={setBigInput}
+                onBlur={() => s.setBigExpenseAlert(toMinorUnits(Number(bigInput) || 0))}
               />
             </View>
           </Card>

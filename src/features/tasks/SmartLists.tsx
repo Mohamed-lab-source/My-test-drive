@@ -14,10 +14,11 @@ export interface SmartList {
 
 // The Reminders app's smart-list tiles: a coloured symbol, a big count and
 // the list's name. The selected list fills with its colour.
-export function SmartLists({ lists, selected, onSelect }: { lists: SmartList[]; selected: number; onSelect: (i: number) => void }) {
+export function SmartLists({ lists, selected, onSelect, columns = 2 }: { lists: SmartList[]; selected: number; onSelect: (i: number) => void; columns?: number }) {
   const { colors, typography, radius, spacing, shadow } = useTheme();
   const rows: SmartList[][] = [];
-  for (let i = 0; i < lists.length; i += 2) rows.push(lists.slice(i, i + 2));
+  for (let i = 0; i < lists.length; i += columns) rows.push(lists.slice(i, i + columns));
+  const compact = columns > 2;
   return (
     <View>
       {rows.map((row, r) => (
@@ -35,7 +36,7 @@ export function SmartLists({ lists, selected, onSelect }: { lists: SmartList[]; 
                       flex: 1,
                       borderRadius: radius.lg,
                       borderCurve: 'continuous',
-                      padding: 12,
+                      padding: compact ? 10 : 12,
                       backgroundColor: on ? l.color : colors.secondarySystemGroupedBackground,
                     },
                     shadow.card,
@@ -44,29 +45,31 @@ export function SmartLists({ lists, selected, onSelect }: { lists: SmartList[]; 
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <View
                       style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 17,
+                        width: compact ? 28 : 34,
+                        height: compact ? 28 : 34,
+                        borderRadius: compact ? 14 : 17,
                         backgroundColor: on ? 'rgba(255,255,255,0.25)' : l.color,
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      <Icon name={l.icon} size={18} color="#FFFFFF" />
+                      <Icon name={l.icon} size={compact ? 15 : 18} color="#FFFFFF" />
                     </View>
-                    <Text style={[typography.title1, { color: on ? '#FFFFFF' : colors.label, fontVariant: ['tabular-nums'] }]}>{l.count}</Text>
+                    <Text style={[compact ? typography.title2 : typography.title1, { color: on ? '#FFFFFF' : colors.label, fontVariant: ['tabular-nums'] }]}>{l.count}</Text>
                   </View>
-                  <Text style={[typography.headline, { color: on ? '#FFFFFF' : colors.secondaryLabel, marginTop: 8 }]}>{l.label}</Text>
+                  <Text style={[compact ? typography.subhead : typography.headline, { color: on ? '#FFFFFF' : colors.secondaryLabel, marginTop: compact ? 6 : 8, fontWeight: '600' }]} numberOfLines={1}>
+                    {l.label}
+                  </Text>
                 </PressableScale>
               </React.Fragment>
             );
           })}
-          {row.length === 1 ? (
-            <>
+          {Array.from({ length: columns - row.length }, (_, k) => (
+            <React.Fragment key={`pad${k}`}>
               <View style={{ width: spacing.sm + 2 }} />
               <View style={{ flex: 1 }} />
-            </>
-          ) : null}
+            </React.Fragment>
+          ))}
         </View>
       ))}
     </View>

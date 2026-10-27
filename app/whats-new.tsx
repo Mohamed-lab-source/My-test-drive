@@ -30,12 +30,16 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
       'Date chips, save & add another, make a transaction a monthly bill, exclude accounts from net worth, VAT and salary calculators, Zakat "mark as paid"',
       'Money → Cards: every card from every bank in your SMS, its spending and purchases; Bank SMS → "Find my other banks & cards"',
       'Money → Plan: how much to save monthly and spend daily/weekly/monthly, with limit alerts; Money → Limits: every card\'s limit, minimum payment and interest',
+      'Swipe transactions to repeat, flag or delete; pay a card\'s minimum in one tap; "This month at a glance", a 7-day chart and big-expense alerts',
+      'Search by amount (">500", "100-300"), CSV export, 6-month in/out per account, card payoff, 50/30/20 and cost-per-use calculators',
     ],
   },
   {
     title: 'Tasks',
     emoji: '✅',
     items: [
+      'Quick add understands "~30m", "@Ahmed", "next monday", "every friday", "this weekend", "tonight" and "25/12"',
+      'Tomorrow and Upcoming lists, quick filters, quick wins, Later swipe, focus on a task, pick 3 from the backlog and a "done today" celebration',
       'Quick add like "Call mom tomorrow !high #family"',
       'Plan my day, top task 🐸, priority matrix, Kanban board and routines',
       'Focus timer with breaks, focus stats and completion streaks',

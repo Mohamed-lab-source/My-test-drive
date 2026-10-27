@@ -12,6 +12,10 @@ import { showUndoDelete } from '../../ui/undo';
 import { useProductivityStore } from '../../store/productivityStore';
 import { daysToDeadline, deadlineLabel, formatEstimate } from '../../utils/estimate';
 import type { Task } from '../../db/types';
+import { useRouter } from 'expo-router';
+import { useUndoStore } from '../../store/undoStore';
+import { todayKey } from '../../db/client';
+import { formatDateKey } from '../../utils/date';
 
 interface TaskRowProps {
   task: Task;
@@ -27,6 +31,9 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
   const refreshTasks = useProductivityStore((s) => s.refreshTasks);
   const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
   const updateTask = useProductivityStore((s) => s.updateTask);
+  const duplicateTask = useProductivityStore((s) => s.duplicateTask);
+  const setTaskReminder = useProductivityStore((s) => s.setTaskReminder);
+  const router = useRouter();
 
   // Long-press: the common actions without opening the task.
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,14 +50,39 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
   };
 
   const isDone = task.status === 'done';
+  // Small status markers under the title: when it's planned, overdue,
+  // repeating, has a reminder or notes.
+  const today = todayKey();
+  const meta: { text: string; color: string; bold?: boolean }[] = [];
+  if (!isDone && task.scheduled_date && task.scheduled_date < today) meta.push({ text: '⚠︎ Overdue', color: colors.red, bold: true });
+  else if (!isDone && task.scheduled_date && task.scheduled_date > today) meta.push({ text: `🗓 ${formatDateKey(task.scheduled_date)}`, color: colors.blue });
+  if (task.repeat_frequency) meta.push({ text: `↻ ${task.repeat_frequency}`, color: colors.secondaryLabel });
+  if (!isDone && task.remind_at && new Date(task.remind_at).getTime() > Date.now())
+    meta.push({ text: `🔔 ${new Date(task.remind_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`, color: colors.secondaryLabel });
+  if (task.notes?.trim()) meta.push({ text: '📝', color: colors.secondaryLabel });
   const priorityColor =
     task.priority === 'high' ? colors.red : task.priority === 'medium' ? colors.orange : colors.gray;
 
   return (
     <SwipeableRow
-      leading={{ label: isDone ? 'Undo' : 'Done', color: isDone ? colors.gray : colors.green, icon: isDone ? 'arrow.clockwise' : 'checkmark.circle.fill', onPress: () => toggleTaskDone(task.id, !isDone) }}
+      leading={{
+        label: isDone ? 'Undo' : 'Done',
+        color: isDone ? colors.gray : colors.green,
+        icon: isDone ? 'arrow.clockwise' : 'checkmark.circle.fill',
+        onPress: () => {
+          toggleTaskDone(task.id, !isDone);
+          if (!isDone) useUndoStore.getState().show(`Done: ${task.title}`, () => toggleTaskDone(task.id, false));
+        },
+      }}
       actions={[
-        ...(isDone ? [] : [{ label: 'Tomorrow', color: colors.orange, onPress: () => rescheduleTask(task.id, 'tomorrow') }]),
+        ...(isDone
+          ? []
+          : [
+              { label: 'Tomorrow', color: colors.orange, onPress: () => rescheduleTask(task.id, 'tomorrow') },
+              ...(task.status !== 'backlog'
+                ? [{ label: 'Later', icon: 'archivebox.fill', color: colors.indigo, onPress: () => updateTask(task.id, { status: 'backlog', scheduled_date: null }) }]
+                : []),
+            ]),
         { label: 'Delete', color: colors.red, onPress: handleDelete },
       ]}
     >
@@ -72,6 +104,7 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
             if (isDone) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             toggleTaskDone(task.id, !isDone);
+            if (!isDone) useUndoStore.getState().show(`Done: ${task.title}`, () => toggleTaskDone(task.id, false));
           }}
           hitSlop={8}
           style={{ marginRight: spacing.sm }}
@@ -94,8 +127,13 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
             >
               {task.title}
             </Text>
-            {project || subtasks || task.estimate_minutes || task.due_date || task.waiting_on ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+            {project || subtasks || task.estimate_minutes || task.due_date || task.waiting_on || meta.length ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+                {meta.map((m) => (
+                  <Text key={m.text} style={[typography.caption1, { color: m.color, marginRight: spacing.sm, fontWeight: m.bold ? '600' : '400' }]}>
+                    {m.text}
+                  </Text>
+                ))}
                 {project ? (
                   <Text style={[typography.caption1, { color: project.color, fontWeight: '600', marginRight: spacing.sm }]}>
                     {project.name}
@@ -139,9 +177,8 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
               </View>
             ) : null}
           </View>
-          {!isDone && task.priority !== 'low' ? (
-            <Badge text={task.priority === 'high' ? 'High' : 'Medium'} color={priorityColor} />
-          ) : null}
+          {/* Medium is the default, so only High stands out. */}
+          {!isDone && task.priority === 'high' ? <Badge text="High" color={priorityColor} /> : null}
         </Pressable>
         {reorder ? (
           <View style={{ marginLeft: spacing.sm }}>
@@ -167,11 +204,32 @@ export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
                 { label: 'Tomorrow', icon: 'sunrise.fill', onPress: () => rescheduleTask(task.id, 'tomorrow') },
                 { label: 'Next week', icon: 'calendar', onPress: () => rescheduleTask(task.id, 'next_week') },
                 {
+                  label: 'Remind me in 1 hour',
+                  icon: 'bell.fill',
+                  section: true,
+                  onPress: () => {
+                    setTaskReminder(task.id, new Date(Date.now() + 3600000).toISOString());
+                    useUndoStore.getState().show('Reminder in 1 hour');
+                  },
+                },
+                { label: 'Focus on this', icon: 'timer', onPress: () => router.push({ pathname: '/tasks/focus', params: { task: task.id } }) },
+                ...(task.status !== 'backlog'
+                  ? [{ label: 'Move to backlog', icon: 'archivebox.fill', onPress: () => updateTask(task.id, { status: 'backlog', scheduled_date: null }) }]
+                  : []),
+                {
                   label: task.priority === 'high' ? 'Lower priority' : 'Make high priority',
                   icon: 'flag.fill',
                   onPress: () => updateTask(task.id, { priority: task.priority === 'high' ? 'medium' : 'high' }),
                 },
               ]),
+          {
+            label: 'Duplicate',
+            icon: 'doc.on.doc',
+            onPress: async () => {
+              await duplicateTask(task.id);
+              useUndoStore.getState().show('Task duplicated');
+            },
+          },
           { label: 'Delete', icon: 'trash.fill', destructive: true, section: true, onPress: handleDelete },
         ]}
       />

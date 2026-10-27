@@ -48,6 +48,24 @@ export default function AccountDetailScreen() {
     [account?.balance, rows, period?.key]
   );
 
+  // Money in vs out for each of the last six months.
+  const sixMonths = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      let inflow = 0;
+      let outflow = 0;
+      for (const t of rows) {
+        if (!localDateKey(t.date).startsWith(key)) continue;
+        const incoming = t.type === 'income' || (t.type === 'transfer' && t.transfer_to_account_id === id);
+        if (incoming) inflow += t.amount;
+        else outflow += t.amount;
+      }
+      return { key, label: d.toLocaleDateString(undefined, { month: 'short' }), inflow, outflow };
+    });
+  }, [rows, id]);
+
   if (!account || !period || !statement) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -235,6 +253,33 @@ export default function AccountDetailScreen() {
             </Pressable>
           </View>
         </View>
+        {sixMonths.some((m) => m.inflow || m.outflow) ? (
+          <Card style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Last 6 months</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 80 }}>
+              {sixMonths.map((m) => {
+                const max = Math.max(1, ...sixMonths.map((x) => Math.max(x.inflow, x.outflow)));
+                return (
+                  <View key={m.key} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 3 }}>
+                    <View style={{ width: 8, height: Math.max(2, (m.inflow / max) * 80), borderRadius: 3, backgroundColor: colors.green }} />
+                    <View style={{ width: 8, height: Math.max(2, (m.outflow / max) * 80), borderRadius: 3, backgroundColor: colors.red }} />
+                  </View>
+                );
+              })}
+            </View>
+            <View style={{ flexDirection: 'row', marginTop: 4 }}>
+              {sixMonths.map((m) => (
+                <Text key={m.key} style={[typography.caption2, { color: colors.secondaryLabel, flex: 1, textAlign: 'center' }]}>
+                  {m.label}
+                </Text>
+              ))}
+            </View>
+            <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.xs }]}>
+              <Text style={{ color: colors.green }}>●</Text> in   <Text style={{ color: colors.red }}>●</Text> out · average out{' '}
+              {formatMoney(Math.round(sixMonths.reduce((s, m) => s + m.outflow, 0) / 6), account.currency)} a month
+            </Text>
+          </Card>
+        ) : null}
         <View style={{ marginBottom: spacing.sm }}>
           <ChipSelector options={periods.map((p) => ({ id: p.key, label: p.label }))} selectedId={period.key} onSelect={setPeriodKey} />
         </View>

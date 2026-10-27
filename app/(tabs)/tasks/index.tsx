@@ -5,10 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useProductivityStore } from '../../../src/store/productivityStore';
 import { ScreenHeader } from '../../../src/ui/ScreenHeader';
-import Animated from 'react-native-reanimated';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { AmbientGlow } from '../../../src/ui/AmbientGlow';
 import { CompactHeader, useScrollY } from '../../../src/ui/CollapsingHeader';
 import { PressableScale } from '../../../src/ui/PressableScale';
+import * as Haptics from '../../../src/utils/haptics';
+import { meetingCountdown, meetingLink } from '../../../src/utils/meetingInfo';
 import { SmartLists } from '../../../src/features/tasks/SmartLists';
 import { SegmentedControl } from '../../../src/ui/SegmentedControl';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
@@ -23,7 +25,7 @@ import { FocusTimer } from '../../../src/features/tasks/FocusTimer';
 import { PlanDaySheet } from '../../../src/features/tasks/PlanDaySheet';
 import { StaleBacklogSheet, staleBacklog } from '../../../src/features/tasks/StaleBacklogSheet';
 import { WeeklyGoalsCard } from '../../../src/features/tasks/WeeklyGoalsCard';
-import { Share } from 'react-native';
+import { Share, Linking, RefreshControl } from 'react-native';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { Icon } from '../../../src/ui/Icon';
 import { TextField } from '../../../src/ui/TextField';
@@ -45,7 +47,17 @@ function remindAtFor(dateKey: string | null, hhmm: string): string | null {
   return at.getTime() > Date.now() ? at.toISOString() : null;
 }
 
-const SEGMENTS = ['Today', 'Backlog', 'All', 'Done', 'Waiting'];
+const EMPTY: Record<number, { title: string; message: string }> = {
+  0: { title: 'Nothing planned for today', message: 'Tap + or type above, e.g. "Call the bank at 3pm".' },
+  1: { title: 'Backlog is empty', message: 'Add "someday" to a quick add to park a task here.' },
+  2: { title: 'No open tasks', message: 'Tap + to add one.' },
+  3: { title: 'Nothing completed yet', message: 'Finished tasks show up here.' },
+  4: { title: 'Not waiting on anyone', message: 'Type "@name" in a quick add, e.g. "Contract @Ahmed".' },
+  5: { title: 'Nothing for tomorrow yet', message: 'Type "tomorrow" in a quick add, or swipe a task left → Tomorrow.' },
+  6: { title: 'Nothing scheduled ahead', message: 'Try "next monday", "in 3 days" or "25/12" in a quick add.' },
+};
+
+const SEGMENTS = ['Today', 'Backlog', 'All', 'Done', 'Waiting', 'Tomorrow', 'Upcoming'];
 
 export default function TasksScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -53,7 +65,7 @@ export default function TasksScreen() {
   const { scrollY, onScroll } = useScrollY();
   const router = useRouter();
   const { action, project } = useLocalSearchParams<{ action?: string; project?: string }>();
-  const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask, rescheduleTask } = useProductivityStore();
+  const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask, rescheduleTask, updateTask } = useProductivityStore();
   const [quickText, setQuickText] = useState('');
   const quick = useMemo(() => parseQuickTask(quickText, projects), [quickText, projects]);
 
@@ -71,8 +83,12 @@ export default function TasksScreen() {
       repeat_interval: quick.repeat ? 1 : null,
       // "at 5pm" on the task's day (today when it isn't scheduled).
       remind_at: quick.remindTime ? remindAtFor(quick.scheduledDate, quick.remindTime) : null,
+      estimate_minutes: quick.estimate,
+      waiting_on: quick.waitingOn,
       sort_order: Date.now(),
     });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    useUndoStore.getState().show(`Added: ${quick.title}`);
     setQuickText('');
   };
 
@@ -90,6 +106,7 @@ export default function TasksScreen() {
   const [query, setQuery] = useState('');
   const topTaskSetting = useSettingsStore((s) => s.topTask);
   const [addVisible, setAddVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [planVisible, setPlanVisible] = useState(false);
   const [staleVisible, setStaleVisible] = useState(false);
   const [planTomorrowVisible, setPlanTomorrowVisible] = useState(false);
@@ -110,6 +127,10 @@ export default function TasksScreen() {
   }, [action]);
 
   const todayStr = todayKey();
+  const tomorrowStr = todayKey(new Date(Date.now() + 86400000));
+  // Quick filters on top of the list (all must match).
+  const [quickFilters, setQuickFilters] = useState<string[]>([]);
+  const [showDoneToday, setShowDoneToday] = useState(false);
   const upcomingMeetings = useMemo(
     () => meetings.filter((m) => new Date(m.start_at) >= new Date(new Date().setHours(0, 0, 0, 0))).slice(0, 3),
     [meetings]
@@ -131,6 +152,12 @@ export default function TasksScreen() {
       );
     }
     if (segment === 4) return tasks.filter((t) => t.status !== 'done' && !!t.waiting_on);
+    if (segment === 5) return tasks.filter((t) => t.status !== 'done' && t.scheduled_date === tomorrowStr);
+    // Everything planned after today, soonest first.
+    if (segment === 6)
+      return tasks
+        .filter((t) => t.status !== 'done' && !!t.scheduled_date && t.scheduled_date > todayStr)
+        .sort((a, b) => a.scheduled_date!.localeCompare(b.scheduled_date!));
     if (segment === 1) return tasks.filter((t) => t.status === 'backlog');
     if (segment === 3) {
       return tasks
@@ -148,6 +175,8 @@ export default function TasksScreen() {
       tasks.filter((t) => t.status !== 'backlog' && t.status !== 'done').length,
       tasks.filter((t) => t.status === 'done').length,
       tasks.filter((t) => t.status !== 'done' && !!t.waiting_on).length,
+      tasks.filter((t) => t.status !== 'done' && t.scheduled_date === tomorrowStr).length,
+      tasks.filter((t) => t.status !== 'done' && !!t.scheduled_date && t.scheduled_date > todayStr).length,
     ],
     [tasks, todayStr]
   );
@@ -158,10 +187,23 @@ export default function TasksScreen() {
     const q = query.trim().toLowerCase();
     // A search looks across every task, whatever tab is selected.
     const base = q
-      ? tasks.filter((t) => t.title.toLowerCase().includes(q) || (t.notes ?? '').toLowerCase().includes(q))
+      ? tasks.filter(
+          (t) =>
+            t.title.toLowerCase().includes(q) ||
+            (t.notes ?? '').toLowerCase().includes(q) ||
+            (t.waiting_on ?? '').toLowerCase().includes(q) ||
+            (projects.find((p) => p.id === t.project_id)?.name ?? '').toLowerCase().includes(q)
+        )
       : bySegment;
-    const list =
+    const byProject =
       activeProject === 'all' ? base : base.filter((t) => (activeProject === 'none' ? !t.project_id : t.project_id === activeProject));
+    const list = byProject.filter(
+      (t) =>
+        (!quickFilters.includes('high') || t.priority === 'high') &&
+        (!quickFilters.includes('deadline') || !!t.due_date) &&
+        (!quickFilters.includes('quick') || (!!t.estimate_minutes && t.estimate_minutes <= 15)) &&
+        (!quickFilters.includes('reminder') || !!t.remind_at)
+    );
     if (taskSort === 'manual' || segment === 3) return list;
     const rank = { high: 0, medium: 1, low: 2 } as const;
     return [...list].sort((a, b) =>
@@ -169,9 +211,11 @@ export default function TasksScreen() {
         ? rank[a.priority] - rank[b.priority]
         : taskSort === 'deadline'
           ? (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999')
-          : b.created_at.localeCompare(a.created_at)
+          : taskSort === 'quick'
+            ? (a.estimate_minutes ?? 9999) - (b.estimate_minutes ?? 9999)
+            : b.created_at.localeCompare(a.created_at)
     );
-  }, [bySegment, activeProject, query, tasks, taskSort, segment]);
+  }, [bySegment, activeProject, query, tasks, taskSort, segment, quickFilters, projects]);
 
   const staleCount = useMemo(() => staleBacklog(tasks).length, [tasks]);
 
@@ -204,7 +248,20 @@ export default function TasksScreen() {
       <AmbientGlow colors={[colors.blue, colors.indigo]} />
       <Animated.ScrollView
         onScroll={onScroll}
-        scrollEventThrottle={16} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}>
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 140 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            progressViewOffset={insets.top}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await Promise.all([refreshTasks(), useProductivityStore.getState().refreshMeetings(), useProductivityStore.getState().refreshSubtaskCounts()]);
+              setRefreshing(false);
+            }}
+          />
+        }
+      >
         <ScreenHeader
           scrollY={scrollY}
           title="Tasks"
@@ -251,6 +308,16 @@ export default function TasksScreen() {
                   <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 2 }]}>
                     {formatRelativeDay(m.start_at)} · {formatTime(m.start_at)}
                   </Text>
+                  {meetingCountdown(m.start_at, m.end_at) ? (
+                    <Text style={[typography.caption1, { color: meetingCountdown(m.start_at, m.end_at) === 'Now' ? colors.green : colors.orange, fontWeight: '700', marginTop: 2 }]}>
+                      {meetingCountdown(m.start_at, m.end_at)}
+                    </Text>
+                  ) : null}
+                  {meetingLink(m) ? (
+                    <Pressable onPress={() => Linking.openURL(meetingLink(m)!).catch(() => {})} style={{ marginTop: 6 }}>
+                      <Text style={[typography.subhead, { color: colors.green, fontWeight: '700' }]}>Join ›</Text>
+                    </Pressable>
+                  ) : null}
                 </Card>
               ))}
             </ScrollView>
@@ -273,14 +340,19 @@ export default function TasksScreen() {
               {quick.projectName ? ` · ${quick.projectName}` : ''}
               {quick.remindTime ? ` · ⏰ ${formatClock(quick.remindTime)}` : ''}
               {quick.repeat ? ` · ↻ ${quick.repeat}` : ''}
-              {quick.deadline ? ` · 📅 by ${formatDateKey(quick.deadline)}` : ''} — press return to add
+              {quick.deadline ? ` · 📅 by ${formatDateKey(quick.deadline)}` : ''}
+              {quick.estimate ? ` · ⏱ ${quick.estimate}m` : ''}
+              {quick.waitingOn ? ` · ⏳ ${quick.waitingOn}` : ''} — press return to add
             </Text>
           ) : null}
           <SmartLists
             selected={segment}
             onSelect={setSegment}
+            columns={3}
             lists={[
               { index: 0, label: 'Today', icon: 'calendar', color: colors.blue, count: segmentCounts[0] },
+              { index: 5, label: 'Tomorrow', icon: 'sunrise.fill', color: colors.teal, count: segmentCounts[5] },
+              { index: 6, label: 'Upcoming', icon: 'calendar.badge.clock', color: colors.red, count: segmentCounts[6] },
               { index: 2, label: 'All', icon: 'tray.fill', color: '#5B5B61', count: segmentCounts[2] },
               { index: 1, label: 'Backlog', icon: 'archivebox.fill', color: colors.orange, count: segmentCounts[1] },
               { index: 4, label: 'Waiting', icon: 'hourglass', color: colors.purple, count: segmentCounts[4] },
@@ -300,14 +372,41 @@ export default function TasksScreen() {
                   { id: 'priority', label: 'Priority' },
                   { id: 'deadline', label: 'Deadline' },
                   { id: 'newest', label: 'Newest' },
+                  { id: 'quick', label: 'Quick wins' },
                 ]}
                 selectedId={taskSort}
                 onSelect={setTaskSort}
               />
             </View>
           ) : null}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm }}>
+            {[
+              { id: 'high', label: '🔴 High' },
+              { id: 'deadline', label: '📅 Has deadline' },
+              { id: 'quick', label: '⚡ Under 15m' },
+              { id: 'reminder', label: '🔔 Reminder' },
+            ].map((f) => {
+              const on = quickFilters.includes(f.id);
+              return (
+                <Pressable
+                  key={f.id}
+                  onPress={() => setQuickFilters((xs) => (on ? xs.filter((x) => x !== f.id) : [...xs, f.id]))}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 14,
+                    marginRight: 6,
+                    marginBottom: 6,
+                    backgroundColor: on ? colors.blue : colors.tertiaryFill,
+                  }}
+                >
+                  <Text style={[typography.footnote, { color: on ? '#fff' : colors.label, fontWeight: on ? '600' : '400' }]}>{f.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
           {projects.length > 0 ? (
-            <View style={{ marginTop: spacing.sm }}>
+            <View style={{ marginTop: spacing.xs }}>
               <ChipSelector
                 options={[
                   { id: 'all', label: 'All projects' },
@@ -420,6 +519,16 @@ export default function TasksScreen() {
                   ? ' — more than 6h of focused work. Consider moving something to tomorrow.'
                   : ` · ${bySegment.filter((t) => t.status !== 'done' && !t.estimate_minutes).length} without an estimate`}
               </Text>
+              {bySegment.some((t) => t.status !== 'done' && !t.estimate_minutes) ? (
+                <Pressable
+                  onPress={async () => {
+                    for (const t of bySegment.filter((x) => x.status !== 'done' && !x.estimate_minutes)) await updateTask(t.id, { estimate_minutes: 15 });
+                  }}
+                  style={{ marginTop: 4 }}
+                >
+                  <Text style={[typography.caption1, { color: colors.blue, fontWeight: '600' }]}>Give the rest 15 min each</Text>
+                </Pressable>
+              ) : null}
               {plannedMinutes(bySegment) > 0 ? (
                 <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 2 }]}>
                   Starting now, you'd finish around {formatTime(new Date(Date.now() + (plannedMinutes(bySegment) + todaysMeetingMinutes) * 60000).toISOString())}
@@ -448,6 +557,22 @@ export default function TasksScreen() {
               </View>
             </Card>
           ) : null}
+          {segment === 1 && !query && bySegment.length > 0 ? (
+            <Pressable
+              onPress={async () => {
+                // High priority first, then the ones waiting longest.
+                const rank = { high: 0, medium: 1, low: 2 } as const;
+                const pick = [...bySegment].sort((a, b) => rank[a.priority] - rank[b.priority] || a.created_at.localeCompare(b.created_at)).slice(0, 3);
+                for (const t of pick) await updateTask(t.id, { status: 'todo', scheduled_date: todayStr });
+                useUndoStore.getState().show(`${pick.length} moved to today`, async () => {
+                  for (const t of pick) await updateTask(t.id, { status: 'backlog', scheduled_date: null });
+                });
+              }}
+              style={{ marginBottom: spacing.sm }}
+            >
+              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>☀️ Pick {Math.min(3, bySegment.length)} for today</Text>
+            </Pressable>
+          ) : null}
           {segment === 1 && staleCount > 0 ? (
             <Pressable onPress={() => setStaleVisible(true)}>
               <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
@@ -474,12 +599,40 @@ export default function TasksScreen() {
             </Pressable>
           ) : null}
           {filtered.length === 0 ? (
-            <Card>
-              <EmptyState icon="checkmark.circle.fill" title="Nothing here" message="Tap + to add a task." />
-            </Card>
+            segment === 0 && !query && doneToday > 0 && quickFilters.length === 0 ? (
+              <Animated.View entering={ZoomIn.springify().damping(12)}>
+                <Card style={{ alignItems: 'center', paddingVertical: spacing.xl, backgroundColor: colors.green + '18' }}>
+                  <Text style={{ fontSize: 44 }}>🎉</Text>
+                  <Text style={[typography.title3, { color: colors.label, marginTop: spacing.xs }]}>All done for today</Text>
+                  <Text style={[typography.subhead, { color: colors.secondaryLabel, marginTop: 2, textAlign: 'center' }]}>
+                    {doneToday} task{doneToday === 1 ? '' : 's'} finished. Plan tomorrow or enjoy the rest of your day.
+                  </Text>
+                  <Pressable onPress={() => setSegment(5)} style={{ marginTop: spacing.sm }}>
+                    <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>See tomorrow ›</Text>
+                  </Pressable>
+                </Card>
+              </Animated.View>
+            ) : (
+              <Card>
+                <EmptyState
+                  icon="checkmark.circle.fill"
+                  title={query ? 'No matching tasks' : quickFilters.length ? 'Nothing matches these filters' : EMPTY[segment]?.title ?? 'Nothing here'}
+                  message={query || quickFilters.length ? 'Try a different search or filter.' : EMPTY[segment]?.message ?? 'Tap + to add a task.'}
+                />
+              </Card>
+            )
           ) : (
             <Card padded={false}>
               {filtered.map((task, i, arr) => (
+                <React.Fragment key={task.id}>
+                {/* Upcoming: a date heading where the day changes. */}
+                {segment === 6 && !query && task.scheduled_date !== arr[i - 1]?.scheduled_date ? (
+                  <View style={{ paddingHorizontal: spacing.md, paddingVertical: 6, backgroundColor: colors.quaternaryFill }}>
+                    <Text style={[typography.footnote, { color: colors.secondaryLabel, fontWeight: '700', textTransform: 'uppercase' }]}>
+                      {task.scheduled_date === tomorrowStr ? 'Tomorrow' : formatDateKey(task.scheduled_date!)}
+                    </Text>
+                  </View>
+                ) : null}
                 <TaskRow
                   key={task.id}
                   task={task}
@@ -496,9 +649,27 @@ export default function TasksScreen() {
                       : undefined
                   }
                 />
+                </React.Fragment>
               ))}
             </Card>
           )}
+          {segment === 0 && !query && doneToday > 0 ? (
+            <View style={{ marginTop: spacing.md }}>
+              <Pressable onPress={() => setShowDoneToday((v) => !v)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs }}>
+                <Text style={[typography.subhead, { color: colors.secondaryLabel, fontWeight: '600', flex: 1 }]}>Done today ({doneToday})</Text>
+                <Icon name={showDoneToday ? 'chevron.down' : 'chevron.right'} size={14} color={colors.secondaryLabel} />
+              </Pressable>
+              {showDoneToday ? (
+                <Card padded={false}>
+                  {tasks
+                    .filter((t) => t.status === 'done' && t.completed_at && localDateKey(t.completed_at) === todayStr)
+                    .map((task, i, arr) => (
+                      <TaskRow key={task.id} task={task} isLast={i === arr.length - 1} onPress={() => setDetailTask(task)} />
+                    ))}
+                </Card>
+              ) : null}
+            </View>
+          ) : null}
           {filtered.length > 0 && segment !== 3 ? (
             <Text style={[typography.caption1, { color: colors.tertiaryLabel, textAlign: 'center', marginTop: spacing.sm }]}>
               Swipe right to finish · swipe left to move or delete · hold for more

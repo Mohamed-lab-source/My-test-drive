@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useQuickAddStore } from '../../../src/store/quickAddStore';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { Card } from '../../../src/ui/Card';
@@ -40,7 +41,16 @@ export default function CardsAndAccountsScreen() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const daysIn = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const open = accounts.filter((a) => !a.is_archived);
-  const cards = open.filter((a) => a.type === 'credit');
+  // Soonest payment due first.
+  const nextDue = (c: Account) =>
+    statementPeriods(c, 2)
+      .map((p) => p.dueDate)
+      .reverse()
+      .find((d) => d && d.getTime() >= today)
+      ?.getTime() ?? Infinity;
+  const cards = open.filter((a) => a.type === 'credit').sort((a, b) => nextDue(a) - nextDue(b));
+  const payFrom = open.find((a) => a.type === 'bank')?.id ?? open.find((a) => a.type !== 'credit')?.id;
+  const quick = useQuickAddStore((s) => s.open);
   const others = open.filter((a) => a.type !== 'credit');
   const spentOn = (a: Account, since: number, until = Infinity) =>
     txs
@@ -187,6 +197,22 @@ export default function CardsAndAccountsScreen() {
                     </Text>
                   ) : null}
                 </View>
+                {owed > 0 ? (
+                  <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
+                    <Pressable
+                      onPress={() => quick('transfer', payFrom, { toAccountId: c.id, amount: minPay })}
+                      style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10, backgroundColor: colors.tertiaryFill, marginRight: spacing.sm }}
+                    >
+                      <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Pay minimum</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => quick('transfer', payFrom, { toAccountId: c.id, amount: owed })}
+                      style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10, backgroundColor: colors.blue }}
+                    >
+                      <Text style={[typography.subhead, { color: '#fff', fontWeight: '600' }]}>Pay in full</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
                 {ownLimit(c)}
               </Card>
             </Appear>

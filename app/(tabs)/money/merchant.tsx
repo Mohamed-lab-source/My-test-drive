@@ -52,7 +52,14 @@ export default function MerchantScreen() {
     const catCounts = new Map<string, number>();
     for (const t of rows) if (t.category_id) catCounts.set(t.category_id, (catCounts.get(t.category_id) ?? 0) + 1);
     const topCat = [...catCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const thisMonth = months[11].value;
+    const lastMonth = months[10].value;
+    const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString();
+    const lastYear = rows.filter((t) => t.date >= yearAgo).reduce((s, t) => s + v(t), 0);
     return {
+      thisMonth,
+      lastMonth,
+      lastYear,
       total,
       count: rows.length,
       avg: rows.length ? total / rows.length : 0,
@@ -91,6 +98,16 @@ export default function MerchantScreen() {
               {stats.category ? ` · usually ${stats.category}` : ''}
             </Text>
           ) : null}
+        </Card>
+        <Card style={{ marginBottom: spacing.md }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {stat('This month', formatMoney(stats.thisMonth, currency))}
+            {stat('Last month', formatMoney(stats.lastMonth, currency))}
+          </View>
+          <Text style={[typography.subhead, { color: colors.secondaryLabel }]}>
+            {formatMoney(stats.lastYear, currency)} in the last 12 months
+            {stats.lastYear > 0 ? ` · about ${formatMoney(Math.round(stats.lastYear / 12), currency)} a month` : ''}
+          </Text>
         </Card>
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Last 12 months</Text>
