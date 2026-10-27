@@ -185,9 +185,13 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - One screen for the last 7 days: prayers, dhikr, Quran pages, tasks done, focus minutes, habit consistency, spending vs. the prior week, and mood
 
 **Home-screen widgets (Android)**
-- Prayers — today's 5 prayers with streak and the next prayer time, tap a prayer to mark it done right from the widget
-- Today — your tasks scheduled for today; tap the circle to mark a task done, tap + to add one
-- Net worth — current net worth and next upcoming bill; tap + to log an expense, tap Pay to post the bill
+- Smart Stack — like iOS's: scores everything going on and shows what matters right now, big, with a one-tap button (Join a meeting about to start, mark the prayer whose time it is, Pay a bill due today, what you can still spend today, Done on a task whose reminder is near, tick a habit in the evening, +1 glass when you're behind on water, special Hijri days, and a look at tomorrow late at night); the next few underneath when the widget is taller
+- Spending — today's allowance as a ring, what's left this week and this month from your plan, an on-track / watch / over badge and the month-end projection
+- Today — overdue and due-today tasks first, then by priority and reminder time, with a progress bar; tap a circle to finish one; a celebration and tomorrow's first tasks when you're done
+- Habits & Water — tick habits off (with streaks) and add a glass of water right from the home screen
+- Prayers — every prayer time today, the next one ringed, the current one flagged until marked, Hijri date, streak; tap a prayer to mark it
+- Net worth — a 30-day trend line, change this month, today's spending against your limit and the next bill with Pay
+- All widgets resize, follow light/dark mode, refresh as you use Anchor and whenever you leave it, and a button on one updates the others; Settings → Home-screen widgets previews them with your data and adds them in one tap
 
 **Settings**
 - Light/Dark/System appearance

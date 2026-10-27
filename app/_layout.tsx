@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, AppState, Platform } from 'react-native';
+import { refreshWidgets } from '../src/widgets/refresh';
+import { WIDGET_NAMES } from '../src/widgets/renderers';
 import { seedPreviewData } from '../src/dev/previewSeed';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -135,6 +137,9 @@ function AppShell() {
         // A new day may have started while Anchor was in the background.
         applyAutoRoutines().catch(() => 0);
         if (Platform.OS !== 'web') rescheduleMorningAllowance().catch(() => {});
+      } else if (state === 'background' && Platform.OS === 'android') {
+        // Leaving the app: bring every home-screen widget up to date.
+        refreshWidgets(WIDGET_NAMES);
       }
     });
     return () => sub.remove();
@@ -166,6 +171,7 @@ function AppShell() {
         <Stack.Screen name="review" />
         <Stack.Screen name="reminders" />
         <Stack.Screen name="whats-new" />
+        <Stack.Screen name="widgets" />
         <Stack.Screen name="recap" />
         <Stack.Screen name="achievements" />
       </Stack>

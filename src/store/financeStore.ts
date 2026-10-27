@@ -126,6 +126,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   refreshTransactions: async () => {
     set({ transactions: await repo.listTransactions(200) });
+    refreshMoneyWidget();
     scheduleSpendDigest(get().transactions, get().accounts).catch(() => {});
   },
   refreshAccounts: async () => {

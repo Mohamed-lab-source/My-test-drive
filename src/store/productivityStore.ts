@@ -70,7 +70,10 @@ export const useProductivityStore = create<ProductivityState>((set, get) => ({
     refreshTasksWidget();
   },
   refreshProjects: async () => set({ projects: await repo.listProjects() }),
-  refreshMeetings: async () => set({ meetings: await repo.listMeetings() }),
+  refreshMeetings: async () => {
+    set({ meetings: await repo.listMeetings() });
+    refreshTasksWidget();
+  },
 
   addTask: async (input) => {
     const id = await repo.createTask(input);

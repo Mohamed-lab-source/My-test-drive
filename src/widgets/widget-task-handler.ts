@@ -3,8 +3,20 @@ import { todayKey } from '../db/client';
 import * as lifeRepo from '../db/repositories/life';
 import * as productivityRepo from '../db/repositories/productivity';
 import * as financeRepo from '../db/repositories/finance';
+import * as habitsRepo from '../db/repositories/habits';
+import * as healthRepo from '../db/repositories/health';
 import type { Prayer } from '../db/types';
-import { renderBothSchemes } from './renderers';
+import { renderBothSchemes, type WidgetName } from './renderers';
+import { refreshWidgets } from './refresh';
+
+// Which other widgets show the data each action changes.
+const AFFECTS: Record<string, WidgetName[]> = {
+  TOGGLE_PRAYER: ['PrayerWidget', 'SmartWidget'],
+  TOGGLE_TASK: ['TasksWidget', 'SmartWidget'],
+  PAY_BILL: ['MoneyWidget', 'SpendWidget', 'SmartWidget'],
+  TOGGLE_HABIT: ['LifeWidget', 'SmartWidget'],
+  WATER_ADD: ['LifeWidget', 'SmartWidget'],
+};
 
 // Runs as a headless JS task — the app may not be in the foreground (or
 // running at all), so this never touches Zustand stores or React; it only
@@ -14,11 +26,11 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
 
   if (widgetAction === 'WIDGET_DELETED') return;
 
-  if (widgetAction === 'WIDGET_CLICK') {
+  if (widgetAction === 'WIDGET_CLICK' && clickAction) {
+    const key = todayKey();
     if (clickAction === 'TOGGLE_PRAYER') {
       const prayer = clickActionData?.prayer as Prayer | undefined;
       if (prayer) {
-        const key = todayKey();
         const logs = await lifeRepo.listPrayerLogsForDate(key);
         const wasDone = logs.some((l) => l.prayer === prayer && l.completed === 1);
         await lifeRepo.setPrayerLog(key, prayer, !wasDone);
@@ -36,8 +48,19 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
           await financeRepo.postRecurringRule(rule);
         }
       }
+    } else if (clickAction === 'TOGGLE_HABIT') {
+      const habitId = clickActionData?.habitId as string | undefined;
+      if (habitId) {
+        const logs = await habitsRepo.listHabitLogsForDate(key);
+        const wasDone = logs.some((l) => l.habit_id === habitId && l.completed === 1);
+        await habitsRepo.setHabitLog(habitId, key, !wasDone);
+      }
+    } else if (clickAction === 'WATER_ADD') {
+      await healthRepo.setWater(key, (await healthRepo.getWater(key)) + 1);
     }
+    const others = (AFFECTS[clickAction] ?? []).filter((n) => n !== widgetInfo.widgetName);
+    if (others.length) refreshWidgets(others);
   }
 
-  renderWidget(await renderBothSchemes(widgetInfo.widgetName));
+  renderWidget(await renderBothSchemes(widgetInfo.widgetName, { width: widgetInfo.width, height: widgetInfo.height }));
 }

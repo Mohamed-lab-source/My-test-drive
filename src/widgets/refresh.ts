@@ -5,13 +5,18 @@
 import { requestWidgetUpdate } from 'react-native-android-widget';
 import { renderBothSchemes, type WidgetName } from './renderers';
 
-function refresh(widgetName: WidgetName) {
-  requestWidgetUpdate({
-    widgetName,
-    renderWidget: () => renderBothSchemes(widgetName),
-  }).catch(() => {});
+export function refreshWidgets(names: WidgetName[]) {
+  for (const widgetName of names) {
+    requestWidgetUpdate({
+      widgetName,
+      renderWidget: (info) => renderBothSchemes(widgetName, { width: info.width, height: info.height }),
+    }).catch(() => {});
+  }
 }
 
-export const refreshPrayerWidget = () => refresh('PrayerWidget');
-export const refreshTasksWidget = () => refresh('TasksWidget');
-export const refreshMoneyWidget = () => refresh('MoneyWidget');
+// Each kind of change also refreshes the Smart Stack, which shows a bit of
+// everything.
+export const refreshPrayerWidget = () => refreshWidgets(['PrayerWidget', 'SmartWidget']);
+export const refreshTasksWidget = () => refreshWidgets(['TasksWidget', 'SmartWidget']);
+export const refreshMoneyWidget = () => refreshWidgets(['MoneyWidget', 'SpendWidget', 'SmartWidget']);
+export const refreshLifeWidget = () => refreshWidgets(['LifeWidget', 'SmartWidget']);

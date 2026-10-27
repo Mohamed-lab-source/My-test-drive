@@ -1,7 +1,8 @@
 "use no memo";
 import * as React from 'react';
-import { FlexWidget, TextWidget } from 'react-native-android-widget';
+import { FlexWidget, SvgWidget, TextWidget } from 'react-native-android-widget';
 import { widgetColors } from './theme';
+import { Bar } from './ui';
 import { formatMoney } from '../utils/money';
 
 export interface MoneyWidgetBill {
@@ -16,13 +17,32 @@ export interface MoneyWidgetData {
   netWorthMinor: number;
   currency: string;
   nextBill: MoneyWidgetBill | null;
+  // Change since the start of the month, and daily net-worth points.
+  monthChange?: number | null;
+  history?: number[];
+  // Day-to-day spending today against the plan's daily limit.
+  spentToday?: number;
+  dailyLimit?: number;
+}
+
+// A smooth-ish sparkline as an SVG polyline.
+function sparkSvg(points: number[], color: string, w = 88, h = 30): string {
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const span = max - min || 1;
+  const xy = points.map((v, i) => `${((i / (points.length - 1)) * w).toFixed(1)},${(h - 3 - ((v - min) / span) * (h - 6)).toFixed(1)}`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+<polyline points="${xy.join(' ')}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>`;
 }
 
 export function buildMoneyWidget(
-  { netWorthMinor, currency, nextBill }: MoneyWidgetData,
-  scheme: 'light' | 'dark' = 'light'
+  { netWorthMinor, currency, nextBill, monthChange, history = [], spentToday = 0, dailyLimit = 0 }: MoneyWidgetData,
+  scheme: 'light' | 'dark' = 'light',
+  height = 110
 ) {
   const c = widgetColors(scheme);
+  const up = (monthChange ?? 0) >= 0;
 
   return (
     <FlexWidget
@@ -30,8 +50,8 @@ export function buildMoneyWidget(
         height: 'match_parent',
         width: 'match_parent',
         backgroundColor: c.secondarySystemGroupedBackground,
-        borderRadius: 20,
-        padding: 16,
+        borderRadius: 22,
+        padding: 14,
         flexDirection: 'column',
         justifyContent: 'space-between',
       }}
@@ -47,7 +67,17 @@ export function buildMoneyWidget(
             text={formatMoney(netWorthMinor, currency)}
             style={{ fontSize: 24, fontWeight: '700', color: c.label, marginTop: 2 }}
           />
+          {monthChange ? (
+            <TextWidget
+              text={`${up ? '▲' : '▼'} ${formatMoney(Math.abs(monthChange), currency)} this month`}
+              maxLines={1}
+              style={{ fontSize: 11, fontWeight: '600', color: up ? c.green : c.red }}
+            />
+          ) : null}
         </FlexWidget>
+        {history.length >= 3 ? (
+          <SvgWidget svg={sparkSvg(history, up ? c.green : c.red)} style={{ width: 88, height: 30, marginRight: 10, marginLeft: 6 }} />
+        ) : null}
         <FlexWidget
           clickAction="OPEN_URI"
           clickActionData={{ uri: 'anchor://money?action=add-expense' }}
@@ -64,6 +94,22 @@ export function buildMoneyWidget(
           <TextWidget text="+" style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF' }} />
         </FlexWidget>
       </FlexWidget>
+      {dailyLimit > 0 && height >= 140 ? (
+        <FlexWidget clickAction="OPEN_URI" clickActionData={{ uri: 'anchor://money/plan' }} style={{ flexDirection: 'column', width: 'match_parent' }}>
+          <FlexWidget style={{ flexDirection: 'row', justifyContent: 'space-between', width: 'match_parent', marginBottom: 3 }}>
+            <TextWidget text="Today" style={{ fontSize: 11, color: c.secondaryLabel }} />
+            <TextWidget
+              text={
+                spentToday > dailyLimit
+                  ? `${formatMoney(spentToday - dailyLimit, currency)} over`
+                  : `${formatMoney(dailyLimit - spentToday, currency)} left of ${formatMoney(dailyLimit, currency)}`
+              }
+              style={{ fontSize: 11, fontWeight: '600', color: spentToday > dailyLimit ? c.red : c.label }}
+            />
+          </FlexWidget>
+          <Bar progress={spentToday / dailyLimit} color={spentToday > dailyLimit ? c.red : spentToday / dailyLimit >= 0.8 ? c.orange : c.green} track={c.tertiaryFill} height={5} />
+        </FlexWidget>
+      ) : null}
       {nextBill ? (
         <FlexWidget
           style={{

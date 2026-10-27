@@ -86,27 +86,69 @@
         {
           "widgets": [
             {
-              "name": "PrayerWidget",
-              "label": "Anchor · Prayers",
-              "description": "Today's 5 prayers with your streak — tap a prayer to mark it done",
+              "name": "SmartWidget",
+              "label": "Anchor · Smart Stack",
+              "description": "Shows what matters right now — a meeting about to start, a prayer to mark, a bill due, what you can spend today — with a one-tap action",
               "minWidth": "250dp",
               "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "PrayerWidget",
+              "label": "Anchor · Prayers",
+              "description": "Today's prayers with their times — the next one highlighted, tap to mark one done",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2
             },
             {
               "name": "TasksWidget",
               "label": "Anchor · Today",
-              "description": "Your tasks scheduled for today",
+              "description": "Today's tasks, most important first, with progress — tap a circle to finish one",
               "minWidth": "250dp",
               "minHeight": "180dp",
-              "updatePeriodMillis": 1800000
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical",
+              "targetCellWidth": 4,
+              "targetCellHeight": 3
             },
             {
               "name": "MoneyWidget",
               "label": "Anchor · Net Worth",
-              "description": "Net worth and your next upcoming bill",
+              "description": "Net worth with a 30-day trend, today's spending and your next bill",
               "minWidth": "250dp",
               "minHeight": "110dp",
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2
+            },
+            {
+              "name": "SpendWidget",
+              "label": "Anchor · Spending",
+              "description": "What's left to spend today, this week and this month from your plan",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "LifeWidget",
+              "label": "Anchor · Habits & Water",
+              "description": "Tick off today's habits and add a glass of water without opening the app",
+              "minWidth": "250dp",
+              "minHeight": "140dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
             }
           ]

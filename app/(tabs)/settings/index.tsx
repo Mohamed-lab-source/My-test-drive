@@ -358,6 +358,13 @@ export default function SettingsScreen() {
               showChevron
             />
             <ListRow
+              title="Home-screen widgets"
+              subtitle="Smart Stack, spending, tasks, habits, prayers — preview and add them"
+              leading={<IconCircle filled name="square.grid.2x2" color={colors.indigo} size={32} />}
+              onPress={() => router.push('/widgets')}
+              showChevron
+            />
+            <ListRow
               title="What's in Anchor"
               subtitle="A quick tour of every feature and where to find it"
               isLast

@@ -3,6 +3,7 @@ import { todayKey } from '../db/client';
 import type { Habit, HabitLog } from '../db/types';
 import * as repo from '../db/repositories/habits';
 import { cancelHabitReminder, scheduleHabitReminder } from '../notifications/scheduler';
+import { refreshLifeWidget } from '../widgets/refresh';
 
 interface HabitState {
   loaded: boolean;
@@ -40,6 +41,7 @@ export const useHabitsStore = create<HabitState>((set, get) => ({
       Promise.all(habits.map(async (h) => [h.id, await repo.computeHabitStreak(h.id)] as const)),
     ]);
     set({ todayLogs, streaks: Object.fromEntries(streakEntries) });
+    refreshLifeWidget();
   },
 
   addHabit: async (input) => {

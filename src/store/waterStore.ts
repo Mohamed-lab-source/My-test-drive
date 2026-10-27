@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as health from '../db/repositories/health';
 import { todayKey } from '../db/client';
+import { refreshLifeWidget } from '../widgets/refresh';
 
 // Today's glasses, shared by the Home water card and progress rings.
 interface WaterState {
@@ -16,6 +17,7 @@ export const useWaterStore = create<WaterState>((set, get) => ({
     const next = Math.max(0, get().count + delta);
     await health.setWater(todayKey(), next);
     set({ count: next });
+    refreshLifeWidget();
     return next;
   },
 }));

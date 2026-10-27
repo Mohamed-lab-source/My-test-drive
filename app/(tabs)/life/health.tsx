@@ -16,6 +16,7 @@ import { formatClock, formatDateKey } from '../../../src/utils/date';
 import { requestNotificationPermission, scheduleBedtimeReminder } from '../../../src/notifications/scheduler';
 import type { SleepLog, WaterLog, WeightLog } from '../../../src/db/types';
 import { VitalsCard } from '../../../src/features/life/VitalsCard';
+import { refreshLifeWidget } from '../../../src/widgets/refresh';
 
 const SLEEP_OPTIONS = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9];
 
@@ -69,6 +70,7 @@ export default function HealthScreen() {
   const changeWater = async (delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await repo.setWater(today, glasses + delta);
+    refreshLifeWidget();
     if (glasses < waterGoal && glasses + delta >= waterGoal) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await load();
   };
