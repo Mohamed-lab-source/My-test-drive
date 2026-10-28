@@ -206,7 +206,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
 **Your month, your budgets**
-- Choose the day your month starts (e.g. payday, the 25th): the spending plan, budgets, limits, "this month" totals, Safe to spend, last month's summary and the widgets all run from it (Settings, or Money → Plan)
+- Or start each month when your salary actually arrives: paydays are found in your income (Salary category, or "salary"/"payroll"/"راتب" in the note, including salary SMS), the month stays open if the salary is late, a notification says when a new month starts, and "My salary arrived today" starts one by hand
+- Choose a fixed day your month starts instead (e.g. the 25th): the spending plan, budgets, limits, "this month" totals, Safe to spend, last month's summary and the widgets all run from it (Settings, or Money → Plan)
 - Budgets are fully customisable: any name, icon and colour; daily, weekly, monthly, yearly or between two dates (with one-tap ranges for a trip); one category, several, or all spending; only certain accounts or cards; only notes containing words like "Talabat, Uber"; count bills or not; roll leftovers (or overspending) into the next period; warn at 50/75/80/90% or only when over; notes; pause and resume
 - Each budget shows spent of available, a pace marker, what's left per day, the end-of-period projection, last period and any rollover; filter by period, tap to edit with a live preview, hold to duplicate or pause, swipe to pause or delete
 - Alerts follow each budget's own period and warning level
@@ -234,6 +235,8 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Settings-style filled icon tiles, green toggles, soft layered shadows (none in dark mode), continuous rounded corners, refined sheets, text fields and empty states
 
 **Cards from every bank**
+- Watch every bank (on by default): every bank SMS scan also checks alerts from banks you haven't added, adds them automatically and imports their purchases; instant alerts work for them too
+- New cards spotted show on Home with what was spent on them: add one as a card in a tap, link it to an account you have, or mark it "Not mine"
 - Bank SMS reads alerts from any bank you add (CIB, NBE, Banque Misr, QNB, AAIB, AlexBank, Emirates NBD, ADCB, FAB, Mashreq, Al Rajhi, SNB, Telda, valU and more), in English or Arabic, including line-by-line formats like "Card: *7766 / At: JARIR"
 - "Find my other banks & cards" checks the last 4 months of messages on the phone for card alerts from senders you haven't added, and adds them in one tap (then re-reads 90 days)
 - Money → Cards lists every card number seen in your alerts with its bank, network (Visa, Mastercard, mada, Meeza), credit/debit, this month's and last month's spending, a 6-month chart, top merchants and every purchase, added or not

@@ -70,6 +70,13 @@ class AnchorSmsModule : Module() {
         .apply()
     }
 
+    Function("setWatchAllBanks") { on: Boolean ->
+      context.getSharedPreferences(AlertPrefs.NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(AlertPrefs.ALL_BANKS, on)
+        .apply()
+    }
+
     AsyncFunction("readInbox") { sinceMillis: Double, senderKeywords: List<String>, limit: Int ->
       val keywords = senderKeywords.map { it.trim() }.filter { it.isNotEmpty() }
       if (granted()) queryInbox(sinceMillis.toLong(), keywords, limit) else emptyList()

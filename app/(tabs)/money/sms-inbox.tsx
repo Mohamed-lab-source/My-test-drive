@@ -41,6 +41,8 @@ export default function SmsInboxScreen() {
     setSmsReadCredits,
     smsIgnored,
     setSmsIgnored,
+    smsWatchAllBanks,
+    setSmsWatchAllBanks,
   } = useSettingsStore();
   const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules, links, loadLinks } = useSmsStore();
   const addAccount = useFinanceStore((s) => s.addAccount);
@@ -317,6 +319,16 @@ export default function SmsInboxScreen() {
                     : 'Needs one more permission — tap "Allow alerts" below',
                   value: smsInstantAlerts,
                   onChange: toggle(setSmsInstantAlerts),
+                },
+                {
+                  label: 'Watch every bank',
+                  hint: "Spot any card you use, from any bank — new banks are added as soon as one of their card alerts arrives",
+                  value: smsWatchAllBanks,
+                  onChange: (v: boolean) => {
+                    setSmsWatchAllBanks(v);
+                    syncSmsAlertConfig();
+                    if (v) scan(120).catch(() => 0);
+                  },
                 },
                 {
                   label: 'Auto-add known merchants',

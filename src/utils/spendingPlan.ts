@@ -24,7 +24,8 @@ export interface PlanInput {
   weekStart: number;
   // Limits you set yourself; 0 means "use the plan's suggestion".
   limits: { daily: number; weekly: number; monthly: number };
-  // The day the money month starts (default the 1st).
+  // A fixed day the money month starts; leave out to use the app-wide
+  // setting (which may follow paydays).
   monthStartDay?: number;
 }
 
@@ -94,7 +95,7 @@ export function buildSpendingPlan(p: PlanInput): SpendingPlan {
   const spendable = Math.max(0, income - bills - saveMonthly);
 
   // The money month, which may start on payday rather than the 1st.
-  const period = monthPeriod(now, 0, p.monthStartDay ?? 1);
+  const period = monthPeriod(now, 0, p.monthStartDay);
   const daysInMonth = daysIn(period);
   const day = dayOfPeriod(period, now);
   const daysLeft = daysInMonth - day + 1;

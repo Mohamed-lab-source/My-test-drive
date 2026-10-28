@@ -10,6 +10,8 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Money',
     emoji: '💰',
     items: [
+      'Spots any card you use, from any bank — new banks are added automatically, and new cards show on Home to add, link or ignore',
+      'Months can start the day your salary arrives (found in your income or salary SMS), with a payday notification',
       'Your month can start on any day (e.g. payday) — Settings or Money → Plan; budgets, plan, limits and totals follow it',
       'Budgets your way: daily/weekly/monthly/yearly or dates, several categories or all, chosen cards, note keywords, rollover, warning %, colours, pause',
       'Bank SMS: HSBC debits read automatically, with instant alerts, a review inbox and a balance check',

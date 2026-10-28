@@ -46,6 +46,7 @@ export function BudgetSheet({ visible, onClose, editing }: { visible: boolean; o
   const { colors, typography, spacing } = useTheme();
   const base = useSettingsStore((s) => s.currency);
   const monthStartDay = useSettingsStore((s) => s.monthStartDay);
+  const monthFromPayday = useSettingsStore((s) => s.monthFromPayday);
   const weekStart = useSettingsStore((s) => s.weekStart);
   const { categories, accounts, fxRates, budgets, addBudget, updateBudget } = useFinanceStore();
 
@@ -126,7 +127,7 @@ export function BudgetSheet({ visible, onClose, editing }: { visible: boolean; o
     if (!visible || !datesOk) return setPreview(null);
     let live = true;
     const b = { ...draft, id: 'preview', created_at: '', is_paused: 0 } as Budget;
-    computeBudgetStatuses([b], new Date(), { monthStartDay, weekStart }, fxRates)
+    computeBudgetStatuses([b], new Date(), { weekStart }, fxRates)
       .then((s) => live && setPreview(s.preview ?? null))
       .catch(() => {});
     return () => {
@@ -201,9 +202,9 @@ export function BudgetSheet({ visible, onClose, editing }: { visible: boolean; o
               <TextField label="To (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} autoCapitalize="none" />
             </View>
           </View>
-        ) : period === 'monthly' && monthStartDay !== 1 ? (
+        ) : period === 'monthly' && (monthFromPayday || monthStartDay !== 1) ? (
           <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: -spacing.xs, marginBottom: spacing.md }]}>
-            Months start on day {monthStartDay}, as set in Settings.
+            {monthFromPayday ? 'Months start when your salary arrives' : `Months start on day ${monthStartDay}`}, as set in Settings.
           </Text>
         ) : null}
 

@@ -12,6 +12,7 @@ interface AnchorSmsModule {
   hasPermission(): boolean;
   hasReceivePermission(): boolean;
   configureAlerts(enabled: boolean, senders: string[]): void;
+  setWatchAllBanks?(on: boolean): void;
   readInbox(sinceMillis: number, senderKeywords: string[], limit: number): Promise<RawSms[]>;
 }
 
@@ -49,9 +50,10 @@ export function hasReceivePermission(): boolean {
 
 // Hands the user's choices to the native SMS receiver, which runs without
 // the app and can't read the JS settings store.
-export function configureSmsAlerts(enabled: boolean, senders: string[]): void {
+export function configureSmsAlerts(enabled: boolean, senders: string[], allBanks = false): void {
   try {
     native?.configureAlerts(enabled, senders);
+    native?.setWatchAllBanks?.(allBanks);
   } catch (e) {
     console.warn('Could not configure SMS alerts', e);
   }

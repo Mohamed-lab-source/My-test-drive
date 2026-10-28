@@ -14,7 +14,6 @@ export interface PlanSettings {
   dailySpendAlert: number;
   weeklyLimit: number;
   monthlyLimit: number;
-  monthStartDay?: number;
 }
 
 export interface PlanSource {
@@ -34,11 +33,11 @@ function variableSpend(txs: { type: string; amount: number; currency: string; re
 export async function computePlanWith(now: Date, { settings: s, fxRates, recurringRules, savingsGoals }: PlanSource): Promise<SpendingPlan> {
   const toBase = (a: number, c: string) => convertToBase(a, c, s.currency, fxRates);
 
-  const startDay = s.monthStartDay ?? 1;
-  const monthStart = monthPeriod(now, 0, startDay).start;
+  // The app-wide month setting (a fixed day or your paydays).
+  const monthStart = monthPeriod(now).start;
   const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() - s.weekStart + 7) % 7));
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const historyStart = monthPeriod(now, -3, startDay).start;
+  const historyStart = monthPeriod(now, -3).start;
   const from = weekStart < monthStart ? weekStart : monthStart;
 
   const [recent, history] = await Promise.all([
@@ -46,7 +45,7 @@ export async function computePlanWith(now: Date, { settings: s, fxRates, recurri
     repo.listTransactionsInRange(historyStart.toISOString(), monthStart.toISOString()),
   ]);
   const incomeHistory = [1, 2, 3].map((back) => {
-    const { start: s0, end: e0 } = monthPeriod(now, -back, startDay);
+    const { start: s0, end: e0 } = monthPeriod(now, -back);
     const start = s0.getTime();
     const end = e0.getTime();
     return history
@@ -70,6 +69,5 @@ export async function computePlanWith(now: Date, { settings: s, fxRates, recurri
     spentToday: variableSpend(recent, dayStart, toBase),
     weekStart: s.weekStart,
     limits: { daily: s.dailySpendAlert, weekly: s.weeklyLimit, monthly: s.monthlyLimit },
-    monthStartDay: startDay,
   });
 }

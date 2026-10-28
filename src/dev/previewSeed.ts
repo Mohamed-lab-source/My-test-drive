@@ -4,6 +4,7 @@ import * as finance from '../db/repositories/finance';
 import * as productivity from '../db/repositories/productivity';
 import * as life from '../db/repositories/life';
 import { setWater } from '../db/repositories/health';
+import { insertSmsImport } from '../db/repositories/smsImports';
 import { todayKey } from '../db/client';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -53,6 +54,23 @@ export async function seedPreviewData(): Promise<void> {
     { name: 'Hurghada trip', category_id: null, monthly_limit: 1200000, period: 'custom' as const, start_date: later, end_date: end, icon: 'airplane', color: '#5856D6', notes: 'Hotel is prepaid — this is for food and trips' },
   ]) {
     await finance.createBudget({ currency: 'EGP', ...b });
+  }
+  // Alerts from a card that isn't linked to any account yet.
+  for (const [n, amount, merchant] of [[1, 54000, 'JARIR BOOKSTORE'], [4, 23500, 'CARREFOUR MAADI'], [6, 120000, 'AMAZON.EG']] as const) {
+    await insertSmsImport({
+      id: `preview-sms-${n}`,
+      sms_date: day(n),
+      sender: 'NBE',
+      body: `Your NBE Visa credit card ending 7766 was used for EGP ${amount / 100} at ${merchant}`,
+      amount,
+      currency: 'EGP',
+      merchant,
+      card_last4: '7766',
+      kind: 'purchase',
+      card_type: 'credit',
+      balance: null,
+      balance_currency: null,
+    });
   }
   await finance.createSavingsGoal({ name: 'Umrah trip', target_amount: 9000000, currency: 'EGP', target_date: null, icon: 'airplane', color: '#5856D6', notes: null });
   const t = todayKey();

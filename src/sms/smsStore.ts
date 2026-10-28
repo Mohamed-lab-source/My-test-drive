@@ -11,6 +11,7 @@ import { useUndoStore } from '../store/undoStore';
 import { configureSmsAlerts, isSmsReadingAvailable, readBankSms } from './native';
 import { bankName, cardLabel } from './banks';
 import { notifyNow } from '../notifications/scheduler';
+import { looksLikeBankAlert } from './discover';
 
 const FIRST_SCAN_DAYS = 30;
 
@@ -115,8 +116,8 @@ function convertForAccount(amount: number, from: string, account: Account | unde
 
 // Pushes the current settings to the native SMS receiver.
 export function syncSmsAlertConfig(): void {
-  const { smsImportEnabled, smsInstantAlerts, smsSenders } = useSettingsStore.getState();
-  configureSmsAlerts(smsImportEnabled && smsInstantAlerts, smsSenders);
+  const { smsImportEnabled, smsInstantAlerts, smsSenders, smsWatchAllBanks } = useSettingsStore.getState();
+  configureSmsAlerts(smsImportEnabled && smsInstantAlerts, smsSenders, smsWatchAllBanks);
 }
 
 // A merchant you've already confirmed (and its category): a saved merchant
@@ -186,14 +187,31 @@ export const useSmsStore = create<SmsState>((set, get) => ({
 
   // Reads new bank SMS since the last scan and queues any debits for review.
   scan: async (days) => {
-    const { smsImportEnabled, smsSenders, smsLastScan, setSmsLastScan, smsReadCredits, smsAutoAddKnown } =
+    const { smsImportEnabled, smsSenders, smsLastScan, setSmsLastScan, smsReadCredits, smsAutoAddKnown, smsWatchAllBanks, ignoredCards } =
       useSettingsStore.getState();
     await get().loadRules();
     if (!smsImportEnabled || !isSmsReadingAvailable() || get().scanning) return 0;
     set({ scanning: true });
     try {
       const since = days ? Date.now() - days * 86400000 : smsLastScan || Date.now() - FIRST_SCAN_DAYS * 86400000;
-      const messages = await readBankSms(since, smsSenders);
+      let messages = await readBankSms(since, smsWatchAllBanks ? [] : smsSenders, smsWatchAllBanks ? 3000 : 500);
+      // Watching every bank: keep your banks' messages, plus card alerts from
+      // any bank you haven't added, which is then added for you.
+      const newBanks = new Set<string>();
+      if (smsWatchAllBanks) {
+        const known = smsSenders.map((s) => s.trim().toLowerCase()).filter(Boolean);
+        messages = messages.filter((m) => {
+          const address = (m.address ?? '').trim();
+          if (known.some((k) => address.toLowerCase().includes(k))) return true;
+          if (!looksLikeBankAlert(m)) return false;
+          newBanks.add(address);
+          return true;
+        });
+        if (newBanks.size) {
+          useSettingsStore.getState().setSmsSenders([...smsSenders, ...newBanks]);
+          syncSmsAlertConfig();
+        }
+      }
       let added = 0;
       let newest = since;
       const newCards = new Map<string, string>();
@@ -218,7 +236,13 @@ export const useSmsStore = create<SmsState>((set, get) => ({
           balance_currency: parseReportedBalance(m.body)?.currency ?? null,
         };
         // A card number Anchor has never seen: worth telling you about.
-        if (parsed.cardLast4 && !get().links[parsed.cardLast4] && !newCards.has(parsed.cardLast4) && !(await repo.hasSeenCard(parsed.cardLast4))) {
+        if (
+          parsed.cardLast4 &&
+          !get().links[parsed.cardLast4] &&
+          !ignoredCards.includes(parsed.cardLast4) &&
+          !newCards.has(parsed.cardLast4) &&
+          !(await repo.hasSeenCard(parsed.cardLast4))
+        ) {
           newCards.set(parsed.cardLast4, cardLabel(bankName(m.address, m.body), parsed.cardLast4));
         }
         const isNew = await repo.insertSmsImport(row);
@@ -234,6 +258,14 @@ export const useSmsStore = create<SmsState>((set, get) => ({
         }
       }
       setSmsLastScan(Math.max(newest, useSettingsStore.getState().smsLastScan));
+      if (newBanks.size && !newCards.size) {
+        const names = [...newBanks].map((a) => bankName(a) ?? a);
+        notifyNow(
+          `Now reading ${names.join(', ')} alerts`,
+          'Anchor found card alerts from a bank you hadn’t added and will track its purchases too.',
+          '/money/cards'
+        ).catch(() => {});
+      }
       if (newCards.size) {
         const names = [...newCards.values()];
         notifyNow(

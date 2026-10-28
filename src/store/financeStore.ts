@@ -29,7 +29,8 @@ import { limitCrossing } from '../utils/spendingPlan';
 import { convertToBase } from '../db/repositories/fx';
 import { todayKey } from '../db/client';
 import { formatMoney } from '../utils/money';
-import { currentMonthStart } from '../utils/period';
+import { currentMonthStart, getMonthConfig } from '../utils/period';
+import { loadPaydays } from '../features/money/paydays';
 import { budgetCrossing, budgetMatches, PERIOD_WORD } from '../utils/budgets';
 import { budgetName, computeBudgetStatuses } from '../features/money/budgetCore';
 
@@ -115,6 +116,8 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       repo.listBudgets(),
       fxRepo.listFxRates(),
     ]);
+    await settingsHydrated();
+    await loadPaydays(useSettingsStore.getState()).catch(() => []);
     set({
       categories: cats2,
       accounts: accs2,
@@ -130,7 +133,15 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   },
 
   refreshTransactions: async () => {
-    set({ transactions: await repo.listTransactions(200) });
+    const transactions = await repo.listTransactions(200);
+    // A salary may have just arrived and started a new money month.
+    const before = getMonthConfig().paydays;
+    const paydays = await loadPaydays(useSettingsStore.getState()).catch(() => [] as Date[]);
+    const newest = paydays[paydays.length - 1];
+    if (before.length && newest && newest.getTime() > before[before.length - 1] && Date.now() - newest.getTime() < 2 * 86400000) {
+      notifyNow('💰 Payday — a new month starts', 'Your budgets, spending plan and limits start fresh from today.', '/money/plan').catch(() => {});
+    }
+    set({ transactions });
     refreshMoneyWidget();
     scheduleSpendDigest(get().transactions, get().accounts).catch(() => {});
   },
@@ -334,7 +345,7 @@ async function checkBudgetAlerts(input: Parameters<typeof repo.createTransaction
   if (!relevant.length) return;
   const s = useSettingsStore.getState();
   const now = new Date(input.date);
-  const statuses = await computeBudgetStatuses(relevant, now, { monthStartDay: s.monthStartDay, weekStart: s.weekStart }, fxRates);
+  const statuses = await computeBudgetStatuses(relevant, now, { weekStart: s.weekStart }, fxRates);
   for (const b of relevant) {
     const st = statuses[b.id];
     if (!st || st.state !== 'active') continue;

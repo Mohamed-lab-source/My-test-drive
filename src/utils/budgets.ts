@@ -37,7 +37,9 @@ export interface TxLike {
 }
 
 export interface PeriodOptions {
-  monthStartDay: number;
+  // A fixed month start day; leave out to use the app-wide setting
+  // (which may follow paydays).
+  monthStartDay?: number;
   // JS getDay() index the week starts on.
   weekStart: number;
 }

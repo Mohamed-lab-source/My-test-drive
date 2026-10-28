@@ -43,6 +43,13 @@ const applyDisplayPrefs = (s: { use24h: boolean; wholeMoney: boolean; monthStart
 applyDisplayPrefs(useSettingsStore.getState());
 useSettingsStore.subscribe(applyDisplayPrefs);
 
+// Months that start on payday: re-detect when that setting changes, then
+// refresh money so every screen picks up the new month.
+useSettingsStore.subscribe((s, prev) => {
+  if (s.monthFromPayday === prev.monthFromPayday && s.manualPaydays === prev.manualPaydays && s.monthStartDay === prev.monthStartDay) return;
+  useFinanceStore.getState().refreshTransactions().catch(() => {});
+});
+
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();
   const router = useRouter();

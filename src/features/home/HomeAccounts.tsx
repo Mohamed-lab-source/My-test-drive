@@ -13,6 +13,7 @@ import { Icon } from '../../ui/Icon';
 import { Card } from '../../ui/Card';
 import { shade } from '../../theme/shade';
 import { HomeAccountsSheet } from './HomeAccountsSheet';
+import { NewCardsPrompt } from './NewCardsPrompt';
 import { AccountSheet } from '../money/AccountSheet';
 import type { Account, AccountType } from '../../db/types';
 import { currentMonthStart } from '../../utils/period';
@@ -64,6 +65,7 @@ export function HomeAccounts() {
         ) : null}
       </View>
 
+      <NewCardsPrompt />
       {active.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <Pressable onPress={() => setEditing(true)} accessibilityRole="button">

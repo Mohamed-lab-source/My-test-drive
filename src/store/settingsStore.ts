@@ -81,6 +81,12 @@ interface SettingsState {
   // The day money months start (1–28), e.g. payday.
   monthStartDay: number;
   setMonthStartDay: (v: number) => void;
+  // Start each money month when the salary arrives (detected from income).
+  monthFromPayday: boolean;
+  setMonthFromPayday: (v: boolean) => void;
+  // Days you said "my salary arrived today" (YYYY-MM-DD).
+  manualPaydays: string[];
+  addManualPayday: (key: string) => void;
   hiddenHomeCards: string[];
   toggleHomeCard: (id: string) => void;
   // Accounts and cards shown on Home, in order; null shows them all.
@@ -92,6 +98,12 @@ interface SettingsState {
   setSmsImportEnabled: (v: boolean) => void;
   smsSenders: string[];
   setSmsSenders: (v: string[]) => void;
+  // Read card alerts from any bank, adding new banks as they appear.
+  smsWatchAllBanks: boolean;
+  setSmsWatchAllBanks: (v: boolean) => void;
+  // Card numbers you said aren't yours (no more "new card" prompts).
+  ignoredCards: string[];
+  ignoreCard: (last4: string) => void;
   smsLastScan: number;
   setSmsLastScan: (v: number) => void;
   smsAccountId: string | null;
@@ -283,6 +295,10 @@ export const useSettingsStore = create<SettingsState>()(
           hiddenHomeCards: s.hiddenHomeCards.includes(id) ? s.hiddenHomeCards.filter((c) => c !== id) : [...s.hiddenHomeCards, id],
         })),
       monthStartDay: 1,
+      monthFromPayday: false,
+      setMonthFromPayday: (v) => set({ monthFromPayday: v }),
+      manualPaydays: [],
+      addManualPayday: (key) => set((s) => ({ manualPaydays: s.manualPaydays.includes(key) ? s.manualPaydays : [...s.manualPaydays, key].slice(-24) })),
       setMonthStartDay: (v) => set({ monthStartDay: Math.min(28, Math.max(1, Math.round(v))) }),
       homeAccounts: null,
       setHomeAccounts: (ids) => set({ homeAccounts: ids }),
@@ -296,6 +312,10 @@ export const useSettingsStore = create<SettingsState>()(
       setSmsImportEnabled: (v) => set({ smsImportEnabled: v }),
       smsSenders: ['HSBC'],
       setSmsSenders: (v) => set({ smsSenders: v }),
+      smsWatchAllBanks: true,
+      setSmsWatchAllBanks: (v) => set({ smsWatchAllBanks: v }),
+      ignoredCards: [],
+      ignoreCard: (last4) => set((s) => ({ ignoredCards: s.ignoredCards.includes(last4) ? s.ignoredCards : [...s.ignoredCards, last4] })),
       smsLastScan: 0,
       setSmsLastScan: (v) => set({ smsLastScan: v }),
       smsAccountId: null,

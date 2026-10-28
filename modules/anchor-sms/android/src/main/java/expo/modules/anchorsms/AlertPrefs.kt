@@ -6,4 +6,6 @@ object AlertPrefs {
   const val NAME = "anchor_sms_alerts"
   const val ENABLED = "enabled"
   const val SENDERS = "senders"
+  // Also alert for card payments from banks not in SENDERS.
+  const val ALL_BANKS = "all_banks"
 }

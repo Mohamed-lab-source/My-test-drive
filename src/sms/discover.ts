@@ -2,6 +2,23 @@ import { readBankSms } from './native';
 import { parseCardPaymentSms, parseCreditSms, parseDebitSms } from './parser';
 import { bankName } from './banks';
 
+export interface RawAlert {
+  address: string;
+  body: string;
+}
+
+// A message from a bank you haven't added that reads like a card or
+// account alert. Personal numbers are skipped: banks send from a name like
+// "CIB", not a phone number.
+export function looksLikeBankAlert(m: RawAlert) {
+  const address = (m.address ?? '').trim();
+  if (!address || !/[a-z\u0600-\u06FF]/i.test(address)) return null;
+  const parsed = parseCardPaymentSms(m.body) ?? parseDebitSms(m.body) ?? parseCreditSms(m.body);
+  // A bank alert names a card or account, not just an amount.
+  if (!parsed || !(parsed.cardLast4 || parsed.cardType || /card|account|acct|بطاق|حساب/i.test(m.body))) return null;
+  return parsed;
+}
+
 export interface FoundSender {
   sender: string;
   bank: string | null;
@@ -20,11 +37,9 @@ export async function discoverBankSenders(current: string[], days = 120): Promis
   const bySender = new Map<string, FoundSender>();
   for (const m of messages) {
     const address = (m.address ?? '').trim();
-    if (!address || !/[a-z]/i.test(address)) continue;
     if (known.some((k) => address.toLowerCase().includes(k))) continue;
-    const parsed = parseCardPaymentSms(m.body) ?? parseDebitSms(m.body) ?? parseCreditSms(m.body);
-    // A bank alert names a card or account, not just an amount.
-    if (!parsed || !(parsed.cardLast4 || parsed.cardType || /card|account|acct|بطاق|حساب/i.test(m.body))) continue;
+    const parsed = looksLikeBankAlert(m);
+    if (!parsed) continue;
     const entry = bySender.get(address) ?? { sender: address, bank: bankName(address, m.body), alerts: 0, cards: [], example: null };
     entry.alerts++;
     if (parsed.cardLast4 && !entry.cards.includes(parsed.cardLast4)) entry.cards.push(parsed.cardLast4);

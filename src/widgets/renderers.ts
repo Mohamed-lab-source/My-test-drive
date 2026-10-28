@@ -15,6 +15,7 @@ import { listFxRates, convertToBase } from '../db/repositories/fx';
 import { formatRelativeDay, formatTime, localDateKey, setUse24hClock } from '../utils/date';
 import { formatMoney, setWholeMoney } from '../utils/money';
 import { setMonthStartDay } from '../utils/period';
+import { loadPaydays } from '../features/money/paydays';
 import { findPrayerCity, getPrayerSchedule, setAsrMadhab, setPrayerAdjustments } from '../utils/prayerTimes';
 import { HIJRI_MONTHS, islamicDay, toHijri } from '../utils/hijri';
 import { meetingLink } from '../utils/meetingInfo';
@@ -57,6 +58,8 @@ interface StoredSettings {
   weeklyLimit?: number;
   monthlyLimit?: number;
   monthStartDay?: number;
+  monthFromPayday?: boolean;
+  manualPaydays?: string[];
 }
 
 async function readSettings(): Promise<StoredSettings> {
@@ -67,6 +70,7 @@ async function readSettings(): Promise<StoredSettings> {
     setUse24hClock(!!state.use24h);
     setWholeMoney(!!state.wholeMoney);
     setMonthStartDay(state.monthStartDay ?? 1);
+    await loadPaydays(state).catch(() => []);
     setPrayerAdjustments(state.prayerAdjust ?? {});
     setAsrMadhab(state.asrMadhab ?? 'auto');
     return state;
@@ -140,7 +144,6 @@ async function loadPlan(s: StoredSettings, now: Date): Promise<SpendingPlan | nu
         dailySpendAlert: s.dailySpendAlert ?? 0,
         weeklyLimit: s.weeklyLimit ?? 0,
         monthlyLimit: s.monthlyLimit ?? 0,
-        monthStartDay: s.monthStartDay ?? 1,
       },
       fxRates,
       recurringRules,

@@ -21,6 +21,8 @@ class SmsDebitReceiver : BroadcastReceiver() {
       .map { it.trim() }
       .filter { it.isNotEmpty() }
 
+    val allBanks = prefs.getBoolean(AlertPrefs.ALL_BANKS, false)
+
     val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
     // A long SMS arrives in parts; stitch them back together per sender.
     val bySender = linkedMapOf<String, StringBuilder>()
@@ -29,7 +31,10 @@ class SmsDebitReceiver : BroadcastReceiver() {
       bySender.getOrPut(address) { StringBuilder() }.append(part.messageBody ?: "")
     }
     for ((address, body) in bySender) {
-      val matchesSender = senders.isEmpty() || senders.any { address.contains(it, ignoreCase = true) }
+      // A bank you haven't added: a named sender (not a phone number) whose
+      // message is about a card or account.
+      val unknownBank = allBanks && address.any { it.isLetter() } && CARD.containsMatchIn(body)
+      val matchesSender = senders.isEmpty() || senders.any { address.contains(it, ignoreCase = true) } || unknownBank
       if (matchesSender && looksLikeDebit(body.toString())) {
         notify(context, body.toString())
       }
@@ -88,6 +93,10 @@ class SmsDebitReceiver : BroadcastReceiver() {
     )
     private val DEBIT = Regex(
       "debited|purchase|used|spent|paid|withdraw|charged|deducted|e-?commerce|online|authori[sz]|transaction|\\btxn\\b|\\btrx\\b|خصم|سحب|شراء|عملية|الإنترنت",
+      RegexOption.IGNORE_CASE
+    )
+    private val CARD = Regex(
+      "card|account|acct|[*xX]{2,}\\d{3,4}|بطاق|حساب",
       RegexOption.IGNORE_CASE
     )
     private val IGNORE = Regex(
