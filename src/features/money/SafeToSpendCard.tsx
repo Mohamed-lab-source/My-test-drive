@@ -8,39 +8,43 @@ import * as repo from '../../db/repositories/finance';
 import { formatMoney } from '../../utils/money';
 import { localDateKey } from '../../utils/date';
 import { todayKey } from '../../db/client';
+import { convertToBase } from '../../db/repositories/fx';
+import { dayOfPeriod, daysLeftIn, monthPeriod } from '../../utils/period';
+import { useBudgetStatuses } from './budgets';
 
-// What's left across this month's budgets, spread over the days remaining,
-// plus how many days this month have had no spending at all.
+// Today's share of what's left in every active budget (each over its own
+// period), plus how many days this money month have had no spending.
 export function SafeToSpendCard() {
   const { colors, typography, spacing } = useTheme();
   const currency = useSettingsStore((s) => s.currency);
-  const { budgets, transactions } = useFinanceStore();
-  const [state, setState] = useState<{ left: number; spent: number; noSpendDays: number; daysSoFar: number } | null>(null);
+  const { budgets, transactions, fxRates } = useFinanceStore();
+  const statuses = useBudgetStatuses();
+  const [days, setDays] = useState<{ noSpendDays: number; daysSoFar: number } | null>(null);
 
   useEffect(() => {
     (async () => {
       const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthTx = await repo.listTransactionsInRange(monthStart.toISOString(), now.toISOString());
-      const expenses = monthTx.filter((t) => t.type === 'expense');
-      const budgeted = new Set(budgets.map((b) => b.category_id));
-      const spentBy = new Map<string, number>();
-      for (const t of expenses) if (t.category_id && budgeted.has(t.category_id)) spentBy.set(t.category_id, (spentBy.get(t.category_id) ?? 0) + t.amount);
-      const left = budgets.reduce((sum, b) => sum + Math.max(0, b.monthly_limit - (spentBy.get(b.category_id) ?? 0)), 0);
-      const spent = Array.from(spentBy.values()).reduce((a, b) => a + b, 0);
-      const spendDays = new Set(expenses.map((t) => localDateKey(t.date)));
+      const period = monthPeriod(now);
+      const monthTx = await repo.listTransactionsInRange(period.start.toISOString(), now.toISOString());
+      const spendDays = new Set(monthTx.filter((t) => t.type === 'expense').map((t) => localDateKey(t.date)));
+      const daysSoFar = dayOfPeriod(period, now);
       let noSpendDays = 0;
-      for (let d = 1; d <= now.getDate(); d++) {
-        if (!spendDays.has(todayKey(new Date(now.getFullYear(), now.getMonth(), d)))) noSpendDays++;
+      for (let d = 0; d < daysSoFar; d++) {
+        const day = new Date(period.start.getFullYear(), period.start.getMonth(), period.start.getDate() + d);
+        if (!spendDays.has(todayKey(day))) noSpendDays++;
       }
-      setState({ left, spent, noSpendDays, daysSoFar: now.getDate() });
+      setDays({ noSpendDays, daysSoFar });
     })();
-  }, [budgets, transactions]);
+  }, [transactions]);
 
-  if (!state) return null;
-  const now = new Date();
-  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1;
-  const hasBudgets = budgets.length > 0;
+  const active = budgets.filter((b) => statuses[b.id]?.state === 'active');
+  const toBase = (n: number, c: string) => convertToBase(n, c, currency, fxRates);
+  const today = active.reduce((sum, b) => sum + toBase(statuses[b.id].perDayLeft, b.currency), 0);
+  const left = active.reduce((sum, b) => sum + Math.max(0, toBase(statuses[b.id].left, b.currency)), 0);
+  if (!days) return null;
+  const state = { ...days, left };
+  const hasBudgets = active.length > 0;
+  const daysLeft = daysLeftIn(monthPeriod());
 
   return (
     <Card>
@@ -50,14 +54,14 @@ export function SafeToSpendCard() {
           {hasBudgets ? (
             <>
               <Text style={[typography.title2, { color: state.left > 0 ? colors.green : colors.red, marginTop: 2 }]}>
-                {formatMoney(Math.floor(state.left / daysLeft), currency)}
+                {formatMoney(today, currency)}
               </Text>
               <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
                 {formatMoney(state.left, currency)} left in budgets · {daysLeft} day{daysLeft === 1 ? '' : 's'} to go
               </Text>
             </>
           ) : (
-            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 4 }]}>Set monthly budgets to see a daily allowance.</Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 4 }]}>Add a budget to see a daily allowance.</Text>
           )}
         </View>
         <View style={{ alignItems: 'flex-end', marginLeft: spacing.md }}>

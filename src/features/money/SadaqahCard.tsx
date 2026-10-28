@@ -9,6 +9,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import * as repo from '../../db/repositories/finance';
 import { convertToBase } from '../../db/repositories/fx';
 import { formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
+import { currentMonthStart } from '../../utils/period';
 
 // Categories that count as giving: the seeded "Giving / Sadaqah" plus any the
 // user creates with a similar name.
@@ -25,7 +26,7 @@ export function SadaqahCard() {
     const ids = new Set(categories.filter((c) => GIVING.test(c.name)).map((c) => c.id));
     const now = new Date();
     repo.listTransactionsInRange(new Date(now.getFullYear(), 0, 1).toISOString(), now.toISOString()).then((txs) => {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const monthStart = currentMonthStart(now).getTime();
       let month = 0;
       let year = 0;
       for (const t of txs) {

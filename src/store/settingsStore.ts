@@ -78,6 +78,9 @@ interface SettingsState {
   setWaterGoal: (v: number) => void;
   waterReminders: boolean;
   setWaterReminders: (v: boolean) => void;
+  // The day money months start (1–28), e.g. payday.
+  monthStartDay: number;
+  setMonthStartDay: (v: number) => void;
   hiddenHomeCards: string[];
   toggleHomeCard: (id: string) => void;
   // Accounts and cards shown on Home, in order; null shows them all.
@@ -279,6 +282,8 @@ export const useSettingsStore = create<SettingsState>()(
         set((s) => ({
           hiddenHomeCards: s.hiddenHomeCards.includes(id) ? s.hiddenHomeCards.filter((c) => c !== id) : [...s.hiddenHomeCards, id],
         })),
+      monthStartDay: 1,
+      setMonthStartDay: (v) => set({ monthStartDay: Math.min(28, Math.max(1, Math.round(v))) }),
       homeAccounts: null,
       setHomeAccounts: (ids) => set({ homeAccounts: ids }),
       setHomeAccountShown: (id, shown, allIds) =>

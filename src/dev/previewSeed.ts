@@ -40,6 +40,20 @@ export async function seedPreviewData(): Promise<void> {
   }
   await finance.updateAccount(card, { apr: 36, min_payment_pct: 5, statement_day: 25, due_day: 15, card_last4: '4521', monthly_limit: 2000000 });
   await finance.updateAccount(bank, { monthly_limit: 1500000, card_last4: '0131' });
+  // Budgets of different shapes, to show what they can do.
+  const food = cat(/food|dining|restaurant/i);
+  const groceries = cat(/grocer/i);
+  const later = todayKey(new Date(Date.now() + 10 * 86400000));
+  const end = todayKey(new Date(Date.now() + 16 * 86400000));
+  for (const b of [
+    { name: null, category_id: food, category_ids: JSON.stringify([food]), monthly_limit: 300000, period: 'monthly' as const, icon: 'fork.knife', color: '#FF9500' },
+    { name: 'Groceries', category_id: groceries, category_ids: JSON.stringify([groceries]), monthly_limit: 250000, period: 'monthly' as const, rollover: 1, icon: 'cart.fill', color: '#34C759' },
+    { name: 'CIB card', category_id: null, account_ids: JSON.stringify([card]), monthly_limit: 150000, period: 'weekly' as const, icon: 'creditcard.fill', color: '#1C3F94', include_bills: 0 },
+    { name: 'Coffee', category_id: null, keywords: 'starbucks, costa', monthly_limit: 10000, period: 'daily' as const, icon: 'sparkles', color: '#A2845E', alert_pct: 0 },
+    { name: 'Hurghada trip', category_id: null, monthly_limit: 1200000, period: 'custom' as const, start_date: later, end_date: end, icon: 'airplane', color: '#5856D6', notes: 'Hotel is prepaid — this is for food and trips' },
+  ]) {
+    await finance.createBudget({ currency: 'EGP', ...b });
+  }
   await finance.createSavingsGoal({ name: 'Umrah trip', target_amount: 9000000, currency: 'EGP', target_date: null, icon: 'airplane', color: '#5856D6', notes: null });
   const t = todayKey();
   const tasks: [string, Task['priority'], string | null, Task['status']][] = [

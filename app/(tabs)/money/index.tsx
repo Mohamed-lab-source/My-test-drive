@@ -35,6 +35,7 @@ import { useBalanceFormatter } from '../../../src/ui/useMoney';
 import { TextField } from '../../../src/ui/TextField';
 import { Icon } from '../../../src/ui/Icon';
 import type { Transaction } from '../../../src/db/types';
+import { useBudgetStatuses } from '../../../src/features/money/budgets';
 
 const HEADLINE_LABEL = ['Net worth', 'Cash on hand', 'Owed on cards'];
 
@@ -99,17 +100,9 @@ export default function MoneyScreen() {
   const [headline, setHeadline] = useState(0);
   const [goalInput, setGoalInput] = useState('');
   const smsPending = useSmsStore((s) => s.pending.length);
-  // Budgets already over their limit this month.
-  const overBudgets = useFinanceStore((st) => {
-    const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-    return st.budgets.filter(
-      (b) =>
-        b.monthly_limit > 0 &&
-        st.transactions
-          .filter((t) => t.type === 'expense' && t.category_id === b.category_id && new Date(t.date).getTime() >= start)
-          .reduce((sum, t) => sum + t.amount, 0) > b.monthly_limit
-    ).length;
-  });
+  // Budgets already over their limit in their current period.
+  const budgetStatuses = useBudgetStatuses();
+  const overBudgets = Object.values(budgetStatuses).filter((st) => st.state === 'active' && st.pace === 'over').length;
   const flaggedCount = useFinanceStore((s) => s.transactions.filter((t) => !!t.flag).length);
   const netWorthHistory = useFinanceStore((s) => s.netWorthHistory);
   const refreshSms = useSmsStore((s) => s.refresh);

@@ -17,6 +17,7 @@ import { formatMoneyWhole, fromMinorUnits, toMinorUnits } from '../../../src/uti
 import { requestNotificationPermission } from '../../../src/notifications/scheduler';
 import { rescheduleMorningAllowance } from '../../../src/notifications/extras';
 import type { Limit } from '../../../src/utils/spendingPlan';
+import { MonthStartPicker } from '../../../src/features/money/MonthStartPicker';
 
 type LimitKey = 'daily' | 'weekly' | 'monthly';
 
@@ -360,6 +361,9 @@ export default function SpendingPlanScreen() {
         </Appear>
 
         <Appear index={5}>
+          <Card style={{ marginBottom: spacing.md }}>
+            <MonthStartPicker />
+          </Card>
           <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Alerts</Text>
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>

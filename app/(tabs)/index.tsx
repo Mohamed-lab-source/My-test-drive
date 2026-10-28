@@ -55,6 +55,7 @@ import { ActivityRings } from '../../src/ui/ActivityRings';
 import { useWaterStore } from '../../src/store/waterStore';
 import { formatRelativeDay, formatTime, isOverdue, localDateKey } from '../../src/utils/date';
 import { todayKey } from '../../src/db/client';
+import { currentMonthStart } from '../../src/utils/period';
 
 const SPARKLINE_DAYS = 14;
 
@@ -171,7 +172,7 @@ export default function HomeScreen() {
   const todaySpend = transactions
     .filter((t) => t.type === 'expense' && localDateKey(t.date) === todayStr)
     .reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0);
-  const monthStart = todayStr.slice(0, 8) + '01';
+  const monthStart = todayKey(currentMonthStart());
   const monthSpend = useMemo(
     () =>
       transactions

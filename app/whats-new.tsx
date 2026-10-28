@@ -10,6 +10,8 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Money',
     emoji: '💰',
     items: [
+      'Your month can start on any day (e.g. payday) — Settings or Money → Plan; budgets, plan, limits and totals follow it',
+      'Budgets your way: daily/weekly/monthly/yearly or dates, several categories or all, chosen cards, note keywords, rollover, warning %, colours, pause',
       'Bank SMS: HSBC debits read automatically, with instant alerts, a review inbox and a balance check',
       'Online charges like Uber, Careem and Netflix are now read; Bank SMS shows skipped messages and lets you test any text',
       'Money → Insights: spending calendar, health score, rides, unusual charges, price changes, personal inflation and more',

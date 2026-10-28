@@ -45,6 +45,7 @@ import { useAuth } from '../../../src/auth/AuthProvider';
 import { buildMonthlyReport } from '../../../src/utils/monthlyReport';
 import { fetchLiveRates } from '../../../src/utils/liveRates';
 import { palette } from '../../../src/theme/colors';
+import { MonthStartPicker } from '../../../src/features/money/MonthStartPicker';
 
 function FxRateRow({ currency, baseCurrency }: { currency: string; baseCurrency: string }) {
   const { colors, spacing } = useTheme();
@@ -684,6 +685,9 @@ export default function SettingsScreen() {
                 selectedId={String(weekStart)}
                 onSelect={(id) => setWeekStart(Number(id))}
               />
+              <View style={{ marginTop: spacing.md }}>
+                <MonthStartPicker />
+              </View>
             </View>
           </Card>
         </View>

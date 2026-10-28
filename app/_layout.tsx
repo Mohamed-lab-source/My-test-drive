@@ -30,13 +30,15 @@ import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
 import { setAsrMadhab, setPrayerAdjustments } from '../src/utils/prayerTimes';
 import { setUse24hClock } from '../src/utils/date';
 import { setWholeMoney } from '../src/utils/money';
+import { setMonthStartDay } from '../src/utils/period';
 import { settingsHydrated, useSettingsStore } from '../src/store/settingsStore';
 
 // Display preferences live in plain module flags so the formatters stay pure;
 // keep them in step with Settings (including after storage rehydrates).
-const applyDisplayPrefs = (s: { use24h: boolean; wholeMoney: boolean }) => {
+const applyDisplayPrefs = (s: { use24h: boolean; wholeMoney: boolean; monthStartDay: number }) => {
   setUse24hClock(s.use24h);
   setWholeMoney(s.wholeMoney);
+  setMonthStartDay(s.monthStartDay ?? 1);
 };
 applyDisplayPrefs(useSettingsStore.getState());
 useSettingsStore.subscribe(applyDisplayPrefs);

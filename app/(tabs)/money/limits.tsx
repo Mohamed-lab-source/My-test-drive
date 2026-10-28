@@ -16,6 +16,7 @@ import { formatMoney, formatMoneyWhole } from '../../../src/utils/money';
 import { statementPeriods } from '../../../src/utils/statement';
 import { DEFAULT_MIN_PCT, minimumPayment, monthlyInterest, payoffMonths, utilizationTone } from '../../../src/utils/cardMath';
 import type { Account, Transaction } from '../../../src/db/types';
+import { currentMonthStart, dayOfPeriod, daysIn as periodDays, monthPeriod } from '../../../src/utils/period';
 
 const DAY = 86400000;
 
@@ -38,8 +39,9 @@ export default function CardsAndAccountsScreen() {
 
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const daysIn = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthStart = currentMonthStart(now).getTime();
+  const daysIn = periodDays(monthPeriod(now));
+  const dayNum = dayOfPeriod(monthPeriod(now), now);
   const open = accounts.filter((a) => !a.is_archived);
   // Soonest payment due first.
   const nextDue = (c: Account) =>
@@ -95,7 +97,7 @@ export default function CardsAndAccountsScreen() {
         <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: 3 }]}>
           {u >= 1
             ? `${formatMoney(spent - a.monthly_limit, a.currency)} over this month`
-            : `${formatMoney(a.monthly_limit - spent, a.currency)} left · about ${formatMoney(Math.floor((a.monthly_limit - spent) / Math.max(1, daysIn - now.getDate() + 1)), a.currency)} a day`}
+            : `${formatMoney(a.monthly_limit - spent, a.currency)} left · about ${formatMoney(Math.floor((a.monthly_limit - spent) / Math.max(1, daysIn - dayNum + 1)), a.currency)} a day`}
         </Text>
       </View>
     );
@@ -222,8 +224,9 @@ export default function CardsAndAccountsScreen() {
         {others.length ? <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm, marginTop: spacing.sm }]}>Accounts</Text> : null}
         {others.map((a, i) => {
           const month = spentOn(a, monthStart);
-          const last = spentOn(a, new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime(), new Date(now.getFullYear(), now.getMonth() - 1, now.getDate() + 1).getTime());
-          const perDay = month / Math.max(1, now.getDate());
+          const prevStart = monthPeriod(now, -1).start.getTime();
+          const last = spentOn(a, prevStart, prevStart + dayNum * 86400000);
+          const perDay = month / Math.max(1, dayNum);
           // How long the balance lasts at this month's pace.
           const runway = perDay > 0 && a.balance > 0 ? Math.floor(a.balance / perDay) : null;
           return (

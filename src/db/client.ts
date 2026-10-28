@@ -14,10 +14,36 @@ async function migrateColumns(db: SQLite.SQLiteDatabase): Promise<void> {
   }
 }
 
+// Budgets used to be one per category (category_id NOT NULL UNIQUE). Now a
+// budget can cover several categories or everything, so rebuild the table
+// once without that constraint, keeping every existing budget.
+async function relaxBudgets(db: SQLite.SQLiteDatabase): Promise<void> {
+  const cols = await db.getAllAsync<{ name: string; notnull: number }>('PRAGMA table_info(budgets)');
+  if (!cols.find((c) => c.name === 'category_id')?.notnull) return;
+  await db.execAsync(`
+PRAGMA foreign_keys = OFF;
+BEGIN;
+CREATE TABLE budgets_relaxed (
+  id TEXT PRIMARY KEY NOT NULL,
+  category_id TEXT,
+  monthly_limit INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  created_at TEXT NOT NULL
+);
+INSERT INTO budgets_relaxed (id, category_id, monthly_limit, currency, created_at)
+  SELECT id, category_id, monthly_limit, currency, created_at FROM budgets;
+DROP TABLE budgets;
+ALTER TABLE budgets_relaxed RENAME TO budgets;
+COMMIT;
+PRAGMA foreign_keys = ON;
+`);
+}
+
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = SQLite.openDatabaseAsync(DB_NAME).then(async (db) => {
       await db.execAsync(CREATE_TABLES_SQL);
+      await relaxBudgets(db);
       await migrateColumns(db);
       return db;
     });

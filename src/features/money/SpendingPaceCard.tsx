@@ -7,6 +7,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import * as repo from '../../db/repositories/finance';
 import { convertToBase } from '../../db/repositories/fx';
 import { formatMoney } from '../../utils/money';
+import { dayOfPeriod, monthPeriod } from '../../utils/period';
 
 // This month so far vs. the same number of days into last month.
 export function SpendingPaceCard() {
@@ -17,10 +18,11 @@ export function SpendingPaceCard() {
 
   useEffect(() => {
     const d = new Date();
-    const startNow = new Date(d.getFullYear(), d.getMonth(), 1);
-    const startThen = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-    const daysInPrev = new Date(d.getFullYear(), d.getMonth(), 0).getDate();
-    const endThen = new Date(d.getFullYear(), d.getMonth() - 1, Math.min(d.getDate(), daysInPrev) + 1);
+    const startNow = monthPeriod(d).start;
+    const prev = monthPeriod(d, -1);
+    const startThen = prev.start;
+    // The same number of days into last month.
+    const endThen = new Date(Math.min(prev.end.getTime(), startThen.getTime() + dayOfPeriod(monthPeriod(d), d) * 86400000));
     Promise.all([
       repo.listTransactionsInRange(startNow.toISOString(), new Date(d.getTime() + 60000).toISOString()),
       repo.listTransactionsInRange(startThen.toISOString(), endThen.toISOString()),

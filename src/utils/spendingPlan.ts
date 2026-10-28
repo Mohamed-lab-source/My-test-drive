@@ -3,6 +3,8 @@
 // plus how the current month is tracking against it. Pure, so it can be
 // tested and reused by notifications.
 
+import { dayOfPeriod, daysIn, monthPeriod } from './period';
+
 export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface PlanInput {
@@ -22,6 +24,8 @@ export interface PlanInput {
   weekStart: number;
   // Limits you set yourself; 0 means "use the plan's suggestion".
   limits: { daily: number; weekly: number; monthly: number };
+  // The day the money month starts (default the 1st).
+  monthStartDay?: number;
 }
 
 export interface Limit {
@@ -89,8 +93,10 @@ export function buildSpendingPlan(p: PlanInput): SpendingPlan {
   const saveMonthly = Math.max(goalSaving, Math.round((income * Math.max(0, p.savingsPct)) / 100));
   const spendable = Math.max(0, income - bills - saveMonthly);
 
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const day = now.getDate();
+  // The money month, which may start on payday rather than the 1st.
+  const period = monthPeriod(now, 0, p.monthStartDay ?? 1);
+  const daysInMonth = daysIn(period);
+  const day = dayOfPeriod(period, now);
   const daysLeft = daysInMonth - day + 1;
 
   const monthly = limitOf(p.limits.monthly, spendable, p.spentThisMonth);

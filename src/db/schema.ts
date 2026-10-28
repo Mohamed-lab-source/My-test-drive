@@ -173,9 +173,11 @@ CREATE TABLE IF NOT EXISTS prayer_logs (
   UNIQUE(date, prayer)
 );
 
+-- category_id is the first of category_ids (or null for "everything");
+-- monthly_limit is the limit per budget period, whatever the period is.
 CREATE TABLE IF NOT EXISTS budgets (
   id TEXT PRIMARY KEY NOT NULL,
-  category_id TEXT NOT NULL UNIQUE REFERENCES categories(id) ON DELETE CASCADE,
+  category_id TEXT,
   monthly_limit INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   created_at TEXT NOT NULL
@@ -467,4 +469,20 @@ export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: stri
   { table: 'tasks', column: 'waiting_on', ddl: 'ALTER TABLE tasks ADD COLUMN waiting_on TEXT' },
   { table: 'books', column: 'rating', ddl: 'ALTER TABLE books ADD COLUMN rating INTEGER' },
   { table: 'occasions', column: 'year', ddl: 'ALTER TABLE occasions ADD COLUMN year INTEGER' },
+  // Fully customisable budgets.
+  { table: 'budgets', column: 'name', ddl: 'ALTER TABLE budgets ADD COLUMN name TEXT' },
+  { table: 'budgets', column: 'icon', ddl: 'ALTER TABLE budgets ADD COLUMN icon TEXT' },
+  { table: 'budgets', column: 'color', ddl: 'ALTER TABLE budgets ADD COLUMN color TEXT' },
+  { table: 'budgets', column: 'category_ids', ddl: 'ALTER TABLE budgets ADD COLUMN category_ids TEXT' },
+  { table: 'budgets', column: 'account_ids', ddl: 'ALTER TABLE budgets ADD COLUMN account_ids TEXT' },
+  { table: 'budgets', column: 'keywords', ddl: 'ALTER TABLE budgets ADD COLUMN keywords TEXT' },
+  { table: 'budgets', column: 'period', ddl: "ALTER TABLE budgets ADD COLUMN period TEXT NOT NULL DEFAULT 'monthly'" },
+  { table: 'budgets', column: 'start_date', ddl: 'ALTER TABLE budgets ADD COLUMN start_date TEXT' },
+  { table: 'budgets', column: 'end_date', ddl: 'ALTER TABLE budgets ADD COLUMN end_date TEXT' },
+  { table: 'budgets', column: 'rollover', ddl: 'ALTER TABLE budgets ADD COLUMN rollover INTEGER NOT NULL DEFAULT 0' },
+  { table: 'budgets', column: 'alert_pct', ddl: 'ALTER TABLE budgets ADD COLUMN alert_pct INTEGER NOT NULL DEFAULT 80' },
+  { table: 'budgets', column: 'include_bills', ddl: 'ALTER TABLE budgets ADD COLUMN include_bills INTEGER NOT NULL DEFAULT 1' },
+  { table: 'budgets', column: 'is_paused', ddl: 'ALTER TABLE budgets ADD COLUMN is_paused INTEGER NOT NULL DEFAULT 0' },
+  { table: 'budgets', column: 'notes', ddl: 'ALTER TABLE budgets ADD COLUMN notes TEXT' },
+  { table: 'budgets', column: 'sort_order', ddl: 'ALTER TABLE budgets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0' },
 ];

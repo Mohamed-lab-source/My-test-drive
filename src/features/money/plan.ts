@@ -5,6 +5,7 @@ import * as repo from '../../db/repositories/finance';
 import { convertToBase } from '../../db/repositories/fx';
 import type { SpendingPlan } from '../../utils/spendingPlan';
 import { computePlanWith } from './planCore';
+import { currentMonthStart } from '../../utils/period';
 
 // Gathers everything the plan needs from the database and stores.
 export async function computePlan(now: Date = new Date()): Promise<SpendingPlan> {
@@ -96,7 +97,7 @@ export function usePlanExtras(plan: SpendingPlan | null): PlanExtras | null {
         totals[k] += spend.filter((t) => dayKey(t.date) === `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`).reduce((s, t) => s + toBase(t.amount, t.currency), 0);
       }
 
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const monthStart = currentMonthStart(now).getTime();
       const month = spend.filter((t) => new Date(t.date).getTime() >= monthStart);
       const byCat = new Map<string, number>();
       for (const t of month) byCat.set(t.category_id ?? '', (byCat.get(t.category_id ?? '') ?? 0) + toBase(t.amount, t.currency));

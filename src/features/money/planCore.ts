@@ -3,6 +3,7 @@
 import * as repo from '../../db/repositories/finance';
 import { convertToBase } from '../../db/repositories/fx';
 import { buildSpendingPlan, type SpendingPlan } from '../../utils/spendingPlan';
+import { monthPeriod } from '../../utils/period';
 import type { FxRate, RecurringRule, SavingsGoal } from '../../db/types';
 
 export interface PlanSettings {
@@ -13,6 +14,7 @@ export interface PlanSettings {
   dailySpendAlert: number;
   weeklyLimit: number;
   monthlyLimit: number;
+  monthStartDay?: number;
 }
 
 export interface PlanSource {
@@ -32,10 +34,11 @@ function variableSpend(txs: { type: string; amount: number; currency: string; re
 export async function computePlanWith(now: Date, { settings: s, fxRates, recurringRules, savingsGoals }: PlanSource): Promise<SpendingPlan> {
   const toBase = (a: number, c: string) => convertToBase(a, c, s.currency, fxRates);
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startDay = s.monthStartDay ?? 1;
+  const monthStart = monthPeriod(now, 0, startDay).start;
   const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() - s.weekStart + 7) % 7));
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const historyStart = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+  const historyStart = monthPeriod(now, -3, startDay).start;
   const from = weekStart < monthStart ? weekStart : monthStart;
 
   const [recent, history] = await Promise.all([
@@ -43,8 +46,9 @@ export async function computePlanWith(now: Date, { settings: s, fxRates, recurri
     repo.listTransactionsInRange(historyStart.toISOString(), monthStart.toISOString()),
   ]);
   const incomeHistory = [1, 2, 3].map((back) => {
-    const start = new Date(now.getFullYear(), now.getMonth() - back, 1).getTime();
-    const end = new Date(now.getFullYear(), now.getMonth() - back + 1, 1).getTime();
+    const { start: s0, end: e0 } = monthPeriod(now, -back, startDay);
+    const start = s0.getTime();
+    const end = e0.getTime();
     return history
       .filter((t) => t.type === 'income' && new Date(t.date).getTime() >= start && new Date(t.date).getTime() < end)
       .reduce((sum, t) => sum + toBase(t.amount, t.currency), 0);
@@ -66,5 +70,6 @@ export async function computePlanWith(now: Date, { settings: s, fxRates, recurri
     spentToday: variableSpend(recent, dayStart, toBase),
     weekStart: s.weekStart,
     limits: { daily: s.dailySpendAlert, weekly: s.weeklyLimit, monthly: s.monthlyLimit },
+    monthStartDay: startDay,
   });
 }

@@ -9,6 +9,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { formatMoney } from '../../utils/money';
 import { METHOD_LABELS, spendByMethod, type PaymentMethod } from '../../utils/paymentMethods';
 import { statementPeriods } from '../../utils/statement';
+import { currentMonthStart } from '../../utils/period';
 
 // This month's spending split by credit card / debit / cash, and what you
 // owe on each credit card with its limit used and next due date.
@@ -18,7 +19,7 @@ export function CardsSummaryCard() {
   const currency = useSettingsStore((s) => s.currency);
   const { accounts, transactions } = useFinanceStore();
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthStart = currentMonthStart(now).toISOString();
   const split = spendByMethod(transactions, accounts, currency, monthStart);
   const total = split.credit + split.debit + split.cash;
   const cards = accounts.filter((a) => a.type === 'credit' && !a.is_archived);

@@ -15,6 +15,7 @@ import { formatDateKey, localDateKey } from '../../../src/utils/date';
 import * as I from '../../../src/utils/moneyInsights';
 import { SpendingCalendar } from '../../../src/features/money/SpendingCalendar';
 import type { Transaction } from '../../../src/db/types';
+import { useBudgetStatuses } from '../../../src/features/money/budgets';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -34,6 +35,7 @@ export default function InsightsScreen() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
   const { categories, accounts, budgets, debts, fxRates, transactions: recent } = useFinanceStore();
+  const budgetStatuses = useBudgetStatuses();
   const { currency, weekendDays, weekStart } = useSettingsStore();
   const [txs, setTxs] = useState<Transaction[] | null>(null);
   const now = useMemo(() => new Date(), []);
@@ -63,11 +65,8 @@ export default function InsightsScreen() {
       .reduce((a, t) => a + toBase(t.amount, t.currency), 0);
     const lastSpent = sp.filter((s) => s.month === prevMonth).reduce((a, s) => a + s.amount, 0);
     const rate = monthIncome > 0 ? (monthIncome - monthSpent) / monthIncome : lastIncome > 0 ? (lastIncome - lastSpent) / lastIncome : null;
-    const elapsed = day / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const over = budgets.filter((b) => {
-      const spent = sp.filter((s) => s.month === month && s.categoryId === b.category_id).reduce((a, s) => a + s.amount, 0);
-      return spent > b.monthly_limit * Math.max(elapsed, 0.01) * 1.1;
-    });
+    // Budgets over, or well ahead of where they should be by now.
+    const over = budgets.filter((b) => budgetStatuses[b.id]?.pace === 'over' || budgetStatuses[b.id]?.pace === 'ahead');
     const liquid = accounts.filter((a) => a.type !== 'credit').reduce((a, x) => a + toBase(x.balance, x.currency), 0);
     const avgMonth = (() => {
       const months = [1, 2, 3].map((i) => I.monthKeyOf(new Date(now.getFullYear(), now.getMonth() - i, 1)));
@@ -130,7 +129,7 @@ export default function InsightsScreen() {
         return t;
       })(),
     };
-  }, [txs, currency, fxRates, accounts, budgets, debts, weekendDays]);
+  }, [txs, currency, fxRates, accounts, budgets, debts, weekendDays, budgetStatuses]);
 
   if (!data) {
     return (

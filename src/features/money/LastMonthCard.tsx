@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import * as repo from '../../db/repositories/finance';
 import { convertToBase } from '../../db/repositories/fx';
 import { formatMoney } from '../../utils/money';
+import { monthPeriod, periodLabel } from '../../utils/period';
 
 // Shown during the first week of a month: how last month went.
 export function LastMonthCard() {
@@ -22,9 +23,9 @@ export function LastMonthCard() {
   useEffect(() => {
     if (!visible) return;
     (async () => {
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-      const end = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const prevStart = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString();
+      const start = monthPeriod(now, -1).start.toISOString();
+      const end = monthPeriod(now).start.toISOString();
+      const prevStart = monthPeriod(now, -2).start.toISOString();
       const [txs, prev] = await Promise.all([repo.listTransactionsInRange(start, end), repo.listTransactionsInRange(prevStart, start)]);
       const base = (t: { amount: number; currency: string }) => convertToBase(t.amount, t.currency, currency, fxRates);
       let income = 0;
@@ -44,7 +45,7 @@ export function LastMonthCard() {
   }, [visible]);
 
   if (!visible || !stats || (stats.income === 0 && stats.expense === 0)) return null;
-  const monthName = new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString(undefined, { month: 'long' });
+  const monthName = periodLabel(monthPeriod(now, -1));
   const net = stats.income - stats.expense;
   const change = stats.prevExpense > 0 ? (stats.expense - stats.prevExpense) / stats.prevExpense : null;
 

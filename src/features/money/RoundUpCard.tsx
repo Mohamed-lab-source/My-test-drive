@@ -10,6 +10,7 @@ import * as repo from '../../db/repositories/finance';
 import { formatMoney } from '../../utils/money';
 import { formatDateShort } from '../../utils/date';
 import type { Transaction } from '../../db/types';
+import { currentMonthStart } from '../../utils/period';
 
 const ROUND_TO = 1000; // 10.00 in minor units
 
@@ -23,7 +24,7 @@ export function RoundUpCard() {
   const open = savingsGoals.filter((g) => !g.is_completed);
   const [goalId, setGoalId] = useState<string | null>(open[0]?.id ?? null);
 
-  const since = roundUpSince ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const since = roundUpSince ?? currentMonthStart().toISOString();
   useEffect(() => {
     repo.listTransactionsInRange(since, new Date().toISOString()).then((txs) => setExpenses(txs.filter((t) => t.type === 'expense')));
   }, [since, transactions]);

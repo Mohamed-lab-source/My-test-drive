@@ -17,6 +17,7 @@ import { convertToBase } from '../../../src/db/repositories/fx';
 import * as repo from '../../../src/db/repositories/finance';
 import { METHOD_LABELS, methodOf, type PaymentMethod } from '../../../src/utils/paymentMethods';
 import type { Transaction } from '../../../src/db/types';
+import { currentMonthStart, dayOfPeriod, daysIn as periodDays, monthPeriod } from '../../../src/utils/period';
 
 const BAR_MAX_HEIGHT = 100;
 
@@ -37,7 +38,7 @@ export default function AnalyticsScreen() {
   useEffect(() => {
     (async () => {
       const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const monthStart = currentMonthStart(now).toISOString();
       const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
       const nowIso = now.toISOString();
       const [m, s] = await Promise.all([
@@ -185,9 +186,10 @@ export default function AnalyticsScreen() {
   // of the month, plus recurring bills still due before it ends.
   const projection = useMemo(() => {
     const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const day = now.getDate();
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+    const period = monthPeriod(now);
+    const daysInMonth = periodDays(period);
+    const day = dayOfPeriod(period, now);
+    const end = period.end.toISOString();
     const billsLeft = recurringRules
       .filter((r) => r.is_active && !r.is_paused && r.type === 'expense' && r.next_due_date >= now.toISOString() && r.next_due_date < end)
       .reduce((sum, r) => sum + convertToBase(r.amount, r.currency, currency, fxRates), 0);

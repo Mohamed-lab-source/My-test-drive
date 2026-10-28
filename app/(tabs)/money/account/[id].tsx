@@ -18,6 +18,7 @@ import { formatDateShort, localDateKey } from '../../../../src/utils/date';
 import { buildStatement, statementPeriods } from '../../../../src/utils/statement';
 import { DEFAULT_MIN_PCT, minimumPayment, monthlyInterest, payoffMonths } from '../../../../src/utils/cardMath';
 import type { Transaction } from '../../../../src/db/types';
+import { currentMonthStart } from '../../../../src/utils/period';
 
 export default function AccountDetailScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -204,7 +205,7 @@ export default function AccountDetailScreen() {
           ) : null}
           {account.monthly_limit ? (
             (() => {
-              const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+              const monthStart = currentMonthStart().getTime();
               const spent = rows
                 .filter((t) => t.type === 'expense' && t.account_id === account.id && new Date(t.date).getTime() >= monthStart)
                 .reduce((sum, t) => sum + t.amount, 0);

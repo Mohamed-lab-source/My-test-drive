@@ -201,12 +201,37 @@ export interface PrayerLog {
 
 export const PRAYERS: Prayer[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
+export type BudgetPeriod = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+
 export interface Budget {
   id: string;
-  category_id: string;
+  // The first of category_ids, kept for older data; null = all spending.
+  category_id: string | null;
+  // The limit for each period (named before budgets had other periods).
   monthly_limit: number;
   currency: string;
   created_at: string;
+  name?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  // JSON arrays of ids; empty or null means "any".
+  category_ids?: string | null;
+  account_ids?: string | null;
+  // Comma-separated words matched against the transaction note.
+  keywords?: string | null;
+  period?: BudgetPeriod;
+  // 'custom' budgets run from start_date to end_date (YYYY-MM-DD, inclusive).
+  start_date?: string | null;
+  end_date?: string | null;
+  // Carry what's left (or overspent) into the next period.
+  rollover?: number;
+  // Warn at this % of the limit (0 = no warning before going over).
+  alert_pct?: number;
+  // Count recurring bills, or only day-to-day spending.
+  include_bills?: number;
+  is_paused?: number;
+  notes?: string | null;
+  sort_order?: number;
 }
 
 export interface Habit {

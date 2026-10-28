@@ -29,6 +29,9 @@ import { limitCrossing } from '../utils/spendingPlan';
 import { convertToBase } from '../db/repositories/fx';
 import { todayKey } from '../db/client';
 import { formatMoney } from '../utils/money';
+import { currentMonthStart } from '../utils/period';
+import { budgetCrossing, budgetMatches, PERIOD_WORD } from '../utils/budgets';
+import { budgetName, computeBudgetStatuses } from '../features/money/budgetCore';
 
 interface FinanceState {
   loaded: boolean;
@@ -78,6 +81,8 @@ interface FinanceState {
   removeSavingsGoal: (id: string) => Promise<void>;
 
   setBudget: (categoryId: string, monthlyLimit: number, currency: string) => Promise<void>;
+  addBudget: (input: repo.BudgetInput) => Promise<string>;
+  updateBudget: (id: string, patch: Partial<Budget>) => Promise<void>;
   removeBudget: (id: string) => Promise<void>;
 
   setFxRate: (currency: string, rateToBase: number) => Promise<void>;
@@ -161,12 +166,6 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   refreshFxRates: async () => set({ fxRates: await fxRepo.listFxRates() }),
 
   addTransaction: async (input) => {
-    const budget =
-      input.type === 'expense' && input.category_id ? get().budgets.find((b) => b.category_id === input.category_id) : undefined;
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const before = budget ? await repo.getCategorySpendSince(budget.category_id, monthStart) : 0;
-
     const accountBefore = get().accounts.find((a) => a.id === input.account_id);
     const id = await repo.createTransaction(input);
     await Promise.all([get().refreshTransactions(), get().refreshAccounts()]);
@@ -192,16 +191,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
       await checkSpendingAlerts(input, accountBefore, get).catch(() => {});
     }
 
-    if (budget && budget.monthly_limit > 0) {
-      const after = before + input.amount;
-      const name = get().categories.find((c) => c.id === budget.category_id)?.name ?? 'A category';
-      const limit = budget.monthly_limit;
-      if (before < limit && after >= limit) {
-        notifyNow(`${name} budget exceeded`, `${formatMoney(after, budget.currency)} of ${formatMoney(limit, budget.currency)} this month`);
-      } else if (before < limit * 0.8 && after >= limit * 0.8) {
-        notifyNow(`${name} budget at ${Math.round((after / limit) * 100)}%`, `${formatMoney(limit - after, budget.currency)} left this month`);
-      }
-    }
+    if (input.type === 'expense') await checkBudgetAlerts(input, get).catch(() => {});
     return id;
   },
   updateTransaction: async (id, patch) => {
@@ -309,6 +299,15 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await repo.setBudget(categoryId, monthlyLimit, currency);
     await get().refreshBudgets();
   },
+  addBudget: async (input) => {
+    const id = await repo.createBudget(input);
+    await get().refreshBudgets();
+    return id;
+  },
+  updateBudget: async (id, patch) => {
+    await repo.updateBudget(id, patch);
+    await get().refreshBudgets();
+  },
   removeBudget: async (id) => {
     await repo.deleteBudget(id);
     await get().refreshBudgets();
@@ -326,6 +325,32 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
 type Getter = () => { accounts: Account[]; fxRates: FxRate[] };
 
+// Budgets this expense counts towards: one alert each as it passes the
+// budget's warning % or goes over (unless the budget is paused).
+async function checkBudgetAlerts(input: Parameters<typeof repo.createTransaction>[0], get: () => FinanceState) {
+  const { budgets, categories, fxRates } = get();
+  const tx = { ...input, note: input.note ?? null, recurring_id: input.recurring_id ?? null };
+  const relevant = budgets.filter((b) => !b.is_paused && budgetMatches(b, tx));
+  if (!relevant.length) return;
+  const s = useSettingsStore.getState();
+  const now = new Date(input.date);
+  const statuses = await computeBudgetStatuses(relevant, now, { monthStartDay: s.monthStartDay, weekStart: s.weekStart }, fxRates);
+  for (const b of relevant) {
+    const st = statuses[b.id];
+    if (!st || st.state !== 'active') continue;
+    const amount = convertToBase(input.amount, input.currency, b.currency, fxRates);
+    const crossed = budgetCrossing(st.spent - amount, st.spent, st.available, b.alert_pct ?? 80);
+    if (!crossed) continue;
+    const name = budgetName(b, categories);
+    const word = PERIOD_WORD[b.period ?? 'monthly'];
+    if (crossed === 'over') {
+      notifyNow(`${name} budget exceeded`, `${formatMoney(st.spent, b.currency)} of ${formatMoney(st.available, b.currency)} ${word}`);
+    } else {
+      notifyNow(`${name} budget at ${Math.round(st.progress * 100)}%`, `${formatMoney(st.left, b.currency)} left ${word}`);
+    }
+  }
+}
+
 async function checkSpendingAlerts(
   input: Parameters<typeof repo.createTransaction>[0],
   accountBefore: Account | undefined,
@@ -342,7 +367,7 @@ async function checkSpendingAlerts(
     const amount = convertToBase(input.amount, input.currency, base, get().fxRates);
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekStart = new Date(dayStart.getTime() - ((now.getDay() - settings.weekStart + 7) % 7) * 86400000);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthStart = currentMonthStart(now);
     const periods = [
       { key: 'monthly' as const, start: monthStart, word: 'this month', name: 'Monthly', rank: 3 },
       { key: 'weekly' as const, start: weekStart, word: 'this week', name: 'Weekly', rank: 2 },
@@ -369,7 +394,7 @@ async function checkSpendingAlerts(
 
   const account = get().accounts.find((a) => a.id === input.account_id);
   if (account?.monthly_limit) {
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const monthStart = currentMonthStart(now).toISOString();
     const txs = await repo.listTransactionsInRange(monthStart, new Date(now.getTime() + 86400000).toISOString());
     const spent = txs.filter((t) => t.type === 'expense' && t.account_id === account.id && t.currency === account.currency).reduce((s, t) => s + t.amount, 0);
     const amount = input.currency === account.currency ? input.amount : 0;

@@ -15,6 +15,7 @@ import { shade } from '../../theme/shade';
 import { HomeAccountsSheet } from './HomeAccountsSheet';
 import { AccountSheet } from '../money/AccountSheet';
 import type { Account, AccountType } from '../../db/types';
+import { currentMonthStart } from '../../utils/period';
 
 const CARD_W = 188;
 const CARD_H = 116;
@@ -41,7 +42,7 @@ export function HomeAccounts() {
   // Spending on each account so far this month.
   const monthSpend = useMemo(() => {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const start = currentMonthStart(now).getTime();
     const m = new Map<string, number>();
     for (const t of transactions) {
       if (t.type !== 'expense' || !t.account_id || new Date(t.date).getTime() < start) continue;

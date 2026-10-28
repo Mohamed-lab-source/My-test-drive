@@ -313,14 +313,29 @@ export async function contributeSavingsGoal(goalId: string, amount: number, note
 // ---------- Budgets ----------
 export const listBudgets = () => allRows<Budget>('budgets', 'created_at ASC');
 
+export type BudgetInput = Omit<Budget, 'id' | 'created_at'>;
+
+export async function createBudget(input: BudgetInput): Promise<string> {
+  const id = newId();
+  await insertRow('budgets', { ...input, id, created_at: nowIso() });
+  return id;
+}
+export const updateBudget = (id: string, patch: Partial<Budget>) => updateRow('budgets', id, patch);
+
+// A plain monthly budget for one category (used by "Suggest").
 export async function setBudget(categoryId: string, monthlyLimit: number, currency: string): Promise<void> {
-  const existing = await whereRows<Budget>('budgets', 'category_id = ?', [categoryId]);
+  const existing = await whereRows<Budget>('budgets', "category_id = ? AND (category_ids IS NULL OR category_ids = ?) AND (period IS NULL OR period = 'monthly')", [
+    categoryId,
+    JSON.stringify([categoryId]),
+  ]);
   if (existing.length > 0) {
     await updateRow('budgets', existing[0].id, { monthly_limit: monthlyLimit, currency });
   } else {
     await insertRow('budgets', {
       id: newId(),
       category_id: categoryId,
+      category_ids: JSON.stringify([categoryId]),
+      period: 'monthly',
       monthly_limit: monthlyLimit,
       currency,
       created_at: nowIso(),

@@ -205,6 +205,12 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
+**Your month, your budgets**
+- Choose the day your month starts (e.g. payday, the 25th): the spending plan, budgets, limits, "this month" totals, Safe to spend, last month's summary and the widgets all run from it (Settings, or Money → Plan)
+- Budgets are fully customisable: any name, icon and colour; daily, weekly, monthly, yearly or between two dates (with one-tap ranges for a trip); one category, several, or all spending; only certain accounts or cards; only notes containing words like "Talabat, Uber"; count bills or not; roll leftovers (or overspending) into the next period; warn at 50/75/80/90% or only when over; notes; pause and resume
+- Each budget shows spent of available, a pace marker, what's left per day, the end-of-period projection, last period and any rollover; filter by period, tap to edit with a live preview, hold to duplicate or pause, swipe to pause or delete
+- Alerts follow each budget's own period and warning level
+
 **Spending plan & limits**
 - Money → Plan works out, from your income (or the average of the last 3 months), bills and savings goals, how much to save each month (the larger of what your goals need and your chosen share of income) and how much you can spend this month, this week and today
 - Daily, weekly and monthly limits: the plan suggests them, or set your own; progress rings and bars, an on-track / watch / over status with the month-end projection, and how much less to spend a day to finish on budget
