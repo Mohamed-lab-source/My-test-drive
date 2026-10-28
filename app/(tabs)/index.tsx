@@ -48,6 +48,7 @@ import { Sparkline } from '../../src/ui/Sparkline';
 import { CompactHeader, useLargeTitleZoom, useScrollY } from '../../src/ui/CollapsingHeader';
 import { heroGradient } from '../../src/theme/shade';
 import { Widget } from '../../src/ui/Widget';
+import { HomeAccounts } from '../../src/features/home/HomeAccounts';
 import { useSpendingPlan } from '../../src/features/money/plan';
 import { JumpBackIn } from '../../src/features/home/JumpBackIn';
 import { ActivityRings } from '../../src/ui/ActivityRings';
@@ -272,6 +273,11 @@ export default function HomeScreen() {
         </View>
 
         {heroCard}
+        {show('accounts') ? (
+          <Appear index={3}>
+            <HomeAccounts />
+          </Appear>
+        ) : null}
         {show('stats') ? (
           <Appear index={3} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
             <View style={{ flexDirection: 'row', marginBottom: spacing.sm + 2 }}>

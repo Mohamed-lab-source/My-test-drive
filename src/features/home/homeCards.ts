@@ -13,6 +13,7 @@ export const HOME_CARDS: { id: string; label: string }[] = [
   { id: 'countdown', label: 'Next countdown' },
   { id: 'water', label: 'Water' },
   { id: 'networth', label: 'Net worth' },
+  { id: 'accounts', label: 'Cards & accounts' },
   { id: 'stats', label: 'Month · tasks · streak' },
   { id: 'review', label: 'Weekly review' },
   { id: 'prayers', label: 'Prayer tracker' },

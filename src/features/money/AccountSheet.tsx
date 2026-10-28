@@ -23,12 +23,26 @@ const TYPES: { id: AccountType; label: string; icon: string }[] = [
 ];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'KWD', 'QAR', 'BHD', 'OMR', 'JOD', 'EGP', 'MAD', 'TRY', 'INR', 'PKR', 'MYR', 'IDR'];
 
-export function AccountSheet({ visible, onClose, editing }: { visible: boolean; onClose: () => void; editing?: Account | null }) {
+export function AccountSheet({
+  visible,
+  onClose,
+  editing,
+  initialType,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  editing?: Account | null;
+  // The type a new account starts as, e.g. 'credit' from "New card".
+  initialType?: AccountType;
+}) {
   const { colors, typography, spacing } = useTheme();
   const baseCurrency = useSettingsStore((s) => s.currency);
   const excludedAccounts = useSettingsStore((s) => s.excludedAccounts);
   const setExcludedAccounts = useSettingsStore((s) => s.setExcludedAccounts);
   const { accounts, addAccount, updateAccount } = useFinanceStore();
+  const homeAccounts = useSettingsStore((s) => s.homeAccounts);
+  const setHomeAccountShown = useSettingsStore((s) => s.setHomeAccountShown);
+  const [onHome, setOnHome] = useState(true);
 
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('bank');
@@ -49,7 +63,7 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
   useEffect(() => {
     if (!visible) return;
     setName(editing?.name ?? '');
-    setType(editing?.type ?? 'bank');
+    setType(editing?.type ?? initialType ?? 'bank');
     setCurrency(editing?.currency ?? baseCurrency);
     // Credit cards are edited as "amount owed" (a positive number); the
     // stored balance is negative while you owe.
@@ -63,6 +77,7 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
     setLast4(editing?.card_last4 ?? '');
     setColor(editing?.color ?? accentColors[0]);
     setArchived(!!editing?.is_archived);
+    setOnHome(editing ? !homeAccounts || homeAccounts.includes(editing.id) : true);
   }, [visible, editing?.id]);
 
   const canSave = name.trim().length > 0 && !isNaN(Number(balance || '0'));
@@ -98,6 +113,13 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
       } else {
         await addAccount({ ...fields, sort_order: accounts.length });
         id = useFinanceStore.getState().accounts.find((a) => a.name === fields.name && a.type === fields.type)?.id;
+      }
+      // Show it on Home (or not). While Home shows everything, a new account
+      // appears there anyway, so only an explicit choice is recorded.
+      if (id) {
+        const allIds = useFinanceStore.getState().accounts.filter((a) => !a.is_archived).map((a) => a.id);
+        const shownNow = !homeAccounts || homeAccounts.includes(id);
+        if (onHome !== shownNow) setHomeAccountShown(id, onHome, allIds);
       }
       // Bank SMS charges with these digits are posted to this account.
       if (id && fields.card_last4) {
@@ -194,6 +216,15 @@ export function AccountSheet({ visible, onClose, editing }: { visible: boolean; 
               }}
             />
           ))}
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.body, { color: colors.label }]}>Show on Home</Text>
+            <Text style={[typography.caption1, { color: colors.secondaryLabel }]}>
+              {isCredit ? 'See what you owe and what’s available on the main screen' : 'See its balance on the main screen'}
+            </Text>
+          </View>
+          <Switch value={onHome} onValueChange={setOnHome} />
         </View>
         {editing ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>

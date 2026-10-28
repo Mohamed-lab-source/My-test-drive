@@ -80,6 +80,11 @@ interface SettingsState {
   setWaterReminders: (v: boolean) => void;
   hiddenHomeCards: string[];
   toggleHomeCard: (id: string) => void;
+  // Accounts and cards shown on Home, in order; null shows them all.
+  homeAccounts: string[] | null;
+  setHomeAccounts: (ids: string[]) => void;
+  // Shows or hides one; `allIds` is what "all" means while nothing is chosen.
+  setHomeAccountShown: (id: string, shown: boolean, allIds: string[]) => void;
   smsImportEnabled: boolean;
   setSmsImportEnabled: (v: boolean) => void;
   smsSenders: string[];
@@ -274,6 +279,14 @@ export const useSettingsStore = create<SettingsState>()(
         set((s) => ({
           hiddenHomeCards: s.hiddenHomeCards.includes(id) ? s.hiddenHomeCards.filter((c) => c !== id) : [...s.hiddenHomeCards, id],
         })),
+      homeAccounts: null,
+      setHomeAccounts: (ids) => set({ homeAccounts: ids }),
+      setHomeAccountShown: (id, shown, allIds) =>
+        set((s) => {
+          const current = s.homeAccounts ?? allIds;
+          const without = current.filter((x) => x !== id);
+          return { homeAccounts: shown ? [...without, id] : without };
+        }),
       smsImportEnabled: false,
       setSmsImportEnabled: (v) => set({ smsImportEnabled: v }),
       smsSenders: ['HSBC'],

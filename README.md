@@ -166,6 +166,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Tahajjud reminder at the last third of the night, dhikr phrases in Tasbih, journal search and mood filter, make-up (qada) plan with a finish date, "finish your khatm before Ramadan" pages-per-day
 
 **Home**
+- Cards & accounts: the cards and accounts you choose, as mini Wallet cards (balance, or owed and available with a limit bar for credit cards, and this month's spending); tap one for its statement, long-press to add an expense, pay the card or remove it; the + tile adds existing ones or a new card or account (new ones show on Home automatically, with a "Show on Home" switch)
 - Quick actions: log an expense, add a task, open Tasbih or Quran
 - Getting started checklist for new accounts (dismissible)
 - Suhoor / iftar countdown during Ramadan
