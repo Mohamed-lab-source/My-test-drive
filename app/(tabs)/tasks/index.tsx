@@ -38,6 +38,7 @@ import { insertRow } from '../../../src/db/helpers';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useUndoStore } from '../../../src/store/undoStore';
 import { DAILY_CAPACITY_MINUTES, daysToDeadline, formatEstimate, plannedMinutes } from '../../../src/utils/estimate';
+import { ActionMenu } from '../../../src/ui/ActionMenu';
 
 function remindAtFor(dateKey: string | null, hhmm: string): string | null {
   const day = dateKey ?? todayKey();
@@ -103,6 +104,7 @@ export default function TasksScreen() {
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [taskSort, setTaskSort] = useState('manual');
   const [searching, setSearching] = useState(false);
+  const [viewsOpen, setViewsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const topTaskSetting = useSettingsStore((s) => s.topTask);
   const [addVisible, setAddVisible] = useState(false);
@@ -267,27 +269,32 @@ export default function TasksScreen() {
           title="Tasks"
           subtitle="Your personal secretary"
           trailing={
-            <View style={{ flexDirection: 'row' }}>
-              {(
-                [
-                  ['square.grid.2x2', '/tasks/board'],
-                  ['list.star', '/tasks/routines'],
-                  ['timer', '/tasks/focus'],
-                  ['calendar', '/tasks/agenda'],
-                  ['folder.fill', '/tasks/projects'],
-                ] as const
-              ).map(([icon, route]) => (
-                <PressableScale
-                  key={route}
-                  onPress={() => router.push(route)}
-                  hitSlop={6}
-                  style={{ width: 34, height: 34, borderRadius: 17, marginLeft: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.tertiaryFill }}
-                >
-                  <Icon name={icon} size={18} color={colors.blue} />
-                </PressableScale>
-              ))}
-            </View>
+            <PressableScale
+              onPress={() => setViewsOpen(true)}
+              hitSlop={6}
+              accessibilityLabel="More task views"
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 34, borderRadius: 17, backgroundColor: colors.tertiaryFill }}
+            >
+              <Icon name="square.grid.2x2" size={16} color={colors.blue} />
+              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600', marginLeft: 6 }]}>More</Text>
+            </PressableScale>
           }
+        />
+
+        <ActionMenu
+          visible={viewsOpen}
+          title="Tasks"
+          onClose={() => setViewsOpen(false)}
+          actions={[
+            { label: 'Agenda', icon: 'calendar', onPress: () => router.push('/tasks/agenda') },
+            { label: 'Board', icon: 'square.grid.2x2', onPress: () => router.push('/tasks/board') },
+            { label: 'Projects', icon: 'folder.fill', onPress: () => router.push('/tasks/projects') },
+            { label: 'Routines', icon: 'list.star', onPress: () => router.push('/tasks/routines') },
+            { label: 'Focus timer', icon: 'timer', onPress: () => router.push('/tasks/focus'), section: true },
+            { label: 'Meetings', icon: 'person.2.fill', onPress: () => router.push('/tasks/meetings') },
+            { label: 'Priority matrix', icon: 'flag.fill', onPress: () => router.push('/tasks/matrix'), section: true },
+            { label: 'Insights', icon: 'chart.bar.fill', onPress: () => router.push('/tasks/insights') },
+          ]}
         />
 
         {upcomingMeetings.length > 0 && (

@@ -49,6 +49,7 @@ import { CompactHeader, useLargeTitleZoom, useScrollY } from '../../src/ui/Colla
 import { heroGradient } from '../../src/theme/shade';
 import { Widget } from '../../src/ui/Widget';
 import { HomeAccounts } from '../../src/features/home/HomeAccounts';
+import { DailyCarousel } from '../../src/features/home/DailyCarousel';
 import { useSpendingPlan } from '../../src/features/money/plan';
 import { JumpBackIn } from '../../src/features/home/JumpBackIn';
 import { ActivityRings } from '../../src/ui/ActivityRings';
@@ -358,43 +359,6 @@ export default function HomeScreen() {
         </Appear>
         {show('spent') && !show('stats') ? <SpentTodayLine /> : null}
 
-        <Appear index={5} style={{ paddingHorizontal: spacing.lg }}>
-          <GettingStartedCard />
-          <RamadanCard />
-          {show('seasons') ? <SeasonCountdownCard /> : null}
-          {show('rings') && !show('stats') ? <TodayRingsCard /> : null}
-          {show('friday') ? <FridayCard /> : null}
-          {show('countdown') ? <CountdownCard /> : null}
-          {show('mood') ? <MoodCheckinCard /> : null}
-          {show('verse') ? <VerseCard /> : null}
-          {show('names') ? <NameOfDayCard /> : null}
-          {show('hadith') ? <HadithCard /> : null}
-          {show('gratitude') ? <GratitudeMemoryCard /> : null}
-          {show('insight') ? <InsightOfDayCard /> : null}
-          {show('water') ? <WaterCard /> : null}
-        </Appear>
-
-        {show('review') ? (
-<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <Pressable onPress={() => router.push('/review')}>
-            <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <IconCircle name="chart.line.uptrend.xyaxis" color={colors.purple} size={36} />
-              <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                <Text style={[typography.headline, { color: colors.label }]}>Weekly review</Text>
-                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Faith, focus and spending over the last 7 days</Text>
-              </View>
-              <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
-            </Card>
-          </Pressable>
-        </View>
-        ) : null}
-
-        {show('prayers') ? (
-<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <PrayerTracker />
-        </View>
-        ) : null}
-
         {show('today') ? (
 <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
@@ -509,6 +473,49 @@ export default function HomeScreen() {
             </Card>
           </View>
         )}
+
+
+        <Appear index={5} style={{ paddingHorizontal: spacing.lg }}>
+          <GettingStartedCard />
+          <RamadanCard />
+          {show('seasons') ? <SeasonCountdownCard /> : null}
+          {show('rings') && !show('stats') ? <TodayRingsCard /> : null}
+          {show('friday') ? <FridayCard /> : null}
+          {show('countdown') ? <CountdownCard /> : null}
+          {show('mood') ? <MoodCheckinCard /> : null}
+          {show('gratitude') ? <GratitudeMemoryCard /> : null}
+          {/* The tiles at the top already show water. */}
+          {show('water') && !show('stats') ? <WaterCard /> : null}
+        </Appear>
+
+        <DailyCarousel>
+          {show('verse') ? <VerseCard /> : null}
+          {show('names') ? <NameOfDayCard /> : null}
+          {show('hadith') ? <HadithCard /> : null}
+          {show('insight') ? <InsightOfDayCard /> : null}
+        </DailyCarousel>
+
+        {show('review') ? (
+<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <Pressable onPress={() => router.push('/review')}>
+            <Card style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <IconCircle name="chart.line.uptrend.xyaxis" color={colors.purple} size={36} />
+              <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                <Text style={[typography.headline, { color: colors.label }]}>Weekly review</Text>
+                <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>Faith, focus and spending over the last 7 days</Text>
+              </View>
+              <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
+            </Card>
+          </Pressable>
+        </View>
+        ) : null}
+
+        {/* The tiles at the top already show prayers. */}
+        {show('prayers') && !show('stats') ? (
+<View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+          <PrayerTracker />
+        </View>
+        ) : null}
 
         <Pressable onPress={() => setCustomizeVisible(true)} style={{ alignSelf: 'center', marginTop: spacing.lg, padding: spacing.sm }}>
           <Text style={[typography.subhead, { color: colors.blue }]}>Customize Home</Text>

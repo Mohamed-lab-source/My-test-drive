@@ -16,6 +16,7 @@ import { AnimatedNumber } from '../../../src/ui/AnimatedNumber';
 import { WalletStack } from '../../../src/features/money/WalletStack';
 import { PlanSummaryCard } from '../../../src/features/money/PlanSummaryCard';
 import { WeekSpendCard } from '../../../src/features/money/WeekSpendCard';
+import { MoneyMenu } from '../../../src/features/money/MoneyMenu';
 import { Card } from '../../../src/ui/Card';
 import { IconCircle } from '../../../src/ui/IconCircle';
 import { EmptyState } from '../../../src/ui/EmptyState';
@@ -24,11 +25,7 @@ import { formatMoney, fromMinorUnits, toMinorUnits } from '../../../src/utils/mo
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
-import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
 import { LastMonthCard } from '../../../src/features/money/LastMonthCard';
-import { CardsSummaryCard } from '../../../src/features/money/CardsSummaryCard';
-import { WeeklyLimitCard } from '../../../src/features/money/WeeklyLimitCard';
-import { SpendingPaceCard } from '../../../src/features/money/SpendingPaceCard';
 import { useSmsStore } from '../../../src/sms/smsStore';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { useBalanceFormatter } from '../../../src/ui/useMoney';
@@ -39,50 +36,7 @@ import { useBudgetStatuses } from '../../../src/features/money/budgets';
 
 const HEADLINE_LABEL = ['Net worth', 'Cash on hand', 'Owed on cards'];
 
-function QuickLink({ icon, label, color, onPress, badge }: { icon: string; label: string; color: string; onPress: () => void; badge?: number }) {
-  const { colors, typography, spacing, radius, shadow } = useTheme();
-  return (
-    <PressableScale
-      onPress={onPress}
-      scaleTo={0.93}
-      style={[
-        {
-          flex: 1,
-          alignItems: 'center',
-          backgroundColor: colors.secondarySystemGroupedBackground,
-          borderRadius: radius.lg,
-          borderCurve: 'continuous',
-          paddingVertical: spacing.sm,
-          marginHorizontal: 4,
-        },
-        shadow.card,
-      ]}
-    >
-      <View>
-        <IconCircle name={icon} color={color} size={36} filled />
-        {badge ? (
-          <View
-            style={{
-              position: 'absolute',
-              top: -4,
-              right: -8,
-              minWidth: 18,
-              height: 18,
-              borderRadius: 9,
-              paddingHorizontal: 4,
-              backgroundColor: colors.red,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{badge > 99 ? '99+' : badge}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text style={[typography.caption1, { color: colors.label, marginTop: 6, fontWeight: '600' }]}>{label}</Text>
-    </PressableScale>
-  );
-}
+const WALLET_PEEK = 3;
 
 export default function MoneyScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -104,6 +58,9 @@ export default function MoneyScreen() {
   const budgetStatuses = useBudgetStatuses();
   const overBudgets = Object.values(budgetStatuses).filter((st) => st.state === 'active' && st.pace === 'over').length;
   const flaggedCount = useFinanceStore((s) => s.transactions.filter((t) => !!t.flag).length);
+  // A short wallet by default; the rest are one tap away.
+  const [showAllWallet, setShowAllWallet] = useState(false);
+  const openAccounts = accounts.filter((a) => !a.is_archived);
   const netWorthHistory = useFinanceStore((s) => s.netWorthHistory);
   const refreshSms = useSmsStore((s) => s.refresh);
   useEffect(() => {
@@ -211,81 +168,53 @@ export default function MoneyScreen() {
           <WeekSpendCard />
         </Appear>
 
+        {/* Only what needs you right now. */}
+        {smsPending || overBudgets || flaggedCount ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+            {[
+              { n: smsPending, label: `bank debit${smsPending === 1 ? '' : 's'} to review`, icon: 'banknote.fill', color: colors.orange, href: '/money/sms-inbox' },
+              { n: overBudgets, label: `budget${overBudgets === 1 ? '' : 's'} over`, icon: 'chart.pie.fill', color: colors.red, href: '/money/budgets' },
+              { n: flaggedCount, label: `to follow up`, icon: 'flag.fill', color: colors.purple, href: '/money/flagged' },
+            ]
+              .filter((x) => x.n > 0)
+              .map((x) => (
+                <PressableScale
+                  key={x.href}
+                  onPress={() => router.push(x.href as never)}
+                  style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, backgroundColor: x.color + '1F', marginRight: 8 }}
+                >
+                  <Icon name={x.icon} size={16} color={x.color} />
+                  <Text style={[typography.subhead, { color: colors.label, marginLeft: 6, fontWeight: '600' }]}>
+                    {x.n} {x.label}
+                  </Text>
+                </PressableScale>
+              ))}
+          </ScrollView>
+        ) : null}
+
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <Text style={[typography.title2, { color: colors.label }]}>Wallet</Text>
-            <Pressable onPress={() => router.push('/money/limits')} hitSlop={8}>
-              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Limits & details</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row' }}>
+              {openAccounts.length > WALLET_PEEK ? (
+                <Pressable onPress={() => setShowAllWallet((v) => !v)} hitSlop={8} style={{ marginRight: spacing.md }}>
+                  <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>{showAllWallet ? 'Show less' : `Show all ${openAccounts.length}`}</Text>
+                </Pressable>
+              ) : null}
+              <Pressable onPress={() => router.push('/money/limits')} hitSlop={8}>
+                <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Limits</Text>
+              </Pressable>
+            </View>
           </View>
           <WalletStack
-            accounts={accounts.filter((a) => !a.is_archived)}
+            accounts={showAllWallet ? openAccounts : openAccounts.slice(0, WALLET_PEEK)}
             balance={balance}
             onOpen={(a) => router.push({ pathname: '/money/account/[id]', params: { id: a.id } })}
           />
         </View>
 
-        {smsPending > 0 ? (
-          <Pressable onPress={() => router.push('/money/sms-inbox')} style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-            <Card style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.orange + '1F' }}>
-              <Icon name="banknote.fill" size={22} color={colors.orange} />
-              <Text style={[typography.headline, { color: colors.label, flex: 1, marginLeft: spacing.sm }]}>
-                {smsPending} bank debit{smsPending === 1 ? '' : 's'} to review
-              </Text>
-              <Icon name="chevron.right" size={16} color={colors.tertiaryLabel} />
-            </Card>
-          </Pressable>
-        ) : null}
-
         <View style={{ paddingHorizontal: spacing.lg }}>
           <LastMonthCard />
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <SafeToSpendCard />
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <WeeklyLimitCard />
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          <SpendingPaceCard />
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <CardsSummaryCard />
-        </View>
-
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <QuickLink icon="exclamationmark.triangle.fill" label="Debts" color={colors.red} onPress={() => router.push('/money/debts')} />
-          <QuickLink icon="repeat" label="Subscriptions" color={colors.purple} onPress={() => router.push('/money/subscriptions')} />
-          <QuickLink icon="target" label="Savings" color={colors.green} onPress={() => router.push('/money/savings')} />
-          <QuickLink icon="calendar" label="Bills" color={colors.indigo} onPress={() => router.push('/money/bills-calendar')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <QuickLink icon="chart.pie.fill" label="Budgets" color={colors.orange} badge={overBudgets} onPress={() => router.push('/money/budgets')} />
-          <QuickLink icon="chart.bar.fill" label="Analytics" color={colors.teal} onPress={() => router.push('/money/analytics')} />
-          <QuickLink icon="building.columns.fill" label="Accounts" color={colors.blue} onPress={() => router.push('/money/accounts')} />
-          <QuickLink icon="hands.sparkles.fill" label="Zakat" color={colors.mint} onPress={() => router.push('/money/zakat')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.sm }}>
-          <QuickLink icon="banknote.fill" label="Bank SMS" color={colors.red} badge={smsPending} onPress={() => router.push('/money/sms-inbox')} />
-          <QuickLink icon="creditcard.fill" label="Cards" color={colors.purple} onPress={() => router.push('/money/cards')} />
-          <QuickLink icon="cart.badge.plus" label="Shopping" color={colors.green} onPress={() => router.push('/money/shopping')} />
-          <QuickLink icon="function" label="Tools" color={colors.gray} onPress={() => router.push('/money/tools')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md }}>
-          <QuickLink icon="camera.fill" label="Receipts" color={colors.orange} onPress={() => router.push('/money/receipts')} />
-          <QuickLink icon="lightbulb.fill" label="Insights" color={colors.yellow} onPress={() => router.push('/money/insights')} />
-          <QuickLink icon="flag.fill" label="Follow-ups" color={colors.red} badge={flaggedCount} onPress={() => router.push('/money/flagged')} />
-          <QuickLink icon="trophy.fill" label="Challenges" color={colors.green} onPress={() => router.push('/money/challenges')} />
-        </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: spacing.lg - 4, marginBottom: spacing.md, marginTop: -spacing.sm }}>
-          <QuickLink icon="chart.line.uptrend.xyaxis" label="Year" color={colors.indigo} onPress={() => router.push('/money/year')} />
-          <QuickLink icon="target" label="Plan" color={colors.green} onPress={() => router.push('/money/plan')} />
-          <QuickLink icon="creditcard.fill" label="Limits" color={colors.purple} onPress={() => router.push('/money/limits')} />
-          <View style={{ flex: 1, marginHorizontal: 4 }} />
         </View>
 
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -294,25 +223,21 @@ export default function MoneyScreen() {
             <Text style={[typography.subhead, { color: colors.blue }]}>See all</Text>
           </Pressable>
         </View>
-        {transactions.length > 0 ? (
-          <Text style={[typography.caption1, { color: colors.tertiaryLabel, paddingHorizontal: spacing.lg, marginTop: -4, marginBottom: spacing.sm }]}>
-            Hold a transaction to duplicate, flag or delete it · hold a card for quick adds
-          </Text>
-        ) : null}
-
-        <View style={{ paddingHorizontal: spacing.lg }}>
+        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
           {transactions.length === 0 ? (
             <Card>
               <EmptyState icon="banknote" title="No transactions yet" message="Tap + to log your first income or expense." />
             </Card>
           ) : (
             <Card padded={false}>
-              {transactions.slice(0, 8).map((tx, i, arr) => (
+              {transactions.slice(0, 5).map((tx, i, arr) => (
                 <TransactionRow key={tx.id} tx={tx} isLast={i === arr.length - 1} onPress={() => setEditing(tx)} />
               ))}
             </Card>
           )}
         </View>
+
+        <MoneyMenu badges={{ budgets: overBudgets, sms: smsPending, flagged: flaggedCount }} />
       </Animated.ScrollView>
       <CompactHeader title="Money" scrollY={scrollY} />
 

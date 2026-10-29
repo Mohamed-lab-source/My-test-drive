@@ -7,6 +7,7 @@ export default function SettingsLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
       <Stack.Screen name="index" />
+      <Stack.Screen name="section" />
       <Stack.Screen name="categories" />
     </Stack>
   );

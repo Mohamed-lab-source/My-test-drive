@@ -205,6 +205,12 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
+**Organised and concise**
+- Settings is a short list — General, Money, Prayer & Hijri, Notifications, Data & backup — each opening its own page, plus a search box that finds any setting
+- Money keeps the essentials up top (net worth, plan, last 7 days, a short wallet with "Show all", recent activity), a "needs attention" row only when something does, and one grouped menu: Plan · Accounts & cards · Bills & spending · Reports & tools; the extra analysis cards live in Analytics
+- Home puts Today's tasks right after the quick actions, swipes through the verse, Name of Allah, hadith and insight of the day in one card, and drops cards the top tiles already show
+- Tasks' extra views (Agenda, Board, Projects, Routines, Focus, Meetings, Matrix, Insights) sit behind one labelled "More" menu; Life moves the prayer record to Prayer times and the wishlist to a tile
+
 **Your month, your budgets**
 - Or start each month when your salary actually arrives: paydays are found in your income (Salary category, or "salary"/"payroll"/"راتب" in the note, including salary SMS), the month stays open if the salary is late, a notification says when a new month starts, and "My salary arrived today" starts one by hand
 - Choose a fixed day your month starts instead (e.g. the 25th): the spending plan, budgets, limits, "this month" totals, Safe to spend, last month's summary and the widgets all run from it (Settings, or Money → Plan)

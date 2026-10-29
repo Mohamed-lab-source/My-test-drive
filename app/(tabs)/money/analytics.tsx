@@ -18,6 +18,10 @@ import * as repo from '../../../src/db/repositories/finance';
 import { METHOD_LABELS, methodOf, type PaymentMethod } from '../../../src/utils/paymentMethods';
 import type { Transaction } from '../../../src/db/types';
 import { currentMonthStart, dayOfPeriod, daysIn as periodDays, monthPeriod } from '../../../src/utils/period';
+import { SafeToSpendCard } from '../../../src/features/money/SafeToSpendCard';
+import { WeeklyLimitCard } from '../../../src/features/money/WeeklyLimitCard';
+import { SpendingPaceCard } from '../../../src/features/money/SpendingPaceCard';
+import { CardsSummaryCard } from '../../../src/features/money/CardsSummaryCard';
 
 const BAR_MAX_HEIGHT = 100;
 
@@ -223,6 +227,16 @@ export default function AnalyticsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Analytics" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        {/* This month at a glance: what used to sit on the Money tab. */}
+        <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>This month</Text>
+        <View style={{ marginBottom: spacing.md }}>
+          <SafeToSpendCard />
+        </View>
+        <WeeklyLimitCard />
+        <SpendingPaceCard />
+        <View style={{ marginBottom: spacing.md }}>
+          <CardsSummaryCard />
+        </View>
         {loading ? null : (
           <>
             <Text style={[typography.title3, { color: colors.label, marginBottom: spacing.sm }]}>Next 30 days</Text>

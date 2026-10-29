@@ -16,6 +16,9 @@ import {
 } from '../../../src/utils/prayerTimes';
 import { formatTime } from '../../../src/utils/date';
 import type { Prayer } from '../../../src/db/types';
+import { QadaCard } from '../../../src/features/life/QadaCard';
+import { MissedPrayersCard } from '../../../src/features/life/MissedPrayersCard';
+import { PrayerHistory } from '../../../src/features/life/PrayerHistory';
 
 const PRAYERS: { key: Prayer; label: string }[] = [
   { key: 'fajr', label: 'Fajr' },
@@ -33,6 +36,7 @@ export default function PrayerTimesScreen() {
   const { colors, typography, spacing } = useTheme();
   const city = findPrayerCity(useSettingsStore((s) => s.prayerCityId));
   const [now, setNow] = useState(() => new Date());
+  const [qadaKey, setQadaKey] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30000);
@@ -177,6 +181,15 @@ export default function PrayerTimesScreen() {
             </View>
           ))}
         </Card>
+
+        {/* Your record: which prayers you keep and what's owed. */}
+        <View style={{ marginTop: spacing.lg }}>
+          <PrayerHistory />
+        </View>
+        <View style={{ marginTop: spacing.md }}>
+          <MissedPrayersCard onChanged={() => setQadaKey((k) => k + 1)} />
+          <QadaCard key={qadaKey} />
+        </View>
       </ScrollView>
     </View>
   );

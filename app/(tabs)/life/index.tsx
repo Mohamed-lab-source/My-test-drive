@@ -57,7 +57,6 @@ function LifeLink({ icon, label, color, onPress }: { icon: string; label: string
 }
 
 export default function LifeScreen() {
-  const [qadaKey, setQadaKey] = React.useState(0);
   const { colors, typography, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   const { scrollY, onScroll } = useScrollY();
@@ -119,18 +118,11 @@ export default function LifeScreen() {
               { icon: 'hourglass', label: 'Countdowns', color: colors.indigo, onPress: () => router.push('/life/countdowns') },
               { icon: 'gift.fill', label: 'Occasions', color: colors.pink, onPress: () => router.push('/life/occasions') },
               { icon: 'doc.text.fill', label: 'Notes', color: colors.gray, onPress: () => router.push('/life/notes') },
+              { icon: 'lightbulb.fill', label: 'Wishlist', color: colors.yellow, onPress: () => router.push('/life/wishlist') },
             ]}
           />
         </Appear>
         <View style={{ height: spacing.sm }} />
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <PrayerHistory />
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
-          <MissedPrayersCard onChanged={() => setQadaKey((k) => k + 1)} />
-          <QadaCard key={qadaKey} />
-        </View>
 
         {topGoal ? (
           <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
@@ -154,6 +146,8 @@ export default function LifeScreen() {
           </View>
         ) : null}
 
+        {/* Only when there's something on it; otherwise it's a tile above. */}
+        {activeIdeas.length > 0 ? (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <Text style={[typography.title3, { color: colors.label }]}>Wishlist & Ideas</Text>
@@ -161,22 +155,13 @@ export default function LifeScreen() {
               <Text style={[typography.subhead, { color: colors.blue }]}>See all</Text>
             </Pressable>
           </View>
-          {activeIdeas.length === 0 ? (
-            <Card>
-              <EmptyState
-                icon="lightbulb.fill"
-                title="No ideas yet"
-                message="Capture things you want, gift ideas, or plans for later."
-              />
-            </Card>
-          ) : (
-            <Card padded={false}>
-              {activeIdeas.slice(0, 5).map((item, i, arr) => (
-                <WishlistRow key={item.id} item={item} isLast={i === arr.length - 1} />
-              ))}
-            </Card>
-          )}
+          <Card padded={false}>
+            {activeIdeas.slice(0, 5).map((item, i, arr) => (
+              <WishlistRow key={item.id} item={item} isLast={i === arr.length - 1} />
+            ))}
+          </Card>
         </View>
+        ) : null}
       </Animated.ScrollView>
       <CompactHeader title="Life" scrollY={scrollY} />
     </View>

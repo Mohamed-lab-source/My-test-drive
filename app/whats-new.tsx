@@ -77,6 +77,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Everywhere',
     emoji: '✨',
     items: [
+      'Tidier everywhere: Settings in five sections with search, Money with a grouped menu, Home with a swipeable daily card, Tasks views under one "More" menu',
       'Cards & accounts on Home: choose which cards and accounts appear on the main screen, reorder them, or add a new one from the + tile',
       'Home-screen widgets: a Smart Stack that shows what matters right now with a one-tap button, Spending, Habits & Water, and smarter Today, Prayers and Net worth widgets — Settings → Home-screen widgets',
       'Apple-style design: floating glass tab bar, Home widgets, Wallet card stack, Reminders-style smart lists, Shortcuts-style Life tiles and Dynamic Island confirmations',
