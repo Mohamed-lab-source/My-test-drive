@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -16,7 +17,7 @@ import type { Account, AccountType } from '../../../src/db/types';
 
 export default function AccountsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, updateAccount, fxRates } = useFinanceStore();
+  const { accounts, updateAccount, fxRates } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, updateAccount: s.updateAccount, fxRates: s.fxRates })));
   const currency = useSettingsStore((s) => s.currency);
   const [reordering, setReordering] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);

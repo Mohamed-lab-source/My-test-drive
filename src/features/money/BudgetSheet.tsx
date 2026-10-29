@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
@@ -48,7 +49,7 @@ export function BudgetSheet({ visible, onClose, editing }: { visible: boolean; o
   const monthStartDay = useSettingsStore((s) => s.monthStartDay);
   const monthFromPayday = useSettingsStore((s) => s.monthFromPayday);
   const weekStart = useSettingsStore((s) => s.weekStart);
-  const { categories, accounts, fxRates, budgets, addBudget, updateBudget } = useFinanceStore();
+  const { categories, accounts, fxRates, budgets, addBudget, updateBudget } = useFinanceStore(useShallow((s) => ({ categories: s.categories, accounts: s.accounts, fxRates: s.fxRates, budgets: s.budgets, addBudget: s.addBudget, updateBudget: s.updateBudget })));
 
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');

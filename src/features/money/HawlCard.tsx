@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -24,7 +25,7 @@ function nextOccurrence(month: number, day: number, offset: number): Date | null
 // The Hijri date your zakat year (hawl) renews, with a yearly reminder.
 export function HawlCard() {
   const { colors, typography, spacing } = useTheme();
-  const { zakatHawl, setZakatHawl, hijriOffset, notificationsEnabled } = useSettingsStore();
+  const { zakatHawl, setZakatHawl, hijriOffset, notificationsEnabled } = useSettingsStore(useShallow((s) => ({ zakatHawl: s.zakatHawl, setZakatHawl: s.setZakatHawl, hijriOffset: s.hijriOffset, notificationsEnabled: s.notificationsEnabled })));
   const today = toHijri(new Date(), hijriOffset);
   const [month, setMonth] = useState(zakatHawl?.month ?? today.month);
   const [day, setDay] = useState(String(zakatHawl?.day ?? today.day));

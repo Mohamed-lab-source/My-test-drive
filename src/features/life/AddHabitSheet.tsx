@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
@@ -17,7 +18,7 @@ const ICONS = ['flame.fill', 'book.fill', 'heart.fill', 'sparkles', 'sun.max.fil
 
 export function AddHabitSheet({ visible, onClose, editing }: { visible: boolean; onClose: () => void; editing?: Habit | null }) {
   const { colors, typography, spacing } = useTheme();
-  const { habits, addHabit } = useHabitsStore();
+  const { habits, addHabit } = useHabitsStore(useShallow((s) => ({ habits: s.habits, addHabit: s.addHabit })));
 
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(ICONS[0]);

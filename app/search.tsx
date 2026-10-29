@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,8 @@ import { EmptyState } from '../src/ui/EmptyState';
 import { searchAll, type SearchResult, type SearchResultType } from '../src/db/search';
 import { useSettingsStore } from '../src/store/settingsStore';
 import { ChipSelector } from '../src/ui/ChipSelector';
+import { DESTINATIONS } from '../src/navigation/destinations';
+import { searchSettings, SECTION_TITLES } from '../src/features/settings/settingsIndex';
 
 const TYPE_LABEL: Record<SearchResultType, string> = {
   transaction: 'Money',
@@ -22,6 +25,12 @@ const TYPE_LABEL: Record<SearchResultType, string> = {
   shopping: 'Shopping',
   countdown: 'Countdowns',
   journal: 'Journal',
+  account: 'Accounts',
+  budget: 'Budgets',
+  habit: 'Habits',
+  goal: 'Goals',
+  screen: 'Go to',
+  setting: 'Settings',
 };
 
 const TYPE_META: Record<SearchResultType, { icon: string; color: string; route: string }> = {
@@ -34,7 +43,31 @@ const TYPE_META: Record<SearchResultType, { icon: string; color: string; route: 
   shopping: { icon: 'cart.fill', color: '#34C759', route: '/money/shopping' },
   countdown: { icon: 'hourglass', color: '#5856D6', route: '/life/countdowns' },
   journal: { icon: 'text.book.closed.fill', color: '#5856D6', route: '/life/journal' },
+  account: { icon: 'creditcard.fill', color: '#007AFF', route: '/money/accounts' },
+  budget: { icon: 'chart.pie.fill', color: '#FF9500', route: '/money/budgets' },
+  habit: { icon: 'flame.fill', color: '#FF9500', route: '/life/habits' },
+  goal: { icon: 'target', color: '#34C759', route: '/money/savings' },
+  screen: { icon: 'arrow.up.right', color: '#007AFF', route: '/' },
+  setting: { icon: 'gearshape.fill', color: '#8E8E93', route: '/settings' },
 };
+
+// Screens and settings whose name (or a related word) matches: "zakat",
+// "payday", "dark mode"…
+function navResults(query: string): SearchResult[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+  const screens = Object.entries(DESTINATIONS)
+    .filter(([, d]) => `${d.label} ${d.keywords ?? ''}`.toLowerCase().includes(q))
+    .slice(0, 4)
+    .map(([route, d]) => ({ type: 'screen' as const, id: route, title: d.label, subtitle: 'Open', route }));
+  const settings = searchSettings(q)
+    .slice(0, 3)
+    .map((r) => ({ type: 'setting' as const, id: r.label, title: r.label, subtitle: `Settings · ${SECTION_TITLES[r.section]}`, route: `/settings/section?id=${r.section}` }));
+  return [...screens, ...settings];
+}
+
+// Shown before you type: the places people go most.
+const JUMP_TO = ['/money/transactions', '/money/budgets', '/money/plan', '/tasks/agenda', '/life/prayer-times', '/life/habits'];
 
 export default function SearchScreen() {
   const { colors, typography, spacing } = useTheme();
@@ -43,11 +76,11 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [typeFilter, setTypeFilter] = useState<SearchResultType | 'all'>('all');
-  const { recentSearches, addRecentSearch, clearRecentSearches } = useSettingsStore();
+  const { recentSearches, addRecentSearch, clearRecentSearches } = useSettingsStore(useShallow((s) => ({ recentSearches: s.recentSearches, addRecentSearch: s.addRecentSearch, clearRecentSearches: s.clearRecentSearches })));
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      searchAll(query).then(setResults);
+      searchAll(query).then((r) => setResults([...navResults(query), ...r]));
     }, 200);
     return () => clearTimeout(handle);
   }, [query]);
@@ -57,7 +90,7 @@ export default function SearchScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
         <View style={{ flex: 1 }}>
           <TextField
-            placeholder="Search money (or an amount), tasks, notes, journal…"
+            placeholder="Search anything — money, tasks, notes, settings…"
             value={query}
             onChangeText={setQuery}
             autoFocus
@@ -73,7 +106,33 @@ export default function SearchScreen() {
 
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
         {query.trim().length === 0 ? (
-          recentSearches.length > 0 ? (
+          <>
+          <Text style={[typography.footnote, { color: colors.secondaryLabel, textTransform: 'uppercase', marginBottom: spacing.sm }]}>Jump to</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.md }}>
+            {JUMP_TO.map((route) => {
+              const d = DESTINATIONS[route];
+              return (
+                <Pressable
+                  key={route}
+                  onPress={() => router.push(route as any)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.secondarySystemGroupedBackground,
+                    borderRadius: 16,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: 7,
+                    marginRight: spacing.sm,
+                    marginBottom: spacing.sm,
+                  }}
+                >
+                  <Icon name={d.icon} size={14} color={(colors as unknown as Record<string, string>)[d.color] ?? colors.blue} />
+                  <Text style={[typography.subhead, { color: colors.label, marginLeft: 6 }]}>{d.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {recentSearches.length > 0 ? (
             <View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm }}>
                 <Text style={[typography.footnote, { color: colors.secondaryLabel, textTransform: 'uppercase' }]}>Recent</Text>
@@ -103,7 +162,8 @@ export default function SearchScreen() {
                 ))}
               </View>
             </View>
-          ) : null
+          ) : null}
+          </>
         ) : results.length === 0 ? (
           <EmptyState icon="magnifyingglass" title="No results" message="Try a different search term." />
         ) : (
@@ -133,7 +193,7 @@ export default function SearchScreen() {
                   key={`${r.type}-${r.id}`}
                   onPress={() => {
                     addRecentSearch(query);
-                    router.push(meta.route as any);
+                    router.push((r.route ?? meta.route) as any);
                   }}
                   style={{
                     flexDirection: 'row',

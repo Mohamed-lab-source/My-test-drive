@@ -7,7 +7,7 @@ import * as habitsRepo from '../db/repositories/habits';
 import * as healthRepo from '../db/repositories/health';
 import type { Prayer } from '../db/types';
 import { renderBothSchemes, type WidgetName } from './renderers';
-import { refreshWidgets } from './refresh';
+import { refreshWidgetsNow } from './refresh';
 
 // Which other widgets show the data each action changes.
 const AFFECTS: Record<string, WidgetName[]> = {
@@ -59,7 +59,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
       await healthRepo.setWater(key, (await healthRepo.getWater(key)) + 1);
     }
     const others = (AFFECTS[clickAction] ?? []).filter((n) => n !== widgetInfo.widgetName);
-    if (others.length) refreshWidgets(others);
+    if (others.length) await refreshWidgetsNow(others);
   }
 
   renderWidget(await renderBothSchemes(widgetInfo.widgetName, { width: widgetInfo.width, height: widgetInfo.height }));

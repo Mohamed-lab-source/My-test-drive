@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert, Platform } from 'react-native';
 import { Switch } from '../../../src/ui/Switch';
 import * as Haptics from '../../../src/utils/haptics';
@@ -26,25 +27,9 @@ import { SkippedMessagesCard, TestMessageCard } from '../../../src/features/mone
 
 export default function SmsInboxScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, categories, transactions, recurringRules } = useFinanceStore();
-  const {
-    smsImportEnabled,
-    setSmsImportEnabled,
-    smsSenders,
-    setSmsSenders,
-    setSmsAccountId,
-    smsInstantAlerts,
-    setSmsInstantAlerts,
-    smsAutoAddKnown,
-    setSmsAutoAddKnown,
-    smsReadCredits,
-    setSmsReadCredits,
-    smsIgnored,
-    setSmsIgnored,
-    smsWatchAllBanks,
-    setSmsWatchAllBanks,
-  } = useSettingsStore();
-  const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules, links, loadLinks } = useSmsStore();
+  const { accounts, categories, transactions, recurringRules } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, recurringRules: s.recurringRules })));
+  const { smsImportEnabled, setSmsImportEnabled, smsSenders, setSmsSenders, setSmsAccountId, smsInstantAlerts, setSmsInstantAlerts, smsAutoAddKnown, setSmsAutoAddKnown, smsReadCredits, setSmsReadCredits, smsIgnored, setSmsIgnored, smsWatchAllBanks, setSmsWatchAllBanks } = useSettingsStore(useShallow((s) => ({ smsImportEnabled: s.smsImportEnabled, setSmsImportEnabled: s.setSmsImportEnabled, smsSenders: s.smsSenders, setSmsSenders: s.setSmsSenders, setSmsAccountId: s.setSmsAccountId, smsInstantAlerts: s.smsInstantAlerts, setSmsInstantAlerts: s.setSmsInstantAlerts, smsAutoAddKnown: s.smsAutoAddKnown, setSmsAutoAddKnown: s.setSmsAutoAddKnown, smsReadCredits: s.smsReadCredits, setSmsReadCredits: s.setSmsReadCredits, smsIgnored: s.smsIgnored, setSmsIgnored: s.setSmsIgnored, smsWatchAllBanks: s.smsWatchAllBanks, setSmsWatchAllBanks: s.setSmsWatchAllBanks })));
+  const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules, links, loadLinks } = useSmsStore(useShallow((s) => ({ pending: s.pending, scanning: s.scanning, scan: s.scan, refresh: s.refresh, add: s.add, dismiss: s.dismiss, rules: s.rules, loadRules: s.loadRules, links: s.links, loadLinks: s.loadLinks })));
   const addAccount = useFinanceStore((s) => s.addAccount);
   const [pickedAccount, setPickedAccount] = useState<Record<string, string>>({});
   const [inboxSort, setInboxSort] = useState('new');

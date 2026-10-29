@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { setCardLink } from '../../db/repositories/cardLinks';
 import { useSmsStore } from '../../sms/smsStore';
@@ -39,7 +40,7 @@ export function AccountSheet({
   const baseCurrency = useSettingsStore((s) => s.currency);
   const excludedAccounts = useSettingsStore((s) => s.excludedAccounts);
   const setExcludedAccounts = useSettingsStore((s) => s.setExcludedAccounts);
-  const { accounts, addAccount, updateAccount } = useFinanceStore();
+  const { accounts, addAccount, updateAccount } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, addAccount: s.addAccount, updateAccount: s.updateAccount })));
   const homeAccounts = useSettingsStore((s) => s.homeAccounts);
   const setHomeAccountShown = useSettingsStore((s) => s.setHomeAccountShown);
   const [onHome, setOnHome] = useState(true);

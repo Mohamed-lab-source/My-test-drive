@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { Text, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -14,7 +15,7 @@ import * as I from '../../utils/moneyInsights';
 export function InsightOfDayCard() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { transactions, fxRates, categories } = useFinanceStore();
+  const { transactions, fxRates, categories } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, fxRates: s.fxRates, categories: s.categories })));
   const currency = useSettingsStore((s) => s.currency);
 
   const [shift, setShift] = useState(0);
@@ -71,7 +72,7 @@ export function InsightOfDayCard() {
 export function SpentTodayLine() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { transactions, fxRates } = useFinanceStore();
+  const { transactions, fxRates } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, fxRates: s.fxRates })));
   const currency = useSettingsStore((s) => s.currency);
   const today = new Date().toDateString();
   const list = transactions.filter((t) => t.type === 'expense' && new Date(t.date).toDateString() === today);

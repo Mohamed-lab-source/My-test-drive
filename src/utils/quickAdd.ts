@@ -32,7 +32,35 @@ const PRIORITY_TOKENS: Record<string, QuickPriority> = {
   '!!': 'medium',
   '!low': 'low',
   '!l': 'low',
+  // Numbered, like other to-do apps: 1 is the most important.
+  '!1': 'high',
+  '!2': 'medium',
+  '!3': 'low',
+  p1: 'high',
+  p2: 'medium',
+  p3: 'low',
 };
+
+const MONTHS: Record<string, number> = {
+  jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3, may: 4, jun: 5, june: 5,
+  jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+};
+
+// Parts of the day, for "this evening" / "tomorrow morning".
+const DAY_PARTS: Record<string, string> = { morning: '09:00', noon: '12:00', afternoon: '15:00', evening: '18:00' };
+
+const hhmm = (h: number, m: number) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+// "5pm", "5:30pm", "17:30" (but not a bare "5", which is too likely a count).
+function parseClock(word: string): string | null {
+  const m = word.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/) ?? word.match(/^(\d{1,2}):(\d{2})()$/);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2] ?? 0);
+  if (m[3] === 'pm' && h < 12) h += 12;
+  if (m[3] === 'am' && h === 12) h = 0;
+  return h < 24 && min < 60 ? hhmm(h, min) : null;
+}
 
 // Weekday word → JS getDay() index (0 = Sunday).
 const WEEKDAYS: Record<string, number> = {
@@ -143,6 +171,77 @@ export function parseQuickTask(
       continue;
     }
 
+    // Arabic: بكرة / غدا (tomorrow), النهارده / اليوم (today).
+    if (word === 'بكرة' || word === 'بكره' || word === 'غدا' || word === 'غداً') {
+      scheduledDate = dateKey(addDays(now, 1));
+      backlog = false;
+      continue;
+    }
+    if (word === 'النهارده' || word === 'النهاردة' || word === 'اليوم') {
+      scheduledDate = dateKey(now);
+      backlog = false;
+      continue;
+    }
+    // "in 2 hours", "in 30 min": a reminder later today.
+    if (word === 'in' && next && /^\d+$/.test(next) && /^(h|hr|hrs|hour|hours|m|min|mins|minute|minutes)$/.test(words[i + 2]?.toLowerCase() ?? '')) {
+      const unit = words[i + 2].toLowerCase();
+      const at = new Date(now.getTime() + Number(next) * (unit.startsWith('h') ? 3600000 : 60000));
+      scheduledDate = dateKey(at);
+      backlog = false;
+      remindTime = hhmm(at.getHours(), at.getMinutes());
+      i += 2;
+      continue;
+    }
+    // "this morning/afternoon/evening", "tomorrow morning", "noon".
+    if ((word === 'this' || word === 'tomorrow') && next && DAY_PARTS[next]) {
+      scheduledDate = dateKey(word === 'tomorrow' ? addDays(now, 1) : now);
+      backlog = false;
+      remindTime = DAY_PARTS[next];
+      i++;
+      continue;
+    }
+    if (word === 'noon' || word === 'midday') {
+      remindTime = '12:00';
+      continue;
+    }
+    // "next month": the same day next month.
+    if (word === 'next' && next === 'month') {
+      const d = new Date(now.getFullYear(), now.getMonth() + 1, Math.min(now.getDate(), new Date(now.getFullYear(), now.getMonth() + 2, 0).getDate()));
+      scheduledDate = dateKey(d);
+      backlog = false;
+      i++;
+      continue;
+    }
+    // "end of month" / "eom": the last day of this month.
+    if (word === 'eom' || (word === 'end' && next === 'of' && words[i + 2]?.toLowerCase() === 'month')) {
+      scheduledDate = dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+      backlog = false;
+      if (word === 'end') i += 2;
+      continue;
+    }
+    // "dec 25", "25 dec", "december 25": that day, next year if it's passed.
+    const monA = MONTHS[word];
+    const monB = next ? MONTHS[next] : undefined;
+    const dayNum = (w: string | undefined) => (w && /^\d{1,2}(st|nd|rd|th)?$/.test(w) ? Number(w.replace(/\D/g, '')) : null);
+    if ((monA !== undefined && dayNum(next)) || (dayNum(word) && monB !== undefined)) {
+      const month = monA !== undefined ? monA : monB!;
+      const day = monA !== undefined ? dayNum(next)! : dayNum(word)!;
+      if (day >= 1 && day <= 31) {
+        let d = new Date(now.getFullYear(), month, day);
+        if (d < new Date(now.getFullYear(), now.getMonth(), now.getDate())) d = new Date(now.getFullYear() + 1, month, day);
+        scheduledDate = dateKey(d);
+        backlog = false;
+        i++;
+        continue;
+      }
+    }
+    // A bare clock time: "call bank 5pm".
+    const clock = parseClock(word);
+    if (clock) {
+      remindTime = clock;
+      continue;
+    }
+
     if (PRIORITY_TOKENS[word]) {
       priority = PRIORITY_TOKENS[word];
       continue;
@@ -195,7 +294,7 @@ export function parseQuickTask(
       backlog = false;
       continue;
     }
-    if (word === 'tomorrow' || word === 'tmrw' || word === 'tmr') {
+    if (word === 'tomorrow' || word === 'tmrw' || word === 'tmr' || word === 'tmw') {
       scheduledDate = dateKey(addDays(now, 1));
       backlog = false;
       continue;

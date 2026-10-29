@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -18,7 +19,18 @@ const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 =
 export function MonthStartPicker() {
   const { colors, typography, spacing } = useTheme();
   const { monthStartDay: day, setMonthStartDay: setDay, monthFromPayday, setMonthFromPayday, addManualPayday, smsReadCredits, setSmsReadCredits, smsImportEnabled } =
-    useSettingsStore();
+    useSettingsStore(
+      useShallow((s) => ({
+        monthStartDay: s.monthStartDay,
+        setMonthStartDay: s.setMonthStartDay,
+        monthFromPayday: s.monthFromPayday,
+        setMonthFromPayday: s.setMonthFromPayday,
+        addManualPayday: s.addManualPayday,
+        smsReadCredits: s.smsReadCredits,
+        setSmsReadCredits: s.setSmsReadCredits,
+        smsImportEnabled: s.smsImportEnabled,
+      }))
+    );
   // Re-read the detected paydays whenever transactions change.
   useFinanceStore((s) => s.transactions);
   const show = useUndoStore((s) => s.show);

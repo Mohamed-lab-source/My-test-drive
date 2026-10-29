@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { NavHeader } from '../src/ui/NavHeader';
 import { useTheme } from '../src/theme/ThemeProvider';
@@ -22,11 +23,11 @@ const MOOD_EMOJI: Record<string, string> = { great: '😄', good: '🙂', okay: 
 export default function RecapScreen() {
   const { colors, typography, spacing } = useTheme();
   const today = todayKey();
-  const { todayPrayerLogs, dhikrToday, journalEntries } = useLifeStore();
+  const { todayPrayerLogs, dhikrToday, journalEntries } = useLifeStore(useShallow((s) => ({ todayPrayerLogs: s.todayPrayerLogs, dhikrToday: s.dhikrToday, journalEntries: s.journalEntries })));
   const tasks = useProductivityStore((s) => s.tasks);
-  const { transactions, fxRates } = useFinanceStore();
-  const { habits, todayLogs } = useHabitsStore();
-  const { currency, waterGoal } = useSettingsStore();
+  const { transactions, fxRates } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, fxRates: s.fxRates })));
+  const { habits, todayLogs } = useHabitsStore(useShallow((s) => ({ habits: s.habits, todayLogs: s.todayLogs })));
+  const { currency, waterGoal } = useSettingsStore(useShallow((s) => ({ currency: s.currency, waterGoal: s.waterGoal })));
   const water = useWaterStore((s) => s.count);
   const [focus, setFocus] = useState(0);
   const [pages, setPages] = useState(0);

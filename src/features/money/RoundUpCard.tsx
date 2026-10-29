@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -18,8 +19,8 @@ const ROUND_TO = 1000; // 10.00 in minor units
 // put the difference into a savings goal.
 export function RoundUpCard() {
   const { colors, typography, spacing } = useTheme();
-  const { savingsGoals, transactions, contributeToGoal } = useFinanceStore();
-  const { currency, roundUpSince, setRoundUpSince } = useSettingsStore();
+  const { savingsGoals, transactions, contributeToGoal } = useFinanceStore(useShallow((s) => ({ savingsGoals: s.savingsGoals, transactions: s.transactions, contributeToGoal: s.contributeToGoal })));
+  const { currency, roundUpSince, setRoundUpSince } = useSettingsStore(useShallow((s) => ({ currency: s.currency, roundUpSince: s.roundUpSince, setRoundUpSince: s.setRoundUpSince })));
   const [expenses, setExpenses] = useState<Transaction[]>([]);
   const open = savingsGoals.filter((g) => !g.is_completed);
   const [goalId, setGoalId] = useState<string | null>(open[0]?.id ?? null);

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -34,9 +35,9 @@ function Insight({ emoji, title, children }: { emoji: string; title: string; chi
 export default function InsightsScreen() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { categories, accounts, budgets, debts, fxRates, transactions: recent } = useFinanceStore();
+  const { categories, accounts, budgets, debts, fxRates, transactions: recent } = useFinanceStore(useShallow((s) => ({ categories: s.categories, accounts: s.accounts, budgets: s.budgets, debts: s.debts, fxRates: s.fxRates, transactions: s.transactions })));
   const budgetStatuses = useBudgetStatuses();
-  const { currency, weekendDays, weekStart } = useSettingsStore();
+  const { currency, weekendDays, weekStart } = useSettingsStore(useShallow((s) => ({ currency: s.currency, weekendDays: s.weekendDays, weekStart: s.weekStart })));
   const [txs, setTxs] = useState<Transaction[] | null>(null);
   const now = useMemo(() => new Date(), []);
 

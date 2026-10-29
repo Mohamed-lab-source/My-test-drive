@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -18,7 +19,7 @@ const COLUMNS: { status: TaskStatus; label: string }[] = [
 export default function BoardScreen() {
   const { colors, typography, spacing, radius } = useTheme();
   const { width } = useWindowDimensions();
-  const { tasks, projects, updateTask, toggleTaskDone, rescheduleTask } = useProductivityStore();
+  const { tasks, projects, updateTask, toggleTaskDone, rescheduleTask } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, projects: s.projects, updateTask: s.updateTask, toggleTaskDone: s.toggleTaskDone, rescheduleTask: s.rescheduleTask })));
   const columnWidth = Math.min(300, width * 0.78);
 
   const move = async (task: Task, to: TaskStatus) => {

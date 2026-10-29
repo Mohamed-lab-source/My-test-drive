@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -23,7 +24,7 @@ const LABELS: Record<TransactionFlag, { title: string; done: string; hint: strin
 // Follow-ups: transactions flagged to check, claim back or get refunded.
 export default function FlaggedScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { transactions, accounts, categories, fxRates, updateTransaction, addTransaction } = useFinanceStore();
+  const { transactions, accounts, categories, fxRates, updateTransaction, addTransaction } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, accounts: s.accounts, categories: s.categories, fxRates: s.fxRates, updateTransaction: s.updateTransaction, addTransaction: s.addTransaction })));
   const currency = useSettingsStore((s) => s.currency);
   const [rows, setRows] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<string>('all');

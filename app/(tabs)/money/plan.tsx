@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert, Share } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -18,6 +19,8 @@ import { requestNotificationPermission } from '../../../src/notifications/schedu
 import { rescheduleMorningAllowance } from '../../../src/notifications/extras';
 import type { Limit } from '../../../src/utils/spendingPlan';
 import { MonthStartPicker } from '../../../src/features/money/MonthStartPicker';
+import { getMonthConfig } from '../../../src/utils/period';
+import { todayKey } from '../../../src/db/client';
 
 type LimitKey = 'daily' | 'weekly' | 'monthly';
 
@@ -30,7 +33,7 @@ export default function SpendingPlanScreen() {
   const plan = useSpendingPlan();
   const extras = usePlanExtras(plan);
   const [bigInput, setBigInput] = useState(useSettingsStore.getState().bigExpenseAlert ? String(fromMinorUnits(useSettingsStore.getState().bigExpenseAlert)) : '');
-  const s = useSettingsStore();
+  const s = useSettingsStore(useShallow((st) => ({ currency: st.currency, limitAlerts: st.limitAlerts, monthlyIncome: st.monthlyIncome, morningAllowance: st.morningAllowance, notificationsEnabled: st.notificationsEnabled, savingsPct: st.savingsPct, setBigExpenseAlert: st.setBigExpenseAlert, setDailySpendAlert: st.setDailySpendAlert, setLimitAlerts: st.setLimitAlerts, setMonthlyIncome: st.setMonthlyIncome, setMonthlyLimit: st.setMonthlyLimit, setMorningAllowance: st.setMorningAllowance, setSavingsPct: st.setSavingsPct, setWeeklyLimit: st.setWeeklyLimit, monthFromPayday: st.monthFromPayday, addManualPayday: st.addManualPayday })));
   const [editing, setEditing] = useState<LimitKey | null>(null);
   const [limitInput, setLimitInput] = useState('');
   const [incomeInput, setIncomeInput] = useState(s.monthlyIncome ? String(fromMinorUnits(s.monthlyIncome)) : '');
@@ -125,6 +128,13 @@ export default function SpendingPlanScreen() {
     { label: 'Spending', value: plan.spendable, color: colors.blue },
   ];
 
+  // Payday months: the expected salary hasn't shown up yet.
+  const { monthFromPayday, addManualPayday } = s;
+  const paydays = getMonthConfig().paydays;
+  const lastPayday = paydays.length ? new Date(paydays[paydays.length - 1]) : null;
+  const salaryLate =
+    monthFromPayday && !!lastPayday && Date.now() > new Date(lastPayday.getFullYear(), lastPayday.getMonth() + 1, lastPayday.getDate() + 1).getTime();
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader
@@ -148,6 +158,17 @@ export default function SpendingPlanScreen() {
         }
       />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
+        {salaryLate ? (
+          <Card style={{ marginBottom: spacing.md, backgroundColor: colors.orange + '1F' }}>
+            <Text style={[typography.headline, { color: colors.label }]}>⏳ Your salary looks late</Text>
+            <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2 }]}>
+              This month stays open until it arrives, so today's allowance covers every day until then.
+            </Text>
+            <Pressable onPress={() => addManualPayday(todayKey())} style={{ marginTop: spacing.sm }}>
+              <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>It arrived today — start a new month</Text>
+            </Pressable>
+          </Card>
+        ) : null}
         <Appear index={0}>
           <Card style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
             <ActivityRings

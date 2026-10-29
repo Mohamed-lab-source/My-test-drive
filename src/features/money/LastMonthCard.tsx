@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -13,8 +14,8 @@ import { monthPeriod, periodLabel } from '../../utils/period';
 // Shown during the first week of a month: how last month went.
 export function LastMonthCard() {
   const { colors, typography, spacing } = useTheme();
-  const { categories, fxRates } = useFinanceStore();
-  const { currency, recapDismissedMonth, setRecapDismissedMonth } = useSettingsStore();
+  const { categories, fxRates } = useFinanceStore(useShallow((s) => ({ categories: s.categories, fxRates: s.fxRates })));
+  const { currency, recapDismissedMonth, setRecapDismissedMonth } = useSettingsStore(useShallow((s) => ({ currency: s.currency, recapDismissedMonth: s.recapDismissedMonth, setRecapDismissedMonth: s.setRecapDismissedMonth })));
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
   const visible = now.getDate() <= 7 && recapDismissedMonth !== monthKey;

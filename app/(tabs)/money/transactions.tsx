@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, ScrollView, Text, Pressable, Share } from 'react-native';
-import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
 import { useFinanceStore } from '../../../src/store/financeStore';
@@ -13,10 +13,10 @@ import { TextField } from '../../../src/ui/TextField';
 import * as financeRepo from '../../../src/db/repositories/finance';
 import { allTags, extractTags } from '../../../src/utils/tags';
 import { findDuplicateIds } from '../../../src/utils/duplicates';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { monthPeriod } from '../../../src/utils/period';
 import { TransactionRow } from '../../../src/features/money/TransactionRow';
 import { AddTransactionSheet } from '../../../src/features/money/AddTransactionSheet';
-import { useUndoStore } from '../../../src/store/undoStore';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
@@ -25,6 +25,9 @@ import type { Transaction, TransactionType } from '../../../src/db/types';
 
 const TYPE_FILTERS: (TransactionType | 'all')[] = ['all', 'expense', 'income', 'transfer'];
 const ALL = 'all';
+
+// Rows drawn at a time, so long lists open instantly.
+const PAGE = 60;
 
 const PERIODS = [
   { id: ALL, label: 'Recent' },
@@ -66,12 +69,15 @@ function periodRange(id: string, weekStart: number): [Date, Date] | null {
       const back = (now.getDay() - weekStart + 7) % 7;
       return [new Date(y, m, now.getDate() - back), end];
     }
+    // Money months, which may start on payday.
     case 'month':
-      return [new Date(y, m, 1), end];
-    case 'last':
-      return [new Date(y, m - 1, 1), new Date(y, m, 1)];
+      return [monthPeriod(now).start, end];
+    case 'last': {
+      const last = monthPeriod(now, -1);
+      return [last.start, last.end];
+    }
     case '3m':
-      return [new Date(y, m - 2, 1), end];
+      return [monthPeriod(now, -2).start, end];
     case 'year':
       return [new Date(y, 0, 1), end];
     default:
@@ -81,19 +87,24 @@ function periodRange(id: string, weekStart: number): [Date, Date] | null {
 
 export default function TransactionsScreen() {
   const { colors, spacing, typography } = useTheme();
-  const { transactions, accounts, categories, removeTransaction, addTransaction } = useFinanceStore();
+  const { transactions, accounts, categories } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, accounts: s.accounts, categories: s.categories })));
   const [typeIndex, setTypeIndex] = useState(0);
-  const [accountFilter, setAccountFilter] = useState<string>(ALL);
-  const [categoryFilter, setCategoryFilter] = useState<string>(ALL);
+  // Other screens can open this list already filtered, e.g. a budget's
+  // "See spending" or an account's "All transactions".
+  const params = useLocalSearchParams<{ account?: string; category?: string; q?: string; period?: string }>();
+  const [accountFilter, setAccountFilter] = useState<string>(params.account ?? ALL);
+  const [categoryFilter, setCategoryFilter] = useState<string>(params.category ?? ALL);
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(params.q ?? '');
   const [searchResults, setSearchResults] = useState<Transaction[] | null>(null);
   const [tagFilter, setTagFilter] = useState<string>(ALL);
   const router = useRouter();
   const [dupesOnly, setDupesOnly] = useState(false);
-  const [period, setPeriod] = useState(ALL);
+  const [period, setPeriod] = useState(params.period ?? ALL);
   const [periodRows, setPeriodRows] = useState<Transaction[] | null>(null);
   const [sort, setSort] = useState('new');
+  // Rows drawn so far; the rest load as you scroll.
+  const [visibleCount, setVisibleCount] = useState(PAGE);
   const [minAmount, setMinAmount] = useState(0);
   const currency = useSettingsStore((s) => s.currency);
   const weekStart = useSettingsStore((s) => s.weekStart);
@@ -169,23 +180,8 @@ export default function TransactionsScreen() {
     return { out, inn };
   }, [filtered, currency, fxRates]);
 
-  const withoutIdentity = (tx: Transaction) => {
-    const { id, created_at, ...rest } = tx;
-    return rest;
-  };
-
-  const handleDelete = async (tx: Transaction) => {
-    await removeTransaction(tx.id);
-    // A raw row re-insert wouldn't redo the balance adjustment removeTransaction
-    // just reversed, so undo goes back through addTransaction instead (it gets
-    // a new id, but the amount, account and balance effect are identical).
-    useUndoStore.getState().show('Transaction deleted', () => addTransaction(withoutIdentity(tx)));
-  };
-
-  const handleRepeat = async (tx: Transaction) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await addTransaction({ ...withoutIdentity(tx), date: new Date().toISOString() });
-  };
+  // Back to the first page whenever the filters change.
+  useEffect(() => setVisibleCount(PAGE), [period, accountFilter, categoryFilter, query, typeIndex, tagFilter, sort, dupesOnly, minAmount]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
@@ -217,7 +213,15 @@ export default function TransactionsScreen() {
           ) : undefined
         }
       />
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 60 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 60 }}
+        scrollEventThrottle={200}
+        // Load the next rows as you near the bottom.
+        onScroll={(e) => {
+          const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+          if (contentOffset.y + layoutMeasurement.height > contentSize.height - 600 && filtered.length > visibleCount) setVisibleCount((n) => n + PAGE);
+        }}
+      >
         {duplicates.size > 0 || uncategorized > 0 ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.sm }}>
             {duplicates.size > 0 ? (
@@ -299,7 +303,7 @@ export default function TransactionsScreen() {
           <EmptyState icon="banknote" title="No transactions" message="Nothing matches these filters." />
         ) : (
           // By date, each day gets a header with what went out and came in.
-          (sort === 'big' ? [{ key: 'all', items: filtered }] : groupByDay(filtered)).map((group) => {
+          (sort === 'big' ? [{ key: 'all', items: filtered.slice(0, visibleCount) }] : groupByDay(filtered.slice(0, visibleCount))).map((group) => {
             const out = group.items.filter((t) => t.type === 'expense').reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0);
             const inn = group.items.filter((t) => t.type === 'income').reduce((sum, t) => sum + convertToBase(t.amount, t.currency, currency, fxRates), 0);
             return (
@@ -315,22 +319,20 @@ export default function TransactionsScreen() {
                   </View>
                 ) : null}
                 <Card padded={false}>
+                  {/* The row has its own swipe actions (again, flag, delete). */}
                   {group.items.map((tx, i, arr) => (
-                    <SwipeableRow
-                      key={tx.id}
-                      actions={[
-                        { label: 'Repeat', color: colors.blue, onPress: () => handleRepeat(tx) },
-                        { label: 'Delete', color: colors.red, onPress: () => handleDelete(tx) },
-                      ]}
-                    >
-                      <TransactionRow tx={tx} isLast={i === arr.length - 1} onPress={() => setEditing(tx)} />
-                    </SwipeableRow>
+                    <TransactionRow key={tx.id} tx={tx} isLast={i === arr.length - 1} onPress={() => setEditing(tx)} />
                   ))}
                 </Card>
               </View>
             );
           })
         )}
+        {filtered.length > visibleCount ? (
+          <Pressable onPress={() => setVisibleCount((n) => n + PAGE)} style={{ alignSelf: 'center', padding: spacing.md }}>
+            <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>Show {Math.min(PAGE, filtered.length - visibleCount)} more</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
       <AddTransactionSheet visible={!!editing} editing={editing} onClose={() => setEditing(null)} />
     </View>

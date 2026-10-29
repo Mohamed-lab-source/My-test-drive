@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import * as healthRepo from '../../../src/db/repositories/health';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -52,7 +53,7 @@ const TREND_HEIGHT = 56;
 
 export default function JournalScreen() {
   const { colors, typography, spacing, radius } = useTheme();
-  const { journalEntries, setTodayMood } = useLifeStore();
+  const { journalEntries, setTodayMood } = useLifeStore(useShallow((s) => ({ journalEntries: s.journalEntries, setTodayMood: s.setTodayMood })));
   const todayEntry = useMemo(() => journalEntries.find((e) => e.date === todayKey()), [journalEntries]);
 
   const [mood, setMood] = useState<JournalMood | null>(todayEntry?.mood ?? null);

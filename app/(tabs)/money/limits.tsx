@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useQuickAddStore } from '../../../src/store/quickAddStore';
@@ -26,7 +27,7 @@ const DAY = 86400000;
 export default function CardsAndAccountsScreen() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { accounts, fxRates } = useFinanceStore();
+  const { accounts, fxRates } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, fxRates: s.fxRates })));
   const currency = useSettingsStore((s) => s.currency);
   const [txs, setTxs] = useState<Transaction[]>([]);
 

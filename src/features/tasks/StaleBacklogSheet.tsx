@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { Button } from '../../ui/Button';
@@ -15,7 +16,7 @@ export function staleBacklog(tasks: Task[], now = Date.now()): Task[] {
 // Old backlog items, one at a time: do it today, or let it go.
 export function StaleBacklogSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, typography, spacing } = useTheme();
-  const { tasks, rescheduleTask, removeTask } = useProductivityStore();
+  const { tasks, rescheduleTask, removeTask } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, rescheduleTask: s.rescheduleTask, removeTask: s.removeTask })));
   const stale = staleBacklog(tasks);
 
   return (

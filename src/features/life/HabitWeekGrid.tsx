@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -10,7 +11,7 @@ import { todayKey } from '../../db/client';
 // Every habit against the last 7 days; tap a cell to fix a missed log.
 export function HabitWeekGrid() {
   const { colors, typography, spacing } = useTheme();
-  const { habits, todayLogs, hydrate } = useHabitsStore();
+  const { habits, todayLogs, hydrate } = useHabitsStore(useShallow((s) => ({ habits: s.habits, todayLogs: s.todayLogs, hydrate: s.hydrate })));
   const [done, setDone] = useState<Set<string>>(new Set());
   const [reload, setReload] = useState(0);
 

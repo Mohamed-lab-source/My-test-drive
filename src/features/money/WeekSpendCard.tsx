@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -14,7 +15,7 @@ import { useSpendingPlan } from './plan';
 export function WeekSpendCard() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { transactions, fxRates } = useFinanceStore();
+  const { transactions, fxRates } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, fxRates: s.fxRates })));
   const currency = useSettingsStore((s) => s.currency);
   const plan = useSpendingPlan();
   const now = new Date();

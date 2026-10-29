@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,7 +67,7 @@ export default function TasksScreen() {
   const { scrollY, onScroll } = useScrollY();
   const router = useRouter();
   const { action, project } = useLocalSearchParams<{ action?: string; project?: string }>();
-  const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask, rescheduleTask, updateTask } = useProductivityStore();
+  const { tasks, meetings, projects, moveTask, clearCompleted, refreshTasks, addTask, rescheduleTask, updateTask } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, meetings: s.meetings, projects: s.projects, moveTask: s.moveTask, clearCompleted: s.clearCompleted, refreshTasks: s.refreshTasks, addTask: s.addTask, rescheduleTask: s.rescheduleTask, updateTask: s.updateTask })));
   const [quickText, setQuickText] = useState('');
   const quick = useMemo(() => parseQuickTask(quickText, projects), [quickText, projects]);
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -17,7 +18,7 @@ import { useBudgetStatuses } from './budgets';
 export function SafeToSpendCard() {
   const { colors, typography, spacing } = useTheme();
   const currency = useSettingsStore((s) => s.currency);
-  const { budgets, transactions, fxRates } = useFinanceStore();
+  const { budgets, transactions, fxRates } = useFinanceStore(useShallow((s) => ({ budgets: s.budgets, transactions: s.transactions, fxRates: s.fxRates })));
   const statuses = useBudgetStatuses();
   const [days, setDays] = useState<{ noSpendDays: number; daysSoFar: number } | null>(null);
 

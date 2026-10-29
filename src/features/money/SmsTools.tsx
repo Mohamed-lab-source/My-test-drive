@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable, Share, Alert } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -19,7 +20,7 @@ const parseAny = (body: string, credits: boolean) =>
 // wording) can still be added, or shared so the reader can be improved.
 export function SkippedMessagesCard() {
   const { colors, typography, spacing } = useTheme();
-  const { smsSenders, smsReadCredits } = useSettingsStore();
+  const { smsSenders, smsReadCredits } = useSettingsStore(useShallow((s) => ({ smsSenders: s.smsSenders, smsReadCredits: s.smsReadCredits })));
   const refresh = useSmsStore((s) => s.refresh);
   const [items, setItems] = useState<{ id: string; date: number; address: string; body: string; reason: string; canAdd: boolean }[] | null>(null);
   const [loading, setLoading] = useState(false);

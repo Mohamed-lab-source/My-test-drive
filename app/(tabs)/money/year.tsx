@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -18,7 +19,7 @@ const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 
 export default function YearReviewScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { categories, fxRates } = useFinanceStore();
+  const { categories, fxRates } = useFinanceStore(useShallow((s) => ({ categories: s.categories, fxRates: s.fxRates })));
   const currency = useSettingsStore((s) => s.currency);
   const thisYear = new Date().getFullYear();
   const [year, setYear] = useState(thisYear);

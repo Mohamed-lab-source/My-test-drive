@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -13,8 +14,8 @@ import { useProductivityStore } from '../../store/productivityStore';
 export function GettingStartedCard() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { prayerCityId, notificationsEnabled, gettingStartedDismissed, setGettingStartedDismissed } = useSettingsStore();
-  const { accounts, transactions, budgets } = useFinanceStore();
+  const { prayerCityId, notificationsEnabled, gettingStartedDismissed, setGettingStartedDismissed } = useSettingsStore(useShallow((s) => ({ prayerCityId: s.prayerCityId, notificationsEnabled: s.notificationsEnabled, gettingStartedDismissed: s.gettingStartedDismissed, setGettingStartedDismissed: s.setGettingStartedDismissed })));
+  const { accounts, transactions, budgets } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, transactions: s.transactions, budgets: s.budgets })));
   const tasks = useProductivityStore((s) => s.tasks);
 
   const steps: { label: string; done: boolean; href: Href }[] = [

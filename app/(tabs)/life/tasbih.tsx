@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
@@ -52,7 +53,7 @@ const PERSIST_DELAY_MS = 800;
 export default function TasbihScreen() {
   const { colors, typography, spacing } = useTheme();
   const dhikrToday = useLifeStore((s) => s.dhikrToday);
-  const { dhikrGoal, setDhikrGoal } = useSettingsStore();
+  const { dhikrGoal, setDhikrGoal } = useSettingsStore(useShallow((s) => ({ dhikrGoal: s.dhikrGoal, setDhikrGoal: s.setDhikrGoal })));
   const [phrase, setPhrase] = useState<string | null>(null);
   const [total, setTotal] = useState(dhikrToday);
   const [target, setTarget] = useState(33);

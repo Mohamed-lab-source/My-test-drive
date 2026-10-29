@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -14,7 +15,7 @@ import { formatMoney, fromMinorUnits, toMinorUnits } from '../../utils/money';
 export function WeeklyLimitCard() {
   const { colors, typography, spacing } = useTheme();
   const transactions = useFinanceStore((s) => s.transactions);
-  const { currency, weeklyLimit, setWeeklyLimit, weekStart } = useSettingsStore();
+  const { currency, weeklyLimit, setWeeklyLimit, weekStart } = useSettingsStore(useShallow((s) => ({ currency: s.currency, weeklyLimit: s.weeklyLimit, setWeeklyLimit: s.setWeeklyLimit, weekStart: s.weekStart })));
   const [spent, setSpent] = useState(0);
   const [lastWeek, setLastWeek] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);

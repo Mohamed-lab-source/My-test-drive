@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -18,7 +19,7 @@ const ITEMS = [
 // Friday's sunnahs as a checklist, only on Fridays.
 export function FridayCard() {
   const { colors, typography, spacing } = useTheme();
-  const { fridayChecklist, setFridayChecklist } = useSettingsStore();
+  const { fridayChecklist, setFridayChecklist } = useSettingsStore(useShallow((s) => ({ fridayChecklist: s.fridayChecklist, setFridayChecklist: s.setFridayChecklist })));
   if (new Date().getDay() !== 5) return null;
   const today = todayKey();
   const done = fridayChecklist?.date === today ? fridayChecklist.done : [];

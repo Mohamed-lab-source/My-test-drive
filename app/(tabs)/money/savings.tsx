@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { ProgressBar } from '../../../src/ui/ProgressBar';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -119,7 +120,7 @@ function SavingsGoalCard({
 
 export default function SavingsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { savingsGoals, contributeToGoal, removeSavingsGoal, refreshSavings } = useFinanceStore();
+  const { savingsGoals, contributeToGoal, removeSavingsGoal, refreshSavings } = useFinanceStore(useShallow((s) => ({ savingsGoals: s.savingsGoals, contributeToGoal: s.contributeToGoal, removeSavingsGoal: s.removeSavingsGoal, refreshSavings: s.refreshSavings })));
   const [addVisible, setAddVisible] = useState(false);
   const [contributingGoal, setContributingGoal] = useState<SavingsGoal | null>(null);
 

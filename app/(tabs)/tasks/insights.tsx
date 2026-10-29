@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -14,7 +15,7 @@ const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 
 
 export default function TaskInsightsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { tasks, meetings, projects } = useProductivityStore();
+  const { tasks, meetings, projects } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, meetings: s.meetings, projects: s.projects })));
   const weekStart = useSettingsStore((s) => s.weekStart);
   const d = useMemo(() => taskInsights(tasks, meetings, new Date(), weekStart), [tasks, meetings, weekStart]);
   const max = Math.max(1, ...d.byWeekday);

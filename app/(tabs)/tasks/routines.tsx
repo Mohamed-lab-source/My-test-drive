@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { Switch } from '../../../src/ui/Switch';
 import * as Haptics from '../../../src/utils/haptics';
@@ -19,7 +20,7 @@ import { useSettingsStore } from '../../../src/store/settingsStore';
 import { applyAutoRoutines } from '../../../src/utils/autoRoutines';
 
 export default function RoutinesScreen() {
-  const { autoRoutines, setAutoRoutines } = useSettingsStore();
+  const { autoRoutines, setAutoRoutines } = useSettingsStore(useShallow((s) => ({ autoRoutines: s.autoRoutines, setAutoRoutines: s.setAutoRoutines })));
   const { colors, typography, spacing } = useTheme();
   const addTask = useProductivityStore((s) => s.addTask);
   const [routines, setRoutines] = useState<Routine[]>([]);

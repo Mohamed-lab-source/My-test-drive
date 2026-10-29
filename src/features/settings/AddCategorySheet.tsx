@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
@@ -28,7 +29,7 @@ const ICONS = [
 
 export function AddCategorySheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, typography, spacing } = useTheme();
-  const { categories, addCategory } = useFinanceStore();
+  const { categories, addCategory } = useFinanceStore(useShallow((s) => ({ categories: s.categories, addCategory: s.addCategory })));
 
   const [name, setName] = useState('');
   const [kindIndex, setKindIndex] = useState(0);

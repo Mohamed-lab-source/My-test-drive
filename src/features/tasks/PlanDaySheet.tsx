@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import * as Haptics from '../../utils/haptics';
 import { Sheet } from '../../ui/Sheet';
@@ -20,7 +21,7 @@ export function PlanDaySheet({
   target?: 'today' | 'tomorrow';
 }) {
   const { colors, typography, spacing } = useTheme();
-  const { tasks, projects, rescheduleTask } = useProductivityStore();
+  const { tasks, projects, rescheduleTask } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, projects: s.projects, rescheduleTask: s.rescheduleTask })));
   const [picked, setPicked] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const today = todayKey();

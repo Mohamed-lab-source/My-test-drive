@@ -37,7 +37,8 @@ export default function TabsLayout() {
     <Tabs
       tabBar={(props) => <GlassTabBar {...props} accessory={<QuickAddButton />} />}
       // A quick cross-fade between tabs.
-      screenOptions={{ headerShown: false, animation: 'fade' }}
+      // Tabs you're not looking at don't redraw when data changes.
+      screenOptions={{ headerShown: false, animation: 'fade', freezeOnBlur: true }}
     >
       <Tabs.Screen
         name="index"

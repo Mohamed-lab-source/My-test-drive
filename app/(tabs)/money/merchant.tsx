@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -19,7 +20,7 @@ import type { Transaction } from '../../../src/db/types';
 export default function MerchantScreen() {
   const { colors, typography, spacing } = useTheme();
   const { name } = useLocalSearchParams<{ name: string }>();
-  const { transactions, fxRates, categories } = useFinanceStore();
+  const { transactions, fxRates, categories } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, fxRates: s.fxRates, categories: s.categories })));
   const currency = useSettingsStore((s) => s.currency);
   const [rows, setRows] = useState<Transaction[]>([]);
   const [editing, setEditing] = useState<Transaction | null>(null);

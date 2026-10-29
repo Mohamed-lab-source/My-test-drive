@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -41,7 +42,7 @@ function HabitCard({
   canDown: boolean;
 }) {
   const { colors, typography, spacing } = useTheme();
-  const { streaks, todayLogs, isHabitDoneToday, toggleHabit, setHabitReminder, moveHabit } = useHabitsStore();
+  const { streaks, todayLogs, isHabitDoneToday, toggleHabit, setHabitReminder, moveHabit } = useHabitsStore(useShallow((s) => ({ streaks: s.streaks, todayLogs: s.todayLogs, isHabitDoneToday: s.isHabitDoneToday, toggleHabit: s.toggleHabit, setHabitReminder: s.setHabitReminder, moveHabit: s.moveHabit })));
   const [expanded, setExpanded] = useState(false);
   const [history, setHistory] = useState<Record<string, number>>({});
 
@@ -141,7 +142,7 @@ function HabitCard({
 
 export default function HabitsScreen() {
   const { colors, spacing } = useTheme();
-  const { habits, removeHabit, hydrate } = useHabitsStore();
+  const { habits, removeHabit, hydrate } = useHabitsStore(useShallow((s) => ({ habits: s.habits, removeHabit: s.removeHabit, hydrate: s.hydrate })));
   const [addVisible, setAddVisible] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [archived, setArchived] = useState<Habit[]>([]);

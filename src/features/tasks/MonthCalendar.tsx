@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -11,7 +12,7 @@ import { formatTime, localDateKey } from '../../utils/date';
 // (purple); tap a day to see what's on it.
 export function MonthCalendar() {
   const { colors, typography, spacing } = useTheme();
-  const { tasks, meetings } = useProductivityStore();
+  const { tasks, meetings } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, meetings: s.meetings })));
   const weekStart = useSettingsStore((s) => s.weekStart);
   const [offset, setOffset] = useState(0);
   const [picked, setPicked] = useState(todayKey());

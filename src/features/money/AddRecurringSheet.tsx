@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { Switch } from '../../ui/Switch';
 import { Sheet } from '../../ui/Sheet';
@@ -18,7 +19,7 @@ const FREQUENCIES: RecurringFrequency[] = ['weekly', 'monthly', 'yearly'];
 export function AddRecurringSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, typography, spacing } = useTheme();
   const currency = useSettingsStore((s) => s.currency);
-  const { accounts, categories, addRecurringRule } = useFinanceStore();
+  const { accounts, categories, addRecurringRule } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, addRecurringRule: s.addRecurringRule })));
 
   const [typeIndex, setTypeIndex] = useState(0);
   const type = typeIndex === 0 ? 'expense' : 'income';

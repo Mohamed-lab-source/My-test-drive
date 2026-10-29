@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { NavHeader } from '../../../../src/ui/NavHeader';
@@ -24,7 +25,7 @@ export default function AccountDetailScreen() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { accounts, transactions, categories } = useFinanceStore();
+  const { accounts, transactions, categories } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, transactions: s.transactions, categories: s.categories })));
   const account = accounts.find((a) => a.id === id);
   const [rows, setRows] = useState<Transaction[]>([]);
   const [editing, setEditing] = useState<Transaction | null>(null);

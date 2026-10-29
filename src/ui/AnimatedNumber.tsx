@@ -8,7 +8,7 @@ export function AnimatedNumber({
   value,
   format,
   style,
-  duration = 750,
+  duration = 500,
   numberOfLines,
 }: {
   value: number;
@@ -26,12 +26,25 @@ export function AnimatedNumber({
     const start = first.current ? 0 : from.current;
     first.current = false;
     if (start === value) return;
+    // Small changes (a coffee off a big balance) just update — counting
+    // them up costs frames and reads as flicker.
+    if (start !== 0 && Math.abs(value - start) < Math.abs(start) * 0.02) {
+      from.current = value;
+      setShown(value);
+      return;
+    }
     const began = Date.now();
     let frame = 0;
+    let lastDraw = 0;
     const tick = () => {
-      const t = Math.min(1, (Date.now() - began) / duration);
-      const next = start + (value - start) * easeOut(t);
-      setShown(t === 1 ? value : Math.round(next));
+      const now = Date.now();
+      const t = Math.min(1, (now - began) / duration);
+      // About 20 redraws a second is smooth for a counter and far cheaper
+      // than every frame (each redraw re-measures auto-fitted text).
+      if (t === 1 || now - lastDraw >= 50) {
+        lastDraw = now;
+        setShown(t === 1 ? value : Math.round(start + (value - start) * easeOut(t)));
+      }
       if (t < 1) frame = requestAnimationFrame(tick);
       else from.current = value;
     };

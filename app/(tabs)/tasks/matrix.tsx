@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -15,7 +16,7 @@ const isImportant = (t: Task) => t.priority === 'high';
 
 export default function MatrixScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { tasks, toggleTaskDone } = useProductivityStore();
+  const { tasks, toggleTaskDone } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, toggleTaskDone: s.toggleTaskDone })));
   const today = todayKey();
   const open = tasks.filter((t) => t.status !== 'done');
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,9 +47,14 @@ export default function MoneyScreen() {
   const router = useRouter();
   const { action } = useLocalSearchParams<{ action?: string }>();
   const currency = useSettingsStore((s) => s.currency);
-  const { accounts, transactions, fxRates } = useFinanceStore();
+  const { accounts, transactions, fxRates, recurringRules } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, transactions: s.transactions, fxRates: s.fxRates, recurringRules: s.recurringRules })));
+  // Day-to-day items without a category, and bills due today or late.
+  const uncategorized = transactions.filter((t) => !t.category_id && t.type !== 'transfer').length;
+  const billsDue = recurringRules.filter(
+    (r) => r.is_active && !r.is_paused && r.type === 'expense' && new Date(r.next_due_date).getTime() < new Date(new Date().setHours(24, 0, 0, 0)).getTime()
+  ).length;
   const [addVisible, setAddVisible] = useState(false);
-  const { netWorthGoal, setNetWorthGoal, hideBalances, setHideBalances } = useSettingsStore();
+  const { netWorthGoal, setNetWorthGoal, hideBalances, setHideBalances } = useSettingsStore(useShallow((s) => ({ netWorthGoal: s.netWorthGoal, setNetWorthGoal: s.setNetWorthGoal, hideBalances: s.hideBalances, setHideBalances: s.setHideBalances })));
   const balance = useBalanceFormatter();
   const [editingGoal, setEditingGoal] = useState(false);
   const [headline, setHeadline] = useState(0);
@@ -169,12 +175,14 @@ export default function MoneyScreen() {
         </Appear>
 
         {/* Only what needs you right now. */}
-        {smsPending || overBudgets || flaggedCount ? (
+        {smsPending || overBudgets || flaggedCount || billsDue || uncategorized ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
             {[
               { n: smsPending, label: `bank debit${smsPending === 1 ? '' : 's'} to review`, icon: 'banknote.fill', color: colors.orange, href: '/money/sms-inbox' },
               { n: overBudgets, label: `budget${overBudgets === 1 ? '' : 's'} over`, icon: 'chart.pie.fill', color: colors.red, href: '/money/budgets' },
               { n: flaggedCount, label: `to follow up`, icon: 'flag.fill', color: colors.purple, href: '/money/flagged' },
+              { n: billsDue, label: `bill${billsDue === 1 ? '' : 's'} due`, icon: 'calendar', color: colors.red, href: '/money/subscriptions' },
+              { n: uncategorized, label: `need${uncategorized === 1 ? 's' : ''} a category`, icon: 'chart.pie.fill', color: colors.blue, href: '/money/uncategorized' },
             ]
               .filter((x) => x.n > 0)
               .map((x) => (

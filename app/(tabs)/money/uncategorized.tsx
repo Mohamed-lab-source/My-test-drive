@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -14,7 +15,7 @@ import type { Transaction } from '../../../src/db/types';
 // Every income/expense without a category, fixable with one tap each.
 export default function UncategorizedScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { categories, transactions, updateTransaction } = useFinanceStore();
+  const { categories, transactions, updateTransaction } = useFinanceStore(useShallow((s) => ({ categories: s.categories, transactions: s.transactions, updateTransaction: s.updateTransaction })));
   const [items, setItems] = useState<Transaction[]>([]);
 
   useEffect(() => {

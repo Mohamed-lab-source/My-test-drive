@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -26,7 +27,7 @@ export default function FocusStatsScreen() {
   const tasks = useProductivityStore((s) => s.tasks);
   const projects = useProductivityStore((s) => s.projects);
   const [sessions, setSessions] = useState<FocusSession[]>([]);
-  const { focusGoal, setFocusGoal } = useSettingsStore();
+  const { focusGoal, setFocusGoal } = useSettingsStore(useShallow((s) => ({ focusGoal: s.focusGoal, setFocusGoal: s.setFocusGoal })));
   // Opened from a task's "Focus on this": start the timer on that task.
   const { task: taskParam } = useLocalSearchParams<{ task?: string }>();
   const [timerTask, setTimerTask] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -18,8 +19,8 @@ import type { Transaction } from '../../../src/db/types';
 // 52-week savings challenge and a monthly no-spend-days challenge.
 export default function ChallengesScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { transactions } = useFinanceStore();
-  const { currency, challenge52, setChallenge52, noSpendChallenge, setNoSpendChallenge } = useSettingsStore();
+  const { transactions } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions })));
+  const { currency, challenge52, setChallenge52, noSpendChallenge, setNoSpendChallenge } = useSettingsStore(useShallow((s) => ({ currency: s.currency, challenge52: s.challenge52, setChallenge52: s.setChallenge52, noSpendChallenge: s.noSpendChallenge, setNoSpendChallenge: s.setNoSpendChallenge })));
   const [monthTx, setMonthTx] = useState<Transaction[]>([]);
   const now = new Date();
   const monthKey = todayKey().slice(0, 7);

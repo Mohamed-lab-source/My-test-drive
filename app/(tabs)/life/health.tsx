@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -22,7 +23,7 @@ const SLEEP_OPTIONS = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9];
 
 export default function HealthScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { waterGoal, setWaterGoal, sleepGoal, setSleepGoal, bedtime, setBedtime, weightGoal, setWeightGoal, notificationsEnabled } = useSettingsStore();
+  const { waterGoal, setWaterGoal, sleepGoal, setSleepGoal, bedtime, setBedtime, weightGoal, setWeightGoal, notificationsEnabled } = useSettingsStore(useShallow((s) => ({ waterGoal: s.waterGoal, setWaterGoal: s.setWaterGoal, sleepGoal: s.sleepGoal, setSleepGoal: s.setSleepGoal, bedtime: s.bedtime, setBedtime: s.setBedtime, weightGoal: s.weightGoal, setWeightGoal: s.setWeightGoal, notificationsEnabled: s.notificationsEnabled })));
   const [goalInput, setGoalInput] = useState(weightGoal > 0 ? String(weightGoal) : '');
   const today = todayKey();
   const week = lastDays(7, todayKey);

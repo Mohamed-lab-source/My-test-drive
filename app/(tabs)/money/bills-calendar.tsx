@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -40,7 +41,7 @@ export default function BillsCalendarScreen() {
   const { colors, typography, spacing } = useTheme();
   const weekStart = useSettingsStore((s) => s.weekStart);
   const currency = useSettingsStore((s) => s.currency);
-  const { recurringRules, fxRates } = useFinanceStore();
+  const { recurringRules, fxRates } = useFinanceStore(useShallow((s) => ({ recurringRules: s.recurringRules, fxRates: s.fxRates })));
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDay, setSelectedDay] = useState<number | null>(null);

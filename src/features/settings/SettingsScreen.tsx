@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Share, Alert, TextInput, Platform, Pressable } from 'react-native';
 import { Switch } from '../../ui/Switch';
 import { useRouter } from 'expo-router';
@@ -81,139 +82,27 @@ function FxRateRow({ currency, baseCurrency }: { currency: string; baseCurrency:
 const APPEARANCE_OPTIONS: Appearance[] = ['system', 'light', 'dark'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'KWD', 'QAR', 'BHD', 'OMR', 'JOD', 'EGP', 'MAD', 'TRY', 'INR', 'PKR', 'MYR', 'IDR'];
 
-export type SettingsSection = 'general' | 'money' | 'prayer' | 'notifications' | 'data';
-
-export const SECTION_TITLES: Record<SettingsSection, string> = {
-  general: 'General',
-  money: 'Money',
-  prayer: 'Prayer & Hijri',
-  notifications: 'Notifications',
-  data: 'Data & backup',
-};
-
-// Every setting, findable from the search box on the main Settings page.
-const SEARCH_INDEX: { label: string; section: SettingsSection; words: string }[] = [
-  { label: 'Appearance (light / dark)', section: 'general', words: 'theme dark light mode system soft' },
-  { label: 'Text size', section: 'general', words: 'font large bigger accessibility' },
-  { label: '24-hour clock', section: 'general', words: 'time format clock' },
-  { label: 'Whole-number amounts', section: 'general', words: 'decimals cents round money format' },
-  { label: 'Vibration', section: 'general', words: 'haptics vibrate' },
-  { label: 'Open the app on', section: 'general', words: 'start tab launch' },
-  { label: 'Accent colour', section: 'general', words: 'color theme tint' },
-  { label: 'Your name', section: 'general', words: 'greeting name' },
-  { label: 'Currency', section: 'money', words: 'egp usd currency base' },
-  { label: 'Default account', section: 'money', words: 'account new transactions' },
-  { label: 'Low-balance alert', section: 'money', words: 'balance alert warning' },
-  { label: 'Daily spending limit', section: 'money', words: 'limit daily alert' },
-  { label: 'Weekend & week start', section: 'money', words: 'weekend saturday sunday monday week' },
-  { label: 'When my month starts (payday)', section: 'money', words: 'month payday salary start day' },
-  { label: 'Exchange rates', section: 'money', words: 'fx rate currency convert' },
-  { label: 'Categories', section: 'money', words: 'categories edit' },
-  { label: 'Prayer city', section: 'prayer', words: 'city location prayer times' },
-  { label: 'Adhan alerts', section: 'prayer', words: 'adhan athan azan prayer notification' },
-  { label: "Jumu'ah, fasting & occasions", section: 'prayer', words: 'jummah friday fast monday thursday ramadan eid' },
-  { label: 'Hijri date adjustment', section: 'prayer', words: 'hijri islamic date calendar' },
-  { label: 'Asr calculation', section: 'prayer', words: 'asr hanafi shafi madhab' },
-  { label: 'Reminders', section: 'notifications', words: 'reminders notifications meetings bills' },
-  { label: 'Morning briefing', section: 'notifications', words: 'morning briefing summary' },
-  { label: 'Card payment due', section: 'notifications', words: 'credit card due payment' },
-  { label: 'Monthly recap & weekly review', section: 'notifications', words: 'recap review weekly monthly' },
-  { label: 'Quiet hours', section: 'notifications', words: 'quiet night silent' },
-  { label: 'Spending digest', section: 'notifications', words: 'nightly digest spending' },
-  { label: 'Water reminders', section: 'notifications', words: 'water drink' },
-  { label: 'Tahajjud & evening check-in', section: 'notifications', words: 'tahajjud night journal mood' },
-  { label: 'Export backup', section: 'data', words: 'backup export save json' },
-  { label: 'Restore from backup', section: 'data', words: 'restore import' },
-  { label: 'Export CSV', section: 'data', words: 'csv spreadsheet excel export transactions tasks' },
-  { label: 'Monthly report', section: 'data', words: 'report share month' },
-  { label: 'Reset all data', section: 'data', words: 'reset delete erase wipe' },
-];
+import { searchSettings, SECTION_TITLES, type SettingsSection } from './settingsIndex';
+export { SECTION_TITLES, type SettingsSection };
 
 // One component for the main Settings list and each section page, so
 // every setting keeps a single implementation.
 export function SettingsScreen({ section }: { section?: SettingsSection }) {
   const { colors, typography, spacing, radius, scheme } = useTheme();
-  const allSettings = useSettingsStore();
+  const allSettings = useSettingsStore(
+    useShallow((s) => ({
+      hapticsEnabled: s.hapticsEnabled,
+      monthFromPayday: s.monthFromPayday,
+      monthStartDay: s.monthStartDay,
+      prayerAlerts: s.prayerAlerts,
+      prayerCityId: s.prayerCityId,
+      use24h: s.use24h,
+    }))
+  );
   const insets = useSafeAreaInsets();
   const { scrollY, onScroll } = useScrollY();
   const router = useRouter();
-  const {
-    appearance,
-    setAppearance,
-    currency,
-    setCurrency,
-    notificationsEnabled,
-    setNotificationsEnabled,
-    defaultAccountId,
-    setDefaultAccountId,
-    prayerCityId,
-    setPrayerCityId,
-    prayerAlerts,
-    setPrayerAlerts,
-    hijriOffset,
-    setHijriOffset,
-    jumuahReminder,
-    setJumuahReminder,
-    sunnahFastReminders,
-    setSunnahFastReminders,
-    morningBriefing,
-    setMorningBriefing,
-    eveningJournal,
-    setEveningJournal,
-    waterReminders,
-    setWaterReminders,
-    smsImportEnabled,
-    occasionReminders,
-    setOccasionReminders,
-    monThuReminders,
-    setMonThuReminders,
-    lowBalanceAlert,
-    setLowBalanceAlert,
-    prayerAdjust,
-    setPrayerAdjust,
-    textScale,
-    setTextScale,
-    use24h,
-    setUse24h,
-    wholeMoney,
-    setWholeMoney,
-    cardDueReminders,
-    setCardDueReminders,
-    spendDigest,
-    setSpendDigest,
-    dailySpendAlert,
-    setDailySpendAlert,
-    weekendDays,
-    setWeekendDays,
-    weekStart,
-    setWeekStart,
-    lastBackupAt,
-    setLastBackupAt,
-    accent,
-    setAccent,
-    displayName,
-    setDisplayName,
-    quietHours,
-    setQuietHours,
-    monthlyRecapReminder,
-    setMonthlyRecapReminder,
-    tahajjudReminder,
-    setTahajjudReminder,
-    weeklyReviewReminder,
-    setWeeklyReviewReminder,
-    hapticsEnabled,
-    setHapticsEnabled,
-    softDark,
-    setSoftDark,
-    startTab,
-    setStartTab,
-    asrMadhab,
-    setAsrMadhab,
-    adhanPrayers,
-    setAdhanPrayers,
-    prePrayerMinutes,
-    setPrePrayerMinutes,
-  } = useSettingsStore();
+  const { appearance, setAppearance, currency, setCurrency, notificationsEnabled, setNotificationsEnabled, defaultAccountId, setDefaultAccountId, prayerCityId, setPrayerCityId, prayerAlerts, setPrayerAlerts, hijriOffset, setHijriOffset, jumuahReminder, setJumuahReminder, sunnahFastReminders, setSunnahFastReminders, morningBriefing, setMorningBriefing, eveningJournal, setEveningJournal, waterReminders, setWaterReminders, smsImportEnabled, occasionReminders, setOccasionReminders, monThuReminders, setMonThuReminders, lowBalanceAlert, setLowBalanceAlert, prayerAdjust, setPrayerAdjust, textScale, setTextScale, use24h, setUse24h, wholeMoney, setWholeMoney, cardDueReminders, setCardDueReminders, spendDigest, setSpendDigest, dailySpendAlert, setDailySpendAlert, weekendDays, setWeekendDays, weekStart, setWeekStart, lastBackupAt, setLastBackupAt, accent, setAccent, displayName, setDisplayName, quietHours, setQuietHours, monthlyRecapReminder, setMonthlyRecapReminder, tahajjudReminder, setTahajjudReminder, weeklyReviewReminder, setWeeklyReviewReminder, hapticsEnabled, setHapticsEnabled, softDark, setSoftDark, startTab, setStartTab, asrMadhab, setAsrMadhab, adhanPrayers, setAdhanPrayers, prePrayerMinutes, setPrePrayerMinutes } = useSettingsStore(useShallow((s) => ({ appearance: s.appearance, setAppearance: s.setAppearance, currency: s.currency, setCurrency: s.setCurrency, notificationsEnabled: s.notificationsEnabled, setNotificationsEnabled: s.setNotificationsEnabled, defaultAccountId: s.defaultAccountId, setDefaultAccountId: s.setDefaultAccountId, prayerCityId: s.prayerCityId, setPrayerCityId: s.setPrayerCityId, prayerAlerts: s.prayerAlerts, setPrayerAlerts: s.setPrayerAlerts, hijriOffset: s.hijriOffset, setHijriOffset: s.setHijriOffset, jumuahReminder: s.jumuahReminder, setJumuahReminder: s.setJumuahReminder, sunnahFastReminders: s.sunnahFastReminders, setSunnahFastReminders: s.setSunnahFastReminders, morningBriefing: s.morningBriefing, setMorningBriefing: s.setMorningBriefing, eveningJournal: s.eveningJournal, setEveningJournal: s.setEveningJournal, waterReminders: s.waterReminders, setWaterReminders: s.setWaterReminders, smsImportEnabled: s.smsImportEnabled, occasionReminders: s.occasionReminders, setOccasionReminders: s.setOccasionReminders, monThuReminders: s.monThuReminders, setMonThuReminders: s.setMonThuReminders, lowBalanceAlert: s.lowBalanceAlert, setLowBalanceAlert: s.setLowBalanceAlert, prayerAdjust: s.prayerAdjust, setPrayerAdjust: s.setPrayerAdjust, textScale: s.textScale, setTextScale: s.setTextScale, use24h: s.use24h, setUse24h: s.setUse24h, wholeMoney: s.wholeMoney, setWholeMoney: s.setWholeMoney, cardDueReminders: s.cardDueReminders, setCardDueReminders: s.setCardDueReminders, spendDigest: s.spendDigest, setSpendDigest: s.setSpendDigest, dailySpendAlert: s.dailySpendAlert, setDailySpendAlert: s.setDailySpendAlert, weekendDays: s.weekendDays, setWeekendDays: s.setWeekendDays, weekStart: s.weekStart, setWeekStart: s.setWeekStart, lastBackupAt: s.lastBackupAt, setLastBackupAt: s.setLastBackupAt, accent: s.accent, setAccent: s.setAccent, displayName: s.displayName, setDisplayName: s.setDisplayName, quietHours: s.quietHours, setQuietHours: s.setQuietHours, monthlyRecapReminder: s.monthlyRecapReminder, setMonthlyRecapReminder: s.setMonthlyRecapReminder, tahajjudReminder: s.tahajjudReminder, setTahajjudReminder: s.setTahajjudReminder, weeklyReviewReminder: s.weeklyReviewReminder, setWeeklyReviewReminder: s.setWeeklyReviewReminder, hapticsEnabled: s.hapticsEnabled, setHapticsEnabled: s.setHapticsEnabled, softDark: s.softDark, setSoftDark: s.setSoftDark, startTab: s.startTab, setStartTab: s.setStartTab, asrMadhab: s.asrMadhab, setAsrMadhab: s.setAsrMadhab, adhanPrayers: s.adhanPrayers, setAdhanPrayers: s.setAdhanPrayers, prePrayerMinutes: s.prePrayerMinutes, setPrePrayerMinutes: s.setPrePrayerMinutes })));
   const [resetVisible, setResetVisible] = useState(false);
   const [resetText, setResetText] = useState('');
   const [nameInput, setNameInput] = useState(displayName);
@@ -365,7 +254,7 @@ export function SettingsScreen({ section }: { section?: SettingsSection }) {
 
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
-  const searchResults = q ? SEARCH_INDEX.filter((r) => `${r.label} ${r.words}`.toLowerCase().includes(q)).slice(0, 8) : [];
+  const searchResults = searchSettings(q).slice(0, 8);
   const cityName = PRAYER_CITIES.find((c) => c.id === allSettings.prayerCityId)?.name;
   const MENU: { id: SettingsSection; icon: string; color: string; summary: string }[] = [
     {

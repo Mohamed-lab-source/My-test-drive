@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import * as Haptics from '../../utils/haptics';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -30,7 +31,7 @@ function useMinuteTick(): Date {
 
 export function PrayerTracker() {
   const { colors, typography, spacing } = useTheme();
-  const { togglePrayer, isPrayerDone, prayerStreak } = useLifeStore();
+  const { togglePrayer, isPrayerDone, prayerStreak } = useLifeStore(useShallow((s) => ({ togglePrayer: s.togglePrayer, isPrayerDone: s.isPrayerDone, prayerStreak: s.prayerStreak })));
   const city = findPrayerCity(useSettingsStore((s) => s.prayerCityId));
   const now = useMinuteTick();
 

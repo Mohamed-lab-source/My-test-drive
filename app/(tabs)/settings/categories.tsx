@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -13,7 +14,7 @@ import { AddCategorySheet } from '../../../src/features/settings/AddCategoryShee
 
 export default function CategoriesScreen() {
   const { colors, spacing } = useTheme();
-  const { categories, deleteCategory } = useFinanceStore();
+  const { categories, deleteCategory } = useFinanceStore(useShallow((s) => ({ categories: s.categories, deleteCategory: s.deleteCategory })));
   const [addVisible, setAddVisible] = useState(false);
   const active = categories.filter((c) => !c.is_archived);
 

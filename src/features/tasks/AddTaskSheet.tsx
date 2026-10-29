@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { TextField } from '../../ui/TextField';
@@ -26,7 +27,7 @@ const REPEAT_OPTIONS: { id: RecurringFrequency | 'none'; label: string }[] = [
 
 export function AddTaskSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, typography, spacing } = useTheme();
-  const { projects, addTask } = useProductivityStore();
+  const { projects, addTask } = useProductivityStore(useShallow((s) => ({ projects: s.projects, addTask: s.addTask })));
 
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');

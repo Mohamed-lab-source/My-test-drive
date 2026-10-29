@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -17,7 +18,7 @@ export function CardsSummaryCard() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
   const currency = useSettingsStore((s) => s.currency);
-  const { accounts, transactions } = useFinanceStore();
+  const { accounts, transactions } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, transactions: s.transactions })));
   const now = new Date();
   const monthStart = currentMonthStart(now).toISOString();
   const split = spendByMethod(transactions, accounts, currency, monthStart);

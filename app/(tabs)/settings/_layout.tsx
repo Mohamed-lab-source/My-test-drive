@@ -5,7 +5,7 @@ import { useTheme } from '../../../src/theme/ThemeProvider';
 export default function SettingsLayout() {
   const { colors } = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, freezeOnBlur: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="section" />
       <Stack.Screen name="categories" />

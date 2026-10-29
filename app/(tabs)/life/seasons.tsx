@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -28,7 +29,7 @@ const DHUL_HIJJAH_ACTS = ['Takbir every day', 'Fast the Day of Arafah', 'Udhiyah
 // first ten days of Dhul Hijjah and the six fasts of Shawwal.
 export default function SeasonsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { hijriOffset, checklists, toggleChecklistItem } = useSettingsStore();
+  const { hijriOffset, checklists, toggleChecklistItem } = useSettingsStore(useShallow((s) => ({ hijriOffset: s.hijriOffset, checklists: s.checklists, toggleChecklistItem: s.toggleChecklistItem })));
   const now = useMemo(() => new Date(), []);
   // Each search converts up to ~400 dates to Hijri, so do it once.
   const { ramadan, dhulHijjah, shawwal, muharram } = useMemo(

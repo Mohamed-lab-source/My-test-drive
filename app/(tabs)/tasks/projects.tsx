@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -28,7 +29,7 @@ function deadlineText(dueDate: string): { text: string; overdue: boolean } {
 
 export default function ProjectsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { projects: allProjects, tasks, removeProject, moveProject, refreshProjects, updateProject } = useProductivityStore();
+  const { projects: allProjects, tasks, removeProject, moveProject, refreshProjects, updateProject } = useProductivityStore(useShallow((s) => ({ projects: s.projects, tasks: s.tasks, removeProject: s.removeProject, moveProject: s.moveProject, refreshProjects: s.refreshProjects, updateProject: s.updateProject })));
   const [addVisible, setAddVisible] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [showArchived, setShowArchived] = useState(false);

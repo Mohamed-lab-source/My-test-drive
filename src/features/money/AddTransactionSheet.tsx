@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Image, Pressable, Modal, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -37,7 +38,7 @@ const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 export function AddTransactionSheet({ visible, onClose, editing, initialType, initialAccountId, initialToAccountId, initialAmount, initialNote }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt, addRecurringRule } = useFinanceStore();
+  const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt, addRecurringRule } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, addTransaction: s.addTransaction, updateTransaction: s.updateTransaction, addDebt: s.addDebt, addRecurringRule: s.addRecurringRule })));
   const currency = useSettingsStore((s) => s.currency);
   const defaultAccountId = useSettingsStore((s) => s.defaultAccountId);
 

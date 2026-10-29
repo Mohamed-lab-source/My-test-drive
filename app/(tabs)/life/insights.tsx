@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -39,7 +40,7 @@ interface LifeData {
 // Faith, mood, health and habit trends in one place.
 export default function LifeInsightsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { prayerCityId, heightCm, setHeightCm } = useSettingsStore();
+  const { prayerCityId, heightCm, setHeightCm } = useSettingsStore(useShallow((s) => ({ prayerCityId: s.prayerCityId, heightCm: s.heightCm, setHeightCm: s.setHeightCm })));
   const habits = useHabitsStore((s) => s.habits);
   const [data, setData] = useState<LifeData | null>(null);
   const [heightInput, setHeightInput] = useState(heightCm ? String(heightCm) : '');

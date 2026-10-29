@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -24,18 +25,7 @@ const PER_YEAR: Record<RecurringFrequency, number> = { daily: 365, weekly: 52, m
 
 export default function SubscriptionsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const {
-    recurringRules,
-    postRecurring,
-    removeRecurringRule,
-    skipRecurring,
-    setRecurringPaused,
-    setRecurringAutoPost,
-    refreshRecurring,
-    fxRates,
-    transactions,
-    addRecurringRule,
-  } = useFinanceStore();
+  const { recurringRules, postRecurring, removeRecurringRule, skipRecurring, setRecurringPaused, setRecurringAutoPost, refreshRecurring, fxRates, transactions, addRecurringRule } = useFinanceStore(useShallow((s) => ({ recurringRules: s.recurringRules, postRecurring: s.postRecurring, removeRecurringRule: s.removeRecurringRule, skipRecurring: s.skipRecurring, setRecurringPaused: s.setRecurringPaused, setRecurringAutoPost: s.setRecurringAutoPost, refreshRecurring: s.refreshRecurring, fxRates: s.fxRates, transactions: s.transactions, addRecurringRule: s.addRecurringRule })));
   const [dismissed, setDismissed] = useState<string[]>([]);
   const suggestions = useMemo(
     () => detectRecurring(transactions, recurringRules).filter((s) => !dismissed.includes(s.key)),

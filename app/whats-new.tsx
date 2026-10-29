@@ -77,6 +77,8 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Everywhere',
     emoji: '✨',
     items: [
+      'Much faster and smoother: less redrawing, frozen background tabs, lighter lists and animations, work deferred until screens settle',
+      'Search finds accounts, cards, budgets, habits, goals, any screen and any setting; quick add understands more ("5pm", "in 2 hours", "dec 25", بكرة)',
       'Tidier everywhere: Settings in five sections with search, Money with a grouped menu, Home with a swipeable daily card, Tasks views under one "More" menu',
       'Cards & accounts on Home: choose which cards and accounts appear on the main screen, reorder them, or add a new one from the + tile',
       'Home-screen widgets: a Smart Stack that shows what matters right now with a one-tap button, Spending, Habits & Water, and smarter Today, Prayers and Net worth widgets — Settings → Home-screen widgets',

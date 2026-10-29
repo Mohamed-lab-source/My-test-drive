@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -17,8 +18,8 @@ const GIVING = /sadaq|charit|giving|zakat|donat/i;
 
 export function SadaqahCard() {
   const { colors, typography, spacing } = useTheme();
-  const { categories, transactions, fxRates } = useFinanceStore();
-  const { currency, sadaqahGoal, setSadaqahGoal } = useSettingsStore();
+  const { categories, transactions, fxRates } = useFinanceStore(useShallow((s) => ({ categories: s.categories, transactions: s.transactions, fxRates: s.fxRates })));
+  const { currency, sadaqahGoal, setSadaqahGoal } = useSettingsStore(useShallow((s) => ({ currency: s.currency, sadaqahGoal: s.sadaqahGoal, setSadaqahGoal: s.setSadaqahGoal })));
   const [goalInput, setGoalInput] = useState(sadaqahGoal > 0 ? String(fromMinorUnits(sadaqahGoal)) : '');
   const [totals, setTotals] = useState({ month: 0, year: 0 });
 

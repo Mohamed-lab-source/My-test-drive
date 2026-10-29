@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -132,8 +133,8 @@ export default function HomeScreen() {
   const hiddenHomeCards = useSettingsStore((s) => s.hiddenHomeCards);
   const show = (id: string) => !hiddenHomeCards.includes(id);
   const balance = useBalanceFormatter();
-  const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory, postRecurring } = useFinanceStore();
-  const { tasks, meetings } = useProductivityStore();
+  const { accounts, transactions, recurringRules, debts, fxRates, netWorthHistory, postRecurring } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, transactions: s.transactions, recurringRules: s.recurringRules, debts: s.debts, fxRates: s.fxRates, netWorthHistory: s.netWorthHistory, postRecurring: s.postRecurring })));
+  const { tasks, meetings } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, meetings: s.meetings })));
   const prayerStreak = useLifeStore((s) => s.prayerStreak);
   const plan = useSpendingPlan();
   const prayersToday = useLifeStore((s) => s.todayPrayerLogs.filter((l) => l.completed).length);

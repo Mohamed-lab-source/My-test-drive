@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { Switch } from '../../../src/ui/Switch';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -31,8 +32,8 @@ const NISAB_GOLD_GRAMS = 85;
 
 export default function ZakatScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, debts, fxRates, categories, addTransaction } = useFinanceStore();
-  const { currency, zakatNisab, setZakatNisab, goldPricePerGram, setGoldPricePerGram, defaultAccountId, zakatPaidOn, setZakatPaidOn } = useSettingsStore();
+  const { accounts, debts, fxRates, categories, addTransaction } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, debts: s.debts, fxRates: s.fxRates, categories: s.categories, addTransaction: s.addTransaction })));
+  const { currency, zakatNisab, setZakatNisab, goldPricePerGram, setGoldPricePerGram, defaultAccountId, zakatPaidOn, setZakatPaidOn } = useSettingsStore(useShallow((s) => ({ currency: s.currency, zakatNisab: s.zakatNisab, setZakatNisab: s.setZakatNisab, goldPricePerGram: s.goldPricePerGram, setGoldPricePerGram: s.setGoldPricePerGram, defaultAccountId: s.defaultAccountId, zakatPaidOn: s.zakatPaidOn, setZakatPaidOn: s.setZakatPaidOn })));
   const [goldInput, setGoldInput] = useState(goldPricePerGram > 0 ? String(goldPricePerGram) : '');
 
   const [nisabInput, setNisabInput] = useState(zakatNisab > 0 ? String(zakatNisab) : '');

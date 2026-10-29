@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -15,7 +16,7 @@ const LABELS: Record<Prayer, string> = { fajr: 'Fajr', dhuhr: 'Dhuhr', asr: 'Asr
 // logged is probably just a day the app wasn't opened, so it's left alone.)
 export function MissedPrayersCard({ onChanged }: { onChanged?: () => void }) {
   const { colors, typography, spacing } = useTheme();
-  const { missedPromptDate, setMissedPromptDate } = useSettingsStore();
+  const { missedPromptDate, setMissedPromptDate } = useSettingsStore(useShallow((s) => ({ missedPromptDate: s.missedPromptDate, setMissedPromptDate: s.setMissedPromptDate })));
   const [missing, setMissing] = useState<Prayer[]>([]);
   const y = new Date();
   y.setDate(y.getDate() - 1);

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -27,7 +28,7 @@ export function HomeAccounts() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
   const balance = useBalanceFormatter();
-  const { accounts, transactions } = useFinanceStore();
+  const { accounts, transactions } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, transactions: s.transactions })));
   const homeAccounts = useSettingsStore((s) => s.homeAccounts);
   const setShown = useSettingsStore((s) => s.setHomeAccountShown);
   const quick = useQuickAddStore((s) => s.open);

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -12,8 +13,8 @@ import { toHijri } from '../../utils/hijri';
 // household, usually paid in cash at the rate your local mosque announces.
 export function FitrCard() {
   const { colors, typography, spacing } = useTheme();
-  const { currency, fitr, setFitr, defaultAccountId, hijriOffset } = useSettingsStore();
-  const { accounts, categories, addTransaction } = useFinanceStore();
+  const { currency, fitr, setFitr, defaultAccountId, hijriOffset } = useSettingsStore(useShallow((s) => ({ currency: s.currency, fitr: s.fitr, setFitr: s.setFitr, defaultAccountId: s.defaultAccountId, hijriOffset: s.hijriOffset })));
+  const { accounts, categories, addTransaction } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, addTransaction: s.addTransaction })));
   const [rate, setRate] = useState(fitr.perPerson > 0 ? String(fromMinorUnits(fitr.perPerson)) : '');
   const total = fitr.people * fitr.perPerson;
   const inRamadan = toHijri(new Date(), hijriOffset).month === 9;

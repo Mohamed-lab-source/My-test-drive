@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -15,7 +16,7 @@ const DAYS_AHEAD = 14;
 
 export default function AgendaScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { tasks, meetings } = useProductivityStore();
+  const { tasks, meetings } = useProductivityStore(useShallow((s) => ({ tasks: s.tasks, meetings: s.meetings })));
   const [view, setView] = useState(0);
 
   const days = useMemo(() => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -32,9 +33,9 @@ interface Spotted {
 // add one in a tap, link it to an account you have, or say it's not yours.
 export function NewCardsPrompt() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, fxRates, addAccount } = useFinanceStore();
-  const { currency, ignoredCards, ignoreCard, homeAccounts, setHomeAccountShown } = useSettingsStore();
-  const { links, loadLinks, pending } = useSmsStore();
+  const { accounts, fxRates, addAccount } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, fxRates: s.fxRates, addAccount: s.addAccount })));
+  const { currency, ignoredCards, ignoreCard, homeAccounts, setHomeAccountShown } = useSettingsStore(useShallow((s) => ({ currency: s.currency, ignoredCards: s.ignoredCards, ignoreCard: s.ignoreCard, homeAccounts: s.homeAccounts, setHomeAccountShown: s.setHomeAccountShown })));
+  const { links, loadLinks, pending } = useSmsStore(useShallow((s) => ({ links: s.links, loadLinks: s.loadLinks, pending: s.pending })));
   const show = useUndoStore((s) => s.show);
   const [rows, setRows] = useState<SmsImport[]>([]);
   const [linking, setLinking] = useState<Spotted | null>(null);

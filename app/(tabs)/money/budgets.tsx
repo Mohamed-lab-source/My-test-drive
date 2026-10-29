@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Icon } from '../../../src/ui/Icon';
 import { useSettingsStore } from '../../../src/store/settingsStore';
 import * as financeRepo from '../../../src/db/repositories/finance';
@@ -28,7 +30,8 @@ const PERIOD_NAME: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', 
 
 export default function BudgetsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { budgets, categories, accounts, fxRates, removeBudget, refreshBudgets, setBudget, addBudget, updateBudget } = useFinanceStore();
+  const router = useRouter();
+  const { budgets, categories, accounts, fxRates, removeBudget, refreshBudgets, setBudget, addBudget, updateBudget } = useFinanceStore(useShallow((s) => ({ budgets: s.budgets, categories: s.categories, accounts: s.accounts, fxRates: s.fxRates, removeBudget: s.removeBudget, refreshBudgets: s.refreshBudgets, setBudget: s.setBudget, addBudget: s.addBudget, updateBudget: s.updateBudget })));
   const currency = useSettingsStore((s) => s.currency);
   const statuses = useBudgetStatuses();
   const [editing, setEditing] = useState<Budget | null>(null);
@@ -270,6 +273,20 @@ export default function BudgetsScreen() {
           menuFor
             ? [
                 { label: 'Edit', icon: 'pencil', onPress: () => setEditing(menuFor) },
+                {
+                  label: 'See spending',
+                  icon: 'list.bullet',
+                  onPress: () => {
+                    const cats = budgetCategoryIds(menuFor);
+                    const accts = budgetAccountIds(menuFor);
+                    const words = budgetKeywords(menuFor);
+                    const params: Record<string, string> = { period: (menuFor.period ?? 'monthly') === 'weekly' ? 'week' : (menuFor.period ?? 'monthly') === 'yearly' ? 'year' : 'month' };
+                    if (cats.length === 1) params.category = cats[0];
+                    if (accts.length === 1) params.account = accts[0];
+                    if (words.length) params.q = words[0];
+                    router.push({ pathname: '/money/transactions', params });
+                  },
+                },
                 { label: 'Duplicate', icon: 'doc.on.doc', onPress: () => duplicate(menuFor) },
                 {
                   label: menuFor.is_paused ? 'Resume' : 'Pause',

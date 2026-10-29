@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,8 +62,8 @@ export default function LifeScreen() {
   const insets = useSafeAreaInsets();
   const { scrollY, onScroll } = useScrollY();
   const router = useRouter();
-  const { savingsGoals } = useFinanceStore();
-  const { wishlist } = useLifeStore();
+  const { savingsGoals } = useFinanceStore(useShallow((s) => ({ savingsGoals: s.savingsGoals })));
+  const { wishlist } = useLifeStore(useShallow((s) => ({ wishlist: s.wishlist })));
 
   const topGoal = savingsGoals.find((g) => !g.is_completed) ?? savingsGoals[0];
   const activeIdeas = wishlist.filter((w) => w.status !== 'purchased' && w.status !== 'dropped');

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Platform, Linking, Alert } from 'react-native';
 import { Icon } from '../../../src/ui/Icon';
 import { meetingCountdown, meetingLink } from '../../../src/utils/meetingInfo';
@@ -27,7 +28,7 @@ function openLocation(location: string) {
 
 export default function MeetingsScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { meetings, removeMeeting, refreshMeetings } = useProductivityStore();
+  const { meetings, removeMeeting, refreshMeetings } = useProductivityStore(useShallow((s) => ({ meetings: s.meetings, removeMeeting: s.removeMeeting, refreshMeetings: s.refreshMeetings })));
   const [addVisible, setAddVisible] = useState(false);
   const [editing, setEditing] = useState<(typeof meetings)[number] | null>(null);
   const [tab, setTab] = useState(0);

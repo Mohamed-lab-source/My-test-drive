@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Share, Pressable } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -95,7 +96,7 @@ function DebtCard({ debt, onPay, onDelete }: { debt: Debt; onPay: () => void; on
 
 export default function DebtsScreen() {
   const { colors, typography, spacing, radius } = useTheme();
-  const { debts, payDebt, removeDebt, refreshDebts } = useFinanceStore();
+  const { debts, payDebt, removeDebt, refreshDebts } = useFinanceStore(useShallow((s) => ({ debts: s.debts, payDebt: s.payDebt, removeDebt: s.removeDebt, refreshDebts: s.refreshDebts })));
   const [addVisible, setAddVisible] = useState(false);
   const [payingDebt, setPayingDebt] = useState<Debt | null>(null);
   const currency = useSettingsStore((s) => s.currency);

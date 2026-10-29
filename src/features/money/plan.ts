@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useFinanceStore } from '../../store/financeStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import * as repo from '../../db/repositories/finance';
@@ -22,12 +23,31 @@ export async function computePlan(now: Date = new Date()): Promise<SpendingPlan>
 // The plan for screens, recomputed whenever money data or settings change.
 export function useSpendingPlan(): SpendingPlan | null {
   const [plan, setPlan] = useState<SpendingPlan | null>(null);
-  const { transactions, recurringRules, savingsGoals, fxRates } = useFinanceStore();
+  const { transactions, recurringRules, savingsGoals, fxRates } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, recurringRules: s.recurringRules, savingsGoals: s.savingsGoals, fxRates: s.fxRates })));
   const deps = useSettingsStore((s) => [s.monthlyIncome, s.savingsPct, s.monthlyLimit, s.weeklyLimit, s.dailySpendAlert, s.weekStart, s.currency].join('|'));
   useEffect(() => {
-    computePlan().then(setPlan).catch(() => {});
+    let live = true;
+    sharedPlan([transactions, recurringRules, savingsGoals, fxRates, deps])
+      .then((p) => live && setPlan(p))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
   }, [transactions, recurringRules, savingsGoals, fxRates, deps]);
   return plan;
+}
+
+// Home and Money show the plan in several places at once; they share one
+// calculation per change instead of each querying the database.
+let lastInputs: unknown[] | null = null;
+let lastPlan: Promise<SpendingPlan> | null = null;
+function sharedPlan(inputs: unknown[]): Promise<SpendingPlan> {
+  const same = lastInputs && lastPlan && lastInputs.length === inputs.length && lastInputs.every((x, i) => x === inputs[i]);
+  if (!same) {
+    lastInputs = inputs;
+    lastPlan = computePlan();
+  }
+  return lastPlan!;
 }
 
 export interface PlanExtras {
@@ -46,8 +66,8 @@ export interface PlanExtras {
 // Extra context for the plan, worked out from recent transactions.
 export function usePlanExtras(plan: SpendingPlan | null): PlanExtras | null {
   const [extras, setExtras] = useState<PlanExtras | null>(null);
-  const { transactions, accounts, categories, fxRates } = useFinanceStore();
-  const { currency, weekendDays } = useSettingsStore();
+  const { transactions, accounts, categories, fxRates } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, accounts: s.accounts, categories: s.categories, fxRates: s.fxRates })));
+  const { currency, weekendDays } = useSettingsStore(useShallow((s) => ({ currency: s.currency, weekendDays: s.weekendDays })));
   useEffect(() => {
     if (!plan) return;
     (async () => {

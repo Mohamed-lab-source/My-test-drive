@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView } from 'react-native';
 import { Switch } from '../../ui/Switch';
 import { Sheet } from '../../ui/Sheet';
@@ -8,7 +9,7 @@ import { HOME_CARDS, QUICK_ACTIONS } from './homeCards';
 
 export function CustomizeHomeSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, typography, spacing } = useTheme();
-  const { hiddenHomeCards, toggleHomeCard, homeQuickActions, setHomeQuickActions } = useSettingsStore();
+  const { hiddenHomeCards, toggleHomeCard, homeQuickActions, setHomeQuickActions } = useSettingsStore(useShallow((s) => ({ hiddenHomeCards: s.hiddenHomeCards, toggleHomeCard: s.toggleHomeCard, homeQuickActions: s.homeQuickActions, setHomeQuickActions: s.setHomeQuickActions })));
   return (
     <Sheet visible={visible} onClose={onClose}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}>

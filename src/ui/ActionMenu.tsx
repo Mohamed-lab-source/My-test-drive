@@ -15,21 +15,28 @@ export interface MenuAction {
   section?: boolean;
 }
 
-// An iOS context menu: a rounded list over a blurred backdrop that springs
-// open from where it's anchored, with a symbol beside each item.
-export function ActionMenu({
-  visible,
-  title,
-  actions,
-  onClose,
-  anchor = 'center',
-}: {
+type ActionMenuProps = {
   visible: boolean;
   title?: string;
   actions: MenuAction[];
   onClose: () => void;
   anchor?: 'center' | ViewStyle;
-}) {
+};
+
+// An iOS context menu: a rounded list over a blurred backdrop that springs
+// open from where it's anchored, with a symbol beside each item. Every
+// list row has one, so it costs nothing until it's opened.
+export function ActionMenu(props: ActionMenuProps) {
+  return props.visible ? <OpenActionMenu {...props} /> : null;
+}
+
+function OpenActionMenu({
+  visible,
+  title,
+  actions,
+  onClose,
+  anchor = 'center',
+}: ActionMenuProps) {
   const { colors, typography, scheme } = useTheme();
   const progress = useSharedValue(0);
   useEffect(() => {

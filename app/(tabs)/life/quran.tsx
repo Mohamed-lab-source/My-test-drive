@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -27,9 +28,9 @@ const QUICK_PAGES = [1, 2, 5, 10, 20];
 
 export default function QuranScreen() {
   const { colors, typography, spacing, radius } = useTheme();
-  const { quranKhatm, quranLogs, logQuranPages, startNewKhatm } = useLifeStore();
+  const { quranKhatm, quranLogs, logQuranPages, startNewKhatm } = useLifeStore(useShallow((s) => ({ quranKhatm: s.quranKhatm, quranLogs: s.quranLogs, logQuranPages: s.logQuranPages, startNewKhatm: s.startNewKhatm })));
   const [custom, setCustom] = useState('');
-  const { quranDailyGoal, setQuranDailyGoal, quranReminder, setQuranReminder, notificationsEnabled } = useSettingsStore();
+  const { quranDailyGoal, setQuranDailyGoal, quranReminder, setQuranReminder, notificationsEnabled } = useSettingsStore(useShallow((s) => ({ quranDailyGoal: s.quranDailyGoal, setQuranDailyGoal: s.setQuranDailyGoal, quranReminder: s.quranReminder, setQuranReminder: s.setQuranReminder, notificationsEnabled: s.notificationsEnabled })));
   const [byDate, setByDate] = useState<Record<string, number>>({});
 
   useEffect(() => {

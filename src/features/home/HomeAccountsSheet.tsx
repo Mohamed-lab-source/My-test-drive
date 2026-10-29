@@ -1,4 +1,5 @@
 import React from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Sheet } from '../../ui/Sheet';
 import { Switch } from '../../ui/Switch';
@@ -24,7 +25,7 @@ export function HomeAccountsSheet({
   const { colors, typography, spacing } = useTheme();
   const balance = useBalanceFormatter();
   const accounts = useFinanceStore((s) => s.accounts).filter((a) => !a.is_archived);
-  const { homeAccounts, setHomeAccounts, setHomeAccountShown } = useSettingsStore();
+  const { homeAccounts, setHomeAccounts, setHomeAccountShown } = useSettingsStore(useShallow((s) => ({ homeAccounts: s.homeAccounts, setHomeAccounts: s.setHomeAccounts, setHomeAccountShown: s.setHomeAccountShown })));
   const allIds = accounts.map((a) => a.id);
   const shownIds = (homeAccounts ?? allIds).filter((id) => allIds.includes(id));
 

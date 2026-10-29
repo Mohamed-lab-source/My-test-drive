@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -11,7 +12,7 @@ import { TextField } from '../../../src/ui/TextField';
 
 export default function DuasScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { favoriteDuas, toggleFavoriteDua } = useSettingsStore();
+  const { favoriteDuas, toggleFavoriteDua } = useSettingsStore(useShallow((s) => ({ favoriteDuas: s.favoriteDuas, toggleFavoriteDua: s.toggleFavoriteDua })));
   const themes = ['All', 'Favorites', ...Array.from(new Set(DUAS.map((d) => d.theme)))];
   const [theme, setTheme] = useState('All');
   const [query, setQuery] = useState('');

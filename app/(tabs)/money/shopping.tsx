@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert, Share } from 'react-native';
 import * as Haptics from '../../../src/utils/haptics';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -16,8 +17,8 @@ import type { ShoppingItem } from '../../../src/db/types';
 
 export default function ShoppingScreen() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, categories, addTransaction } = useFinanceStore();
-  const { currency, defaultAccountId } = useSettingsStore();
+  const { accounts, categories, addTransaction } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, addTransaction: s.addTransaction })));
+  const { currency, defaultAccountId } = useSettingsStore(useShallow((s) => ({ currency: s.currency, defaultAccountId: s.defaultAccountId })));
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');

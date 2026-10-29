@@ -11,6 +11,8 @@ export default function MoneyLayout() {
         // The iOS push: slides in from the right with the old screen parallaxing away.
         animation: 'ios_from_right',
         fullScreenGestureEnabled: true,
+        // Screens underneath don't redraw while you're on another one.
+        freezeOnBlur: true,
         contentStyle: { backgroundColor: colors.systemGroupedBackground },
       }}
     >

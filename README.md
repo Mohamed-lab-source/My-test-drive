@@ -205,6 +205,14 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Backup reminder (last export date) and a shareable monthly report: money, tasks, prayers, habits and mood
 - Accent colour, quiet hours for spending alerts, monthly recap and weekly review reminders, tasks CSV export; notifications open the right screen when tapped
 
+**Fast and smooth**
+- Screens only redraw for the data they show, tabs and screens you're not looking at stay frozen, long transaction lists load 60 rows at a time, the money counters animate cheaply, widget updates are batched until you stop tapping, and start-up/resume housekeeping waits until the screen has settled
+
+**Search everything**
+- Search finds accounts and cards (by name or last digits), budgets, habits, savings goals, every screen ("zakat", "payday") and every setting, as well as money, tasks, notes and more; a purchase opens everything spent at that place, and "Jump to" shortcuts show before you type
+- Quick add also understands !1/!2/!3 and p1–p3, bare times ("5pm", "17:30"), "in 2 hours", "this evening", "tomorrow morning", "noon", "next month", "end of month", "dec 25" and Arabic بكرة / النهارده
+- Budgets: "See spending" opens their transactions; Money's attention row also flags bills due and transactions needing a category; Plan says when a salary looks late; transaction month filters follow your payday
+
 **Organised and concise**
 - Settings is a short list — General, Money, Prayer & Hijri, Notifications, Data & backup — each opening its own page, plus a search box that finds any setting
 - Money keeps the essentials up top (net worth, plan, last 7 days, a short wallet with "Show all", recent activity), a "needs attention" row only when something does, and one grouped menu: Plan · Accounts & cards · Bills & spending · Reports & tools; the extra analysis cards live in Analytics

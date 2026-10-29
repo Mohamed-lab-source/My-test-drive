@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Share } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -32,7 +33,7 @@ function monthLabel(monthKey: string): string {
 
 export default function AnalyticsScreen() {
   const { colors, typography, spacing, radius } = useTheme();
-  const { categories, accounts, recurringRules, fxRates, netWorthHistory } = useFinanceStore();
+  const { categories, accounts, recurringRules, fxRates, netWorthHistory } = useFinanceStore(useShallow((s) => ({ categories: s.categories, accounts: s.accounts, recurringRules: s.recurringRules, fxRates: s.fxRates, netWorthHistory: s.netWorthHistory })));
   const currency = useSettingsStore((s) => s.currency);
   const [loading, setLoading] = useState(true);
   const [monthTx, setMonthTx] = useState<Transaction[]>([]);

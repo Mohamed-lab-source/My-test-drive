@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -12,7 +13,7 @@ import { dayOfPeriod, monthPeriod } from '../../utils/period';
 // This month so far vs. the same number of days into last month.
 export function SpendingPaceCard() {
   const { colors, typography, spacing } = useTheme();
-  const { transactions, fxRates } = useFinanceStore();
+  const { transactions, fxRates } = useFinanceStore(useShallow((s) => ({ transactions: s.transactions, fxRates: s.fxRates })));
   const currency = useSettingsStore((s) => s.currency);
   const [pace, setPace] = useState<{ now: number; then: number } | null>(null);
 

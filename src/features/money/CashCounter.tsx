@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Card } from '../../ui/Card';
@@ -18,7 +19,7 @@ const NOTES: Record<string, number[]> = {
 // Count the notes in your wallet and set the Cash account to the total.
 export function CashCounter() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, updateAccount, addTransaction, categories } = useFinanceStore();
+  const { accounts, updateAccount, addTransaction, categories } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, updateAccount: s.updateAccount, addTransaction: s.addTransaction, categories: s.categories })));
   const cash = accounts.find((a) => a.type === 'cash' && !a.is_archived);
   const currency = cash?.currency ?? 'EGP';
   const notes = NOTES[currency] ?? NOTES.USD;

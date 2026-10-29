@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { NavHeader } from '../../../src/ui/NavHeader';
 import { useTheme } from '../../../src/theme/ThemeProvider';
@@ -28,7 +29,7 @@ export default function BooksScreen() {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [pages, setPages] = useState('');
-  const { readingGoal, setReadingGoal } = useSettingsStore();
+  const { readingGoal, setReadingGoal } = useSettingsStore(useShallow((s) => ({ readingGoal: s.readingGoal, setReadingGoal: s.setReadingGoal })));
 
   const load = useCallback(() => repo.listBooks().then(setBooks), []);
   useEffect(() => {

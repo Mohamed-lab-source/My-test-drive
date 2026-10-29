@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, AppState, Platform } from 'react-native';
-import { refreshWidgets } from '../src/widgets/refresh';
+import { View, ActivityIndicator, AppState, InteractionManager, Platform } from 'react-native';
+import { refreshWidgetsNow } from '../src/widgets/refresh';
 import { WIDGET_NAMES } from '../src/widgets/renderers';
 import { seedPreviewData } from '../src/dev/previewSeed';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -112,6 +112,9 @@ function AppShell() {
         await settingsHydrated();
         setPrayerAdjustments(useSettingsStore.getState().prayerAdjust);
         setAsrMadhab(useSettingsStore.getState().asrMadhab);
+        // Housekeeping waits until the first screen has finished appearing,
+        // so opening the app stays smooth.
+        await new Promise<void>((resolve) => setTimeout(() => InteractionManager.runAfterInteractions(() => resolve()), 1200));
         // Bank SMS: pick up any new debit alerts (no-op unless turned on).
         syncSmsAlertConfig();
         useSmsStore
@@ -142,13 +145,19 @@ function AppShell() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        useSmsStore.getState().scan().catch(() => {});
-        // A new day may have started while Anchor was in the background.
-        applyAutoRoutines().catch(() => 0);
-        if (Platform.OS !== 'web') rescheduleMorningAllowance().catch(() => {});
+        // Let the app finish coming back on screen before doing any work,
+        // so resuming is instant.
+        setTimeout(() => {
+          InteractionManager.runAfterInteractions(() => {
+            useSmsStore.getState().scan().catch(() => {});
+            // A new day may have started while Anchor was in the background.
+            applyAutoRoutines().catch(() => 0);
+            if (Platform.OS !== 'web') rescheduleMorningAllowance().catch(() => {});
+          });
+        }, 800);
       } else if (state === 'background' && Platform.OS === 'android') {
         // Leaving the app: bring every home-screen widget up to date.
-        refreshWidgets(WIDGET_NAMES);
+        refreshWidgetsNow(WIDGET_NAMES).catch(() => {});
       }
     });
     return () => sub.remove();
@@ -173,7 +182,7 @@ function AppShell() {
 
   const content = (
     <>
-      <Stack screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
+      <Stack screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, freezeOnBlur: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
         <Stack.Screen name="search" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />

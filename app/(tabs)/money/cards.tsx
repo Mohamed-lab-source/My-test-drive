@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { NavHeader } from '../../../src/ui/NavHeader';
@@ -45,9 +46,9 @@ const localMonth = (iso: string) => monthKey(new Date(iso));
 export default function CardsScreen() {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { accounts, fxRates, addAccount } = useFinanceStore();
-  const { currency, cardNicknames, setCardNickname } = useSettingsStore();
-  const { links, loadLinks } = useSmsStore();
+  const { accounts, fxRates, addAccount } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, fxRates: s.fxRates, addAccount: s.addAccount })));
+  const { currency, cardNicknames, setCardNickname } = useSettingsStore(useShallow((s) => ({ currency: s.currency, cardNicknames: s.cardNicknames, setCardNickname: s.setCardNickname })));
+  const { links, loadLinks } = useSmsStore(useShallow((s) => ({ links: s.links, loadLinks: s.loadLinks })));
   const [rows, setRows] = useState<SmsImport[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [nickInput, setNickInput] = useState('');
