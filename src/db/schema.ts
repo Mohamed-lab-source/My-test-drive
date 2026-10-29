@@ -1,0 +1,488 @@
+// SQLite schema for the app's local-first database.
+// All money amounts are stored as integer minor units (cents) to avoid float drift.
+
+export const SCHEMA_VERSION = 1;
+
+export const CREATE_TABLES_SQL = `
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('expense', 'income', 'both')),
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('cash', 'bank', 'savings', 'credit', 'wallet')),
+  balance INTEGER NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS recurring_rules (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+  account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  frequency TEXT NOT NULL CHECK (frequency IN ('daily', 'weekly', 'monthly', 'yearly')),
+  interval_count INTEGER NOT NULL DEFAULT 1,
+  start_date TEXT NOT NULL,
+  next_due_date TEXT NOT NULL,
+  end_date TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  is_subscription INTEGER NOT NULL DEFAULT 0,
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  reminder_days_before INTEGER NOT NULL DEFAULT 1,
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id TEXT PRIMARY KEY NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  transfer_to_account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+  category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+  recurring_id TEXT REFERENCES recurring_rules(id) ON DELETE SET NULL,
+  note TEXT,
+  date TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
+CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);
+
+CREATE TABLE IF NOT EXISTS debts (
+  id TEXT PRIMARY KEY NOT NULL,
+  direction TEXT NOT NULL CHECK (direction IN ('owed_to_me', 'i_owe')),
+  person_name TEXT NOT NULL,
+  principal_amount INTEGER NOT NULL,
+  remaining_amount INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  due_date TEXT,
+  status TEXT NOT NULL CHECK (status IN ('open', 'partially_paid', 'paid')) DEFAULT 'open',
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS debt_payments (
+  id TEXT PRIMARY KEY NOT NULL,
+  debt_id TEXT NOT NULL REFERENCES debts(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS savings_goals (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  target_amount INTEGER NOT NULL,
+  current_amount INTEGER NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  target_date TEXT,
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  notes TEXT,
+  is_completed INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS savings_contributions (
+  id TEXT PRIMARY KEY NOT NULL,
+  goal_id TEXT NOT NULL REFERENCES savings_goals(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  price INTEGER,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  url TEXT,
+  priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')) DEFAULT 'medium',
+  status TEXT NOT NULL CHECK (status IN ('idea', 'planned', 'purchased', 'dropped')) DEFAULT 'idea',
+  notes TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY NOT NULL,
+  project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  notes TEXT,
+  status TEXT NOT NULL CHECK (status IN ('backlog', 'todo', 'in_progress', 'done')) DEFAULT 'todo',
+  priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')) DEFAULT 'medium',
+  due_date TEXT,
+  scheduled_date TEXT,
+  completed_at TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_scheduled ON tasks(scheduled_date);
+
+CREATE TABLE IF NOT EXISTS meetings (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  location TEXT,
+  notes TEXT,
+  start_at TEXT NOT NULL,
+  end_at TEXT,
+  reminder_minutes_before INTEGER NOT NULL DEFAULT 10,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_meetings_start ON meetings(start_at);
+
+CREATE TABLE IF NOT EXISTS prayer_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  prayer TEXT NOT NULL CHECK (prayer IN ('fajr', 'dhuhr', 'asr', 'maghrib', 'isha')),
+  completed INTEGER NOT NULL DEFAULT 1,
+  completed_at TEXT,
+  UNIQUE(date, prayer)
+);
+
+-- category_id is the first of category_ids (or null for "everything");
+-- monthly_limit is the limit per budget period, whatever the period is.
+CREATE TABLE IF NOT EXISTS budgets (
+  id TEXT PRIMARY KEY NOT NULL,
+  category_id TEXT,
+  monthly_limit INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS subtasks (
+  id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  is_done INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id);
+
+CREATE TABLE IF NOT EXISTS habits (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS habit_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  completed INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(habit_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL UNIQUE,
+  mood TEXT NOT NULL CHECK (mood IN ('great', 'good', 'okay', 'low', 'rough')),
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- id is the currency code itself, so this plugs into the same generic
+-- insertRow/updateRow/getRow helpers (and their id-keyed WHERE clauses,
+-- Firestore sync, and JSON backup) as every other table.
+CREATE TABLE IF NOT EXISTS fx_rates (
+  id TEXT PRIMARY KEY NOT NULL,
+  currency TEXT NOT NULL UNIQUE,
+  rate_to_base REAL NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS dhikr_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL UNIQUE,
+  count INTEGER NOT NULL DEFAULT 0
+);
+
+-- khatm numbers each full read-through; the current one is MAX(khatm).
+CREATE TABLE IF NOT EXISTS quran_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  pages INTEGER NOT NULL,
+  khatm INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS focus_sessions (
+  id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+  minutes INTEGER NOT NULL,
+  completed_at TEXT NOT NULL
+);
+
+-- One row per local day (id = the 'YYYY-MM-DD' key), in the base currency.
+CREATE TABLE IF NOT EXISTS networth_snapshots (
+  id TEXT PRIMARY KEY NOT NULL,
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fasting_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL CHECK (kind IN ('ramadan', 'voluntary', 'makeup'))
+);
+
+CREATE TABLE IF NOT EXISTS occasions (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  month INTEGER NOT NULL,
+  day INTEGER NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('birthday', 'anniversary', 'other')),
+  created_at TEXT NOT NULL
+);
+
+-- id = '<date>-<session>'; done holds a JSON array of completed adhkar ids.
+CREATE TABLE IF NOT EXISTS adhkar_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  session TEXT NOT NULL CHECK (session IN ('morning', 'evening')),
+  done TEXT NOT NULL DEFAULT '[]'
+);
+
+-- One row per prayer (id = the prayer name): make-up prayers still owed.
+CREATE TABLE IF NOT EXISTS qada_counts (
+  id TEXT PRIMARY KEY NOT NULL,
+  owed INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS shopping_items (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  est_amount INTEGER,
+  category_id TEXT,
+  is_done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- items holds a JSON array of task titles added together in one tap.
+CREATE TABLE IF NOT EXISTS routines (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  items TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL
+);
+
+-- The next three are keyed by the 'YYYY-MM-DD' date: one row per day.
+CREATE TABLE IF NOT EXISTS water_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sleep_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  hours REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS weight_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  kg REAL NOT NULL
+);
+
+-- id = '<date>-<kind>'.
+CREATE TABLE IF NOT EXISTS sunnah_prayer_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  kind TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS books (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  author TEXT,
+  total_pages INTEGER NOT NULL DEFAULT 0,
+  pages_read INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL CHECK (status IN ('want', 'reading', 'finished')),
+  finished_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS countdowns (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  date TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- Debits read from bank SMS, waiting for review. Device-only: never synced
+-- or included in backups, since bodies are raw messages.
+CREATE TABLE IF NOT EXISTS sms_imports (
+  id TEXT PRIMARY KEY NOT NULL,
+  sms_date TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  body TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  merchant TEXT,
+  card_last4 TEXT,
+  kind TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'added', 'dismissed')),
+  created_at TEXT NOT NULL
+);
+
+-- times holds a JSON array of 'HH:MM' daily reminder times.
+CREATE TABLE IF NOT EXISTS medications (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  dose TEXT,
+  times TEXT NOT NULL DEFAULT '[]',
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
+
+-- id = the merchant as the bank writes it, lowercased.
+CREATE TABLE IF NOT EXISTS merchant_rules (
+  id TEXT PRIMARY KEY NOT NULL,
+  display TEXT NOT NULL,
+  category_id TEXT
+);
+
+-- week = the 'YYYY-MM-DD' key of that week's Monday.
+CREATE TABLE IF NOT EXISTS weekly_goals (
+  id TEXT PRIMARY KEY NOT NULL,
+  week TEXT NOT NULL,
+  title TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+-- id = '<date>-<medication id>-<HH:MM>'.
+CREATE TABLE IF NOT EXISTS med_logs (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  medication_id TEXT NOT NULL,
+  time TEXT NOT NULL
+);
+
+-- id = the visible card/account digits from bank SMS (e.g. '1234', '013').
+CREATE TABLE IF NOT EXISTS card_links (
+  id TEXT PRIMARY KEY NOT NULL,
+  account_id TEXT NOT NULL,
+  card_type TEXT
+);
+
+-- id = 's<surah>'; Al-Fatiha and Juz Amma (78..114). No row = not started.
+CREATE TABLE IF NOT EXISTS hifz (
+  id TEXT PRIMARY KEY NOT NULL,
+  surah INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('learning', 'memorised')),
+  updated_at TEXT NOT NULL
+);
+
+-- Health readings: blood pressure (value = systolic, value2 = diastolic),
+-- blood sugar (mg/dL) and resting heart rate (bpm).
+CREATE TABLE IF NOT EXISTS vitals (
+  id TEXT PRIMARY KEY NOT NULL,
+  date TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('bp', 'sugar', 'heart')),
+  value REAL NOT NULL,
+  value2 REAL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS notes (
+  id TEXT PRIMARY KEY NOT NULL,
+  body TEXT NOT NULL,
+  pinned INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+`;
+
+// Columns added to already-shipped tables after their initial release. A
+// fresh install gets these from CREATE TABLE above; an existing on-device
+// database predates them, so client.ts applies these as ALTER TABLE
+// migrations, guarded by checking PRAGMA table_info first (SQLite has no
+// "ADD COLUMN IF NOT EXISTS").
+export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; ddl: string }> = [
+  { table: 'transactions', column: 'receipt_uri', ddl: 'ALTER TABLE transactions ADD COLUMN receipt_uri TEXT' },
+  {
+    table: 'recurring_rules',
+    column: 'is_paused',
+    ddl: 'ALTER TABLE recurring_rules ADD COLUMN is_paused INTEGER NOT NULL DEFAULT 0',
+  },
+  { table: 'tasks', column: 'repeat_frequency', ddl: 'ALTER TABLE tasks ADD COLUMN repeat_frequency TEXT' },
+  { table: 'tasks', column: 'repeat_interval', ddl: 'ALTER TABLE tasks ADD COLUMN repeat_interval INTEGER' },
+  { table: 'tasks', column: 'remind_at', ddl: 'ALTER TABLE tasks ADD COLUMN remind_at TEXT' },
+  {
+    table: 'recurring_rules',
+    column: 'auto_post',
+    ddl: 'ALTER TABLE recurring_rules ADD COLUMN auto_post INTEGER NOT NULL DEFAULT 0',
+  },
+  { table: 'habits', column: 'remind_time', ddl: 'ALTER TABLE habits ADD COLUMN remind_time TEXT' },
+  { table: 'journal_entries', column: 'gratitude', ddl: 'ALTER TABLE journal_entries ADD COLUMN gratitude TEXT' },
+  { table: 'sms_imports', column: 'balance', ddl: 'ALTER TABLE sms_imports ADD COLUMN balance INTEGER' },
+  { table: 'sms_imports', column: 'balance_currency', ddl: 'ALTER TABLE sms_imports ADD COLUMN balance_currency TEXT' },
+  { table: 'sms_imports', column: 'card_type', ddl: 'ALTER TABLE sms_imports ADD COLUMN card_type TEXT' },
+  { table: 'accounts', column: 'credit_limit', ddl: 'ALTER TABLE accounts ADD COLUMN credit_limit INTEGER' },
+  { table: 'accounts', column: 'statement_day', ddl: 'ALTER TABLE accounts ADD COLUMN statement_day INTEGER' },
+  { table: 'accounts', column: 'due_day', ddl: 'ALTER TABLE accounts ADD COLUMN due_day INTEGER' },
+  { table: 'accounts', column: 'monthly_limit', ddl: 'ALTER TABLE accounts ADD COLUMN monthly_limit INTEGER' },
+  { table: 'accounts', column: 'apr', ddl: 'ALTER TABLE accounts ADD COLUMN apr REAL' },
+  { table: 'accounts', column: 'min_payment_pct', ddl: 'ALTER TABLE accounts ADD COLUMN min_payment_pct REAL' },
+  { table: 'accounts', column: 'card_last4', ddl: 'ALTER TABLE accounts ADD COLUMN card_last4 TEXT' },
+  { table: 'tasks', column: 'estimate_minutes', ddl: 'ALTER TABLE tasks ADD COLUMN estimate_minutes INTEGER' },
+  { table: 'projects', column: 'due_date', ddl: 'ALTER TABLE projects ADD COLUMN due_date TEXT' },
+  { table: 'transactions', column: 'flag', ddl: 'ALTER TABLE transactions ADD COLUMN flag TEXT' },
+  { table: 'tasks', column: 'waiting_on', ddl: 'ALTER TABLE tasks ADD COLUMN waiting_on TEXT' },
+  { table: 'books', column: 'rating', ddl: 'ALTER TABLE books ADD COLUMN rating INTEGER' },
+  { table: 'occasions', column: 'year', ddl: 'ALTER TABLE occasions ADD COLUMN year INTEGER' },
+  // Fully customisable budgets.
+  { table: 'budgets', column: 'name', ddl: 'ALTER TABLE budgets ADD COLUMN name TEXT' },
+  { table: 'budgets', column: 'icon', ddl: 'ALTER TABLE budgets ADD COLUMN icon TEXT' },
+  { table: 'budgets', column: 'color', ddl: 'ALTER TABLE budgets ADD COLUMN color TEXT' },
+  { table: 'budgets', column: 'category_ids', ddl: 'ALTER TABLE budgets ADD COLUMN category_ids TEXT' },
+  { table: 'budgets', column: 'account_ids', ddl: 'ALTER TABLE budgets ADD COLUMN account_ids TEXT' },
+  { table: 'budgets', column: 'keywords', ddl: 'ALTER TABLE budgets ADD COLUMN keywords TEXT' },
+  { table: 'budgets', column: 'period', ddl: "ALTER TABLE budgets ADD COLUMN period TEXT NOT NULL DEFAULT 'monthly'" },
+  { table: 'budgets', column: 'start_date', ddl: 'ALTER TABLE budgets ADD COLUMN start_date TEXT' },
+  { table: 'budgets', column: 'end_date', ddl: 'ALTER TABLE budgets ADD COLUMN end_date TEXT' },
+  { table: 'budgets', column: 'rollover', ddl: 'ALTER TABLE budgets ADD COLUMN rollover INTEGER NOT NULL DEFAULT 0' },
+  { table: 'budgets', column: 'alert_pct', ddl: 'ALTER TABLE budgets ADD COLUMN alert_pct INTEGER NOT NULL DEFAULT 80' },
+  { table: 'budgets', column: 'include_bills', ddl: 'ALTER TABLE budgets ADD COLUMN include_bills INTEGER NOT NULL DEFAULT 1' },
+  { table: 'budgets', column: 'is_paused', ddl: 'ALTER TABLE budgets ADD COLUMN is_paused INTEGER NOT NULL DEFAULT 0' },
+  { table: 'budgets', column: 'notes', ddl: 'ALTER TABLE budgets ADD COLUMN notes TEXT' },
+  { table: 'budgets', column: 'sort_order', ddl: 'ALTER TABLE budgets ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0' },
+];

@@ -1,0 +1,242 @@
+import React, { useState } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { ActionMenu } from '../../ui/ActionMenu';
+import * as Haptics from '../../utils/haptics';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { PressableScale } from '../../ui/PressableScale';
+import { useTheme } from '../../theme/ThemeProvider';
+import { Icon } from '../../ui/Icon';
+import { Badge } from '../../ui/Badge';
+import { SwipeableRow } from '../../ui/SwipeableRow';
+import { showUndoDelete } from '../../ui/undo';
+import { useProductivityStore } from '../../store/productivityStore';
+import { daysToDeadline, deadlineLabel, formatEstimate } from '../../utils/estimate';
+import type { Task } from '../../db/types';
+import { useRouter } from 'expo-router';
+import { useUndoStore } from '../../store/undoStore';
+import { todayKey } from '../../db/client';
+import { formatDateKey } from '../../utils/date';
+
+interface TaskRowProps {
+  task: Task;
+  isLast?: boolean;
+  onPress?: () => void;
+  reorder?: { canMoveUp: boolean; canMoveDown: boolean; onMoveUp: () => void; onMoveDown: () => void };
+}
+
+export function TaskRow({ task, isLast, onPress, reorder }: TaskRowProps) {
+  const { colors, typography, spacing } = useTheme();
+  const toggleTaskDone = useProductivityStore((s) => s.toggleTaskDone);
+  const removeTask = useProductivityStore((s) => s.removeTask);
+  const refreshTasks = useProductivityStore((s) => s.refreshTasks);
+  const rescheduleTask = useProductivityStore((s) => s.rescheduleTask);
+  const updateTask = useProductivityStore((s) => s.updateTask);
+  const duplicateTask = useProductivityStore((s) => s.duplicateTask);
+  const setTaskReminder = useProductivityStore((s) => s.setTaskReminder);
+  const router = useRouter();
+
+  // Long-press: the common actions without opening the task.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const quickMenu = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setMenuOpen(true);
+  };
+  const project = useProductivityStore((s) => s.projects.find((p) => p.id === task.project_id));
+  const subtasks = useProductivityStore((s) => s.subtaskCounts[task.id]);
+
+  const handleDelete = async () => {
+    await removeTask(task.id);
+    showUndoDelete('tasks', task, 'Task deleted', refreshTasks);
+  };
+
+  const isDone = task.status === 'done';
+  // Small status markers under the title: when it's planned, overdue,
+  // repeating, has a reminder or notes.
+  const today = todayKey();
+  const meta: { text: string; color: string; bold?: boolean }[] = [];
+  if (!isDone && task.scheduled_date && task.scheduled_date < today) meta.push({ text: '⚠︎ Overdue', color: colors.red, bold: true });
+  else if (!isDone && task.scheduled_date && task.scheduled_date > today) meta.push({ text: `🗓 ${formatDateKey(task.scheduled_date)}`, color: colors.blue });
+  if (task.repeat_frequency) meta.push({ text: `↻ ${task.repeat_frequency}`, color: colors.secondaryLabel });
+  if (!isDone && task.remind_at && new Date(task.remind_at).getTime() > Date.now())
+    meta.push({ text: `🔔 ${new Date(task.remind_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`, color: colors.secondaryLabel });
+  if (task.notes?.trim()) meta.push({ text: '📝', color: colors.secondaryLabel });
+  const priorityColor =
+    task.priority === 'high' ? colors.red : task.priority === 'medium' ? colors.orange : colors.gray;
+
+  return (
+    <SwipeableRow
+      leading={{
+        label: isDone ? 'Undo' : 'Done',
+        color: isDone ? colors.gray : colors.green,
+        icon: isDone ? 'arrow.clockwise' : 'checkmark.circle.fill',
+        onPress: () => {
+          toggleTaskDone(task.id, !isDone);
+          if (!isDone) useUndoStore.getState().show(`Done: ${task.title}`, () => toggleTaskDone(task.id, false));
+        },
+      }}
+      actions={[
+        ...(isDone
+          ? []
+          : [
+              { label: 'Tomorrow', color: colors.orange, onPress: () => rescheduleTask(task.id, 'tomorrow') },
+              ...(task.status !== 'backlog'
+                ? [{ label: 'Later', icon: 'archivebox.fill', color: colors.indigo, onPress: () => updateTask(task.id, { status: 'backlog', scheduled_date: null }) }]
+                : []),
+            ]),
+        { label: 'Delete', color: colors.red, onPress: handleDelete },
+      ]}
+    >
+      <View
+        style={[
+          styles.row,
+          {
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.md,
+            borderBottomColor: colors.separator,
+            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+          },
+        ]}
+      >
+        <PressableScale
+          haptic="none"
+          scaleTo={0.75}
+          onPress={() => {
+            if (isDone) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            toggleTaskDone(task.id, !isDone);
+            if (!isDone) useUndoStore.getState().show(`Done: ${task.title}`, () => toggleTaskDone(task.id, false));
+          }}
+          hitSlop={8}
+          style={{ marginRight: spacing.sm }}
+        >
+          {isDone ? (
+            <Animated.View key="done" entering={ZoomIn.springify().damping(12).stiffness(260)}>
+              <Icon name="checkmark.circle.fill" size={25} color={colors.green} />
+            </Animated.View>
+          ) : (
+            <Icon name="circle" size={25} color={colors.gray3} />
+          )}
+        </PressableScale>
+        <Pressable style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={onPress} onLongPress={quickMenu} delayLongPress={350}>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                typography.body,
+                { color: isDone ? colors.secondaryLabel : colors.label, textDecorationLine: isDone ? 'line-through' : 'none' },
+              ]}
+            >
+              {task.title}
+            </Text>
+            {project || subtasks || task.estimate_minutes || task.due_date || task.waiting_on || meta.length ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 2 }}>
+                {meta.map((m) => (
+                  <Text key={m.text} style={[typography.caption1, { color: m.color, marginRight: spacing.sm, fontWeight: m.bold ? '600' : '400' }]}>
+                    {m.text}
+                  </Text>
+                ))}
+                {project ? (
+                  <Text style={[typography.caption1, { color: project.color, fontWeight: '600', marginRight: spacing.sm }]}>
+                    {project.name}
+                  </Text>
+                ) : null}
+                {task.due_date && !isDone ? (
+                  <Text
+                    style={[
+                      typography.caption1,
+                      { color: daysToDeadline(task.due_date) < 0 ? colors.red : daysToDeadline(task.due_date) <= 1 ? colors.orange : colors.secondaryLabel, marginRight: spacing.sm, fontWeight: '600' },
+                    ]}
+                  >
+                    📅 {deadlineLabel(task.due_date)}
+                  </Text>
+                ) : null}
+                {task.waiting_on && !isDone ? (
+                  <Text style={[typography.caption1, { color: colors.purple, marginRight: spacing.sm }]}>⏳ {task.waiting_on}</Text>
+                ) : null}
+                {task.estimate_minutes ? (
+                  <Text style={[typography.caption1, { color: colors.secondaryLabel, marginRight: spacing.sm }]}>
+                    ⏱ {formatEstimate(task.estimate_minutes)}
+                  </Text>
+                ) : null}
+                {subtasks ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Icon
+                      name="checklist"
+                      size={12}
+                      color={subtasks.done === subtasks.total ? colors.green : colors.secondaryLabel}
+                    />
+                    <Text
+                      style={[
+                        typography.caption1,
+                        { color: subtasks.done === subtasks.total ? colors.green : colors.secondaryLabel, marginLeft: 3 },
+                      ]}
+                    >
+                      {subtasks.done}/{subtasks.total}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+          {/* Medium is the default, so only High stands out. */}
+          {!isDone && task.priority === 'high' ? <Badge text="High" color={priorityColor} /> : null}
+        </Pressable>
+        {reorder ? (
+          <View style={{ marginLeft: spacing.sm }}>
+            <Pressable onPress={reorder.onMoveUp} disabled={!reorder.canMoveUp} hitSlop={6}>
+              <Icon name="arrow.up" size={14} color={reorder.canMoveUp ? colors.secondaryLabel : colors.tertiaryLabel} />
+            </Pressable>
+            <Pressable onPress={reorder.onMoveDown} disabled={!reorder.canMoveDown} hitSlop={6}>
+              <Icon name="arrow.down" size={14} color={reorder.canMoveDown ? colors.secondaryLabel : colors.tertiaryLabel} />
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+      <ActionMenu
+        visible={menuOpen}
+        title={task.title}
+        onClose={() => setMenuOpen(false)}
+        actions={[
+          { label: isDone ? 'Mark not done' : 'Mark done', icon: isDone ? 'arrow.clockwise' : 'checkmark.circle.fill', onPress: () => toggleTaskDone(task.id, !isDone) },
+          ...(isDone
+            ? []
+            : [
+                { label: 'Do today', icon: 'sun.max.fill', section: true, onPress: () => rescheduleTask(task.id, 'today') },
+                { label: 'Tomorrow', icon: 'sunrise.fill', onPress: () => rescheduleTask(task.id, 'tomorrow') },
+                { label: 'Next week', icon: 'calendar', onPress: () => rescheduleTask(task.id, 'next_week') },
+                {
+                  label: 'Remind me in 1 hour',
+                  icon: 'bell.fill',
+                  section: true,
+                  onPress: () => {
+                    setTaskReminder(task.id, new Date(Date.now() + 3600000).toISOString());
+                    useUndoStore.getState().show('Reminder in 1 hour');
+                  },
+                },
+                { label: 'Focus on this', icon: 'timer', onPress: () => router.push({ pathname: '/tasks/focus', params: { task: task.id } }) },
+                ...(task.status !== 'backlog'
+                  ? [{ label: 'Move to backlog', icon: 'archivebox.fill', onPress: () => updateTask(task.id, { status: 'backlog', scheduled_date: null }) }]
+                  : []),
+                {
+                  label: task.priority === 'high' ? 'Lower priority' : 'Make high priority',
+                  icon: 'flag.fill',
+                  onPress: () => updateTask(task.id, { priority: task.priority === 'high' ? 'medium' : 'high' }),
+                },
+              ]),
+          {
+            label: 'Duplicate',
+            icon: 'doc.on.doc',
+            onPress: async () => {
+              await duplicateTask(task.id);
+              useUndoStore.getState().show('Task duplicated');
+            },
+          },
+          { label: 'Delete', icon: 'trash.fill', destructive: true, section: true, onPress: handleDelete },
+        ]}
+      />
+    </SwipeableRow>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center' },
+});
