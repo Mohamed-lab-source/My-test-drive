@@ -5,7 +5,7 @@ import '../../widgets/large_title.dart';
 import '../../app/theme.dart';
 import '../../widgets/launchers.dart';
 
-const appVersion = '2.0.0';
+const appVersion = '2.1.0';
 
 /// What Khroga is, where its facts come from, and that it's free.
 class AboutScreen extends StatelessWidget {

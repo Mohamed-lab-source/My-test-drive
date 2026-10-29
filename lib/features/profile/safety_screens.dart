@@ -83,8 +83,8 @@ class PrivacyScreen extends StatelessWidget {
         ('Track my outing', 'Routes you record with Track my outing stay only on your phone. Nothing about them is sent to us.'),
         ('Camera', 'The camera is used only to scan Khroga QR codes, on your phone. No photos are taken or uploaded.'),
         ('AI', 'When you ask the AI to write a plan, the plan request and a list of real places are sent to Google Gemini. Your name and messages are never sent.'),
-        ('Error reports', 'If the app hits an error, a short technical report (no messages or personal details) may be saved so we can fix it. You can turn this off in Profile.'),
-        ('Deleting your data', 'Profile → Delete my account removes everything we keep about you, right away.'),
+        ('Error reports', 'If the app hits an error, a short technical report (no messages or personal details) may be saved so we can fix it. You can turn this off in Settings.'),
+        ('Deleting your data', 'Settings → Account → Delete my account removes everything we keep about you, right away.'),
         ('No ads, no selling', 'Khroga shows no ads and never sells or shares your data.'),
       ]);
 }
@@ -199,7 +199,7 @@ Future<void> deleteMyAccount(BuildContext context, WidgetRef ref) async {
           children: [
             Text(tr('This deletes your plans, favorites, notes, reviews and points, friends, check-ins and username. Groups you organize are deleted for everyone. This can\'t be undone.')),
             const SizedBox(height: KSpace.sm),
-            Text(tr('Want a copy first? Use Profile → Export my data.'),
+            Text(tr('Want a copy first? Use Settings → Export my data.'),
                 style: Theme.of(d).textTheme.bodySmall),
             const SizedBox(height: KSpace.md),
             Text(tr('Type DELETE (or حذف) to confirm')),

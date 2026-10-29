@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 2.1.0
+
+<en-US>
+• Settings in one place, in clear groups
+• A tidier Explore with everything under Discover
+• Get started steps for new people, cleaner plans
+• Fits large text; reminders cancel when a plan or group is gone
+</en-US>
+
+<ar>
+• الإعدادات في مكان واحد ومتقسمة بوضوح
+• استكشف أنضف وكل حاجة تحت "اكتشف"
+• خطوات "ابدأ هنا" للجداد وخطط أنضف
+• مظبوط مع الخط الكبير، والتذكير بيتلغي لما الخطة أو الجروب يتمسحوا
+</ar>
+
 ## 2.0.0
 
 <en-US>

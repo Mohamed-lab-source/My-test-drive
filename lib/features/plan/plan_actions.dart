@@ -12,6 +12,7 @@ import '../../models/plan.dart';
 import '../../widgets/common.dart';
 import 'plan_form_screen.dart' show runPlanGeneration;
 import 'plan_glance.dart';
+import 'reminder_sheet.dart' show forgetReminder;
 import '../../app/local_prefs.dart' show pinnedPlansProvider;
 
 /// Everything you can do with a plan, in one tidy sheet (from "My plans",
@@ -155,6 +156,8 @@ Future<void> deletePlan(BuildContext context, WidgetRef ref, OutingPlan plan, {b
   final repo = ref.read(plansRepositoryProvider);
   try {
     await repo.delete(uid, plan.id);
+    // No reminder for a plan that's gone.
+    forgetReminder(ref, 'plan:${plan.id}');
     if (!context.mounted) return;
     showUndo(context, tr('Plan deleted'), () => repo.restore(uid, plan));
     if (leave && context.canPop()) context.pop();

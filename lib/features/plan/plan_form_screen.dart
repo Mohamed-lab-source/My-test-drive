@@ -25,7 +25,6 @@ import '../../widgets/common.dart';
 import '../../widgets/large_title.dart';
 import '../../widgets/motion.dart';
 import '../profile/about_screen.dart' show appVersion;
-import '../profile/theme_sheet.dart';
 import '../reviews/challenge_card.dart';
 
 /// The home tab: describe your outing, get a real plan.
@@ -294,12 +293,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         title: const KhrogaWordmark(),
         actions: [
           IconButton(
-            tooltip: tr('Look & colors'),
-            icon: const Icon(Icons.palette_outlined),
-            onPressed: () => showThemeSheet(context),
-          ),
-          IconButton(
-            tooltip: tr('Saved plans & places'),
+            tooltip: tr('Saved places'),
             icon: const Icon(Icons.bookmark_outline),
             onPressed: () => context.push('/saved'),
           ),
@@ -346,37 +340,46 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
           ),
           SectionTitle(tr('Quick start'),
               trailing: TextButton(onPressed: _reset, child: Text(tr('Reset')))),
-          Wrap(
-            spacing: KSpace.sm,
-            runSpacing: KSpace.sm,
-            children: [
-              for (final name in ref.watch(planPresetsProvider).keys)
-                InputChip(
-                  avatar: const Text('⭐'),
-                  label: Text(name),
-                  onPressed: () => _applyMine(name),
-                  deleteButtonTooltipMessage: tr('Remove'),
-                  onDeleted: () => ref.read(planPresetsProvider.notifier).set(name, null),
-                ),
-              ActionChip(
-                avatar: const Icon(Icons.bookmark_add_outlined, size: 18),
-                label: Text(tr('Save my choices')),
-                onPressed: _saveMine,
-              ),
-              for (final preset in _presets)
+          // One sliding row: your saved choices first, then ready-made ones.
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (final name in ref.watch(planPresetsProvider).keys)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: KSpace.sm),
+                    child: InputChip(
+                      avatar: const Text('⭐'),
+                      label: Text(name),
+                      onPressed: () => _applyMine(name),
+                      deleteButtonTooltipMessage: tr('Remove'),
+                      onDeleted: () => ref.read(planPresetsProvider.notifier).set(name, null),
+                    ),
+                  ),
+                for (final preset in _presets)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: KSpace.sm),
+                    child: ActionChip(
+                      label: Text(tr(preset.label)),
+                      onPressed: () => setState(() {
+                        _people = preset.people;
+                        _vibes
+                          ..clear()
+                          ..addAll(preset.vibes);
+                        _time = preset.time;
+                        _stops = preset.stops;
+                        showMessage(context, trf('{preset} picked. Change anything, then tap Plan.', {'preset': tr(preset.label)}));
+                      }),
+                    ),
+                  ),
                 ActionChip(
-                  label: Text(tr(preset.label)),
-                  onPressed: () => setState(() {
-                    _people = preset.people;
-                    _vibes
-                      ..clear()
-                      ..addAll(preset.vibes);
-                    _time = preset.time;
-                    _stops = preset.stops;
-                    showMessage(context, trf('{preset} picked. Change anything, then tap Plan.', {'preset': tr(preset.label)}));
-                  }),
+                  avatar: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  label: Text(tr('Save my choices')),
+                  onPressed: _saveMine,
                 ),
-            ],
+              ],
+            ),
           ),
           StepTitle(1, tr('When?')),
           Wrap(
@@ -959,6 +962,7 @@ class _Stepper extends StatelessWidget {
     return Row(
       children: [
         IconButton.outlined(
+          tooltip: tr('Fewer'),
           onPressed: value > min ? () => onChanged(value - 1) : null,
           icon: const Icon(Icons.remove),
         ),
@@ -969,6 +973,7 @@ class _Stepper extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge),
         ),
         IconButton.outlined(
+          tooltip: tr('More'),
           onPressed: value < max ? () => onChanged(value + 1) : null,
           icon: const Icon(Icons.add),
         ),
@@ -1038,7 +1043,7 @@ class _WhatsNewCard extends ConsumerWidget {
         child: ListTile(
           leading: const Text('🎁', style: TextStyle(fontSize: 26)),
           title: Text(trf("What's new in {v}", {'v': appVersion})),
-          subtitle: Text(tr('19 new tools, plan search, labels, notes and more')),
+          subtitle: Text(tr('Settings in one place, a tidier Explore and cleaner plans')),
           trailing: IconButton(
             tooltip: tr('Hide'),
             icon: const Icon(Icons.close),
@@ -1298,6 +1303,7 @@ String? _nickname(WidgetRef ref) {
 
 /// The "For you today" cards: key, label, card.
 List<(String, String, Widget)> _homeCards() => [
+      ('start', tr('Get started'), const _GetStarted()),
       ('today', tr("Today's plan"), const _TodayStrip()),
       ('idea', tr('Idea for right now'), const _IdeaForNow()),
       ('mydates', tr('My countdowns'), const MyDatesStrip()),
@@ -1351,3 +1357,57 @@ Future<void> _customizeHome(BuildContext context, WidgetRef ref) => showModalBot
         );
       }),
     );
+
+/// For new people: three first steps that tick themselves off, then the
+/// card goes away. Uses only what Home already loads.
+class _GetStarted extends ConsumerWidget {
+  const _GetStarted();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pocket = ref.watch(pocketPrefsProvider);
+    if (pocket['start.done'] == '1') return const SizedBox.shrink();
+    final plans = ref.watch(recentPlansProvider).value;
+    final favs = ref.watch(favoriteIdsProvider).value;
+    final groups = ref.watch(myGroupsProvider).value;
+    if (plans == null || favs == null || groups == null) return const SizedBox.shrink();
+    final steps = [
+      (plans.isNotEmpty, tr('Make your first plan'), tr('Pick the vibe above and tap Plan my outing.'), null),
+      (favs.isNotEmpty, tr('Save a place you like'), tr('Tap the heart on any place.'), '/explore'),
+      (groups.isNotEmpty, tr('Make a group for your friends'), tr('Plan together, vote and split the bill.'), '/groups'),
+    ];
+    final done = steps.where((s) => s.$1).length;
+    if (done == steps.length) return const SizedBox.shrink();
+    final k = context.k;
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: KSpace.sm),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(KSpace.md, KSpace.sm, KSpace.xs, KSpace.sm),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text(trf('Get started · {n} of 3', {'n': done}), style: text.titleMedium)),
+              IconButton(
+                tooltip: tr('Hide'),
+                icon: const Icon(Icons.close, size: 20),
+                onPressed: () => ref.read(pocketPrefsProvider.notifier).set('start.done', '1'),
+              ),
+            ]),
+            for (final (ok, title, hint, path) in steps)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(ok ? Icons.check_circle : Icons.radio_button_unchecked,
+                    color: ok ? k.signal : k.inkMuted),
+                title: Text(title,
+                    style: ok ? TextStyle(decoration: TextDecoration.lineThrough, color: k.inkMuted) : null),
+                subtitle: ok ? null : Text(hint),
+                onTap: ok || path == null ? null : () => context.go(path),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+}

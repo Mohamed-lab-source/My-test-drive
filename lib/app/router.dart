@@ -21,6 +21,7 @@ import '../features/auth/sign_in_screen.dart';
 import '../features/explore/explore_screen.dart';
 import '../features/explore/compare_screen.dart';
 import '../features/fun/badges_screen.dart';
+import '../features/profile/settings_screen.dart';
 import '../features/fun/bingo_screen.dart';
 import '../features/fun/collections_screen.dart';
 import '../features/fun/leaderboard_screen.dart';
@@ -140,7 +141,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/plan/:id',
         builder: (_, s) => PlanResultScreen(planId: s.pathParameters['id']!),
       ),
-      GoRoute(path: '/saved', builder: (_, _) => const SavedPlansScreen()),
+      GoRoute(path: '/saved', builder: (_, s) => SavedPlansScreen(beenThere: s.uri.queryParameters['been'] == '1')),
       GoRoute(
         path: '/place/:id',
         builder: (_, s) => PlaceDetailsScreen(placeId: s.pathParameters['id']!),
@@ -195,6 +196,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             AreaScreen(city: s.pathParameters['city']!, name: s.pathParameters['name']!),
       ),
       GoRoute(path: '/tools', builder: (_, _) => const ToolsScreen()),
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       GoRoute(path: '/badges', builder: (_, _) => const BadgesScreen()),
       GoRoute(path: '/help', builder: (_, _) => const HelpScreen()),
       GoRoute(path: '/timeline', builder: (_, _) => const TimelineScreen()),

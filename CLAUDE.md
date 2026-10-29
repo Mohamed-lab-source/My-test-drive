@@ -380,6 +380,17 @@ How the code enforces it (keep it this way):
   app already listens to). Home cards can be hidden (`home.hidden`),
   Hijri line, nickname, start tab (`start`), export phone data.
 
+- 2.1 launch tidy-up: all settings in `SettingsScreen` (`/settings`,
+  features/profile/settings_screen.dart: General, Look and feel,
+  Notifications, Data and privacy, About, Account → Delete my account);
+  Profile = you + shortcuts + share/help. `/saved` is "Saved places"
+  (Favorites, Been there; `?been=1`); plans live only in My plans. Explore's
+  shortcuts are one "Discover" sheet (`_discover`). Home "Get started" card
+  (`_GetStarted`, pref `start.done`). Deleting a plan / leaving a group calls
+  `forgetReminder`. Big text: tiles and grids grow with the text scale,
+  settings rows put controls under the title (test in screens_test).
+  Closing at midnight reads "midnight" (tables show 24:00).
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

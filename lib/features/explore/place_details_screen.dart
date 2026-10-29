@@ -171,6 +171,37 @@ class _Details extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           Text(facts.description!, style: text.bodyLarge),
         ],
+        if (facts.labels.isNotEmpty) ...[
+          SectionTitle(tr('Good to know')),
+          Wrap(
+            spacing: KSpace.sm,
+            runSpacing: KSpace.sm,
+            children: [for (final l in facts.labels) Pill(l)],
+          ),
+        ],
+        if (place.hours?.minutesUntilOpen(DateTime.now()) case final m? when m <= 120) ...[
+          const SizedBox(height: KSpace.sm),
+          Pill(m < 60 ? trf('⏰ Opens in {n} min', {'n': m}) : trf('⏰ Opens in {t}', {'t': durationText(m)})),
+        ],
+        if (place.hours?.minutesUntilClose(DateTime.now()) case final m? when m <= 60) ...[
+          const SizedBox(height: KSpace.sm),
+          Pill(trf('⚠️ Closes in {n} min', {'n': m}),
+              color: Theme.of(context).colorScheme.errorContainer,
+              textColor: Theme.of(context).colorScheme.onErrorContainer),
+        ],
+        if (categoryTip(place.category) case final tip?) ...[
+          const SizedBox(height: KSpace.md),
+          Text('💡 $tip', style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
+        ],
+        if (place.openingHours != null) ...[
+          SectionTitle(tr('Opening hours')),
+          if (place.hours?.weekTable() case final table?)
+            _HoursTable(table: table)
+          else
+            Text(_friendlyHours(place.openingHours!), style: text.bodyMedium),
+          const SizedBox(height: KSpace.xs),
+          Text(tr('Hours can change. Call ahead if it matters.'), style: text.bodySmall),
+        ],
         if (place.address != null || place.phone != null || place.hasLocation) ...[
           SectionTitle(tr('Details')),
           MenuGroup(children: [
@@ -222,37 +253,6 @@ class _Details extends ConsumerWidget {
           ),
         ],
         ..._actionSections(context, ref, place),
-        if (facts.labels.isNotEmpty) ...[
-          SectionTitle(tr('Good to know')),
-          Wrap(
-            spacing: KSpace.sm,
-            runSpacing: KSpace.sm,
-            children: [for (final l in facts.labels) Pill(l)],
-          ),
-        ],
-        if (place.hours?.minutesUntilOpen(DateTime.now()) case final m? when m <= 120) ...[
-          const SizedBox(height: KSpace.sm),
-          Pill(m < 60 ? trf('⏰ Opens in {n} min', {'n': m}) : trf('⏰ Opens in {t}', {'t': durationText(m)})),
-        ],
-        if (place.hours?.minutesUntilClose(DateTime.now()) case final m? when m <= 60) ...[
-          const SizedBox(height: KSpace.sm),
-          Pill(trf('⚠️ Closes in {n} min', {'n': m}),
-              color: Theme.of(context).colorScheme.errorContainer,
-              textColor: Theme.of(context).colorScheme.onErrorContainer),
-        ],
-        if (categoryTip(place.category) case final tip?) ...[
-          const SizedBox(height: KSpace.md),
-          Text('💡 $tip', style: text.bodyMedium?.copyWith(color: context.k.inkMuted)),
-        ],
-        if (place.openingHours != null) ...[
-          SectionTitle(tr('Opening hours')),
-          if (place.hours?.weekTable() case final table?)
-            _HoursTable(table: table)
-          else
-            Text(_friendlyHours(place.openingHours!), style: text.bodyMedium),
-          const SizedBox(height: KSpace.xs),
-          Text(tr('Hours can change. Call ahead if it matters.'), style: text.bodySmall),
-        ],
         SectionTitle(tr('Right now')),
         CrowdCard(place: place),
         AroundCard(place: place),

@@ -206,6 +206,9 @@ String compassDirection(double fromLat, double fromLng, double toLat, double toL
 String durationText(int minutes) {
   if (minutes < 60) return trf('{n} min', {'n': minutes});
   final h = minutes ~/ 60, m = minutes % 60;
+  // One and two hours have their own words in Arabic (ساعة / ساعتين).
+  if (h == 1) return m == 0 ? tr('1 h') : trf('1 h {m} min', {'m': m});
+  if (h == 2) return m == 0 ? tr('2 h') : trf('2 h {m} min', {'m': m});
   return m == 0 ? trf('{h} h', {'h': h}) : trf('{h} h {m} min', {'h': h, 'm': m});
 }
 

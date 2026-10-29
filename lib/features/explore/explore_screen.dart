@@ -1,7 +1,5 @@
-import 'dart:math' as math;
 
 import '../../app/districts.dart' show areaSearchText;
-import '../../app/fun.dart' show luckyPlace;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -294,11 +292,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         title: Text(tr('Explore')),
         actions: [
           IconButton(
-            tooltip: tr('All malls'),
-            icon: const Text('🛍️', style: TextStyle(fontSize: 20)),
-            onPressed: () => context.push('/malls'),
-          ),
-          IconButton(
             tooltip: _map ? tr('List') : tr('Map'),
             icon: Icon(_map ? Icons.view_list_outlined : Icons.map_outlined),
             onPressed: () {
@@ -311,11 +304,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             tooltip: _grid ? tr('List view') : tr('Photo grid'),
             icon: Icon(_grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
             onPressed: () => setState(() => _grid = !_grid),
-          ),
-          IconButton(
-            tooltip: tr('Surprise me'),
-            icon: const Text('🎲', style: TextStyle(fontSize: 22)),
-            onPressed: () => places.whenData((all) => _surprise(_filter(all, me))),
           ),
           PopupMenuButton<String>(
             tooltip: tr('City'),
@@ -332,7 +320,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               padding: const EdgeInsets.symmetric(horizontal: KSpace.md),
               child: Row(
                 children: [
-                  Text(Cities.all[city] ?? city,
+                  Text(tr(Cities.all[city] ?? city),
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   const Icon(Icons.expand_more),
                 ],
@@ -406,44 +394,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       onPressed: _clearFilters,
                     ),
                   ActionChip(
-                    avatar: const Text('📋'),
-                    label: Text(tr('My lists')),
-                    onPressed: () => context.push('/lists'),
-                  ),
-                  ActionChip(
-                    avatar: const Text('🍀'),
-                    label: Text(tr('Feeling lucky')),
-                    onPressed: () {
-                      final city = ref.read(cityProvider);
-                      final all = ref.read(allPlacesProvider).value ?? const <Place>[];
-                      final p = luckyPlace(all.where((p) => p.city == city).toList(), math.Random());
-                      if (p != null) context.push('/place/${p.id}');
-                    },
-                  ),
-                  ActionChip(
-                    avatar: const Text('🔮'),
-                    label: Text(tr('For you')),
-                    onPressed: () => context.push('/for-you'),
-                  ),
-                  ActionChip(
-                    avatar: const Text('🗂️'),
-                    label: Text(tr('Collections')),
-                    onPressed: () => context.push('/collections'),
-                  ),
-                  ActionChip(
-                    avatar: const Text('⭐'),
-                    label: Text(tr('Top on Khroga')),
-                    onPressed: () => context.push('/community'),
-                  ),
-                  ActionChip(
-                    avatar: const Text('🏘️'),
-                    label: Text(tr('Areas')),
-                    onPressed: () => context.push('/areas'),
-                  ),
-                  ActionChip(
-                    avatar: const Text('💡'),
-                    label: Text(tr('Ideas')),
-                    onPressed: () => context.push('/ideas'),
+                    avatar: const Icon(Icons.auto_awesome, size: 18),
+                    label: Text(tr('Discover')),
+                    onPressed: () => _discover(context, () => places.whenData((all) => _surprise(_filter(all, me)))),
                   ),
                   PopupMenuButton<_Sort>(
                     tooltip: tr('Sort'),
@@ -1023,4 +976,34 @@ class PlaceMarks extends ConsumerWidget {
       child: Text('${fav ? '❤️' : ''}${been ? '✅' : ''}', style: const TextStyle(fontSize: 12)),
     );
   }
+}
+
+/// Everything to browse beyond the list, in one tidy sheet.
+void _discover(BuildContext context, VoidCallback surprise) {
+  void go(BuildContext sheet, String path) {
+    Navigator.pop(sheet);
+    context.push(path);
+  }
+
+  showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (sheet) => SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, KSpace.lg),
+      child: TileGrid(title: tr('Discover'), items: [
+        (Icons.casino_outlined, tr('Surprise me'), tr('A random place from what you see now'), () {
+          Navigator.pop(sheet);
+          surprise();
+        }),
+        (Icons.auto_awesome_outlined, tr('For you'), tr('Like the places you visit and save'), () => go(sheet, '/for-you')),
+        (Icons.star_outline, tr('Top on Khroga'), tr('Best rated by people on Khroga'), () => go(sheet, '/community')),
+        (Icons.collections_bookmark_outlined, tr('Collections'), tr('Ready-made lists from map facts'), () => go(sheet, '/collections')),
+        (Icons.holiday_village_outlined, tr('Areas'), tr('Browse by neighbourhood'), () => go(sheet, '/areas')),
+        (Icons.local_mall_outlined, tr('All malls'), tr('Malls and what\'s inside'), () => go(sheet, '/malls')),
+        (Icons.lightbulb_outline, tr('Ideas'), tr('Outing ideas to start from'), () => go(sheet, '/ideas')),
+        (Icons.list_alt, tr('My lists'), tr('Your own lists of places'), () => go(sheet, '/lists')),
+      ]),
+    ),
+  );
 }

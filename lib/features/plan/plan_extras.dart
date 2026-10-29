@@ -215,7 +215,7 @@ class WeatherHeadsUp extends ConsumerWidget {
             'r': f.rainPct,
           }),
         ),
-        onTap: () => context.push('/saved'),
+        onTap: () => context.go('/plans'),
       ),
     );
   }

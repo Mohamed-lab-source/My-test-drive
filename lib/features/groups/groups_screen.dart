@@ -102,15 +102,22 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
                   ..insertAll(0, pinned);
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(KSpace.md, 0, KSpace.md, 100),
-                  itemCount: shown.length + 1,
+                  itemCount: shown.length + (shown.isEmpty ? 2 : 1),
                   separatorBuilder: (_, _) => const SizedBox(height: KSpace.sm),
                   itemBuilder: (_, i) => i == 0
                       ? TextField(
                           decoration: InputDecoration(
-                              hintText: tr('Search your groups'), prefixIcon: Icon(Icons.search)),
+                              hintText: tr('Search your groups'), prefixIcon: const Icon(Icons.search)),
                           onChanged: (v) => setState(() => _q = v),
                         )
-                      : _GroupTile(group: shown[i - 1]),
+                      : shown.isEmpty
+                          // Nothing matched the search: say so, instead of a blank list.
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: KSpace.lg),
+                              child: Text(trf('No group called "{q}".', {'q': _q.trim()}),
+                                  textAlign: TextAlign.center),
+                            )
+                          : _GroupTile(group: shown[i - 1]),
                 );
               }),
       ),

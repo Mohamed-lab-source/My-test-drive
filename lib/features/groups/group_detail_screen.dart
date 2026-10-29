@@ -1,5 +1,5 @@
 import 'bring_list.dart' show showBringList;
-import '../plan/reminder_sheet.dart' show ReminderButton;
+import '../plan/reminder_sheet.dart' show ReminderButton, forgetReminder;
 import '../../app/fun.dart' show nextDays;
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +89,9 @@ class _GroupViewState extends ConsumerState<_GroupView> {
   @override
   void initState() {
     super.initState();
+    // Once you've said if you're coming, the chat matters more than the
+    // details card, so it starts folded (one tap opens it).
+    _showHeader = widget.group.rsvp[widget.uid] == null;
     _opened = ref.read(groupOpenedProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
   }
@@ -895,6 +898,7 @@ class _MembersSheet extends ConsumerWidget {
       } else {
         await repo.leave(group.id, uid);
       }
+      forgetReminder(ref, 'group:${group.id}'); // no reminder for a group you're not in
       router.go('/groups');
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -1178,7 +1182,7 @@ class _Bubble extends ConsumerWidget {
         return;
       case 'block':
         ref.read(blockedUsersProvider.notifier).set(message.uid, message.name);
-        showMessage(context, trf('{name} is blocked. Unblock in Profile → Blocked people.', {'name': message.name}));
+        showMessage(context, trf('{name} is blocked. Unblock in Settings → Blocked people.', {'name': message.name}));
         return;
     }
     if (picked == 'copy') {
@@ -1538,6 +1542,7 @@ class _ComposerState extends ConsumerState<_Composer> {
           ),
           const SizedBox(width: KSpace.xs),
           IconButton.filled(
+            tooltip: tr('Send'),
             onPressed: _sending ? null : _send,
             icon: const Icon(Icons.send_rounded),
           ),
@@ -1652,11 +1657,13 @@ class _BillSplitterState extends ConsumerState<_BillSplitter> {
             children: [
               Expanded(child: Text(tr('People paying'))),
               IconButton.outlined(
+                tooltip: tr('Fewer'),
                 onPressed: _people > 1 ? () => setState(() => _people--) : null,
                 icon: const Icon(Icons.remove),
               ),
               SizedBox(width: 40, child: Text('$_people', textAlign: TextAlign.center, style: text.titleLarge)),
               IconButton.outlined(
+                tooltip: tr('More'),
                 onPressed: () => setState(() => _people++),
                 icon: const Icon(Icons.add),
               ),

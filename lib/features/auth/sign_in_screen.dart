@@ -1,3 +1,4 @@
+import '../../models/place.dart';
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +36,11 @@ class SignInScreen extends ConsumerWidget {
     return Scaffold(
       body: GradientBackdrop(
         child: SafeArea(
+          // Scrolls only when it doesn't fit (very big text, small phones).
+          child: LayoutBuilder(builder: (context, box) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight),
+              child: IntrinsicHeight(
           child: Padding(
             padding: const EdgeInsets.all(KSpace.lg),
             child: Column(
@@ -83,7 +89,7 @@ class SignInScreen extends ConsumerWidget {
                 FadeSlideIn(
                   index: 3,
                   child: Wrap(spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
-                    for (final t in ['☕ Cafés', '🍽️ Restaurants', '🛍️ Malls', '🌳 Parks', '🏛️ Museums'])
+                    for (final t in [for (final c in ['cafe', 'restaurant', 'mall', 'park', 'museum']) '${Categories.emoji(c)} ${Categories.label(c)}'])
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                         decoration: ShapeDecoration(
@@ -124,6 +130,9 @@ class SignInScreen extends ConsumerWidget {
               ],
             ),
           ),
+              ),
+            ),
+          )),
         ),
       ),
     );

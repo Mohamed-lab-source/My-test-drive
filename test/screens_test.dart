@@ -17,6 +17,7 @@ import 'package:khroga/features/profile/welcome_screen.dart';
 import 'package:khroga/features/profile/whats_new_screen.dart';
 import 'package:khroga/features/tools/ideas_screen.dart';
 import 'package:khroga/features/tools/tools_screen.dart';
+import 'package:khroga/features/profile/settings_screen.dart';
 import 'package:khroga/features/tools/track_screen.dart';
 import 'package:khroga/features/groups/live_map_screen.dart';
 import 'package:khroga/features/plan/plans_hub_screen.dart';
@@ -74,7 +75,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('19 new tools'), findsOneWidget);
+    expect(find.text('Settings in one place'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -186,6 +187,18 @@ void main() {
       }
       expect(tester.takeException(), isNull, reason: name);
     }
+  });
+
+  testWidgets('tools and settings fit with very big text', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.8;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(_app(const ToolsScreen()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(KeyedSubtree(key: UniqueKey(), child: _app(const SettingsScreen())));
+    await tester.pumpAndSettle();
+    expect(find.text('Language · اللغة'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('help screen fits and searches', (tester) async {

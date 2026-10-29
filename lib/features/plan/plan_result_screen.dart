@@ -8,7 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/extras.dart';
-import '../../app/helpers.dart' show sameDay, totalStopMinutes, showTime, timeRange, walkingMinutes, weatherIcon;
+import '../../app/helpers.dart' show sameDay, showTime, timeRange, walkingMinutes, weatherIcon;
 import '../../app/local_prefs.dart';
 import '../../app/review.dart';
 import '../../app/share_texts.dart';
@@ -28,7 +28,6 @@ import '../groups/create_group_sheet.dart';
 import 'plan_actions.dart' show sendPlanToGroup, showPlanActions;
 import 'plan_glance.dart';
 import 'plan_extras.dart';
-import 'plan_form_screen.dart';
 
 class PlanResultScreen extends ConsumerWidget {
   const PlanResultScreen({super.key, required this.planId});
@@ -124,18 +123,6 @@ class _PlanBody extends ConsumerWidget {
 
   final OutingPlan plan;
 
-  Future<void> _regenerate(BuildContext context, WidgetRef ref) async {
-    // Keep everything the person asked for (including mall-only mode) and
-    // avoid the places we just showed them.
-    final exclude = {
-      ...plan.request.excludePlaceIds,
-      ...plan.stops.map((s) => s.placeId),
-    }.toList();
-    final id = await runPlanGeneration(
-        context, ref, plan.request.copyWith(excludePlaceIds: exclude));
-    if (id != null && context.mounted) context.pushReplacement('/plan/$id');
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final text = Theme.of(context).textTheme;
@@ -184,8 +171,6 @@ class _PlanBody extends ConsumerWidget {
             if (endsAt != null && plan.stops.first.startTime != null)
               Pill('🕘 ${timeRange(showTime(plan.stops.first.startTime, clock24: clock24), showTime(endsAt, clock24: clock24))}'),
             if (walkable) Pill(tr('🚶 Walkable route')),
-            if (totalStopMinutes(plan.stops.map((s) => s.durationMinutes)) > 0)
-              Pill(trf('⏱ {t} at stops', {'t': _StopTile._duration(totalStopMinutes(plan.stops.map((s) => s.durationMinutes)))})),
           ],
         ),
 
@@ -216,10 +201,6 @@ class _PlanBody extends ConsumerWidget {
             icon: Icons.info_outline,
             text: tr('The AI was busy or offline, so our planner picked real places for you.'),
           ),
-        ],
-        if (plan.source != 'ai') ...[
-          const SizedBox(height: KSpace.md),
-          _MakeNicer(plan: plan),
         ],
         if (plan.source == 'ai')
           Align(
@@ -255,6 +236,11 @@ class _PlanBody extends ConsumerWidget {
             onEditLength: () => _editLength(context, ref, plan, i),
             onEditNote: () => _editNote(context, ref, plan, i),
           )),
+        if (plan.source != 'ai') ...[
+          const SizedBox(height: KSpace.md),
+          _MakeNicer(plan: plan),
+        ],
+        const SizedBox(height: KSpace.md),
         if (plan.stops.where((s) => s.hasLocation).length >= 2) ...[
           ClipRRect(
             borderRadius: BorderRadius.circular(KRadius.card),
@@ -290,10 +276,9 @@ class _PlanBody extends ConsumerWidget {
           const SizedBox(height: KSpace.sm),
         ],
         _RouteCard(plan: plan),
-        if (plan.stops.where((s) => s.hasLocation).length >= 3)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
+        Wrap(spacing: KSpace.sm, children: [
+          if (plan.stops.where((s) => s.hasLocation).length >= 3)
+            TextButton.icon(
               onPressed: () async {
                 await _editStops(context, ref, plan, shortestRoute(plan.stops));
                 if (context.mounted) showMessage(context, tr('Stops reordered for a shorter route'));
@@ -301,19 +286,18 @@ class _PlanBody extends ConsumerWidget {
               icon: const Icon(Icons.alt_route),
               label: Text(tr('Shortest route')),
             ),
-          ),
-        if (plan.stops.length < 5)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
+          if (plan.stops.length < 5)
+            TextButton.icon(
               onPressed: () => _showAddStopSheet(context, ref, plan),
               icon: const Icon(Icons.add_location_alt_outlined),
               label: Text(tr('Add a stop')),
             ),
-          ),
+        ]),
+        if (plan.request.budgetPerPerson != null) ...[
+          const SizedBox(height: KSpace.md),
+          _BudgetCard(plan: plan),
+        ],
         const SizedBox(height: KSpace.md),
-        _BudgetCard(plan: plan),
-        const SizedBox(height: KSpace.sm),
         _BringList(planId: plan.id),
         const SizedBox(height: KSpace.sm),
         _HowWasIt(planId: plan.id),
@@ -332,47 +316,35 @@ class _PlanBody extends ConsumerWidget {
             ),
         ],
         const SizedBox(height: KSpace.lg),
-        FilledButton.icon(
-          onPressed: () => showCreateGroupSheet(context, planId: plan.id,
-              suggestedName: plan.title),
-          icon: const Icon(Icons.group_add_outlined),
-          label: Text(tr('Invite friends')),
-        ),
-        const SizedBox(height: KSpace.sm),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  try {
-                    await ref
-                        .read(plansRepositoryProvider)
-                        .setSaved(uid, plan.id, !plan.saved);
-                    if (!plan.saved) happyMoment(ref);
-                  } catch (e) {
-                    if (context.mounted) showError(context, e);
-                  }
-                },
-                icon: Icon(plan.saved ? Icons.bookmark : Icons.bookmark_outline),
-                label: Text(plan.saved ? tr('Saved') : tr('Save')),
-              ),
+        // The three things people do once a plan looks good.
+        Row(children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => showCreateGroupSheet(context, planId: plan.id, suggestedName: plan.title),
+              icon: const Icon(Icons.group_add_outlined),
+              label: Text(tr('Invite friends')),
             ),
-            const SizedBox(width: KSpace.sm),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _regenerate(context, ref),
-                icon: const Icon(Icons.refresh),
-                label: Text(tr('Another one')),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: KSpace.sm),
-        FilledButton.tonalIcon(
-          onPressed: () => sharePictureCard(context, planStoryCard(plan), planShareText(plan)),
-          icon: const Icon(Icons.photo_camera_back_outlined),
-          label: Text(tr('Send to friends as a picture')),
-        ),
+          ),
+          const SizedBox(width: KSpace.sm),
+          IconButton.outlined(
+            tooltip: plan.saved ? tr('Saved') : tr('Save'),
+            onPressed: () async {
+              try {
+                await ref.read(plansRepositoryProvider).setSaved(uid, plan.id, !plan.saved);
+                if (!plan.saved) happyMoment(ref);
+              } catch (e) {
+                if (context.mounted) showError(context, e);
+              }
+            },
+            icon: Icon(plan.saved ? Icons.bookmark : Icons.bookmark_outline),
+          ),
+          const SizedBox(width: KSpace.sm),
+          IconButton.outlined(
+            tooltip: tr('Send to friends as a picture'),
+            onPressed: () => sharePictureCard(context, planStoryCard(plan), planShareText(plan)),
+            icon: const Icon(Icons.photo_camera_back_outlined),
+          ),
+        ]),
       ],
     );
   }
@@ -590,16 +562,6 @@ class _StopTile extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                IconButton(
-                                  tooltip: tr('Move up'),
-                                  onPressed: onUp,
-                                  icon: const Icon(Icons.arrow_upward, size: 20),
-                                ),
-                                IconButton(
-                                  tooltip: tr('Move down'),
-                                  onPressed: onDown,
-                                  icon: const Icon(Icons.arrow_downward, size: 20),
-                                ),
                                 PopupMenuButton<String>(
                                   tooltip: tr('Edit this stop'),
                                   icon: const Icon(Icons.more_horiz, size: 20),
@@ -607,9 +569,14 @@ class _StopTile extends StatelessWidget {
                                     'time' => onEditTime(),
                                     'length' => onEditLength(),
                                     'note' => onEditNote(),
+                                    'up' => onUp?.call(),
+                                    'down' => onDown?.call(),
                                     _ => onRemove?.call(),
                                   },
                                   itemBuilder: (_) => [
+                                    PopupMenuItem(value: 'up', enabled: onUp != null, child: Text(tr('Move up'))),
+                                    PopupMenuItem(value: 'down', enabled: onDown != null, child: Text(tr('Move down'))),
+                                    const PopupMenuDivider(),
                                     PopupMenuItem(value: 'time', child: Text(tr('Change start time'))),
                                     PopupMenuItem(value: 'length', child: Text(tr('Change how long'))),
                                     PopupMenuItem(
@@ -642,12 +609,7 @@ class _StopTile extends StatelessWidget {
     );
   }
 
-  static String _duration(int minutes) {
-    if (minutes < 60) return trf('{m} min', {'m': minutes});
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
-    return m == 0 ? trf('{n} h', {'n': h}) : trf('{h} h {m} min', {'h': h, 'm': m});
-  }
+  static String _duration(int minutes) => durationText(minutes);
 }
 
 /// Ride shortcuts, shown only on the first stop and only when we have its
@@ -933,7 +895,7 @@ class _RouteCard extends StatelessWidget {
         leading: const Text('🧭', style: TextStyle(fontSize: 24)),
         title: Text(summary == null
             ? tr('Your route')
-            : '${summary.km} km between stops · about ${summary.minutes} min by car'),
+            : trf('{km} km between stops · about {n} min by car', {'km': summary.km, 'n': summary.minutes})),
         subtitle: Text(tr('Straight-line distance; the time is a rough estimate. '
             'Tap to open the whole route in Google Maps.')),
         trailing: const Icon(Icons.open_in_new),

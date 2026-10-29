@@ -152,7 +152,7 @@ class _ToolsBodyState extends ConsumerState<_ToolsBody> {
           index: i < 9 ? i : 0,
           child: SizedBox(
             width: w,
-            height: 112,
+            height: 70 + 42 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.2),
             child: Pressable(
               child: Card(
                 clipBehavior: Clip.antiAlias,
@@ -1013,11 +1013,13 @@ class _SplitCardState extends State<_SplitCard> {
         Row(children: [
           Text(tr('People')),
           IconButton(
+            tooltip: tr('Fewer'),
             onPressed: _people > 1 ? () => setState(() => _people--) : null,
             icon: const Icon(Icons.remove_circle_outline),
           ),
           Text('$_people', style: Theme.of(context).textTheme.titleMedium),
           IconButton(
+            tooltip: tr('More'),
             onPressed: _people < 30 ? () => setState(() => _people++) : null,
             icon: const Icon(Icons.add_circle_outline),
           ),

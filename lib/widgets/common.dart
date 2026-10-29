@@ -635,7 +635,8 @@ class TileGrid extends StatelessWidget {
           for (final (icon, name, about, onTap) in items)
             SizedBox(
               width: w,
-              height: 104,
+              // Grows with the phone's text size so names never get cut.
+              height: 62 + 42 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.2),
               child: Tooltip(
                 message: about,
                 triggerMode: TooltipTriggerMode.longPress,

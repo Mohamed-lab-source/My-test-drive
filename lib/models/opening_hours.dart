@@ -119,11 +119,11 @@ class OpeningHours {
         if (minute >= s && minute < e) {
           return e >= 1440 && s == 0 && e - s >= 1440
               ? tr('Open all day')
-              : trf('Open · closes {t}', {'t': _hhmm(e)});
+              : trf('Open · closes {t}', {'t': _end(e)});
         }
       }
       for (final (_, e) in _week[(now.weekday + 5) % 7 + 1] ?? const <(int, int)>[]) {
-        if (e > 1440 && minute < e - 1440) return trf('Open · closes {t}', {'t': _hhmm(e)});
+        if (e > 1440 && minute < e - 1440) return trf('Open · closes {t}', {'t': _end(e)});
       }
       return tr('Open');
     }
@@ -175,7 +175,7 @@ class OpeningHours {
         list.isEmpty
             ? tr('Closed')
             : list
-                .map((i) => i.$1 == 0 && i.$2 >= 1440 ? tr('24 hours') : '${_hhmm(i.$1)}–${_hhmm(i.$2)}')
+                .map((i) => i.$1 == 0 && i.$2 >= 1440 ? tr('24 hours') : '${_hhmm(i.$1)}–${i.$2 == 1440 ? '24:00' : _hhmm(i.$2)}')
                 .join(', '),
       ));
     }
@@ -183,6 +183,9 @@ class OpeningHours {
   }
 
   static const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  /// A closing time: "midnight" instead of 00:00 (easier to read).
+  static String _end(int minutes) => minutes == 1440 ? tr('midnight') : _hhmm(minutes);
 
   static String _hhmm(int minutes) {
     final m = minutes % 1440;

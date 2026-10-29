@@ -4,7 +4,7 @@ These match what the app really does. Answer the form like this.
 
 **Does your app collect or share any of the required user data types?** Yes.
 **Is all of the user data collected by your app encrypted in transit?** Yes (everything goes over HTTPS to Google Firebase).
-**Do you provide a way for users to request that their data is deleted?** Yes — in the app (Profile → Delete my account) and on the web: `https://<your-project-id>.web.app/delete-account.html`
+**Do you provide a way for users to request that their data is deleted?** Yes — in the app (Settings → Account → Delete my account) and on the web: `https://<your-project-id>.web.app/delete-account.html`
 
 | Data type | Collected? | Shared? | Optional? | Why |
 |---|---|---|---|---|

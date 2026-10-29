@@ -31,6 +31,8 @@ void main() {
     test('open: says when it closes, also after midnight', () {
       expect(OpeningHours.parse('Mo-Su 10:00-23:00')!.statusText(mon(12)), 'Open · closes 23:00');
       expect(OpeningHours.parse('Mo-Su 18:00-02:00')!.statusText(mon(1)), 'Open · closes 02:00');
+      expect(OpeningHours.parse('Mo-Su 08:00-24:00')!.statusText(mon(12)), 'Open · closes midnight');
+      expect(OpeningHours.parse('Mo-Su 08:00-24:00')!.weekTable()!.first.$2, '08:00–24:00');
     });
 
     test('closed: says when it opens next', () {

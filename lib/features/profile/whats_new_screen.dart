@@ -10,6 +10,12 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('⚙️', 'Settings in one place', 'Language, city, look, notifications and your data now live in Settings, in clear groups. Profile is just you.'),
+    ('✨', 'A tidier Explore', 'Lists, ideas, areas, malls and more are one tap away under Discover. The filters row is just filters.'),
+    ('✅', 'Get started', 'New here? Three first steps on Home that tick themselves off.'),
+    ('🧹', 'Cleaner plans', 'Fewer buttons on each stop, the main actions in one row, and nothing empty.'),
+    ('🔠', 'Big text friendly', 'Screens now fit when your phone uses large text.'),
+    ('🔔', 'Reminders fixed', 'Deleting a plan or leaving a group now cancels its reminder.'),
     ('🧰', '19 new tools', 'Tip calculator, car trip split, score keeper, game timer, stopwatch, charades, would you rather, rock paper scissors, spin the bottle, qibla, Hijri date, plus code, your own countdowns and more. Search them and star your favourites.'),
     ('🔍', 'Find any plan', 'Search My plans, sort them, see past outings, and pin the ones you care about to the top.'),
     ('🏷️', 'Labels and notes', 'Give a plan a label (date, birthday, family…) and a private note. Only on your phone.'),
@@ -50,7 +56,7 @@ class WhatsNewScreen extends StatelessWidget {
     ('🛟', 'Share with someone I trust', 'Send your plan and when you\'ll be done, for peace of mind.'),
     ('🧭', 'Around here', 'Wikipedia articles and photos people took near a place.'),
     ('📔', 'My timeline', 'Every place you\'ve been, by date, with a 12-week activity grid.'),
-    ('📸', 'Memories', '"A month ago today you were at…" on the Plan tab.'),
+    ('📸', 'Memories', '"A month ago today you were at…" on Home.'),
     ('👤', 'Profiles', 'Tap a friend or a reviewer to see their level and newest reviews.'),
     ('⭐', 'Sort reviews', 'Newest, highest or lowest, or only reviews with words.'),
     ('✨', 'Daily place idea', 'An optional 10:00 notification with the place of the day.'),
@@ -74,7 +80,7 @@ class WhatsNewScreen extends StatelessWidget {
     ('🎲', 'Party tools', 'Make teams, roll dice and get conversation starters.'),
     ('📖', 'Wikipedia on place pages', 'Famous places show a short summary from Wikipedia, with a link.'),
     ('🌤️', 'Weather at every stop', 'Plans show the forecast for the hour you\'ll be at each place.'),
-    ('☀️', 'UV and air quality', 'Today\'s UV and air quality for your city on the Plan tab.'),
+    ('☀️', 'UV and air quality', 'Today\'s UV and air quality for your city on Home.'),
     ('⭐', 'Top on Khroga', 'The best-rated places in your city and the newest reviews.'),
     ('🏆', 'Weekly challenges', 'A new small goal every Saturday.'),
     ('📸', 'More real facts', 'Instagram, Facebook and menu links, kids areas and halal tags, when the maps list them.'),
@@ -107,16 +113,25 @@ class WhatsNewScreen extends StatelessWidget {
         children: [
           Text(trf('Version {v}', {'v': appVersion}), style: text.bodySmall),
           const SizedBox(height: KSpace.sm),
-          for (final (emoji, title, body) in items)
-            Card(
-              child: ListTile(
-                leading: Text(emoji, style: const TextStyle(fontSize: 26)),
-                title: Text(tr(title)),
-                subtitle: Text(tr(body)),
-              ),
+          // The newest first; everything older folded away.
+          for (final item in items.take(6)) _tile(item),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: ExpansionTile(
+              title: Text(trf('Earlier updates ({n})', {'n': items.length - 6})),
+              children: [for (final item in items.skip(6)) _tile(item)],
             ),
+          ),
         ],
       ),
     );
   }
+
+  Widget _tile((String, String, String) item) => Card(
+        child: ListTile(
+          leading: Text(item.$1, style: const TextStyle(fontSize: 26)),
+          title: Text(tr(item.$2)),
+          subtitle: Text(tr(item.$3)),
+        ),
+      );
 }

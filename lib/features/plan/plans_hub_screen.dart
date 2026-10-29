@@ -351,7 +351,7 @@ class PlanCard extends ConsumerWidget {
                   decoration: BoxDecoration(color: k.surfaceHigh, borderRadius: BorderRadius.circular(16)),
                   alignment: Alignment.center,
                   child: dated
-                      ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      ? FittedBox(fit: BoxFit.scaleDown, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Text(DateFormat('MMM').format(day).toUpperCase(),
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: k.signal)),
                           Text('${day.day}',
@@ -363,7 +363,7 @@ class PlanCard extends ConsumerWidget {
                                 height: 1.05,
                                 color: k.ink,
                               )),
-                        ])
+                        ]))
                       : Text(plan.stops.isEmpty ? '🗺️' : Categories.emoji(plan.stops.first.category),
                           style: const TextStyle(fontSize: 26)),
                 ),

@@ -416,11 +416,13 @@ class _OrderSheetState extends State<_OrderSheet> {
         Row(children: [
           Expanded(child: Text(tr('How many'))),
           IconButton.outlined(
+            tooltip: tr('Fewer'),
             onPressed: _qty > 1 ? () => setState(() => _qty--) : null,
             icon: const Icon(Icons.remove),
           ),
           SizedBox(width: 44, child: Text('$_qty', textAlign: TextAlign.center)),
           IconButton.outlined(
+            tooltip: tr('More'),
             onPressed: _qty < 50 ? () => setState(() => _qty++) : null,
             icon: const Icon(Icons.add),
           ),

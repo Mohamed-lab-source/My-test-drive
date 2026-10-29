@@ -568,7 +568,7 @@ void _showFriend(BuildContext context, WidgetRef ref, PublicProfile p, Friendshi
                   await ref.read(socialRepositoryProvider).remove(f.id);
                 } catch (_) {}
                 if (context.mounted) {
-                  showMessage(context, trf('{name} is blocked. Unblock in Profile → Blocked people.', {'name': p.displayName}));
+                  showMessage(context, trf('{name} is blocked. Unblock in Settings → Blocked people.', {'name': p.displayName}));
                 }
               },
               label: Text(trf('Block {name}', {'name': p.displayName})),

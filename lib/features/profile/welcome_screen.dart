@@ -1,3 +1,5 @@
+import '../../models/plan.dart';
+import '../../data/providers.dart';
 import '../../app/i18n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +27,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     ('🧭', 'Explore real places', 'Thousands of places in Cairo, Giza and Alexandria, straight from the map. '
         'Unknown facts say "unknown", never guesses.'),
     ('👯', 'Bring your friends', 'Make a group, vote in polls, chat and split the bill. All free.'),
-    ('🇪🇬', 'Arabic or English', 'Switch language any time in Profile. Maps, check-ins and plans work in both.'),
+    ('📍', 'Where are you?', 'Pick your city. You can change it, and the language, any time in Settings.'),
   ];
 
   @override
@@ -36,7 +38,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   void _done() {
     ref.read(appSettingsProvider.notifier).finishOnboarding();
-    context.go(ref.read(appSettingsProvider).startOnExplore ? '/explore' : '/plan');
+    context.go(switch (ref.read(pocketPrefsProvider)['start']) {
+      'plans' => '/plans',
+      'explore' => '/explore',
+      _ => ref.read(appSettingsProvider).startOnExplore ? '/explore' : '/plan',
+    });
   }
 
   @override
@@ -104,6 +110,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                                 textAlign: TextAlign.center,
                                 style: text.bodyLarge?.copyWith(color: k.onHero.withValues(alpha: 0.9))),
                           ),
+                          // Last page: pick your city right here.
+                          if (emoji == '📍') ...[
+                            const SizedBox(height: KSpace.lg),
+                            Wrap(alignment: WrapAlignment.center, spacing: KSpace.sm, runSpacing: KSpace.sm, children: [
+                              for (final e in Cities.all.entries)
+                                ChoiceChip(
+                                  label: Text(tr(e.value)),
+                                  selected: ref.watch(cityProvider) == e.key,
+                                  showCheckmark: false,
+                                  onSelected: (_) => ref.read(cityProvider.notifier).set(e.key),
+                                ),
+                            ]),
+                          ],
                         ],
                       ),
                   ],

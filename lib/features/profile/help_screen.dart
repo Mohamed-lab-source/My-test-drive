@@ -68,7 +68,7 @@ class HelpScreen extends StatefulWidget {
     (
       '🗑️',
       'How do I delete my data?',
-      'Profile → Delete my account removes everything: plans, reviews, messages and your sign-in. You can export a copy first.',
+      'Settings → Account → Delete my account removes everything: plans, reviews, messages and your sign-in. You can export a copy first.',
     ),
     (
       '🧰',

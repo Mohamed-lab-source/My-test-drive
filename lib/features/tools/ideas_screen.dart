@@ -18,11 +18,12 @@ class IdeasScreen extends StatelessWidget {
       appBar: AppBar(title: Text(tr('Outing ideas'))),
       body: GridView.builder(
         padding: const EdgeInsets.all(KSpace.md),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 260,
           mainAxisSpacing: KSpace.sm,
           crossAxisSpacing: KSpace.sm,
-          childAspectRatio: 0.95,
+          // Taller cards when the phone uses bigger text.
+          childAspectRatio: 0.95 / MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.2),
         ),
         itemCount: outingIdeas.length,
         itemBuilder: (context, i) {
