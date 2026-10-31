@@ -219,7 +219,7 @@ Future<void> deleteMyAccount(BuildContext context, WidgetRef ref) async {
       ),
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   if (ok != true || !context.mounted) return;
   final uid = ref.read(uidProvider);
   if (uid == null) return;

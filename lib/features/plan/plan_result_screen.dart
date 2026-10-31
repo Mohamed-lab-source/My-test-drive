@@ -816,7 +816,7 @@ Future<void> _rename(BuildContext context, WidgetRef ref, OutingPlan plan) async
       ],
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   final uid = ref.read(uidProvider);
   if (title == null || title.trim().isEmpty || uid == null) return;
   try {
@@ -965,7 +965,7 @@ Future<void> _editNote(BuildContext context, WidgetRef ref, OutingPlan plan, int
       ],
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   if (note == null || !context.mounted) return;
   await _editStops(context, ref, plan, setStopNote(plan.stops, i, note));
 }
@@ -1003,7 +1003,7 @@ class _BringList extends ConsumerWidget {
           ],
         ),
       );
-      controller.dispose();
+      disposeLater(controller);
       if (item != null && item.trim().isNotEmpty) save([...items, item.trim()]);
     }
 

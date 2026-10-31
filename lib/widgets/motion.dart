@@ -77,7 +77,9 @@ class _PressableState extends State<Pressable> {
   bool _down = false;
 
   void _set(bool v) {
-    if (_down != v) setState(() => _down = v);
+    // The finger can lift after the item already moved away (e.g. a list
+    // that reorders on tap), so only update while still on screen.
+    if (mounted && _down != v) setState(() => _down = v);
   }
 
   @override

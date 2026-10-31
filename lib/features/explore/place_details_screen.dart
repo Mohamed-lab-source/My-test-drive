@@ -787,7 +787,7 @@ class _VisitedAndNote extends ConsumerWidget {
         ],
       ),
     );
-    controller.dispose();
+    disposeLater(controller);
     if (text == null) return;
     final repo = ref.read(personalRepositoryProvider);
     try {

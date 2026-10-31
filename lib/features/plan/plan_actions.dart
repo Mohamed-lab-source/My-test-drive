@@ -119,7 +119,7 @@ Future<void> renamePlan(BuildContext context, WidgetRef ref, OutingPlan plan) as
       ],
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   final uid = ref.read(uidProvider);
   if (name == null || name.isEmpty || uid == null) return;
   try {

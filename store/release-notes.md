@@ -2,6 +2,18 @@
 
 Keep each under 500 characters.
 
+## 2.1.1
+
+<en-US>
+• Fixes freezes and flashes when closing pop-ups (rename, notes, names)
+• Fixes taps on lists that rearrange themselves (tools)
+</en-US>
+
+<ar>
+• تصليح التهنيج والوميض لما بتقفل النوافذ الصغيرة (تغيير الاسم والملحوظات)
+• تصليح الضغط على القوايم اللي بتترتب لوحدها (الأدوات)
+</ar>
+
 ## 2.1.0
 
 <en-US>

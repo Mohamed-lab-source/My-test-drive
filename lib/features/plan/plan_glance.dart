@@ -168,7 +168,7 @@ Future<void> editPlanNote(BuildContext context, WidgetRef ref, OutingPlan plan) 
       ],
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   if (text == null) return;
   ref.read(planNotesProvider.notifier).set(plan.id, text.isEmpty ? null : text);
 }

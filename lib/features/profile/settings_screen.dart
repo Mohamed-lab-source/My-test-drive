@@ -279,7 +279,7 @@ Future<void> _editNickname(BuildContext context, WidgetRef ref, String? nick) as
       ],
     ),
   );
-  c.dispose();
+  disposeLater(c);
   if (v != null) ref.read(pocketPrefsProvider.notifier).set('nickname', v.isEmpty ? null : v);
 }
 

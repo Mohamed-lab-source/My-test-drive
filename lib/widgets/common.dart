@@ -903,3 +903,9 @@ class GradientButton extends StatelessWidget {
     );
   }
 }
+
+/// Disposes a text box's controller after its pop-up has finished closing.
+/// Disposing right after `await showDialog` breaks the closing animation
+/// (it still draws the text box for a moment).
+void disposeLater(ChangeNotifier controller) =>
+    Future<void>.delayed(const Duration(seconds: 1), controller.dispose);

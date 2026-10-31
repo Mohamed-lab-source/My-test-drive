@@ -200,7 +200,7 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
         ],
       ),
     );
-    controller.dispose();
+    disposeLater(controller);
     if (name == null || name.isEmpty || !mounted) return;
     if (ref.read(planPresetsProvider).length >= 8 && !ref.read(planPresetsProvider).containsKey(name)) {
       showMessage(context, tr('You can keep up to 8. Remove one first.'));

@@ -232,7 +232,7 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
-    controller.dispose();
+    disposeLater(controller);
     if (name == null || name.trim().isEmpty) return;
     final uid = ref.read(uidProvider);
     if (uid == null) return;

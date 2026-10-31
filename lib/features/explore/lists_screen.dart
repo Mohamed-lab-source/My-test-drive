@@ -94,7 +94,7 @@ class ListsScreen extends ConsumerWidget {
                                 ],
                               ),
                             );
-                            controller.dispose();
+                            disposeLater(controller);
                             if (name != null) ref.read(placeListsProvider.notifier).rename(e.key, name);
                           },
                           icon: const Icon(Icons.edit_outlined),
@@ -150,7 +150,7 @@ Future<String?> newListDialog(BuildContext context, WidgetRef ref) async {
       ],
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   if (name == null || name.trim().isEmpty) return null;
   ref.read(placeListsProvider.notifier).create(name);
   return name.trim();

@@ -285,7 +285,7 @@ Future<void> _renameGroup(BuildContext context, WidgetRef ref, Group group) asyn
       ],
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   if (name == null || name.trim().isEmpty) return;
   try {
     await ref.read(groupsRepositoryProvider).rename(group.id, name);
@@ -317,7 +317,7 @@ Future<void> _pinNote(BuildContext context, WidgetRef ref, Group group) async {
       ],
     ),
   );
-  controller.dispose();
+  disposeLater(controller);
   if (text == null) return;
   try {
     await ref.read(groupsRepositoryProvider).setPinned(group.id, text);
@@ -1373,7 +1373,7 @@ class _ComposerState extends ConsumerState<_Composer> {
       }
     }
     for (final c in controllers) {
-      c.dispose();
+      disposeLater(c);
     }
   }
 
@@ -1921,7 +1921,7 @@ class _PollsSheet extends ConsumerWidget {
                     onPressed: () => setState(() {
                       question.text = tr('Which day works for you?');
                       for (final c in options) {
-                        c.dispose();
+                        disposeLater(c);
                       }
                       final now = DateTime.now();
                       options
@@ -1936,7 +1936,7 @@ class _PollsSheet extends ConsumerWidget {
                     onPressed: () => setState(() {
                       question.text = tr('What time should we meet?');
                       for (final c in options) {
-                        c.dispose();
+                        disposeLater(c);
                       }
                       options
                         ..clear()
@@ -1949,7 +1949,7 @@ class _PollsSheet extends ConsumerWidget {
                     onPressed: () => setState(() {
                       question.text = tr('What are we in the mood for?');
                       for (final c in options) {
-                        c.dispose();
+                        disposeLater(c);
                       }
                       options
                         ..clear()
@@ -1963,7 +1963,7 @@ class _PollsSheet extends ConsumerWidget {
                     onPressed: () => setState(() {
                       question.text = question.text.isEmpty ? tr('Which place?') : question.text;
                       for (final c in options) {
-                        c.dispose();
+                        disposeLater(c);
                       }
                       options
                         ..clear()
@@ -1984,9 +1984,9 @@ class _PollsSheet extends ConsumerWidget {
     );
     final q = question.text.trim();
     final opts = options.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
-    question.dispose();
+    disposeLater(question);
     for (final c in options) {
-      c.dispose();
+      disposeLater(c);
     }
     if (ok != true) return;
     if (q.isEmpty || opts.length < 2) {
