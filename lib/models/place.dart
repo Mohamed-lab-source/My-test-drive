@@ -88,7 +88,15 @@ class Place {
     return other == null || other.trim().isEmpty || other == shownName ? null : other;
   }
 
-  OpeningHours? get hours => OpeningHours.parse(openingHours);
+  OpeningHours? get hours {
+    final raw = openingHours;
+    if (raw == null) return null;
+    // Many places share the same hours text, and Explore asks for thousands
+    // at once ("open now"), so each text is only read once.
+    return _hoursCache.putIfAbsent(raw, () => OpeningHours.parse(raw));
+  }
+
+  static final _hoursCache = <String, OpeningHours?>{};
 
   /// true = open, false = closed, null = we don't know.
   bool? isOpenAt(DateTime time) => hours?.isOpenAt(time);

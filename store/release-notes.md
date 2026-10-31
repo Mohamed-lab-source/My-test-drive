@@ -2,6 +2,18 @@
 
 Keep each under 500 characters.
 
+## 2.1.2
+
+<en-US>
+• Switching tabs is instant and smooth again
+• Explore is faster with lots of places
+</en-US>
+
+<ar>
+• التنقل بين التبويبات بقى فوري وناعم تاني
+• استكشف بقى أسرع مع الأماكن الكتير
+</ar>
+
 ## 2.1.1
 
 <en-US>

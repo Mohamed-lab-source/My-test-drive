@@ -147,7 +147,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ?p.kindLabel,
       ].where((k) => k.isNotEmpty && k != 'shisha').toList();
 
+  // The last filtered list and what it was made from: rebuilding Explore
+  // (scrolling the chips, a favorite changing…) shouldn't redo it.
+  Object? _lastKey;
+  List<Place> _lastList = const [];
+  bool _lastClose = false;
+
   List<Place> _filter(List<Place> all, (double, double)? me) {
+    final now = DateTime.now();
+    final key = Object.hashAll([
+      identityHashCode(all), _query, _category, _kind, _area, _openNow, _sort, me,
+      Object.hashAllUnordered(_extras), Object.hashAllUnordered(_visited), Object.hashAllUnordered(_favorites),
+      now.minute, now.hour,
+    ]);
+    if (key == _lastKey) {
+      _closeMatches = _lastClose;
+      return _lastList;
+    }
+    final list = _filterNow(all, me);
+    _lastKey = key;
+    _lastList = list;
+    _lastClose = _closeMatches;
+    return list;
+  }
+
+  List<Place> _filterNow(List<Place> all, (double, double)? me) {
     final raw = _query.trim();
     final q = normalizeSearch(latinDigits(raw));
     final now = DateTime.now();
