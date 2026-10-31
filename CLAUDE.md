@@ -393,6 +393,25 @@ How the code enforces it (keep it this way):
   settings rows put controls under the title (test in screens_test).
   Closing at midnight reads "midnight" (tables show 24:00).
 
+- 2.2 smarter plans (`lib/planner/curation.dart`, tested in
+  test/curation_test.dart): `isJunkPlace` drops non-outings at load
+  (offices, compounds, real estate, streets/addresses, Overture "historic
+  sites" without a landmark word, members-only clubs and stadiums, beaches
+  outside Alexandria, groceries filed as cafés, pyramid pins far from the
+  real sites, places too far from their city). Ranking uses `fameOf` (map
+  signals only: quality, Wikidata, photo, OSM entry, hours) with penalties
+  for chain branches (`chainSizes`/`chainKey`, ≥4 = chain) and quick bites
+  (`isQuickBite`, harsh for romantic). `pickCandidates` centres on
+  `bestHub` (most good, varied options within 2.5 km, randomised a bit),
+  keeps one branch per chain, no shops outside mall plans. `fallbackPlan`
+  follows `stopRoles` (fun → meal → sweet/coffee; night meal first; foodie
+  all food) and fills each slot near the last stop, open at that time,
+  never the same category twice in a row, one restaurant per ≤3 stops,
+  no chain twice; `isDaytimeOnly` (museums, parks, sights, zoos, beaches)
+  is avoided after 17:30. Explore sorts by `fameOf` too. Google/TripAdvisor
+  reviews are not used: copying them breaks their terms and the Places API
+  isn't free.
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 2.2.0
+
+<en-US>
+• Smarter plans: something to do, then a meal, then coffee or dessert, all close together
+• Stops are checked against opening hours for the time you get there
+• Fewer fast-food chains on date nights, one branch per chain
+• Offices, compounds and streets no longer show up as places
+</en-US>
+
+<ar>
+• خطط أذكى: حاجة تعملوها، بعدين أكلة، بعدين قهوة أو حلو، وكله قريب من بعض
+• بنتأكد إن كل مكان فاتح وقت ما توصلوله
+• سلاسل أكل سريع أقل في خروجات الرومانسية، وفرع واحد من كل سلسلة
+• المكاتب والكمبوندات والشوارع مبقتش بتظهر كأماكن
+</ar>
+
 ## 2.1.2
 
 <en-US>

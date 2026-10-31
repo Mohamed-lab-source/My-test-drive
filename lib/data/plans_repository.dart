@@ -52,7 +52,7 @@ class PlansRepository {
       }
       source = plan == null ? 'fallback' : 'ai';
     }
-    plan ??= fallbackPlan(request, candidates);
+    plan ??= fallbackPlan(request, candidates, day: day);
 
     var stops = buildStops(plan.stops, candidates);
     final aiWrote = source == 'ai';

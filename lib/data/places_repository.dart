@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../app/districts.dart';
 import '../models/place.dart';
+import '../planner/curation.dart';
 
 /// Real places from OpenStreetMap and Overture Maps, bundled inside the app
 /// at build time (assets/data/places.json). No server, no cost, works offline.
@@ -34,7 +35,7 @@ class PlacesRepository {
   Future<List<Place>> placesInCity(String city) async {
     final list = (await all()).where((p) => p.city == city).toList()
       ..sort((a, b) {
-        final q = b.quality.compareTo(a.quality);
+        final q = fameOf(b).compareTo(fameOf(a));
         return q != 0 ? q : a.name.compareTo(b.name);
       });
     return list;
@@ -67,6 +68,8 @@ List<Place> _parsePlaces((String, bool) input) {
         if (arabic && map['area'] is String) map['area'] = areaName(map['area'] as String, arabic: true);
         return Place.fromMap(map);
       })
-      .where((p) => p.id.isNotEmpty)
+      // Leave out entries that aren't somewhere to go (offices, compounds,
+      // streets filed as sights, places far outside the city...).
+      .where((p) => p.id.isNotEmpty && !isJunkPlace(p))
       .toList();
 }

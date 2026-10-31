@@ -2485,4 +2485,10 @@ const arabic = <String, String>{
   'Reminders fixed': 'التذكيرات اتصلحت',
   'Deleting a plan or leaving a group now cancels its reminder.': 'مسح خطة أو الخروج من جروب بقى بيلغي التذكير بتاعه.',
   'Settings in one place, a tidier Explore and cleaner plans': 'الإعدادات في مكان واحد، استكشف أنضف، وخطط أنضف',
+  'Smarter plans': 'خطط أذكى',
+  'Plans now go in a sensible order (something to do, then a meal, then coffee or dessert), with stops close to each other and open when you get there.':
+      'الخطط بقت ماشية بترتيب منطقي (حاجة تعملوها، بعدين أكلة، بعدين قهوة أو حلو)، والأماكن قريبة من بعض وفاتحة وقت ما توصلوا.',
+  'Better places': 'أماكن أحسن',
+  'Fewer fast-food chains for a date night, one branch per chain, and no more offices, compounds or streets listed as places to visit.':
+      'سلاسل أكل سريع أقل في خروجات الرومانسية، فرع واحد بس من كل سلسلة، ومفيش تاني مكاتب أو كمبوندات أو شوارع على إنها أماكن تتزار.',
 };

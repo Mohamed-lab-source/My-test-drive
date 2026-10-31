@@ -12,6 +12,7 @@ import 'dart:math' as math;
 import '../app/i18n.dart';
 import '../models/place.dart';
 import '../models/plan.dart';
+import 'curation.dart';
 
 class Weather {
   const Weather({required this.maxTempC, required this.rainChancePct});
@@ -50,14 +51,13 @@ const Map<String, Map<String, int>> vibeWeights = {
   'chill': {'cafe': 3, 'park': 2, 'restaurant': 1, 'museum': 1, 'cinema': 1, 'sight': 1},
   'foodie': {'restaurant': 3, 'cafe': 2},
   'active': {'escape_room': 3, 'entertainment': 3, 'activity': 3, 'park': 1},
-  'romantic': {'restaurant': 3, 'cafe': 2, 'cinema': 2, 'park': 1, 'sight': 1},
+  'romantic': {'restaurant': 3, 'cafe': 2, 'cinema': 2, 'activity': 2, 'sight': 2, 'park': 1},
   'family': {'entertainment': 3, 'park': 2, 'mall': 2, 'cinema': 2, 'restaurant': 1, 'museum': 1, 'sight': 1},
   'culture': {'museum': 3, 'sight': 3, 'park': 1, 'cafe': 1},
   'shopping': {'mall': 3, 'shop': 2, 'cafe': 1, 'restaurant': 1},
   'nightlife': {'restaurant': 2, 'cafe': 2, 'cinema': 2, 'entertainment': 2},
 };
 
-const _daytimeCategories = {'museum', 'park', 'sight'};
 
 /// When the outing starts today, for checking opening hours.
 DateTime startTimeFor(String timeOfDay, DateTime now) {
@@ -71,18 +71,30 @@ bool isBadWeather(Weather? w) =>
 bool isIndoor(Place p) => p.indoor ?? p.category != 'park';
 
 double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random random,
-    {DateTime? startsAt}) {
+    {DateTime? startsAt, bool chain = false}) {
   var fit = 0;
   for (final v in input.vibes) {
     fit += vibeWeights[v]?[p.category] ?? 0;
   }
   if (fit == 0) return double.negativeInfinity;
 
+  final vibes = input.vibes.toSet();
+  final cozy = vibes.intersection(const {'romantic', 'chill', 'culture', 'foodie'}).isNotEmpty;
   var score = fit * 10.0;
-  // Better-documented map entries are usually better-known places.
-  score += math.min(p.quality, 10) * 1.5;
-  if ((input.timeOfDay == 'night' || input.timeOfDay == 'evening') &&
-      _daytimeCategories.contains(p.category)) {
+  // How well-known it probably is (map signals only, never shown).
+  score += fameOf(p) * 1.2;
+  // One branch of a big chain is rarely what makes an outing special.
+  if (chain) score -= cozy ? 14 : 6;
+  // A burger or koshary stop isn't a romantic dinner.
+  if (isQuickBite(p)) {
+    score -= vibes.contains('romantic') ? 30 : vibes.contains('foodie') ? 10 : vibes.contains('chill') ? 8 : 3;
+  }
+  final kind = p.kind ?? '';
+  if (vibes.contains('nightlife') && (kind.contains('hookah') || kind == 'lounge')) score += 8;
+  if (vibes.contains('family') && (kind.contains('playcenter') || kind.contains('zoo') || kind.contains('amusement'))) {
+    score += 8;
+  }
+  if ((input.timeOfDay == 'night' || input.timeOfDay == 'evening') && isDaytimeOnly(p)) {
     score -= input.timeOfDay == 'night' ? 1000 : 15;
   }
   if (isBadWeather(weather) && !isIndoor(p)) score -= 25;
@@ -153,39 +165,75 @@ List<Place> pickCandidates(
   final rnd = random ?? math.Random();
   final startsAt = now == null ? null : startTimeFor(input.timeOfDay, now);
   final exclude = input.excludePlaceIds.toSet();
+  final inMall = input.mallId != null && input.mallId!.isNotEmpty;
+  final chains = chainSizes(places);
 
-  List<Place> rank(bool useExclude) {
+  List<(Place, double)> rank(bool useExclude) {
     final scored = <(Place, double)>[
       for (final p in places)
         if (passesFilters(p, input) &&
+            !isJunkPlace(p) &&
+            // Shops only make sense inside the mall you picked.
+            (inMall || p.category != 'shop') &&
             (!useExclude || !exclude.contains(p.id)) &&
             !(input.onlyOpen && startsAt != null && p.isOpenAt(startsAt) == false))
-          (p, scorePlace(p, input, weather, rnd, startsAt: startsAt)),
+          (p, scorePlace(p, input, weather, rnd, startsAt: startsAt, chain: isChain(p, chains))),
     ]..removeWhere((x) => x.$2 < -500);
     scored.sort((a, b) => b.$2.compareTo(a.$2));
-    return [for (final x in scored) x.$1];
+    return scored;
   }
 
-  var ranked = rank(true);
+  var scored = rank(true);
   // If "Another one" has used up the good options, allow repeats again.
-  if (ranked.length < input.stops) ranked = rank(false);
-  // "Anywhere in the city": still keep every stop close together, around
-  // the best match, so nobody crosses Cairo between stops.
-  if (!input.hasAnchor && (input.mallId == null || input.mallId!.isEmpty)) {
-    ranked = keepClose(ranked, input.stops);
+  if (scored.length < input.stops) scored = rank(false);
+  var ranked = [for (final x in scored) x.$1];
+  // "Anywhere in the city": keep every stop close together, around the
+  // spot with the most good options, so nobody crosses Cairo between stops.
+  if (!input.hasAnchor && !inMall) {
+    ranked = keepClose(ranked, input.stops, seed: bestHub(scored, random: rnd));
   }
 
-  // Keep variety: at most 12 of any one category.
+  // Keep variety: at most 12 of any one category, one branch per chain.
   final perCategory = <String, int>{};
+  final seenChains = <String>{};
   final out = <Place>[];
   for (final p in ranked) {
     final n = perCategory[p.category] ?? 0;
     if (n >= 12) continue;
+    final key = chainKey(p.name);
+    if (key.length >= 3 && !seenChains.add(key)) continue;
     perCategory[p.category] = n + 1;
     out.add(p);
     if (out.length >= limit) break;
   }
   return out;
+}
+
+/// The best place to center an outing on: a well-ranked place with plenty
+/// of other good (and different) options within a short walk or ride.
+Place? bestHub(List<(Place, double)> scored, {double radiusKm = 2.5, int look = 30, math.Random? random}) {
+  final top = [for (final x in scored.take(200)) if (x.$1.hasLocation) x];
+  if (top.isEmpty) return null;
+  Place? best;
+  var bestValue = double.negativeInfinity;
+  for (final (seed, seedScore) in top.take(look)) {
+    final near = <String, double>{};
+    for (final (p, s) in top) {
+      if (identical(p, seed)) continue;
+      if (haversineKm(seed.lat!, seed.lng!, p.lat!, p.lng!) > radiusKm) continue;
+      // Count the best option of each category once, so variety wins.
+      if (s > (near[p.category] ?? double.negativeInfinity)) near[p.category] = s;
+    }
+    var value = seedScore + near.values.fold(0.0, (a, b) => a + b) * 0.5;
+    // Several good areas are close in value: vary between them so not
+    // everyone is sent to the same street.
+    if (random != null) value *= 0.7 + random.nextDouble() * 0.6;
+    if (value > bestValue) {
+      bestValue = value;
+      best = seed;
+    }
+  }
+  return best;
 }
 
 // ---------------------------------------------------------------------------
@@ -266,8 +314,13 @@ String buildPrompt(PlanRequest input, List<Place> candidates, Weather? weather, 
     '1. Every placeId MUST be copied exactly from the list. Never invent places.',
     '2. Never use the same place twice.',
     "3. NEVER mention prices, costs, menus or amounts of money. We don't know them.",
-    '4. Order stops sensibly: activities first, food or cafés later; respect opening hours '
-        '(written in OpenStreetMap format, e.g. "Mo-Su 10:00-23:00").',
+    '4. Order stops sensibly: something to do first, then one proper meal, then coffee or dessert '
+        '(at night the meal can come first). At most one full meal unless there are 4+ stops; '
+        'never two restaurants or two cafés in a row; never two branches of the same chain. '
+        'Respect opening hours at the time of each stop (written in OpenStreetMap format, '
+        'e.g. "Mo-Su 10:00-23:00"). Museums, parks, zoos and sights are for daylight.',
+    if (input.vibes.contains('romantic'))
+      '4b. For a romantic outing avoid fast food and big chains when a better option is listed.',
     "5. Prefer places in the same or nearby areas so the group doesn't cross the city.",
     "6. Times must be realistic and in order. Keep 'why' to one friendly sentence.",
     '7. Tips: up to 3 short practical tips (e.g. booking ahead, traffic). No prices.',
@@ -345,31 +398,123 @@ const _defaultMinutes = {
 
 const _food = {'restaurant', 'cafe'};
 
-ProposedPlan fallbackPlan(PlanRequest input, List<Place> candidates) {
+/// The order of an outing, by time of day: something to do, then a meal,
+/// then coffee or dessert. Foodie-only plans are all food, never two big
+/// meals in a row.
+List<String> stopRoles(PlanRequest input, {bool hasFun = true}) {
+  final n = input.stops;
+  final pattern = !hasFun
+      ? const ['meal', 'sweet', 'coffee', 'meal', 'sweet']
+      : switch (input.timeOfDay) {
+          'night' => const ['meal', 'fun', 'coffee', 'fun', 'sweet'],
+          'morning' => const ['fun', 'fun', 'meal', 'coffee', 'fun'],
+          _ => const ['fun', 'meal', 'sweet', 'fun', 'coffee'],
+        };
+  if (n == 1) return [hasFun ? 'fun' : 'meal'];
+  if (n == 2) {
+    return hasFun
+        ? (input.timeOfDay == 'night' ? const ['meal', 'fun'] : const ['fun', 'meal'])
+        : const ['meal', 'sweet'];
+  }
+  return [for (var i = 0; i < n; i++) pattern[i % pattern.length]];
+}
+
+/// "groppi garden" → "groppi" (so Groppi and Groppi Garden aren't both picked).
+String _firstWord(String key) {
+  final w = key.split(' ').first;
+  return w.length >= 4 ? w : key;
+}
+
+bool _fitsRole(Place p, String role) => switch (role) {
+      'fun' => !_food.contains(p.category),
+      'meal' => p.category == 'restaurant',
+      _ => p.category == 'cafe',
+    };
+
+/// Builds the app's own plan from the ranked [candidates]: a sensible order
+/// (see [stopRoles]), stops close to each other, open at the time we'd get
+/// there (when the hours are known), no two of the same kind back to back
+/// and no chain twice.
+ProposedPlan fallbackPlan(PlanRequest input, List<Place> candidates, {DateTime? day, math.Random? random}) {
+  final rnd = random ?? math.Random();
   final target = math.min(input.stops, candidates.length);
-  final chosen = <Place>[];
-  final usedCategories = <String>{};
-  // Prefer a new category each time for variety.
-  for (final p in candidates) {
-    if (chosen.length >= target) break;
-    if (usedCategories.add(p.category)) chosen.add(p);
-  }
-  for (final p in candidates) {
-    if (chosen.length >= target) break;
-    if (!chosen.contains(p)) chosen.add(p);
-  }
-  // Activities first, food last.
-  chosen.sort((a, b) =>
-      (_food.contains(a.category) ? 1 : 0).compareTo(_food.contains(b.category) ? 1 : 0));
+  final hasFun = candidates.any((p) => !_food.contains(p.category));
+  final roles = stopRoles(PlanRequest(
+    city: input.city, groupSize: input.groupSize, vibes: input.vibes, timeOfDay: input.timeOfDay,
+    stops: target,
+  ), hasFun: hasFun);
 
   final parts = startHour[input.timeOfDay]!.split(':').map(int.parse).toList();
   var minutes = parts[0] * 60 + parts[1];
+  final rankOf = {for (final (i, p) in candidates.indexed) p.id: i};
+  final chosen = <Place>[];
   final stops = <ProposedStop>[];
-  for (final p in chosen) {
-    final duration = _defaultMinutes[p.category] ?? 90;
-    stops.add(ProposedStop(placeId: p.id, startTime: _hhmm(minutes), durationMinutes: duration));
-    minutes += duration + 20;
+  final usedChains = <String>{};
+  final usedCategories = <String, int>{};
+  final usedFood = <String>{};
+  var restaurants = 0;
+  Place? prev;
+  String? mallId;
+
+  for (final role in roles) {
+    Place? best;
+    var bestScore = double.negativeInfinity;
+    final at = day == null ? null : DateTime(day.year, day.month, day.day).add(Duration(minutes: minutes));
+    for (final p in candidates) {
+      if (chosen.contains(p)) continue;
+      var s = 40.0 * (1 - rankOf[p.id]! / candidates.length) + rnd.nextDouble() * 12;
+      if (!_fitsRole(p, role)) s -= 60;
+      // Something to do should be somewhere people know (well documented).
+      if (role == 'fun' && fameOf(p) < 6) s -= 20;
+      final key = chainKey(p.name);
+      if (key.length >= 3 && (usedChains.contains(key) || usedChains.contains(_firstWord(key)))) s -= 80;
+      s -= 14.0 * (usedCategories[p.category] ?? 0);
+      if (prev != null && prev.category == p.category) s -= 30;
+      final food = foodRole(p);
+      if (food != 'fun' && usedFood.contains(food)) s -= 25;
+      if (p.category == 'restaurant' && restaurants >= (target >= 4 ? 2 : 1)) s -= 45;
+      if (role == 'sweet' && isSweetStop(p)) s += 10;
+      if (role == 'coffee' && p.category == 'cafe' && !isSweetStop(p)) s += 6;
+      // Close to the last stop (or inside the same mall).
+      if (prev != null && prev.hasLocation && p.hasLocation) {
+        final km = haversineKm(prev.lat!, prev.lng!, p.lat!, p.lng!);
+        s -= km * 4;
+        if (km > 4) s -= 25;
+      }
+      if (mallId != null && p.parentMallId == mallId) s += 12;
+      // Open when we'd get there, if we know the hours.
+      if (at != null) {
+        final open = p.isOpenAt(at);
+        if (open == false) s -= 60;
+        if (open == true) s += 4;
+      }
+      if (isDaytimeOnly(p) && minutes >= 17 * 60 + 30) s -= 40;
+      if (s > bestScore) {
+        bestScore = s;
+        best = p;
+      }
+    }
+    if (best == null) break;
+    chosen.add(best);
+    final key = chainKey(best.name);
+    if (key.length >= 3) usedChains.addAll([key, _firstWord(key)]);
+    usedCategories[best.category] = (usedCategories[best.category] ?? 0) + 1;
+    final food = foodRole(best);
+    if (food != 'fun') usedFood.add(food);
+    if (best.category == 'restaurant') restaurants++;
+    if (best.category == 'mall') mallId = best.id;
+    final duration = _defaultMinutes[best.category] ?? 90;
+    final gap = prev != null && prev.hasLocation && best.hasLocation &&
+            haversineKm(prev.lat!, prev.lng!, best.lat!, best.lng!) < 0.4
+        ? 10
+        : 20;
+    if (prev != null) minutes += gap;
+    minutes = (minutes / 5).round() * 5;
+    stops.add(ProposedStop(placeId: best.id, startTime: _hhmm(minutes), durationMinutes: duration));
+    minutes += duration;
+    prev = best;
   }
+
   final city = tr(Cities.all[input.city] ?? input.city);
   final time = tr(TimesOfDay.all[input.timeOfDay] ?? input.timeOfDay);
   return ProposedPlan(
@@ -788,12 +933,12 @@ const compactRadiusKm = 5.0;
 
 /// Keeps only places within [compactRadiusKm] of the best-ranked place that
 /// has coordinates. If that leaves too few for [stops], widens step by step.
-List<Place> keepClose(List<Place> ranked, int stops) {
-  final seed = ranked.where((p) => p.hasLocation).firstOrNull;
-  if (seed == null) return ranked;
-  for (final r in [compactRadiusKm, 8.0, 12.0]) {
+List<Place> keepClose(List<Place> ranked, int stops, {Place? seed}) {
+  final s = seed ?? ranked.where((p) => p.hasLocation).firstOrNull;
+  if (s == null) return ranked;
+  for (final r in [3.0, compactRadiusKm, 8.0, 12.0]) {
     final near = ranked
-        .where((p) => p.hasLocation && haversineKm(seed.lat!, seed.lng!, p.lat!, p.lng!) <= r)
+        .where((p) => p.hasLocation && haversineKm(s.lat!, s.lng!, p.lat!, p.lng!) <= r)
         .toList();
     if (near.length >= stops) return near;
   }

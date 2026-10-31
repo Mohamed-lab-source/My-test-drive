@@ -10,6 +10,8 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('🧠', 'Smarter plans', 'Plans now go in a sensible order (something to do, then a meal, then coffee or dessert), with stops close to each other and open when you get there.'),
+    ('🍝', 'Better places', 'Fewer fast-food chains for a date night, one branch per chain, and no more offices, compounds or streets listed as places to visit.'),
     ('⚙️', 'Settings in one place', 'Language, city, look, notifications and your data now live in Settings, in clear groups. Profile is just you.'),
     ('✨', 'A tidier Explore', 'Lists, ideas, areas, malls and more are one tap away under Discover. The filters row is just filters.'),
     ('✅', 'Get started', 'New here? Three first steps on Home that tick themselves off.'),
