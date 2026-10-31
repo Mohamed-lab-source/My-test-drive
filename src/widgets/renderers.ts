@@ -30,6 +30,7 @@ import { buildSmartWidget } from './SmartWidget';
 import { buildSpendWidget } from './SpendWidget';
 import { buildLifeWidget } from './LifeWidget';
 import { greeting, pickSmartCards } from './smartEngine';
+import { applyGlass, type WidgetLook } from './glass';
 
 export type WidgetName = 'PrayerWidget' | 'TasksWidget' | 'MoneyWidget' | 'SmartWidget' | 'SpendWidget' | 'LifeWidget';
 export const WIDGET_NAMES: WidgetName[] = ['PrayerWidget', 'TasksWidget', 'MoneyWidget', 'SmartWidget', 'SpendWidget', 'LifeWidget'];
@@ -59,6 +60,7 @@ interface StoredSettings {
   monthlyLimit?: number;
   monthStartDay?: number;
   monthFromPayday?: boolean;
+  widgetLook?: WidgetLook;
   manualPaydays?: string[];
 }
 
@@ -312,7 +314,7 @@ async function smartBuilder(size: WidgetSize): Promise<Builder> {
 
 const DEFAULT_SIZE: WidgetSize = { width: 250, height: 180 };
 
-function builderFor(name: string, size: WidgetSize): Promise<Builder> {
+function rawBuilderFor(name: string, size: WidgetSize): Promise<Builder> {
   switch (name as WidgetName) {
     case 'PrayerWidget':
       return prayerBuilder();
@@ -332,8 +334,15 @@ function builderFor(name: string, size: WidgetSize): Promise<Builder> {
 }
 
 // The widget's look for both colour schemes, for in-app previews.
-export async function widgetBuilder(name: WidgetName, size: WidgetSize = DEFAULT_SIZE) {
-  return builderFor(name, size);
+// Every widget in the look chosen on the Widgets page (Liquid glass unless
+// you picked Solid).
+async function builderFor(name: string, size: WidgetSize, look?: WidgetLook): Promise<Builder> {
+  const [build, s] = await Promise.all([rawBuilderFor(name, size), readSettings()]);
+  return (look ?? s.widgetLook ?? 'glass') === 'glass' ? (scheme) => applyGlass(build(scheme), scheme) : build;
+}
+
+export async function widgetBuilder(name: WidgetName, size: WidgetSize = DEFAULT_SIZE, look?: WidgetLook) {
+  return builderFor(name, size, look);
 }
 
 export async function renderWidgetByName(name: string, scheme: Scheme, size: WidgetSize = DEFAULT_SIZE) {

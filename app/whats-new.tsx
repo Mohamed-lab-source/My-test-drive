@@ -77,6 +77,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Everywhere',
     emoji: '✨',
     items: [
+      'Liquid glass home-screen widgets: see-through with a glass rim and sheen over your wallpaper — or Solid, on the Widgets page',
       'Much faster and smoother: less redrawing, frozen background tabs, lighter lists and animations, work deferred until screens settle',
       'Search finds accounts, cards, budgets, habits, goals, any screen and any setting; quick add understands more ("5pm", "in 2 hours", "dec 25", بكرة)',
       'Tidier everywhere: Settings in five sections with search, Money with a grouped menu, Home with a swipeable daily card, Tasks views under one "More" menu',

@@ -7,7 +7,10 @@ import { Card } from '../src/ui/Card';
 import { Button } from '../src/ui/Button';
 import { useUndoStore } from '../src/store/undoStore';
 import { widgetBuilder, type WidgetName } from '../src/widgets/renderers';
-import { refreshWidgets } from '../src/widgets/refresh';
+import { refreshWidgets, refreshWidgetsNow } from '../src/widgets/refresh';
+import { SegmentedControl } from '../src/ui/SegmentedControl';
+import { GradientCard } from '../src/ui/GradientCard';
+import { useSettingsStore } from '../src/store/settingsStore';
 
 const GALLERY: { name: WidgetName; title: string; about: string; height: number }[] = [
   {
@@ -31,6 +34,8 @@ export default function WidgetsScreen() {
   const { colors, typography, spacing, scheme } = useTheme();
   const { width } = useWindowDimensions();
   const show = useUndoStore((s) => s.show);
+  const widgetLook = useSettingsStore((st) => st.widgetLook);
+  const setWidgetLook = useSettingsStore((st) => st.setWidgetLook);
   const [built, setBuilt] = useState<Partial<Record<WidgetName, Built>>>({});
   const previewWidth = Math.min(360, width - spacing.lg * 2 - 32);
   const android = Platform.OS === 'android';
@@ -38,11 +43,11 @@ export default function WidgetsScreen() {
   useEffect(() => {
     if (!android) return;
     for (const w of GALLERY) {
-      widgetBuilder(w.name, { width: previewWidth, height: w.height })
+      widgetBuilder(w.name, { width: previewWidth - 20, height: w.height }, widgetLook)
         .then((b) => setBuilt((prev) => ({ ...prev, [w.name]: b })))
         .catch(() => {});
     }
-  }, [android, previewWidth]);
+  }, [android, previewWidth, widgetLook]);
 
   const pin = async (name: WidgetName, title: string) => {
     try {
@@ -62,6 +67,23 @@ export default function WidgetsScreen() {
             ? 'Widgets update as you use Anchor, every half hour, and whenever you leave the app. Every button on them works without opening the app.'
             : 'Home-screen widgets are available on Android.'}
         </Text>
+        <Card style={{ marginBottom: spacing.md }}>
+          <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Look</Text>
+          <SegmentedControl
+            options={['Liquid glass', 'Solid']}
+            selectedIndex={widgetLook === 'glass' ? 0 : 1}
+            onChange={(i) => {
+              setWidgetLook(i === 0 ? 'glass' : 'solid');
+              // Repaint the widgets on the home screen in the new look.
+              setTimeout(() => refreshWidgetsNow(GALLERY.map((w) => w.name)).catch(() => {}), 300);
+            }}
+          />
+          <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>
+            {widgetLook === 'glass'
+              ? 'See-through, with a bright glass edge and white text, so your wallpaper shows behind it. Android can’t blur what’s behind a widget, so on a very busy or bright wallpaper Solid may read better.'
+              : 'An opaque card that follows light and dark mode.'}
+          </Text>
+        </Card>
         {android ? (
           <View style={{ marginBottom: spacing.md }}>
             <Button
@@ -82,7 +104,13 @@ export default function WidgetsScreen() {
               <Text style={[typography.footnote, { color: colors.secondaryLabel, marginTop: 2, marginBottom: spacing.sm }]}>{w.about}</Text>
               {android && b ? (
                 <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
-                  <WidgetPreview renderWidget={() => b(scheme === 'dark' ? 'dark' : 'light')} width={previewWidth} height={w.height} />
+                  {/* Glass is see-through: show it over a sample wallpaper. */}
+                  <GradientCard
+                    colors={widgetLook === 'glass' ? ['#5E5CE6', '#FF6482'] : [colors.secondarySystemGroupedBackground, colors.secondarySystemGroupedBackground]}
+                    style={{ padding: 10, borderRadius: 24 }}
+                  >
+                    <WidgetPreview renderWidget={() => b(scheme === 'dark' ? 'dark' : 'light')} width={previewWidth - 20} height={w.height} />
+                  </GradientCard>
                 </View>
               ) : null}
               {android ? <Button title="Add to Home Screen" onPress={() => pin(w.name, w.title)} /> : null}

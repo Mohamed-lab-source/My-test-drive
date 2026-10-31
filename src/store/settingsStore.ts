@@ -87,6 +87,9 @@ interface SettingsState {
   // Days you said "my salary arrived today" (YYYY-MM-DD).
   manualPaydays: string[];
   addManualPayday: (key: string) => void;
+  // How home-screen widgets look: see-through glass or solid.
+  widgetLook: 'glass' | 'solid';
+  setWidgetLook: (v: 'glass' | 'solid') => void;
   hiddenHomeCards: string[];
   toggleHomeCard: (id: string) => void;
   // Accounts and cards shown on Home, in order; null shows them all.
@@ -295,6 +298,8 @@ export const useSettingsStore = create<SettingsState>()(
           hiddenHomeCards: s.hiddenHomeCards.includes(id) ? s.hiddenHomeCards.filter((c) => c !== id) : [...s.hiddenHomeCards, id],
         })),
       monthStartDay: 1,
+      widgetLook: 'glass',
+      setWidgetLook: (v) => set({ widgetLook: v }),
       monthFromPayday: false,
       setMonthFromPayday: (v) => set({ monthFromPayday: v }),
       manualPaydays: [],
