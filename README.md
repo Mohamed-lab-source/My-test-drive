@@ -192,7 +192,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 - Habits & Water — tick habits off (with streaks) and add a glass of water right from the home screen
 - Prayers — every prayer time today, the next one ringed, the current one flagged until marked, Hijri date, streak; tap a prayer to mark it
 - Net worth — a 30-day trend line, change this month, today's spending against your limit and the next bill with Pay
-- Liquid glass look (default): see-through widgets with a light sheen, a bright glass rim, frosted panels, white text with a soft shadow and coloured status words on dark-glass capsules, so your wallpaper shows behind them; switch to Solid on the Widgets page (Android can't blur behind a widget, so on very busy wallpapers Solid can read better)
+- Liquid glass (default): clear glass like iOS — the wallpaper shows straight through, with a lit rim that fades inward, bright highlights on the top-left and bottom-right curves and a faint sheen; white text with a soft shadow and coloured status words on dark-glass capsules. Or Frosted (tinted with your wallpaper's colours, a little smokier) or Solid, on the Widgets page (Android can't blur behind a widget)
 - All widgets resize, follow light/dark mode, refresh as you use Anchor and whenever you leave it, and a button on one updates the others; Settings → Home-screen widgets previews them with your data and adds them in one tap
 
 **Settings**

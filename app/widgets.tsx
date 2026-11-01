@@ -12,6 +12,8 @@ import { SegmentedControl } from '../src/ui/SegmentedControl';
 import { GradientCard } from '../src/ui/GradientCard';
 import { useSettingsStore } from '../src/store/settingsStore';
 
+const LOOKS = ['glass', 'frosted', 'solid'] as const;
+
 const GALLERY: { name: WidgetName; title: string; about: string; height: number }[] = [
   {
     name: 'SmartWidget',
@@ -70,18 +72,21 @@ export default function WidgetsScreen() {
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={[typography.headline, { color: colors.label, marginBottom: spacing.sm }]}>Look</Text>
           <SegmentedControl
-            options={['Liquid glass', 'Solid']}
-            selectedIndex={widgetLook === 'glass' ? 0 : 1}
+            options={['Liquid glass', 'Frosted', 'Solid']}
+            selectedIndex={LOOKS.indexOf(widgetLook)}
             onChange={(i) => {
-              setWidgetLook(i === 0 ? 'glass' : 'solid');
+              setWidgetLook(LOOKS[i]);
               // Repaint the widgets on the home screen in the new look.
               setTimeout(() => refreshWidgetsNow(GALLERY.map((w) => w.name)).catch(() => {}), 300);
             }}
           />
           <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm }]}>
             {widgetLook === 'glass'
-              ? 'See-through, with a bright glass edge and white text, so your wallpaper shows behind it. Android can’t blur what’s behind a widget, so on a very busy or bright wallpaper Solid may read better.'
-              : 'An opaque card that follows light and dark mode.'}
+              ? 'Clear glass, like iOS: your wallpaper shows straight through, with light catching the edges and corners.'
+              : widgetLook === 'frosted'
+                ? 'Glass tinted with your wallpaper’s colours, a little smokier so text reads on bright wallpapers.'
+                : 'An opaque card that follows light and dark mode.'}
+            {widgetLook !== 'solid' ? ' Android can’t blur what’s behind a widget, so on a very busy wallpaper Frosted or Solid reads better.' : ''}
           </Text>
         </Card>
         {android ? (
@@ -106,7 +111,7 @@ export default function WidgetsScreen() {
                 <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
                   {/* Glass is see-through: show it over a sample wallpaper. */}
                   <GradientCard
-                    colors={widgetLook === 'glass' ? ['#5E5CE6', '#FF6482'] : [colors.secondarySystemGroupedBackground, colors.secondarySystemGroupedBackground]}
+                    colors={widgetLook !== 'solid' ? ['#5E5CE6', '#FF6482'] : [colors.secondarySystemGroupedBackground, colors.secondarySystemGroupedBackground]}
                     style={{ padding: 10, borderRadius: 24 }}
                   >
                     <WidgetPreview renderWidget={() => b(scheme === 'dark' ? 'dark' : 'light')} width={previewWidth - 20} height={w.height} />

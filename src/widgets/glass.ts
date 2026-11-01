@@ -9,7 +9,9 @@ import { OverlapWidget, SvgWidget } from 'react-native-android-widget';
 import type { ColorProp } from 'react-native-android-widget';
 import { widgetColors } from './theme';
 
-export type WidgetLook = 'glass' | 'solid';
+// 'glass' is clear Liquid Glass (iOS's default), 'frosted' is tinted by the
+// wallpaper, 'solid' is an opaque card.
+export type WidgetLook = 'glass' | 'frosted' | 'solid';
 
 type El = React.ReactElement<{ style?: Record<string, unknown>; children?: React.ReactNode }>;
 
@@ -59,6 +61,45 @@ export function glassSvg(w: number, h: number, scheme: 'light' | 'dark', tint: s
 </svg>`;
 }
 
+// Clear Liquid Glass, as iOS draws it by default: almost see-through in the
+// middle, with the glass shown by light on its edges — a lit rim that
+// fades inward like the edge of a thick lens, bright highlights on the
+// top-left and bottom-right curves, and a faint sheen at the top.
+export function clearGlassSvg(w: number, h: number, scheme: 'light' | 'dark', radius = 28): string {
+  const dark = scheme === 'dark';
+  const r = Math.min(radius, h / 2, w / 2);
+  const rect = (inset: number, attrs: string) =>
+    `<rect x="${inset}" y="${inset}" width="${w - inset * 2}" height="${h - inset * 2}" rx="${Math.max(0, r - inset)}" ry="${Math.max(0, r - inset)}" ${attrs}/>`;
+  // The lit rim: concentric strokes, brightest at the edge.
+  const glow = [
+    [1, 0.5],
+    [2.5, 0.22],
+    [4.5, 0.1],
+    [7, 0.04],
+  ]
+    .map(([inset, o]) => rect(inset, `fill="none" stroke="#FFFFFF" stroke-opacity="${(o * (dark ? 0.7 : 1)).toFixed(3)}" stroke-width="1.5"`))
+    .join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w * 3}" height="${h * 3}" viewBox="0 0 ${w} ${h}">
+<defs>
+<radialGradient id="sheen" cx="0.25" cy="0" r="0.7" fx="0.25" fy="0">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="${dark ? 0.14 : 0.22}"/>
+<stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="spec" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+<stop offset="0.28" stop-color="#FFFFFF" stop-opacity="0.05"/>
+<stop offset="0.72" stop-color="#FFFFFF" stop-opacity="0.05"/>
+<stop offset="1" stop-color="#FFFFFF" stop-opacity="0.75"/>
+</linearGradient>
+</defs>
+${rect(0.5, `fill="#000000" fill-opacity="${dark ? 0.16 : 0.06}"`)}
+${rect(0.5, `fill="#FFFFFF" fill-opacity="${dark ? 0.04 : 0.07}"`)}
+${rect(0.5, 'fill="url(#sheen)"')}
+${glow}
+${rect(1, 'fill="none" stroke="url(#spec)" stroke-width="2"')}
+</svg>`;
+}
+
 function luminance(hex: string): number {
   const n = parseInt(hex.replace('#', '').slice(0, 6), 16);
   const ch = (v: number) => {
@@ -68,7 +109,13 @@ function luminance(hex: string): number {
   return 0.2126 * ch((n >> 16) & 255) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255);
 }
 
-export function applyGlass(tree: El, scheme: 'light' | 'dark', size?: { width: number; height: number }, tint: string[] = []): El {
+export function applyGlass(
+  tree: El,
+  scheme: 'light' | 'dark',
+  size?: { width: number; height: number },
+  tint: string[] = [],
+  look: 'glass' | 'frosted' = 'glass'
+): El {
   const c = widgetColors(scheme);
   const panel = 'rgba(255, 255, 255, 0.18)' as ColorProp;
   const text: Record<string, ColorProp> = {
@@ -106,15 +153,15 @@ export function applyGlass(tree: El, scheme: 'light' | 'dark', size?: { width: n
       const color = style.color as string | undefined;
       const plain = !color || !!text[color] || color === '#FFFFFF';
       if (color && text[color]) style.color = text[color];
-      style.textShadowColor = 'rgba(0, 0, 0, 0.35)';
-      style.textShadowRadius = 3;
+      style.textShadowColor = look === 'glass' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.35)';
+      style.textShadowRadius = look === 'glass' ? 4 : 3;
       style.textShadowOffset = { width: 0, height: 1 };
       // Coloured words (Overdue, Watch it, ▲ this month) keep their colour
       // on a small dark-glass capsule, so they read on any wallpaper.
       const words = String((el.props as { text?: unknown }).text ?? '');
       if (!plain && words.length > 2 && !style.backgroundColor) {
         style.color = bright[color as string] ?? color;
-        style.backgroundColor = 'rgba(0, 0, 0, 0.32)';
+        style.backgroundColor = look === 'glass' ? 'rgba(0, 0, 0, 0.38)' : 'rgba(0, 0, 0, 0.32)';
         style.paddingHorizontal = 6;
         style.paddingVertical = 1;
         style.borderRadius = 8;
@@ -146,7 +193,10 @@ export function applyGlass(tree: El, scheme: 'light' | 'dark', size?: { width: n
   return React.createElement(
     OverlapWidget,
     { style: { width: 'match_parent', height: 'match_parent' } },
-    React.createElement(SvgWidget, { svg: glassSvg(Math.round(size.width), Math.round(size.height), scheme, tint), style: { width: Math.round(size.width), height: Math.round(size.height) } }),
+    React.createElement(SvgWidget, { svg:
+        look === 'frosted'
+          ? glassSvg(Math.round(size.width), Math.round(size.height), scheme, tint)
+          : clearGlassSvg(Math.round(size.width), Math.round(size.height), scheme), style: { width: Math.round(size.width), height: Math.round(size.height) } }),
     content
   ) as El;
 }

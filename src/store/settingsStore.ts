@@ -88,8 +88,8 @@ interface SettingsState {
   manualPaydays: string[];
   addManualPayday: (key: string) => void;
   // How home-screen widgets look: see-through glass or solid.
-  widgetLook: 'glass' | 'solid';
-  setWidgetLook: (v: 'glass' | 'solid') => void;
+  widgetLook: 'glass' | 'frosted' | 'solid';
+  setWidgetLook: (v: 'glass' | 'frosted' | 'solid') => void;
   hiddenHomeCards: string[];
   toggleHomeCard: (id: string) => void;
   // Accounts and cards shown on Home, in order; null shows them all.

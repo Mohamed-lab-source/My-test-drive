@@ -339,10 +339,11 @@ function rawBuilderFor(name: string, size: WidgetSize): Promise<Builder> {
 // you picked Solid).
 async function builderFor(name: string, size: WidgetSize, look?: WidgetLook): Promise<Builder> {
   const [build, s] = await Promise.all([rawBuilderFor(name, size), readSettings()]);
-  if ((look ?? s.widgetLook ?? 'glass') !== 'glass') return build;
-  // Tinted by the wallpaper's colours, like frosted glass.
-  const tint = wallpaperColors();
-  return (scheme) => applyGlass(build(scheme), scheme, size, tint);
+  const chosen = look ?? s.widgetLook ?? 'glass';
+  if (chosen === 'solid') return build;
+  // Frosted glass takes on the wallpaper's colours.
+  const tint = chosen === 'frosted' ? wallpaperColors() : [];
+  return (scheme) => applyGlass(build(scheme), scheme, size, tint, chosen);
 }
 
 export async function widgetBuilder(name: WidgetName, size: WidgetSize = DEFAULT_SIZE, look?: WidgetLook) {
