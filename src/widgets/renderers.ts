@@ -31,6 +31,7 @@ import { buildSpendWidget } from './SpendWidget';
 import { buildLifeWidget } from './LifeWidget';
 import { greeting, pickSmartCards } from './smartEngine';
 import { applyGlass, type WidgetLook } from './glass';
+import { wallpaperColors } from '../sms/native';
 
 export type WidgetName = 'PrayerWidget' | 'TasksWidget' | 'MoneyWidget' | 'SmartWidget' | 'SpendWidget' | 'LifeWidget';
 export const WIDGET_NAMES: WidgetName[] = ['PrayerWidget', 'TasksWidget', 'MoneyWidget', 'SmartWidget', 'SpendWidget', 'LifeWidget'];
@@ -338,7 +339,10 @@ function rawBuilderFor(name: string, size: WidgetSize): Promise<Builder> {
 // you picked Solid).
 async function builderFor(name: string, size: WidgetSize, look?: WidgetLook): Promise<Builder> {
   const [build, s] = await Promise.all([rawBuilderFor(name, size), readSettings()]);
-  return (look ?? s.widgetLook ?? 'glass') === 'glass' ? (scheme) => applyGlass(build(scheme), scheme) : build;
+  if ((look ?? s.widgetLook ?? 'glass') !== 'glass') return build;
+  // Tinted by the wallpaper's colours, like frosted glass.
+  const tint = wallpaperColors();
+  return (scheme) => applyGlass(build(scheme), scheme, size, tint);
 }
 
 export async function widgetBuilder(name: WidgetName, size: WidgetSize = DEFAULT_SIZE, look?: WidgetLook) {

@@ -132,6 +132,9 @@ function AppShell() {
         await reschedulePrayerAlerts();
         await rescheduleOccasionReminders();
         await rescheduleExtraReminders();
+        // Repaint home-screen widgets on every launch, so a new look (or a
+        // widget that missed an update) shows without waiting.
+        refreshWidgetsNow(WIDGET_NAMES).catch(() => {});
         await applyAutoRoutines().catch(() => 0);
       })
       .catch((e) => {

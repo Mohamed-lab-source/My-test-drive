@@ -5,6 +5,7 @@
 // a soft shadow so it reads on any wallpaper. It restyles a finished
 // widget, so every widget gets the same treatment from one place.
 import * as React from 'react';
+import { OverlapWidget, SvgWidget } from 'react-native-android-widget';
 import type { ColorProp } from 'react-native-android-widget';
 import { widgetColors } from './theme';
 
@@ -12,15 +13,63 @@ export type WidgetLook = 'glass' | 'solid';
 
 type El = React.ReactElement<{ style?: Record<string, unknown>; children?: React.ReactNode }>;
 
-export function applyGlass(tree: El, scheme: 'light' | 'dark'): El {
-  const c = widgetColors(scheme);
+// The glass surface itself, drawn as an image because a widget's own
+// background can't combine a gradient with a border: a smoky translucent
+// body, a curved specular sheen across the top, a rim that catches the
+// light at the top and bottom edges, and a faint inner rim for thickness.
+// `tint` is the wallpaper's main colours: frosted glass mostly looks like the
+// average colour of what's behind it, so the glass takes on that tint, and
+// on a light wallpaper it gets smokier so white text still reads.
+export function glassSvg(w: number, h: number, scheme: 'light' | 'dark', tint: string[] = [], radius = 28): string {
   const dark = scheme === 'dark';
-  const body = {
-    // A sheen from the top-left corner, fading towards the bottom-right.
-    from: (dark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.34)') as ColorProp,
-    to: (dark ? 'rgba(20, 20, 24, 0.22)' : 'rgba(255, 255, 255, 0.10)') as ColorProp,
+  const r = Math.min(radius, h / 2, w / 2);
+  const top = dark ? 0.2 : 0.3;
+  const bottom = dark ? 0.06 : 0.1;
+  const light = tint.length ? luminance(tint[0]) : 0.4;
+  const smoke = (dark ? 0.26 : 0.1) + Math.max(0, light - 0.45) * 0.45;
+  const [t1, t2] = [tint[0], tint[1] ?? tint[0]];
+  // Drawn at 3× and scaled down to the widget, so the rim stays crisp.
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w * 3}" height="${h * 3}" viewBox="0 0 ${w} ${h}">
+<defs>
+<linearGradient id="body" x1="0" y1="0" x2="0.35" y2="1">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="${top}"/>
+<stop offset="1" stop-color="#FFFFFF" stop-opacity="${bottom}"/>
+</linearGradient>
+<radialGradient id="sheen" cx="0.3" cy="0" r="0.75" fx="0.3" fy="0">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="${dark ? 0.32 : 0.5}"/>
+<stop offset="0.55" stop-color="#FFFFFF" stop-opacity="${dark ? 0.06 : 0.1}"/>
+<stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="tint" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="${t1 ?? '#FFFFFF'}" stop-opacity="${t1 ? 0.34 : 0}"/>
+<stop offset="1" stop-color="${t2 ?? '#FFFFFF'}" stop-opacity="${t2 ? 0.26 : 0}"/>
+</linearGradient>
+<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="${dark ? 0.7 : 0.95}"/>
+<stop offset="0.45" stop-color="#FFFFFF" stop-opacity="${dark ? 0.12 : 0.25}"/>
+<stop offset="1" stop-color="#FFFFFF" stop-opacity="${dark ? 0.4 : 0.6}"/>
+</linearGradient>
+</defs>
+<rect x="0.75" y="0.75" width="${w - 1.5}" height="${h - 1.5}" rx="${r}" ry="${r}" fill="#000000" fill-opacity="${smoke.toFixed(2)}"/>
+<rect x="0.75" y="0.75" width="${w - 1.5}" height="${h - 1.5}" rx="${r}" ry="${r}" fill="url(#tint)"/>
+<rect x="0.75" y="0.75" width="${w - 1.5}" height="${h - 1.5}" rx="${r}" ry="${r}" fill="url(#body)"/>
+<rect x="0.75" y="0.75" width="${w - 1.5}" height="${h - 1.5}" rx="${r}" ry="${r}" fill="url(#sheen)"/>
+<rect x="0.75" y="0.75" width="${w - 1.5}" height="${h - 1.5}" rx="${r}" ry="${r}" fill="none" stroke="url(#rim)" stroke-width="1.5"/>
+<rect x="2.5" y="2.5" width="${w - 5}" height="${h - 5}" rx="${Math.max(0, r - 2)}" ry="${Math.max(0, r - 2)}" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1"/>
+</svg>`;
+}
+
+function luminance(hex: string): number {
+  const n = parseInt(hex.replace('#', '').slice(0, 6), 16);
+  const ch = (v: number) => {
+    const x = v / 255;
+    return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
   };
-  const rim = (dark ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.6)') as ColorProp;
+  return 0.2126 * ch((n >> 16) & 255) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255);
+}
+
+export function applyGlass(tree: El, scheme: 'light' | 'dark', size?: { width: number; height: number }, tint: string[] = []): El {
+  const c = widgetColors(scheme);
   const panel = 'rgba(255, 255, 255, 0.18)' as ColorProp;
   const text: Record<string, ColorProp> = {
     [c.label]: '#FFFFFF' as ColorProp,
@@ -40,6 +89,7 @@ export function applyGlass(tree: El, scheme: 'light' | 'dark'): El {
   };
   const panels = new Set<string>([c.tertiaryFill, c.fill, c.secondaryFill, c.quaternaryFill]);
 
+  let foundBody = false;
   const visit = (node: React.ReactNode): React.ReactNode => {
     if (Array.isArray(node)) return node.map(visit);
     if (!node || typeof node !== 'object' || !('type' in node)) return node;
@@ -73,14 +123,15 @@ export function applyGlass(tree: El, scheme: 'light' | 'dark'): El {
     } else if (name === 'FlexWidget' || name === 'OverlapWidget') {
       const bg = style.backgroundColor as string | undefined;
       if (bg === c.secondarySystemGroupedBackground) {
-        // The widget's own body: clear glass with a bright rim.
+        // The widget's own body: see-through, with the glass drawn
+        // underneath it (see glassSvg).
         delete style.backgroundColor;
-        style.backgroundGradient = { ...body, orientation: 'TL_BR' };
-        style.borderWidth = 1;
-        style.borderColor = rim;
-        style.borderRadius = 28;
+        foundBody = true;
       } else if (bg && panels.has(bg)) {
+        // Inner panels: frosted, with a thin glass edge.
         style.backgroundColor = panel;
+        style.borderWidth = 0.75;
+        style.borderColor = 'rgba(255, 255, 255, 0.28)' as ColorProp;
       }
       if (style.borderColor === c.gray3) style.borderColor = 'rgba(255, 255, 255, 0.75)' as ColorProp;
     }
@@ -89,5 +140,13 @@ export function applyGlass(tree: El, scheme: 'light' | 'dark'): El {
       ? React.cloneElement(el, { style })
       : React.cloneElement(el, { style }, visit(children) as React.ReactNode);
   };
-  return visit(tree) as El;
+  const content = visit(tree) as El;
+  if (!foundBody || !size) return content;
+  // Glass underneath, the widget's content on top.
+  return React.createElement(
+    OverlapWidget,
+    { style: { width: 'match_parent', height: 'match_parent' } },
+    React.createElement(SvgWidget, { svg: glassSvg(Math.round(size.width), Math.round(size.height), scheme, tint), style: { width: Math.round(size.width), height: Math.round(size.height) } }),
+    content
+  ) as El;
 }

@@ -13,6 +13,7 @@ interface AnchorSmsModule {
   hasReceivePermission(): boolean;
   configureAlerts(enabled: boolean, senders: string[]): void;
   setWatchAllBanks?(on: boolean): void;
+  wallpaperColors?(): string[];
   readInbox(sinceMillis: number, senderKeywords: string[], limit: number): Promise<RawSms[]>;
 }
 
@@ -62,4 +63,13 @@ export function configureSmsAlerts(enabled: boolean, senders: string[], allBanks
 export async function readBankSms(sinceMillis: number, senders: string[], limit = 500): Promise<RawSms[]> {
   if (!native || !hasSmsPermission()) return [];
   return native.readInbox(sinceMillis, senders, limit);
+}
+
+// The home-screen wallpaper's main colours (Android 8.1+), or none.
+export function wallpaperColors(): string[] {
+  try {
+    return native?.wallpaperColors?.() ?? [];
+  } catch {
+    return [];
+  }
 }

@@ -1,6 +1,8 @@
 package expo.modules.anchorsms
 
 import android.Manifest
+import android.app.WallpaperManager
+import android.os.Build
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -75,6 +77,22 @@ class AnchorSmsModule : Module() {
         .edit()
         .putBoolean(AlertPrefs.ALL_BANKS, on)
         .apply()
+    }
+
+    // The wallpaper's main colours (no permission needed), so the glass
+    // widgets can take on the tint of what's behind them, like frosted glass.
+    Function("wallpaperColors") {
+      try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+          val colors = WallpaperManager.getInstance(context).getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+          listOfNotNull(colors?.primaryColor, colors?.secondaryColor, colors?.tertiaryColor)
+            .map { String.format("#%06X", 0xFFFFFF and it.toArgb()) }
+        } else {
+          emptyList<String>()
+        }
+      } catch (e: Exception) {
+        emptyList<String>()
+      }
     }
 
     AsyncFunction("readInbox") { sinceMillis: Double, senderKeywords: List<String>, limit: Int ->
