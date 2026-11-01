@@ -5,7 +5,7 @@
 // a soft shadow so it reads on any wallpaper. It restyles a finished
 // widget, so every widget gets the same treatment from one place.
 import * as React from 'react';
-import { OverlapWidget, SvgWidget } from 'react-native-android-widget';
+import { FlexWidget, OverlapWidget, SvgWidget, TextWidget } from 'react-native-android-widget';
 import type { ColorProp } from 'react-native-android-widget';
 import { widgetColors } from './theme';
 
@@ -147,9 +147,11 @@ export function applyGlass(
       el = (el.type as (p: unknown) => El)(el.props);
       if (!el) return el;
     }
-    const name = (el.type as unknown as { __name__?: string }).__name__;
+    // Compare the components themselves: their internal names are the
+    // native view names (FlexWidget is "LinearLayoutWidget"), not these.
+    const type = el.type as unknown;
     const style: Record<string, unknown> = { ...(el.props.style ?? {}) };
-    if (name === 'TextWidget') {
+    if (type === TextWidget) {
       const color = style.color as string | undefined;
       const plain = !color || !!text[color] || color === '#FFFFFF';
       if (color && text[color]) style.color = text[color];
@@ -167,7 +169,7 @@ export function applyGlass(
         style.borderRadius = 8;
         style.textShadowColor = 'rgba(0, 0, 0, 0)';
       }
-    } else if (name === 'FlexWidget' || name === 'OverlapWidget') {
+    } else if (type === FlexWidget || type === OverlapWidget) {
       const bg = style.backgroundColor as string | undefined;
       if (bg === c.secondarySystemGroupedBackground) {
         // The widget's own body: see-through, with the glass drawn
