@@ -75,7 +75,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(_app(const WhatsNewScreen()));
     await tester.pump();
-    expect(find.text('Settings in one place'), findsOneWidget);
+    expect(find.text('Instant plans'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
