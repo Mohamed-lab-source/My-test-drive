@@ -25,7 +25,7 @@ import '../../widgets/khroga_map.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/launchers.dart';
 import '../groups/create_group_sheet.dart';
-import 'plan_actions.dart' show sendPlanToGroup, showPlanActions;
+import 'plan_actions.dart' show planAgain, sendPlanToGroup, showPlanActions;
 import 'plan_glance.dart';
 import 'plan_extras.dart';
 
@@ -240,6 +240,14 @@ class _PlanBody extends ConsumerWidget {
           const SizedBox(height: KSpace.md),
           _MakeNicer(plan: plan),
         ],
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            icon: const Icon(Icons.refresh),
+            label: Text(tr('Another plan like this (new places)')),
+            onPressed: () => planAgain(context, ref, plan),
+          ),
+        ),
         const SizedBox(height: KSpace.md),
         if (plan.stops.where((s) => s.hasLocation).length >= 2) ...[
           ClipRRect(
@@ -717,6 +725,16 @@ String planShareText(OutingPlan plan) {
   return lines.join('\n');
 }
 
+/// Whether a place would be open at this stop's time on the plan's day
+/// (null = we don't know the hours or the time).
+bool? openThen(Place p, OutingPlan plan, int index) {
+  final parts = plan.stops[index].startTime?.split(':');
+  if (parts == null || parts.length != 2) return null;
+  final day = plan.request.day;
+  final at = DateTime(day.year, day.month, day.day, int.tryParse(parts[0]) ?? 0, int.tryParse(parts[1]) ?? 0);
+  return p.isOpenAt(at);
+}
+
 /// Lets the person replace one stop with a similar real place nearby.
 Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan, int index) async {
   final repo = ref.read(plansRepositoryProvider);
@@ -760,7 +778,7 @@ Future<void> _showSwapSheet(BuildContext context, WidgetRef ref, OutingPlan plan
                       'km': haversineKm(plan.stops[index - 1].lat!, plan.stops[index - 1].lng!, p.lat!, p.lng!)
                           .toStringAsFixed(1)
                     }),
-                  if (p.isOpenAt(DateTime.now()) == true) tr('Open now'),
+                  if (openThen(p, plan, index) case final open?) open ? tr('Open then') : tr('Closed then'),
                 ].join(' · ')),
                 onTap: () => Navigator.pop(sheetContext, p),
               ),
@@ -829,18 +847,12 @@ Future<void> _rename(BuildContext context, WidgetRef ref, OutingPlan plan) async
 /// Lets the person add one more real place, nearest to the last stop first.
 Future<void> _showAddStopSheet(BuildContext context, WidgetRef ref, OutingPlan plan) async {
   final all = await ref.read(placesRepositoryProvider).all();
-  final used = {for (final s in plan.stops) s.placeId};
   final last = plan.stops.isEmpty ? null : plan.stops.last;
-  final options = all
-      .where((p) => !used.contains(p.id) && p.category != 'shop' && passesFilters(p, plan.request))
-      .toList();
+  // Close by, a kind that makes sense next, open by the time you get there.
+  final options = addStopOptions(plan, all);
   double dist(Place p) => last != null && last.hasLocation && p.hasLocation
       ? haversineKm(last.lat!, last.lng!, p.lat!, p.lng!)
       : 9999;
-  options.sort((a, b) {
-    final d = dist(a).compareTo(dist(b));
-    return d != 0 ? d : b.quality.compareTo(a.quality);
-  });
   if (!context.mounted) return;
   final picked = await showModalBottomSheet<Place>(
     context: context,
@@ -855,7 +867,8 @@ Future<void> _showAddStopSheet(BuildContext context, WidgetRef ref, OutingPlan p
         children: [
           Text(tr('Add a stop'), style: Theme.of(sheetContext).textTheme.titleLarge),
           const SizedBox(height: KSpace.xs),
-          Text(tr('Real places near your last stop'), style: Theme.of(sheetContext).textTheme.bodySmall),
+          Text(tr('Real places near your last stop that make sense next'),
+              style: Theme.of(sheetContext).textTheme.bodySmall),
           const SizedBox(height: KSpace.md),
           for (final p in options.take(25))
             Card(
@@ -866,7 +879,7 @@ Future<void> _showAddStopSheet(BuildContext context, WidgetRef ref, OutingPlan p
                 subtitle: Text([
                   p.kindLabel ?? Categories.label(p.category),
                   if (p.area != null) p.area!,
-                  if (dist(p) < 9999) '${dist(p).toStringAsFixed(1)} km away',
+                  if (dist(p) < 9999) trf('{km} km away', {'km': dist(p).toStringAsFixed(1)}),
                 ].join(' · ')),
                 onTap: () => Navigator.pop(sheetContext, p),
               ),

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../fun/place_of_day.dart';
 import '../fun/timeline_screen.dart' show OnThisDayCard;
 import 'plan_extras.dart' show BestTimeCard, WeatherHeadsUp;
@@ -20,7 +21,7 @@ import '../../data/live_data.dart' show aqiLabel, uvLabel;
 import '../../data/providers.dart';
 import '../../models/plan.dart';
 import '../../planner/services.dart' show aiResting;
-import '../../planner/planner.dart' show compactRadiusKm, planNeeds;
+import '../../planner/planner.dart' show compactRadiusKm, outingShape, planNeeds, timeOfDayIsOver;
 import '../../widgets/common.dart';
 import '../../widgets/large_title.dart';
 import '../../widgets/motion.dart';
@@ -255,6 +256,14 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
     last.set('people', '$_people');
     last.set('stops', '$_stops');
     last.set('vibes', _vibes.join(','));
+    // "Morning" picked at 3 pm: plan tomorrow's morning instead of one
+    // that's already over.
+    final now = DateTime.now();
+    if (_date == null && timeOfDayIsOver(_time, now)) {
+      setState(() => _date = DateTime(now.year, now.month, now.day + 1));
+      showMessage(context, trf('{time} is over for today, so this plan is for tomorrow.',
+          {'time': tr(TimesOfDay.all[_time] ?? _time)}));
+    }
     final request = PlanRequest(
       city: ref.read(cityProvider),
       groupSize: _people,
@@ -453,6 +462,14 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 ),
             ],
           ),
+          if (_date == null && timeOfDayIsOver(_time, DateTime.now()))
+            Padding(
+              padding: const EdgeInsets.only(top: KSpace.xs),
+              child: Text(
+                  trf('{time} is over for today, so we\'ll plan it for tomorrow.',
+                      {'time': tr(TimesOfDay.all[_time] ?? _time)}),
+                  style: text.bodySmall?.copyWith(color: context.k.inkMuted)),
+            ),
           _DayFacts(day: _date ?? DateTime.now(), city: ref.watch(cityProvider)),
           _BestDay(
             city: ref.watch(cityProvider),
@@ -501,6 +518,16 @@ class _PlanFormScreenState extends ConsumerState<PlanFormScreen> {
                 ),
             ],
           ),
+          if (_vibes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: KSpace.sm),
+              child: Text(
+                trf('Your outing: {shape}', {
+                  'shape': outingShape(_time, _vibes, _mallId != null ? math.min(_stops, 3) : _stops).join('  →  '),
+                }),
+                style: text.bodySmall?.copyWith(color: context.k.inkMuted),
+              ),
+            ),
           StepTitle(4, tr('Where?')),
           SegmentedButton<String>(
             showSelectedIcon: false,
@@ -753,15 +780,27 @@ Future<String?> runPlanGeneration(BuildContext context, WidgetRef ref, PlanReque
     {bool useAi = false}) async {
   final navigator = Navigator.of(context, rootNavigator: true);
   final messenger = ScaffoldMessenger.of(context);
-  showDialog<void>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const PopScope(canPop: false, child: _GeneratingDialog()),
-  );
+  final uid = ref.read(uidProvider);
+  final work = uid == null
+      ? Future<String>.error(Exception(tr('Please sign in again.')))
+      : ref.read(plansRepositoryProvider).generate(uid, request, useAi: useAi);
+  // Our own planner is usually done in a blink: only show the "building"
+  // pop-up when it takes a moment (weather, AI), so nothing flashes.
+  var showing = false;
+  final first = await Future.any<Object?>([
+    work.then<Object?>((v) => v, onError: (_) => null),
+    Future<Object?>.delayed(const Duration(milliseconds: 350), () => #wait),
+  ]);
+  if (first == #wait && context.mounted) {
+    showing = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(canPop: false, child: _GeneratingDialog()),
+    );
+  }
   try {
-    final uid = ref.read(uidProvider);
-    if (uid == null) throw Exception(tr('Please sign in again.'));
-    final id = await ref.read(plansRepositoryProvider).generate(uid, request, useAi: useAi);
+    final id = await work;
     ref.invalidate(plansCountProvider);
     if (useAi && aiResting) {
       messenger.showSnackBar(SnackBar(
@@ -772,7 +811,7 @@ Future<String?> runPlanGeneration(BuildContext context, WidgetRef ref, PlanReque
     messenger.showSnackBar(SnackBar(content: Text(friendlyError(e))));
     return null;
   } finally {
-    navigator.pop();
+    if (showing) navigator.pop();
   }
 }
 

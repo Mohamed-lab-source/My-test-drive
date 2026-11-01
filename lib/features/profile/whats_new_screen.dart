@@ -10,6 +10,10 @@ class WhatsNewScreen extends StatelessWidget {
   const WhatsNewScreen({super.key});
 
   static const items = [
+    ('⚡', 'Instant plans', 'Plans are made in a blink and open straight away, even on a slow connection.'),
+    ('⏱️', 'Real timings', 'Time at each stop fits the place (a quick dessert, a long film) and travel time grows with the distance.'),
+    ('🔁', 'Better swaps', 'Swap and Add a stop suggest close places that make sense next and are open at that time.'),
+    ('👀', 'See your outing first', 'The plan form shows how your outing will go before you tap Plan.'),
     ('🧠', 'Smarter plans', 'Plans now go in a sensible order (something to do, then a meal, then coffee or dessert), with stops close to each other and open when you get there.'),
     ('🍝', 'Better places', 'Fewer fast-food chains for a date night, one branch per chain, and no more offices, compounds or streets listed as places to visit.'),
     ('⚙️', 'Settings in one place', 'Language, city, look, notifications and your data now live in Settings, in clear groups. Profile is just you.'),

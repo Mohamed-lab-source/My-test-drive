@@ -55,7 +55,7 @@ void main() {
 
     final added = addStop(stops(['a']), places[2]);
     expect(added.last.placeId, 'c');
-    expect(added.last.startTime, '19:20', reason: 'after the last stop plus travel time');
+    expect(added.last.startTime, '19:10', reason: 'after the last stop plus a short walk (300 m)');
   });
 
   test('a plan request remembers its day', () {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -69,7 +71,11 @@ class PlansRepository {
       source: source,
     );
     final doc = _plans(uid).doc();
-    await doc.set({...outing.toMap(), 'createdAt': FieldValue.serverTimestamp()});
+    // Saved to the phone at once (and to the server when it can), so the
+    // plan opens straight away even on a slow connection.
+    unawaited(doc
+        .set({...outing.toMap(), 'createdAt': FieldValue.serverTimestamp()})
+        .catchError((Object e) => debugPrint('Saving the plan failed: $e')));
     return doc.id;
   }
 

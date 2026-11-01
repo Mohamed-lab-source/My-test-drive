@@ -412,6 +412,20 @@ How the code enforces it (keep it this way):
   reviews are not used: copying them breaks their terms and the Places API
   isn't free.
 
+- 2.3 faster planning: `PlaceSignals` (curation.dart: junk, chain +
+  size, quick, sweet, daytime, fame, role) are worked out once in the
+  places isolate (`buildSignals` in `_parsePlaces`, `attachSignals` on the
+  main side; `ensureSignals`/`signalsOf` for other lists), so
+  pickCandidates is ~10x faster; keep regexes as top-level finals.
+  `stopMinutes` (length by kind) + `travelMinutes` (by km), nothing starts
+  after 02:00 (`latestStartMinutes`). `alternativesFor` and
+  `addStopOptions` score by fame − distance, open at the stop's time,
+  no chain twice, no same-name duplicates. Plan form: `outingShape`
+  preview, `timeOfDayIsOver` → plan tomorrow. `runPlanGeneration` shows
+  the pop-up only after 350 ms; `generate` doesn't await the server write
+  (cache first) and `fetchWeather` caches per city+day for an hour (4 s
+  timeout). "Another plan like this" under the stops (`planAgain`).
+
 ## Setup (browser only, see SETUP.md)
 
 He creates a Firebase project (Spark), turns on Anonymous + Google sign-in,

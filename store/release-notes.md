@@ -2,6 +2,22 @@
 
 Keep each under 500 characters.
 
+## 2.3.0
+
+<en-US>
+• Plans are made instantly and open straight away, even on a slow connection
+• Realistic timings: time at each stop fits the place, travel time follows the distance
+• Smarter Swap and Add a stop: close, open at that time and a good fit next
+• See the shape of your outing before you plan, and "Another plan like this"
+</en-US>
+
+<ar>
+• الخطط بتتعمل في لحظة وبتفتح على طول حتى لو النت بطيء
+• مواعيد واقعية: الوقت في كل محطة على حسب المكان، والمشوار على حسب المسافة
+• تبديل وإضافة محطة أذكى: قريبة وفاتحة وقتها ومناسبة بعدها
+• شوف شكل خروجتك قبل ما تخطط، وزرار "خطة شبهها"
+</ar>
+
 ## 2.2.0
 
 <en-US>

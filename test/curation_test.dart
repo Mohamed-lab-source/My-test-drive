@@ -125,4 +125,58 @@ void main() {
     final ids = fallbackPlan(r, c, day: day, random: Random(3)).stops.map((s) => s.placeId).toList();
     expect(ids, ['fun', 'nearFood', 'openCafe']);
   });
+
+  test('realistic times: length by kind, travel by distance, nothing after 2 am', () {
+    expect(stopMinutes(_p('ic', 'cafe', kind: 'ice cream shop')), 40);
+    expect(stopMinutes(_p('ff', 'restaurant', kind: 'fast food restaurant')), 45);
+    expect(stopMinutes(_p('cin', 'cinema')), 150);
+    expect(stopMinutes(_p('bowl', 'entertainment', kind: 'bowling alley')), 75);
+    expect(travelMinutes(0.2), 10);
+    expect(travelMinutes(3), 20);
+    expect(travelMinutes(30), 60);
+    expect(travelMinutes(null), 20);
+    final late = [
+      for (var i = 0; i < 6; i++) _p('n$i', i.isEven ? 'cinema' : 'restaurant', quality: 8, lat: 30.05 + i * 0.001),
+    ];
+    final r = _req(['nightlife'], 'night', stops: 5);
+    final stops = fallbackPlan(r, late, random: Random(1)).stops;
+    for (final s in stops) {
+      final h = int.parse(s.startTime!.split(':').first);
+      expect(h >= 21 || h < 2, isTrue, reason: s.startTime);
+    }
+  });
+
+  test('time of day already over and the outing shape', () {
+    expect(timeOfDayIsOver('morning', DateTime(2026, 11, 6, 15)), isTrue);
+    expect(timeOfDayIsOver('evening', DateTime(2026, 11, 6, 15)), isFalse);
+    expect(timeOfDayIsOver('morning', DateTime(2026, 11, 6, 1)), isFalse, reason: 'still last night');
+    expect(timeOfDayIsOver('night', DateTime(2026, 11, 6, 23)), isFalse);
+    expect(outingShape('evening', ['romantic'], 3), ['🎯 Something to do', '🍽️ Dinner', '🍰 Dessert']);
+    expect(outingShape('night', ['chill'], 2).first, '🍽️ Dinner');
+    expect(outingShape('evening', ['foodie'], 3), ['🍽️ Dinner', '🍰 Dessert', '☕ Coffee']);
+  });
+
+  test('swap and add-a-stop options make sense', () {
+    final ps = [
+      _p('meal', 'restaurant', kind: 'italian restaurant', quality: 8),
+      _p('cafeNear', 'cafe', kind: 'dessert shop', quality: 6, lat: 30.051),
+      _p('cafeFar', 'cafe', kind: 'coffee shop', quality: 10, lat: 30.2),
+      _p('meal2', 'restaurant', kind: 'egyptian restaurant', quality: 9, lat: 30.0505),
+      _p('r2', 'restaurant', kind: 'seafood restaurant', quality: 7, lat: 30.052),
+      _p('r3', 'restaurant', kind: 'grill restaurant', quality: 7, lat: 30.053),
+    ];
+    final plan = OutingPlan(
+      id: 'p',
+      title: 't',
+      summary: '',
+      request: _req(['chill'], 'evening'),
+      stops: buildStops(const [ProposedStop(placeId: 'meal', startTime: '19:00', durationMinutes: 90)], ps),
+    );
+    final next = addStopOptions(plan, ps);
+    expect(next.first.id, 'cafeNear', reason: 'dessert after dinner, close by');
+    expect(next.map((p) => p.id), isNot(contains('cafeFar')), reason: 'more than 5 km away');
+    final swaps = alternativesFor(plan, 0, ps);
+    expect(swaps.first.id, 'meal2');
+    expect(swaps.every((p) => p.category == 'restaurant'), isTrue);
+  });
 }

@@ -82,11 +82,12 @@ double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random rand
   final cozy = vibes.intersection(const {'romantic', 'chill', 'culture', 'foodie'}).isNotEmpty;
   var score = fit * 10.0;
   // How well-known it probably is (map signals only, never shown).
-  score += fameOf(p) * 1.2;
+  final sig = signalsOf(p);
+  score += sig.fame * 1.2;
   // One branch of a big chain is rarely what makes an outing special.
   if (chain) score -= cozy ? 14 : 6;
   // A burger or koshary stop isn't a romantic dinner.
-  if (isQuickBite(p)) {
+  if (sig.quick) {
     score -= vibes.contains('romantic') ? 30 : vibes.contains('foodie') ? 10 : vibes.contains('chill') ? 8 : 3;
   }
   final kind = p.kind ?? '';
@@ -94,7 +95,8 @@ double scorePlace(Place p, PlanRequest input, Weather? weather, math.Random rand
   if (vibes.contains('family') && (kind.contains('playcenter') || kind.contains('zoo') || kind.contains('amusement'))) {
     score += 8;
   }
-  if ((input.timeOfDay == 'night' || input.timeOfDay == 'evening') && isDaytimeOnly(p)) {
+  if (vibes.contains('family') && p.details.kidsArea == true) score += 6;
+  if ((input.timeOfDay == 'night' || input.timeOfDay == 'evening') && sig.daytime) {
     score -= input.timeOfDay == 'night' ? 1000 : 15;
   }
   if (isBadWeather(weather) && !isIndoor(p)) score -= 25;
@@ -166,18 +168,18 @@ List<Place> pickCandidates(
   final startsAt = now == null ? null : startTimeFor(input.timeOfDay, now);
   final exclude = input.excludePlaceIds.toSet();
   final inMall = input.mallId != null && input.mallId!.isNotEmpty;
-  final chains = chainSizes(places);
+  ensureSignals(places);
 
   List<(Place, double)> rank(bool useExclude) {
     final scored = <(Place, double)>[
       for (final p in places)
         if (passesFilters(p, input) &&
-            !isJunkPlace(p) &&
+            !signalsOf(p).junk &&
             // Shops only make sense inside the mall you picked.
             (inMall || p.category != 'shop') &&
             (!useExclude || !exclude.contains(p.id)) &&
             !(input.onlyOpen && startsAt != null && p.isOpenAt(startsAt) == false))
-          (p, scorePlace(p, input, weather, rnd, startsAt: startsAt, chain: isChain(p, chains))),
+          (p, scorePlace(p, input, weather, rnd, startsAt: startsAt, chain: signalsOf(p).isChainBranch)),
     ]..removeWhere((x) => x.$2 < -500);
     scored.sort((a, b) => b.$2.compareTo(a.$2));
     return scored;
@@ -200,7 +202,7 @@ List<Place> pickCandidates(
   for (final p in ranked) {
     final n = perCategory[p.category] ?? 0;
     if (n >= 12) continue;
-    final key = chainKey(p.name);
+    final key = signalsOf(p).chain;
     if (key.length >= 3 && !seenChains.add(key)) continue;
     perCategory[p.category] = n + 1;
     out.add(p);
@@ -398,6 +400,48 @@ const _defaultMinutes = {
 
 const _food = {'restaurant', 'cafe'};
 
+/// About how long people usually spend at a place of this kind (a rough
+/// default the person can change; never shown as a fact about the place).
+int stopMinutes(Place p) {
+  final kind = p.kind ?? '';
+  final sig = signalsOf(p);
+  switch (p.category) {
+    case 'restaurant':
+      return sig.quick ? 45 : 90;
+    case 'cafe':
+      if (sig.sweet) return 40;
+      if (sig.role == 'lounge') return 90;
+      return 60;
+    case 'museum':
+      if (kind.contains('theatre')) return 150;
+      if (kind.contains('gallery')) return 45;
+      return sig.fame >= 15 ? 150 : 90;
+    case 'sight':
+      return sig.fame >= 15 ? 90 : 60;
+    case 'entertainment':
+      if (RegExp(r'(zoo|amusement|water park)').hasMatch(kind) || sig.daytime) return 150;
+      if (RegExp(r'(bowling|billiards|arcade|karaoke|laser)').hasMatch(kind)) return 75;
+      return 90;
+    case 'activity':
+      if (kind == 'beach') return 150;
+      if (kind.contains('golf')) return 120;
+      if (kind.contains('boat')) return 60;
+      return 75;
+  }
+  return _defaultMinutes[p.category] ?? 90;
+}
+
+/// Rough minutes to get from one stop to the next in city traffic.
+int travelMinutes(double? km) {
+  if (km == null) return 20;
+  if (km < 0.4) return 10;
+  return math.min(60, ((10 + km * 4) / 5).round() * 5);
+}
+
+/// Nothing new starts after 02:00: a plan that would run later ends with
+/// fewer stops instead.
+const latestStartMinutes = 26 * 60;
+
 /// The order of an outing, by time of day: something to do, then a meal,
 /// then coffee or dessert. Foodie-only plans are all food, never two big
 /// meals in a row.
@@ -423,6 +467,36 @@ List<String> stopRoles(PlanRequest input, {bool hasFun = true}) {
 String _firstWord(String key) {
   final w = key.split(' ').first;
   return w.length >= 4 ? w : key;
+}
+
+/// Does any of these vibes include something to do (not only food)?
+bool vibesHaveFun(Iterable<String> vibes) => vibes.any(
+    (v) => (vibeWeights[v] ?? const {}).keys.any((c) => !_food.contains(c) && c != 'shop'));
+
+/// True when that part of today is already over (e.g. "morning" at 3 pm).
+/// Between midnight and 4 am nothing counts as over yet (it's still last
+/// night for most people).
+bool timeOfDayIsOver(String timeOfDay, DateTime now) {
+  if (now.hour < 4) return false;
+  const ends = {'morning': 12, 'afternoon': 17, 'evening': 21, 'night': 26};
+  return now.hour >= (ends[timeOfDay] ?? 26);
+}
+
+/// The usual shape of the outing, as short labels (e.g. "🎯 Something to
+/// do → 🍽️ Dinner → 🍰 Dessert"), for the plan form.
+List<String> outingShape(String timeOfDay, Iterable<String> vibes, int stops) {
+  final roles = stopRoles(
+      PlanRequest(city: '', groupSize: 1, vibes: vibes.toList(), timeOfDay: timeOfDay, stops: stops),
+      hasFun: vibesHaveFun(vibes));
+  return [
+    for (final r in roles)
+      switch (r) {
+        'fun' => tr('🎯 Something to do'),
+        'meal' => timeOfDay == 'evening' || timeOfDay == 'night' ? tr('🍽️ Dinner') : tr('🍽️ Lunch'),
+        'sweet' => tr('🍰 Dessert'),
+        _ => tr('☕ Coffee'),
+      },
+  ];
 }
 
 bool _fitsRole(Place p, String role) => switch (role) {
@@ -457,6 +531,7 @@ ProposedPlan fallbackPlan(PlanRequest input, List<Place> candidates, {DateTime? 
   String? mallId;
 
   for (final role in roles) {
+    if (prev != null && minutes >= latestStartMinutes) break;
     Place? best;
     var bestScore = double.negativeInfinity;
     final at = day == null ? null : DateTime(day.year, day.month, day.day).add(Duration(minutes: minutes));
@@ -465,16 +540,17 @@ ProposedPlan fallbackPlan(PlanRequest input, List<Place> candidates, {DateTime? 
       var s = 40.0 * (1 - rankOf[p.id]! / candidates.length) + rnd.nextDouble() * 12;
       if (!_fitsRole(p, role)) s -= 60;
       // Something to do should be somewhere people know (well documented).
-      if (role == 'fun' && fameOf(p) < 6) s -= 20;
-      final key = chainKey(p.name);
+      final sig = signalsOf(p);
+      if (role == 'fun' && sig.fame < 6) s -= 20;
+      final key = sig.chain;
       if (key.length >= 3 && (usedChains.contains(key) || usedChains.contains(_firstWord(key)))) s -= 80;
       s -= 14.0 * (usedCategories[p.category] ?? 0);
       if (prev != null && prev.category == p.category) s -= 30;
-      final food = foodRole(p);
+      final food = sig.role;
       if (food != 'fun' && usedFood.contains(food)) s -= 25;
       if (p.category == 'restaurant' && restaurants >= (target >= 4 ? 2 : 1)) s -= 45;
-      if (role == 'sweet' && isSweetStop(p)) s += 10;
-      if (role == 'coffee' && p.category == 'cafe' && !isSweetStop(p)) s += 6;
+      if (role == 'sweet' && sig.sweet) s += 10;
+      if (role == 'coffee' && p.category == 'cafe' && !sig.sweet) s += 6;
       // Close to the last stop (or inside the same mall).
       if (prev != null && prev.hasLocation && p.hasLocation) {
         final km = haversineKm(prev.lat!, prev.lng!, p.lat!, p.lng!);
@@ -488,7 +564,7 @@ ProposedPlan fallbackPlan(PlanRequest input, List<Place> candidates, {DateTime? 
         if (open == false) s -= 60;
         if (open == true) s += 4;
       }
-      if (isDaytimeOnly(p) && minutes >= 17 * 60 + 30) s -= 40;
+      if (sig.daytime && minutes >= 17 * 60 + 30) s -= 40;
       if (s > bestScore) {
         bestScore = s;
         best = p;
@@ -496,19 +572,19 @@ ProposedPlan fallbackPlan(PlanRequest input, List<Place> candidates, {DateTime? 
     }
     if (best == null) break;
     chosen.add(best);
-    final key = chainKey(best.name);
+    final key = signalsOf(best).chain;
     if (key.length >= 3) usedChains.addAll([key, _firstWord(key)]);
     usedCategories[best.category] = (usedCategories[best.category] ?? 0) + 1;
-    final food = foodRole(best);
+    final food = signalsOf(best).role;
     if (food != 'fun') usedFood.add(food);
     if (best.category == 'restaurant') restaurants++;
     if (best.category == 'mall') mallId = best.id;
-    final duration = _defaultMinutes[best.category] ?? 90;
-    final gap = prev != null && prev.hasLocation && best.hasLocation &&
-            haversineKm(prev.lat!, prev.lng!, best.lat!, best.lng!) < 0.4
-        ? 10
-        : 20;
-    if (prev != null) minutes += gap;
+    final duration = stopMinutes(best);
+    if (prev != null) {
+      minutes += travelMinutes(prev.hasLocation && best.hasLocation
+          ? haversineKm(prev.lat!, prev.lng!, best.lat!, best.lng!)
+          : null);
+    }
     minutes = (minutes / 5).round() * 5;
     stops.add(ProposedStop(placeId: best.id, startTime: _hhmm(minutes), durationMinutes: duration));
     minutes += duration;
@@ -614,21 +690,106 @@ List<PlanStop> withDistances(List<PlanStop> stops) {
 List<Place> alternativesFor(OutingPlan plan, int index, List<Place> places, {int limit = 10}) {
   final stop = plan.stops[index];
   final used = {for (final s in plan.stops) s.placeId};
-  final pool = places
-      .where((p) => !used.contains(p.id) && passesFilters(p, plan.request) && p.category != 'shop')
-      .toList();
-  double distance(Place p) => stop.hasLocation && p.hasLocation
-      ? haversineKm(stop.lat!, stop.lng!, p.lat!, p.lng!)
-      : 9999;
-  int fit(Place p) => p.category == stop.category ? 0 : 1;
-  pool.sort((a, b) {
-    final f = fit(a).compareTo(fit(b));
-    if (f != 0) return f;
-    final d = distance(a).compareTo(distance(b));
-    return d != 0 ? d : b.quality.compareTo(a.quality);
-  });
-  final sameKind = pool.where((p) => p.category == stop.category).toList();
-  return (sameKind.length >= 3 ? sameKind : pool).take(limit).toList();
+  final usedChains = {
+    for (final (i, s) in plan.stops.indexed)
+      if (i != index) chainKey(s.name),
+  };
+  final at = _atTime(plan.request.day, stop.startTime);
+  final late = (_minutesOf(stop.startTime) ?? 0) >= 17 * 60 + 30;
+  // Distances once, not inside the sort.
+  final options = <(Place, double)>[];
+  for (final p in places) {
+    if (used.contains(p.id) || p.category == 'shop' || signalsOf(p).junk) continue;
+    if (!passesFilters(p, plan.request)) continue;
+    final km = stop.hasLocation && p.hasLocation ? haversineKm(stop.lat!, stop.lng!, p.lat!, p.lng!) : 9999.0;
+    options.add((p, km));
+  }
+  final stopRole = foodRoleOfCategory(stop.category);
+  double score((Place, double) x) {
+    final (p, km) = x;
+    final sig = signalsOf(p);
+    var s = sig.fame * 1.2 - (km >= 9999 ? 60 : km * 5);
+    if (p.category == stop.category) s += 30;
+    if (stopRole != null && sig.role == stopRole) s += 6;
+    if (sig.isChainBranch) s -= 6;
+    if (sig.chain.length >= 3 && usedChains.contains(sig.chain)) s -= 80;
+    if (at != null) {
+      final open = p.isOpenAt(at);
+      if (open == false) s -= 40;
+      if (open == true) s += 4;
+    }
+    if (late && sig.daytime) s -= 30;
+    return s;
+  }
+
+  List<Place> best(Iterable<(Place, double)> pool) {
+    final scored = [for (final x in pool) (x.$1, score(x))]..sort((a, b) => b.$2.compareTo(a.$2));
+    return _distinctNames([for (final x in scored) x.$1]);
+  }
+
+  // Closest first: widen only if there aren't enough of the same kind.
+  for (final r in [3.0, 8.0, double.infinity]) {
+    final near = options.where((x) => x.$2 <= r || (r.isInfinite));
+    final same = near.where((x) => x.$1.category == stop.category).toList();
+    if (same.length >= 3) return best(same).take(limit).toList();
+    if (r.isInfinite) return best(near).take(limit).toList();
+  }
+  return const [];
+}
+
+/// The usual food role of a category ('meal' for restaurants, 'coffee' for
+/// cafés), or null for things to do.
+String? foodRoleOfCategory(String category) => switch (category) {
+      'restaurant' => 'meal',
+      'cafe' => 'coffee',
+      _ => null,
+    };
+
+/// Good next stops after the plan's last one: close by, of a kind that
+/// makes sense next (no second dinner, a sweet after a meal...), open by
+/// the time you'd get there.
+List<Place> addStopOptions(OutingPlan plan, List<Place> places, {int limit = 25}) {
+  final used = {for (final s in plan.stops) s.placeId};
+  final usedChains = {for (final s in plan.stops) chainKey(s.name)};
+  final last = plan.stops.isEmpty ? null : plan.stops.last;
+  final hasMeal = plan.stops.any((s) => s.category == 'restaurant');
+  final next = last == null ? null : _minutesOf(stopEndTime(last));
+  final at = next == null ? null : _atTime(plan.request.day, _hhmm(next + 15));
+  final late = next != null && next >= 17 * 60 + 30;
+  final scored = <(Place, double)>[];
+  for (final p in places) {
+    if (used.contains(p.id) || p.category == 'shop') continue;
+    final sig = signalsOf(p);
+    if (sig.junk || !passesFilters(p, plan.request)) continue;
+    final km = last != null && last.hasLocation && p.hasLocation
+        ? haversineKm(last.lat!, last.lng!, p.lat!, p.lng!)
+        : null;
+    if (km != null && km > 5) continue;
+    var s = sig.fame * 1.2 - (km ?? 3) * 5;
+    if (last != null && p.category == last.category) s -= 25;
+    if (hasMeal && p.category == 'restaurant') s -= 20;
+    if (last?.category == 'restaurant' && sig.sweet) s += 10;
+    if (sig.chain.length >= 3 && usedChains.contains(sig.chain)) s -= 80;
+    if (sig.isChainBranch) s -= 4;
+    if (at != null) {
+      final open = p.isOpenAt(at);
+      if (open == false) s -= 40;
+      if (open == true) s += 4;
+    }
+    if (late && sig.daytime) s -= 30;
+    scored.add((p, s));
+  }
+  scored.sort((a, b) => b.$2.compareTo(a.$2));
+  return _distinctNames([for (final x in scored.take(limit * 2)) x.$1]).take(limit).toList();
+}
+
+/// The same place listed twice by the two map sources: keep the first.
+List<Place> _distinctNames(List<Place> list) {
+  final seen = <String>{};
+  return [
+    for (final p in list)
+      if (seen.add(p.name.trim().toLowerCase())) p,
+  ];
 }
 
 /// Kinds of places that make a good plan B when it rains or is very hot.
@@ -779,7 +940,10 @@ List<PlanStop> addStop(List<PlanStop> stops, Place place) {
     final last = stops.last;
     final parts = last.startTime?.split(':');
     if (parts != null && parts.length == 2) {
-      final m = int.parse(parts[0]) * 60 + int.parse(parts[1]) + (last.durationMinutes ?? 90) + 20;
+      final km = last.hasLocation && place.hasLocation
+          ? haversineKm(last.lat!, last.lng!, place.lat!, place.lng!)
+          : null;
+      final m = int.parse(parts[0]) * 60 + int.parse(parts[1]) + (last.durationMinutes ?? 90) + travelMinutes(km);
       start = _hhmm(m);
     }
   }
@@ -794,7 +958,7 @@ List<PlanStop> addStop(List<PlanStop> stops, Place place) {
       lng: place.lng,
       cuisine: place.cuisineLabel,
       startTime: start,
-      durationMinutes: _defaultMinutes[place.category] ?? 60,
+      durationMinutes: stopMinutes(place),
     ),
   ]);
 }

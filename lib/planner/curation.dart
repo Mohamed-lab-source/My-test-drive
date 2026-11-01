@@ -33,7 +33,7 @@ final _junk = RegExp(
   r'apartments?|\bflats?\b|\boffice\b|company|\bco\.|\bltd\b|agency|production|'
   r'insurance|\bbank\b|pharmacy|clinic|hospital|dental|\bschool\b|nursery|kindergarten|university|'
   r'institute|training center|furnished|for rent|for sale|\bstore\b|home accessories|frames|fan ?page|'
-  r'ramadan tent|shipping|logistics|توكيلات|ملاحية|خيمة رمضان|صفحة|'
+  r'ramadan tent|shipping|logistics|\bvape|smoke shop|tobacco|توكيلات|ملاحية|خيمة رمضان|صفحة|فيب|سجائر|'
   r'عقار|عقارات|التسويق العقاري|للتسويق|للتطوير|كمبوند|كومباوند|كمباوند|ابراج|أبراج|برج سكني|شقة|شقق|'
   r'مفروشة|مكتب|شركة|شركه|للانتاج|للإنتاج|تأمين|بنك|صيدلي|عيادة|عياده|مستشفى|مستشفي|'
   r'مدرسة|مدرسه|حضانة|جامعة|معهد|براويز|للبيع|للايجار|للإيجار|مخزن)',
@@ -86,16 +86,15 @@ bool isJunkPlace(Place p) {
   }
   if (_streetLike.hasMatch(name) && const {'sight', 'park', 'museum', 'activity'}.contains(p.category)) return true;
   if (const {'museum', 'cinema', 'entertainment'}.contains(p.category) &&
-      RegExp(r'(academy|اكاديمية|أكاديمية)', caseSensitive: false).hasMatch(name)) {
+      _academy.hasMatch(name)) {
     return true;
   }
   if (fromOverture && p.category == 'sight' && !_landmark.hasMatch(name)) return true;
   if (fromOverture && p.category == 'museum' && p.kind == 'art gallery' &&
-      !RegExp(r'(gallery|galerie|art|museum|space|studio|جاليري|معرض|فن|متحف|قاعة)', caseSensitive: false)
-          .hasMatch(name)) {
+      !_galleryWord.hasMatch(name)) {
     return true;
   }
-  if (p.category == 'park' && RegExp(r'(academy|اكاديمية|أكاديمية|ملعب|كرة)', caseSensitive: false).hasMatch(name)) {
+  if (p.category == 'park' && _sportsGround.hasMatch(name)) {
     return true;
   }
   if (_isJustAPlaceName(name)) return true;
@@ -113,12 +112,16 @@ bool isDaytimeOnly(Place p) {
   final kind = p.kind ?? '';
   if (kind.contains('theatre')) return false;
   if (const {'museum', 'park', 'sight'}.contains(p.category)) return true;
-  if (RegExp(r'(zoo|water park|beach|horse|riding|golf|botanical|aquarium|national park|boat)').hasMatch(kind)) {
-    return true;
-  }
-  return RegExp(r'(\bzoo\b|حديقة الحيوان|حديقة حيوان|aqua ?park|water ?park|اكوا ?بارك)', caseSensitive: false)
-      .hasMatch(p.name);
+  if (_daytimeKind.hasMatch(kind)) return true;
+  return _daytimeName.hasMatch(p.name);
 }
+
+final _academy = RegExp(r'(academy|اكاديمية|أكاديمية)', caseSensitive: false);
+final _galleryWord = RegExp(r'(gallery|galerie|art|museum|space|studio|جاليري|معرض|فن|متحف|قاعة)', caseSensitive: false);
+final _sportsGround = RegExp(r'(academy|اكاديمية|أكاديمية|ملعب|كرة)', caseSensitive: false);
+final _daytimeKind = RegExp(r'(zoo|water park|beach|horse|riding|golf|botanical|aquarium|national park|boat)');
+final _daytimeName =
+    RegExp(r'(\bzoo\b|حديقة الحيوان|حديقة حيوان|aqua ?park|water ?park|اكوا ?بارك)', caseSensitive: false);
 
 const _placeNames = {
   'cairo', 'giza', 'alexandria', 'alex', 'egypt', 'القاهرة', 'القاهره', 'الجيزة', 'الجيزه', 'الاسكندرية',
@@ -155,26 +158,26 @@ final _nonLetters = RegExp(r'[^a-z0-9؀-ۿ]+');
 /// The chain part of a name: "Buffalo Burger - Zamalek" → "buffalo burger".
 String chainKey(String name) {
   var base = name.split(_branchSplit).first.toLowerCase();
-  base = base.replaceAll(RegExp(r'^(مطعم|كافيه|كافية|كافي|مقهى|قهوة|cafe|café|restaurant)\s+'), '');
-  base = base.replaceAll(RegExp(r'\s+(egypt|eg|cairo|giza|alexandria|مصر)$'), '');
+  base = base.replaceFirst(_namePrefix, '');
+  base = base.replaceFirst(_nameSuffix, '');
   return base.replaceAll(_nonLetters, ' ').trim();
 }
 
-final _chainCache = Expando<Map<String, int>>('chains');
+final _namePrefix = RegExp(r'^(مطعم|كافيه|كافية|كافي|مقهى|قهوة|cafe|café|restaurant)\s+');
+final _nameSuffix = RegExp(r'\s+(egypt|eg|cairo|giza|alexandria|مصر)$');
 
-/// How many places share each chain name in this list (counted once per
-/// list, then kept).
-Map<String, int> chainSizes(List<Place> places) {
-  final cached = _chainCache[places];
-  if (cached != null) return cached;
+/// How many places share each chain name in this list.
+Map<String, int> chainSizes(List<Place> places) => _countChains(places, [for (final p in places) chainKey(p.name)]);
+
+Map<String, int> _countChains(List<Place> places, List<String> keys) {
   final counts = <String, int>{};
-  for (final p in places) {
+  for (var i = 0; i < places.length; i++) {
+    final p = places[i];
     if (p.category != 'restaurant' && p.category != 'cafe') continue;
-    final k = chainKey(p.name);
+    final k = keys[i];
     if (k.length < 3) continue;
     counts[k] = (counts[k] ?? 0) + 1;
   }
-  _chainCache[places] = counts;
   return counts;
 }
 
@@ -201,7 +204,7 @@ bool isQuickBite(Place p) {
   if (p.category != 'restaurant') return false;
   if (p.kind != null && _fastFoodKind.hasMatch(p.kind!)) return true;
   final c = p.cuisine ?? '';
-  if (RegExp(r'^(burger|chicken|sandwich|friture|hotdog|kebab|crepe|fast_food)').hasMatch(c) ||
+  if (_fastFoodCuisine.hasMatch(c) ||
       c.contains('fast_food')) {
     return true;
   }
@@ -211,9 +214,11 @@ bool isQuickBite(Place p) {
 /// Sweet / dessert stop (ice cream, bakery, dessert shop, donuts...).
 bool isSweetStop(Place p) {
   final k = '${p.kind ?? ''} ${p.cuisine ?? ''}'.toLowerCase();
-  return p.category == 'cafe' &&
-      RegExp(r'(dessert|ice.cream|bakery|donut|patisserie|cake|gelato|chocolat|juice)').hasMatch(k);
+  return p.category == 'cafe' && _sweetWord.hasMatch(k);
 }
+
+final _fastFoodCuisine = RegExp(r'^(burger|chicken|sandwich|friture|hotdog|kebab|crepe|fast_food)');
+final _sweetWord = RegExp(r'(dessert|ice.cream|bakery|donut|patisserie|cake|gelato|chocolat|juice)');
 
 /// The kind of food stop, used so a plan doesn't have two of the same.
 String foodRole(Place p) {
@@ -240,6 +245,75 @@ double fameOf(Place p) {
   if (p.details.wheelchair != null || p.details.outdoorSeating != null) f += 1;
   return f;
 }
+
+// ---------------------------------------------------------------------------
+// Worked out once per place (in the background while places load), so
+// making a plan is instant instead of re-reading every name each time.
+// ---------------------------------------------------------------------------
+
+class PlaceSignals {
+  const PlaceSignals({
+    required this.junk,
+    required this.chain,
+    required this.chainSize,
+    required this.quick,
+    required this.sweet,
+    required this.daytime,
+    required this.fame,
+    required this.role,
+  });
+
+  final bool junk;
+  final String chain;
+  final int chainSize;
+  final bool quick;
+  final bool sweet;
+  final bool daytime;
+  final double fame;
+  final String role;
+
+  bool get isChainBranch => chainSize >= chainMin;
+}
+
+final _signals = Expando<PlaceSignals>('signals');
+final _ready = Expando<bool>('signalsReady');
+
+PlaceSignals _compute(Place p, String key, int size) => PlaceSignals(
+      junk: isJunkPlace(p),
+      chain: key,
+      chainSize: p.details.brand != null ? math.max(size, chainMin) : size,
+      quick: isQuickBite(p),
+      sweet: isSweetStop(p),
+      daytime: isDaytimeOnly(p),
+      fame: fameOf(p),
+      role: foodRole(p),
+    );
+
+/// Works out the signals of every place (chain sizes need the whole list).
+/// Runs in the background isolate when places load.
+List<PlaceSignals> buildSignals(List<Place> places) {
+  final keys = [for (final p in places) chainKey(p.name)];
+  final counts = _countChains(places, keys);
+  return [for (var i = 0; i < places.length; i++) _compute(places[i], keys[i], counts[keys[i]] ?? 1)];
+}
+
+/// Remembers already-worked-out signals for these places.
+void attachSignals(List<Place> places, List<PlaceSignals> signals) {
+  for (var i = 0; i < places.length && i < signals.length; i++) {
+    _signals[places[i]] = signals[i];
+  }
+  _ready[places] = true;
+}
+
+/// Makes sure every place in this list has its signals (only works them
+/// out the first time).
+void ensureSignals(List<Place> places) {
+  if (_ready[places] == true) return;
+  attachSignals(places, buildSignals(places));
+}
+
+/// The signals of one place (worked out on the spot if it has none yet).
+PlaceSignals signalsOf(Place p) => _signals[p] ??= _compute(p, chainKey(p.name), 1);
 
 double _km(double aLat, double aLng, double bLat, double bLng) {
   const r = 6371.0;

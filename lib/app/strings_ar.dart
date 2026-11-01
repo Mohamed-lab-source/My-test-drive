@@ -2491,4 +2491,28 @@ const arabic = <String, String>{
   'Better places': 'أماكن أحسن',
   'Fewer fast-food chains for a date night, one branch per chain, and no more offices, compounds or streets listed as places to visit.':
       'سلاسل أكل سريع أقل في خروجات الرومانسية، فرع واحد بس من كل سلسلة، ومفيش تاني مكاتب أو كمبوندات أو شوارع على إنها أماكن تتزار.',
+  'Another plan like this (new places)': 'خطة شبهها (أماكن جديدة)',
+  'Closed then': 'قافل وقتها',
+  'Open then': 'فاتح وقتها',
+  'Real places near your last stop that make sense next': 'أماكن حقيقية قريبة من آخر محطة ومناسبة بعدها',
+  'Your outing: {shape}': 'خروجتك: {shape}',
+  '{km} km away': 'على بعد {km} كم',
+  '{time} is over for today, so this plan is for tomorrow.': '{time} خلص النهارده، فالخطة دي لبكرة.',
+  "{time} is over for today, so we'll plan it for tomorrow.": '{time} خلص النهارده، فهنخططها لبكرة.',
+  '☕ Coffee': '☕ قهوة',
+  '🍰 Dessert': '🍰 حاجة حلوة',
+  '🍽️ Dinner': '🍽️ عشا',
+  '🍽️ Lunch': '🍽️ غدا',
+  '🎯 Something to do': '🎯 حاجة تعملوها',
+  'Instant plans': 'خطط في لحظة',
+  'Plans are made in a blink and open straight away, even on a slow connection.':
+      'الخطة بتتعمل في لمح البصر وبتفتح على طول، حتى لو النت بطيء.',
+  'Real timings': 'مواعيد واقعية',
+  'Time at each stop fits the place (a quick dessert, a long film) and travel time grows with the distance.':
+      'الوقت في كل محطة على حسب المكان (حلو سريع أو فيلم طويل)، ووقت المشوار على حسب المسافة.',
+  'Better swaps': 'تبديل أذكى',
+  'Swap and Add a stop suggest close places that make sense next and are open at that time.':
+      'التبديل وإضافة محطة بيقترحوا أماكن قريبة ومناسبة بعدها وفاتحة في الوقت ده.',
+  'See your outing first': 'شوف خروجتك الأول',
+  'The plan form shows how your outing will go before you tap Plan.': 'صفحة التخطيط بتوريك الخروجة هتمشي إزاي قبل ما تدوس خطط.',
 };

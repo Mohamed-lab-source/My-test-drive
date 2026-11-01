@@ -67,20 +67,31 @@ Future<Weather?> fetchWeather(String city, {DateTime? day, http.Client? client})
     'start_date': ymd,
     'end_date': ymd,
   });
+  // One request per city and day for an hour: "Another one" and new plans
+  // for the same day don't wait for the network again.
+  final key = '$city|$ymd';
+  final cached = _weatherCache[key];
+  if (client == null && cached != null && DateTime.now().difference(cached.$1) < const Duration(hours: 1)) {
+    return cached.$2;
+  }
   try {
     final res = await (client ?? http.Client())
         .get(uri)
-        .timeout(const Duration(seconds: 6));
+        .timeout(const Duration(seconds: 4));
     if (res.statusCode != 200) return null;
     final daily = (jsonDecode(res.body) as Map)['daily'] as Map?;
     final temp = (daily?['temperature_2m_max'] as List?)?.firstOrNull;
     final rain = (daily?['precipitation_probability_max'] as List?)?.firstOrNull;
     if (temp is! num) return null;
-    return Weather(maxTempC: temp.toDouble(), rainChancePct: rain is num ? rain.round() : 0);
+    final weather = Weather(maxTempC: temp.toDouble(), rainChancePct: rain is num ? rain.round() : 0);
+    if (client == null) _weatherCache[key] = (DateTime.now(), weather);
+    return weather;
   } catch (_) {
     return null;
   }
 }
+
+final _weatherCache = <String, (DateTime, Weather)>{};
 
 class AiUnavailable implements Exception {
   AiUnavailable(this.reason, {this.resting = false});
