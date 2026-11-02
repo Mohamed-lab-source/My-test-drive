@@ -27,6 +27,8 @@ import { rescheduleExtraReminders, rescheduleMorningAllowance } from '../src/not
 import { applyAutoRoutines } from '../src/utils/autoRoutines';
 
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
+import { splitMergedCards } from '../src/sms/cardAccounts';
+import { useUndoStore } from '../src/store/undoStore';
 import { setAsrMadhab, setPrayerAdjustments } from '../src/utils/prayerTimes';
 import { setUse24hClock } from '../src/utils/date';
 import { setWholeMoney } from '../src/utils/money';
@@ -115,6 +117,17 @@ function AppShell() {
         // Housekeeping waits until the first screen has finished appearing,
         // so opening the app stays smooth.
         await new Promise<void>((resolve) => setTimeout(() => InteractionManager.runAfterInteractions(() => resolve()), 1200));
+        // Cards that had all landed on one account get their own again.
+        if (!useSettingsStore.getState().cardsSplitDone) {
+          const split = await splitMergedCards().catch(() => null);
+          if (split) {
+            useSettingsStore.getState().setCardsSplitDone();
+            if (split.length) {
+              await useSmsStore.getState().loadLinks();
+              useUndoStore.getState().show(split.length === 1 ? `Card ••${split[0]} now has its own account` : `${split.length} cards now have their own accounts`);
+            }
+          }
+        }
         // Bank SMS: pick up any new debit alerts (no-op unless turned on).
         syncSmsAlertConfig();
         useSmsStore

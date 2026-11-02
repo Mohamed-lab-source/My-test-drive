@@ -11,6 +11,7 @@ import { useSmsStore } from '../../sms/smsStore';
 import { useUndoStore } from '../../store/undoStore';
 import { listSmsImportsSince } from '../../db/repositories/smsImports';
 import * as linksRepo from '../../db/repositories/cardLinks';
+import { createCardAccount } from '../../sms/cardAccounts';
 import { bankName, cardLabel, cardNetwork } from '../../sms/banks';
 import { convertToBase } from '../../db/repositories/fx';
 import { formatMoney } from '../../utils/money';
@@ -33,8 +34,8 @@ interface Spotted {
 // add one in a tap, link it to an account you have, or say it's not yours.
 export function NewCardsPrompt() {
   const { colors, typography, spacing } = useTheme();
-  const { accounts, fxRates, addAccount } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, fxRates: s.fxRates, addAccount: s.addAccount })));
-  const { currency, ignoredCards, ignoreCard, homeAccounts, setHomeAccountShown } = useSettingsStore(useShallow((s) => ({ currency: s.currency, ignoredCards: s.ignoredCards, ignoreCard: s.ignoreCard, homeAccounts: s.homeAccounts, setHomeAccountShown: s.setHomeAccountShown })));
+  const { accounts, fxRates } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, fxRates: s.fxRates })));
+  const { currency, ignoredCards, ignoreCard } = useSettingsStore(useShallow((s) => ({ currency: s.currency, ignoredCards: s.ignoredCards, ignoreCard: s.ignoreCard })));
   const { links, loadLinks, pending } = useSmsStore(useShallow((s) => ({ links: s.links, loadLinks: s.loadLinks, pending: s.pending })));
   const show = useUndoStore((s) => s.show);
   const [rows, setRows] = useState<SmsImport[]>([]);
@@ -78,23 +79,8 @@ export function NewCardsPrompt() {
   };
 
   const add = async (c: Spotted) => {
-    const name = `${c.bank ?? 'Card'} ${c.credit ? 'Credit Card' : 'Debit'} ••${c.last4}`;
-    await addAccount({
-      name,
-      type: c.credit ? 'credit' : 'bank',
-      currency: c.currency,
-      icon: 'creditcard.fill',
-      color: c.credit ? '#AF52DE' : '#007AFF',
-      sort_order: accounts.length,
-      card_last4: c.last4,
-    });
-    const created = useFinanceStore.getState().accounts.find((a) => a.name === name);
-    if (created) {
-      await link(c, created.id, c.credit);
-      if (homeAccounts && !homeAccounts.includes(created.id)) {
-        setHomeAccountShown(created.id, true, useFinanceStore.getState().accounts.map((a) => a.id));
-      }
-    }
+    await createCardAccount({ digits: c.last4, bank: c.bank, credit: c.credit, currency: c.currency });
+    await loadLinks();
     show(`${cardLabel(c.bank, c.last4)} added`);
   };
 

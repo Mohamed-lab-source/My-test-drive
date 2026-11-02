@@ -12,6 +12,7 @@ import { configureSmsAlerts, isSmsReadingAvailable, readBankSms } from './native
 import { bankName, cardLabel } from './banks';
 import { notifyNow } from '../notifications/scheduler';
 import { looksLikeBankAlert } from './discover';
+import { cardOwner, claimedByOther, createCardAccountFor, freeCreditCards } from './cardAccounts';
 
 const FIRST_SCAN_DAYS = 30;
 
@@ -45,30 +46,34 @@ export function smsTargetAccount(accounts: Account[]): Account | null {
 }
 
 // Where an imported SMS should be posted: the account its card number is
-// linked to, else (for a credit-card charge) your credit card account, else
-// the default bank account. Card payments come *from* the bank account.
+// linked to, else (for a credit-card charge) a credit card account that
+// doesn't belong to another card, else the default bank account. Card
+// payments come *from* the bank account. Null for a credit card nobody owns
+// yet: it gets an account of its own when the charge is added.
 export function accountForImport(item: SmsImport, accounts: Account[], links: Record<string, CardLink>): Account | null {
   const open = accounts.filter((a) => !a.is_archived);
-  if (item.kind !== 'card_payment' && item.card_last4) {
-    const linked = open.find((a) => a.id === links[item.card_last4!]?.account_id);
-    if (linked) return linked;
-    // An account you gave these card digits, or one named with them.
-    const named = open.find((a) => a.card_last4 === item.card_last4) ?? open.find((a) => a.name.includes(item.card_last4!));
-    if (named) return named;
+  const digits = item.card_last4;
+  if (item.kind !== 'card_payment' && digits) {
+    const owner = cardOwner(digits, accounts, links);
+    if (owner) return owner;
   }
   if (item.kind !== 'card_payment' && item.card_type === 'credit') {
     // Prefer a credit card account from the same bank over any credit card.
+    const free = freeCreditCards(digits, accounts, links);
     const bank = bankName(item.sender, item.body)?.toLowerCase();
-    const sameBank = bank ? open.find((a) => a.type === 'credit' && a.name.toLowerCase().includes(bank)) : undefined;
-    const card = sameBank ?? open.find((a) => a.type === 'credit');
+    const card = (bank ? free.find((a) => a.name.toLowerCase().includes(bank)) : undefined) ?? free[0];
     if (card) return card;
+    if (digits) return null;
   }
   if (item.card_type === 'debit' || item.kind === 'card_payment') {
     const bank = smsTargetAccount(accounts);
     if (bank && bank.type !== 'credit') return bank;
     return open.find((a) => a.type === 'bank') ?? bank;
   }
-  return smsTargetAccount(accounts);
+  const target = smsTargetAccount(accounts);
+  // Your default account being a card doesn't make it every card's.
+  if (target?.type === 'credit' && digits && claimedByOther(target, digits, links)) return open.find((a) => a.type === 'bank') ?? null;
+  return target;
 }
 
 // The credit card a payment SMS is paying off.
@@ -91,15 +96,14 @@ export function billFor(item: SmsImport, rules: RecurringRule[]): RecurringRule 
 }
 
 export function creditCardFor(item: SmsImport, accounts: Account[], links: Record<string, CardLink>): Account | null {
-  const open = accounts.filter((a) => !a.is_archived && a.type === 'credit');
-  if (item.card_last4) {
-    const linked = open.find((a) => a.id === links[item.card_last4!]?.account_id);
-    if (linked) return linked;
-    const named = open.find((a) => a.name.includes(item.card_last4!));
-    if (named) return named;
+  const digits = item.card_last4;
+  if (digits) {
+    const owner = cardOwner(digits, accounts, links);
+    if (owner?.type === 'credit') return owner;
   }
+  const free = freeCreditCards(digits, accounts, links);
   const bank = bankName(item.sender, item.body)?.toLowerCase();
-  return (bank ? open.find((a) => a.name.toLowerCase().includes(bank)) : undefined) ?? open[0] ?? null;
+  return (bank ? free.find((a) => a.name.toLowerCase().includes(bank)) : undefined) ?? free[0] ?? null;
 }
 
 // A foreign-currency charge converted into the account's currency with your
@@ -282,6 +286,13 @@ export const useSmsStore = create<SmsState>((set, get) => ({
   },
 
   add: async (item, categoryId, accountId, opts) => {
+    // A credit card no account owns yet gets its own account, rather than
+    // landing on another card's.
+    if (item.card_last4 && (item.kind === 'card_payment' ? !creditCardFor(item, useFinanceStore.getState().accounts, get().links) : !accountId && item.card_type === 'credit')) {
+      const created = await createCardAccountFor(item);
+      await get().loadLinks();
+      if (created && item.kind !== 'card_payment') accountId = created.id;
+    }
     const finance = useFinanceStore.getState();
     const account = finance.accounts.find((a) => a.id === accountId);
     // Remember which account this card/account number belongs to.

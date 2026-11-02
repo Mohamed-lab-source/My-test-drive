@@ -10,6 +10,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Money',
     emoji: '💰',
     items: [
+      'Fixed: every credit card now gets its own account — new cards no longer pile onto the first card, and cards already merged were split back apart with their charges',
       'Spots any card you use, from any bank — new banks are added automatically, and new cards show on Home to add, link or ignore',
       'Months can start the day your salary arrives (found in your income or salary SMS), with a payday notification',
       'Your month can start on any day (e.g. payday) — Settings or Money → Plan; budgets, plan, limits and totals follow it',

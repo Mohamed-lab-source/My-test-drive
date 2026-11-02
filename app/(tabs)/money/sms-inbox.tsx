@@ -15,7 +15,7 @@ import { useSettingsStore } from '../../../src/store/settingsStore';
 import { bankName, cardLabel } from '../../../src/sms/banks';
 import { discoverBankSenders, type FoundSender } from '../../../src/sms/discover';
 import { useSmsStore, smsTargetAccount, syncSmsAlertConfig, accountForImport, creditCardFor, billFor } from '../../../src/sms/smsStore';
-import * as linksRepo from '../../../src/db/repositories/cardLinks';
+import { createCardAccountFor } from '../../../src/sms/cardAccounts';
 import { guessCategory } from '../../../src/sms/categorize';
 import { hasReceivePermission, hasSmsPermission, isSmsReadingAvailable, requestSmsPermission } from '../../../src/sms/native';
 import { formatMoney } from '../../../src/utils/money';
@@ -30,7 +30,6 @@ export default function SmsInboxScreen() {
   const { accounts, categories, transactions, recurringRules } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, recurringRules: s.recurringRules })));
   const { smsImportEnabled, setSmsImportEnabled, smsSenders, setSmsSenders, setSmsAccountId, smsInstantAlerts, setSmsInstantAlerts, smsAutoAddKnown, setSmsAutoAddKnown, smsReadCredits, setSmsReadCredits, smsIgnored, setSmsIgnored, smsWatchAllBanks, setSmsWatchAllBanks } = useSettingsStore(useShallow((s) => ({ smsImportEnabled: s.smsImportEnabled, setSmsImportEnabled: s.setSmsImportEnabled, smsSenders: s.smsSenders, setSmsSenders: s.setSmsSenders, setSmsAccountId: s.setSmsAccountId, smsInstantAlerts: s.smsInstantAlerts, setSmsInstantAlerts: s.setSmsInstantAlerts, smsAutoAddKnown: s.smsAutoAddKnown, setSmsAutoAddKnown: s.setSmsAutoAddKnown, smsReadCredits: s.smsReadCredits, setSmsReadCredits: s.setSmsReadCredits, smsIgnored: s.smsIgnored, setSmsIgnored: s.setSmsIgnored, smsWatchAllBanks: s.smsWatchAllBanks, setSmsWatchAllBanks: s.setSmsWatchAllBanks })));
   const { pending, scanning, scan, refresh, add, dismiss, rules, loadRules, links, loadLinks } = useSmsStore(useShallow((s) => ({ pending: s.pending, scanning: s.scanning, scan: s.scan, refresh: s.refresh, add: s.add, dismiss: s.dismiss, rules: s.rules, loadRules: s.loadRules, links: s.links, loadLinks: s.loadLinks })));
-  const addAccount = useFinanceStore((s) => s.addAccount);
   const [pickedAccount, setPickedAccount] = useState<Record<string, string>>({});
   const [inboxSort, setInboxSort] = useState('new');
   const [showRaw, setShowRaw] = useState<string | null>(null);
@@ -43,17 +42,7 @@ export default function SmsInboxScreen() {
   // One tap to set up a credit card account the first time a credit-card
   // charge or payment shows up, linked to the card's digits.
   const createCardAccount = async (p: SmsImport) => {
-    const accountName = `${bankName(p.sender, p.body) ?? 'My'} Credit Card${p.card_last4 ? ` ••${p.card_last4}` : ''}`;
-    await addAccount({
-      name: accountName,
-      type: 'credit',
-      currency: p.currency,
-      icon: 'creditcard.fill',
-      color: '#AF52DE',
-      sort_order: accounts.length,
-    });
-    const created = useFinanceStore.getState().accounts.find((a) => a.type === 'credit' && a.name === accountName);
-    if (created && p.card_last4) await linksRepo.setCardLink(p.card_last4, created.id, 'credit');
+    await createCardAccountFor({ ...p, card_type: 'credit' });
     await loadLinks();
   };
   const [renaming, setRenaming] = useState<{ id: string; merchant: string; text: string } | null>(null);
@@ -633,7 +622,13 @@ export default function SmsInboxScreen() {
                     ) : null}
                     <Text style={[typography.caption1, { color: colors.secondaryLabel, marginTop: spacing.sm, marginBottom: 4 }]}>
                       {p.kind === 'card_payment' ? 'Paid from' : 'Post to'}
-                      {p.card_last4 && links[p.card_last4] ? ` · ••${p.card_last4} is linked` : p.card_last4 ? ` · Anchor will remember ••${p.card_last4}` : ''}
+                      {p.card_last4 && links[p.card_last4]
+                        ? ` · ••${p.card_last4} is linked`
+                        : p.card_last4 && !target && p.card_type === 'credit'
+                          ? ` · New card ••${p.card_last4}: it gets its own account`
+                          : p.card_last4
+                            ? ` · Anchor will remember ••${p.card_last4}`
+                            : ''}
                     </Text>
                     <ChipSelector
                       options={accounts
