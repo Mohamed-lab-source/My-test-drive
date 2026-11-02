@@ -12,7 +12,7 @@ import { configureSmsAlerts, isSmsReadingAvailable, readBankSms } from './native
 import { bankName, cardLabel } from './banks';
 import { notifyNow } from '../notifications/scheduler';
 import { looksLikeBankAlert } from './discover';
-import { cardOwner, claimedByOther, createCardAccountFor, freeCreditCards } from './cardAccounts';
+import { cardOwner, claimedByOther, createCardAccountFor, freeCreditCards, isCardAccount } from './cardAccounts';
 
 const FIRST_SCAN_DAYS = 30;
 
@@ -53,11 +53,12 @@ export function smsTargetAccount(accounts: Account[]): Account | null {
 export function accountForImport(item: SmsImport, accounts: Account[], links: Record<string, CardLink>): Account | null {
   const open = accounts.filter((a) => !a.is_archived);
   const digits = item.card_last4;
-  if (item.kind !== 'card_payment' && digits) {
+  const payment = item.kind === 'card_payment';
+  if (!payment && digits) {
     const owner = cardOwner(digits, accounts, links);
     if (owner) return owner;
   }
-  if (item.kind !== 'card_payment' && item.card_type === 'credit') {
+  if (!payment && item.card_type === 'credit') {
     // Prefer a credit card account from the same bank over any credit card.
     const free = freeCreditCards(digits, accounts, links);
     const bank = bankName(item.sender, item.body)?.toLowerCase();
@@ -65,15 +66,16 @@ export function accountForImport(item: SmsImport, accounts: Account[], links: Re
     if (card) return card;
     if (digits) return null;
   }
-  if (item.card_type === 'debit' || item.kind === 'card_payment') {
-    const bank = smsTargetAccount(accounts);
-    if (bank && bank.type !== 'credit') return bank;
-    return open.find((a) => a.type === 'bank') ?? bank;
-  }
+  // Never an account that belongs to a different card. (A card payment's
+  // digits are the card being paid, not the account paying it.)
+  const ok = (a: Account) => payment || !digits || !(isCardAccount(a) && claimedByOther(a, digits, links));
   const target = smsTargetAccount(accounts);
-  // Your default account being a card doesn't make it every card's.
-  if (target?.type === 'credit' && digits && claimedByOther(target, digits, links)) return open.find((a) => a.type === 'bank') ?? null;
-  return target;
+  if (item.card_type === 'debit' || payment) {
+    if (target && target.type !== 'credit' && ok(target)) return target;
+    return open.find((a) => a.type === 'bank' && ok(a)) ?? (payment ? target : null);
+  }
+  if (target && ok(target)) return target;
+  return open.find((a) => a.type === 'bank' && ok(a)) ?? null;
 }
 
 // The credit card a payment SMS is paying off.
@@ -286,9 +288,9 @@ export const useSmsStore = create<SmsState>((set, get) => ({
   },
 
   add: async (item, categoryId, accountId, opts) => {
-    // A credit card no account owns yet gets its own account, rather than
-    // landing on another card's.
-    if (item.card_last4 && (item.kind === 'card_payment' ? !creditCardFor(item, useFinanceStore.getState().accounts, get().links) : !accountId && item.card_type === 'credit')) {
+    // A card no account owns yet gets its own account, rather than landing
+    // on another card's.
+    if (item.card_last4 && (item.kind === 'card_payment' ? !creditCardFor(item, useFinanceStore.getState().accounts, get().links) : !accountId)) {
       const created = await createCardAccountFor(item);
       await get().loadLinks();
       if (created && item.kind !== 'card_payment') accountId = created.id;

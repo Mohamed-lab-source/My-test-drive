@@ -79,7 +79,7 @@ export function NewCardsPrompt() {
   };
 
   const add = async (c: Spotted) => {
-    await createCardAccount({ digits: c.last4, bank: c.bank, credit: c.credit, currency: c.currency });
+    await createCardAccount({ digits: c.last4, bank: c.bank, kind: c.credit ? 'credit' : 'debit', currency: c.currency });
     await loadLinks();
     show(`${cardLabel(c.bank, c.last4)} added`);
   };

@@ -44,6 +44,22 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
+      # Every build gets a higher version code (and a version name you can
+      # see in Settings), so Android always installs it as an update. With
+      # the same version code on every build, some phones (Xiaomi/HyperOS
+      # among them) refused the update with "App not installed".
+      - name: Stamp build number
+        run: |
+          node -e '
+            const fs = require("fs");
+            const j = JSON.parse(fs.readFileSync("app.json", "utf8"));
+            const n = Number(process.env.GITHUB_RUN_NUMBER);
+            j.expo.version = "1.0." + n;
+            j.expo.android = { ...j.expo.android, versionCode: 1000 + n };
+            fs.writeFileSync("app.json", JSON.stringify(j, null, 2));
+            console.log("version", j.expo.version, "code", j.expo.android.versionCode);
+          '
+
       - name: Generate native Android project
         run: npx expo prebuild --platform android
 

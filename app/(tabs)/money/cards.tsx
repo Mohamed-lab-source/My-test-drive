@@ -16,6 +16,7 @@ import { useSettingsStore } from '../../../src/store/settingsStore';
 import { useSmsStore } from '../../../src/sms/smsStore';
 import { listSmsImportsSince } from '../../../src/db/repositories/smsImports';
 import * as linksRepo from '../../../src/db/repositories/cardLinks';
+import { splitMergedCards, splitMessage } from '../../../src/sms/cardAccounts';
 import { convertToBase } from '../../../src/db/repositories/fx';
 import { bankName, cardLabel, cardNetwork } from '../../../src/sms/banks';
 import { formatMoney } from '../../../src/utils/money';
@@ -106,6 +107,23 @@ export default function CardsScreen() {
   const monthTotal = cards.reduce((s, c) => s + c.month, 0);
   const unlinked = cards.filter((c) => c.last4 && !linkedAccount(c)).length;
   const card = cards.find((c) => c.key === selected) ?? null;
+
+  const [fixing, setFixing] = useState(false);
+  // Moves every card's charges that landed on another card's account to
+  // the card's own account.
+  const fixMerged = async () => {
+    setFixing(true);
+    try {
+      const r = await splitMergedCards();
+      await loadLinks();
+      setRows(await listSmsImportsSince(365));
+      Alert.alert(r.cards.length ? 'Cards fixed' : 'All cards are on their own accounts', r.cards.length ? `${splitMessage(r)}.` : 'No card’s charges are sitting on another card’s account.');
+    } catch (e) {
+      Alert.alert('Couldn’t fix the cards', String(e));
+    } finally {
+      setFixing(false);
+    }
+  };
 
   const link = async (c: CardSummary, accountId: string) => {
     if (!c.last4) return;
@@ -302,6 +320,9 @@ export default function CardsScreen() {
                   {unlinked} card{unlinked === 1 ? " isn't" : "s aren't"} linked to an account yet — tap one to choose where its charges go.
                 </Text>
               ) : null}
+              <Pressable onPress={fixMerged} disabled={fixing} accessibilityRole="button" style={{ marginTop: spacing.sm }}>
+                <Text style={[typography.subhead, { color: colors.blue, fontWeight: '600' }]}>{fixing ? 'Checking your cards…' : 'Fix cards on the wrong account'}</Text>
+              </Pressable>
             </Card>
             {cards.map((c) => {
               const linked = linkedAccount(c);

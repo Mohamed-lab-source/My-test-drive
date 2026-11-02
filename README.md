@@ -252,7 +252,7 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 **Cards from every bank**
 - Watch every bank (on by default): every bank SMS scan also checks alerts from banks you haven't added, adds them automatically and imports their purchases; instant alerts work for them too
 - New cards spotted show on Home with what was spent on them: add one as a card in a tap, link it to an account you have, or mark it "Not mine"
-- Every card keeps its own account: a card number Anchor hasn't seen never lands on another card's account (it gets a new one instead), and cards that had been merged into one account are split back apart once, with their charges and payments moved to the right card
+- Every card keeps its own account: a card number Anchor hasn't seen never lands on another card's account (credit card or a card saved as a debit account), it gets a new one instead; cards that were merged are split back apart from their actual charges, automatically once and any time from Money → Cards → "Fix cards on the wrong account"
 - Bank SMS reads alerts from any bank you add (CIB, NBE, Banque Misr, QNB, AAIB, AlexBank, Emirates NBD, ADCB, FAB, Mashreq, Al Rajhi, SNB, Telda, valU and more), in English or Arabic, including line-by-line formats like "Card: *7766 / At: JARIR"
 - "Find my other banks & cards" checks the last 4 months of messages on the phone for card alerts from senders you haven't added, and adds them in one tap (then re-reads 90 days)
 - Money → Cards lists every card number seen in your alerts with its bank, network (Visa, Mastercard, mada, Meeza), credit/debit, this month's and last month's spending, a 6-month chart, top merchants and every purchase, added or not

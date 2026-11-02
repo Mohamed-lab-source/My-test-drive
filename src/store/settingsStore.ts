@@ -106,9 +106,9 @@ interface SettingsState {
   setSmsWatchAllBanks: (v: boolean) => void;
   // Card numbers you said aren't yours (no more "new card" prompts).
   ignoredCards: string[];
-  // The one-time split of cards that had been merged into one account.
-  cardsSplitDone: boolean;
-  setCardsSplitDone: () => void;
+  // Which version of the merged-cards repair has run.
+  cardsSplitVersion: number;
+  setCardsSplitVersion: (v: number) => void;
   ignoreCard: (last4: string) => void;
   smsLastScan: number;
   setSmsLastScan: (v: number) => void;
@@ -323,8 +323,8 @@ export const useSettingsStore = create<SettingsState>()(
       smsWatchAllBanks: true,
       setSmsWatchAllBanks: (v) => set({ smsWatchAllBanks: v }),
       ignoredCards: [],
-      cardsSplitDone: false,
-      setCardsSplitDone: () => set({ cardsSplitDone: true }),
+      cardsSplitVersion: 0,
+      setCardsSplitVersion: (v) => set({ cardsSplitVersion: v }),
       ignoreCard: (last4) => set((s) => ({ ignoredCards: s.ignoredCards.includes(last4) ? s.ignoredCards : [...s.ignoredCards, last4] })),
       smsLastScan: 0,
       setSmsLastScan: (v) => set({ smsLastScan: v }),

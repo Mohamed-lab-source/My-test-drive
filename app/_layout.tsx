@@ -27,7 +27,7 @@ import { rescheduleExtraReminders, rescheduleMorningAllowance } from '../src/not
 import { applyAutoRoutines } from '../src/utils/autoRoutines';
 
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
-import { splitMergedCards } from '../src/sms/cardAccounts';
+import { splitMergedCards, splitMessage } from '../src/sms/cardAccounts';
 import { useUndoStore } from '../src/store/undoStore';
 import { setAsrMadhab, setPrayerAdjustments } from '../src/utils/prayerTimes';
 import { setUse24hClock } from '../src/utils/date';
@@ -118,13 +118,16 @@ function AppShell() {
         // so opening the app stays smooth.
         await new Promise<void>((resolve) => setTimeout(() => InteractionManager.runAfterInteractions(() => resolve()), 1200));
         // Cards that had all landed on one account get their own again.
-        if (!useSettingsStore.getState().cardsSplitDone) {
-          const split = await splitMergedCards().catch(() => null);
+        if (useSettingsStore.getState().cardsSplitVersion < 2) {
+          const split = await splitMergedCards().catch((e) => {
+            console.warn('Card split failed', e);
+            return null;
+          });
           if (split) {
-            useSettingsStore.getState().setCardsSplitDone();
-            if (split.length) {
+            useSettingsStore.getState().setCardsSplitVersion(2);
+            if (split.cards.length) {
               await useSmsStore.getState().loadLinks();
-              useUndoStore.getState().show(split.length === 1 ? `Card ••${split[0]} now has its own account` : `${split.length} cards now have their own accounts`);
+              useUndoStore.getState().show(splitMessage(split));
             }
           }
         }
