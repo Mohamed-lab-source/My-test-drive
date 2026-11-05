@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
+import 'guide_tab.dart';
 import 'home_tab.dart';
 import 'planner_tab.dart';
 import 'practice_tab.dart';
@@ -27,9 +28,10 @@ class _RootScreenState extends State<RootScreen> {
       body: IndexedStack(
         index: _tab,
         children: <Widget>[
-          HomeTab(state: widget.state, onOpenPlan: () => _goTo(1)),
+          HomeTab(state: widget.state, onOpenPlan: () => _goTo(1), onOpenTrack: () => _goTo(4)),
           PlannerTab(state: widget.state),
           PracticeTab(state: widget.state),
+          GuideTab(state: widget.state),
           TrackTab(state: widget.state, onSaved: () => _goTo(1)),
         ],
       ),
@@ -40,6 +42,7 @@ class _RootScreenState extends State<RootScreen> {
           NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: t('الرئيسية', 'Home')),
           NavigationDestination(icon: const Icon(Icons.bar_chart_outlined), selectedIcon: const Icon(Icons.bar_chart), label: t('الخطة', 'Plan')),
           NavigationDestination(icon: const Icon(Icons.menu_book_outlined), selectedIcon: const Icon(Icons.menu_book), label: t('تدريب', 'Practice')),
+          NavigationDestination(icon: const Icon(Icons.auto_stories_outlined), selectedIcon: const Icon(Icons.auto_stories), label: t('الدليل', 'Guide')),
           NavigationDestination(icon: const Icon(Icons.explore_outlined), selectedIcon: const Icon(Icons.explore), label: t('المسار', 'Track')),
         ],
       ),

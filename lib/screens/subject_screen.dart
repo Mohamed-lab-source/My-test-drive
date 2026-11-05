@@ -158,8 +158,8 @@ class SubjectScreen extends StatelessWidget {
               Panel(
                 color: AppColors.blueSoft,
                 child: Text(
-                  t('أعلى درجة بس هي اللي بتتحسب · أول محاولة مجانية · المحاولات بعدها لحد 200 جنيه',
-                      'Only your best score counts · First attempt is free · Later attempts cost up to 200 EGP'),
+                  t('أعلى درجة بس هي اللي بتتحسب · المحاولة الأولى مجانية · المحاولة الاختيارية بـ 200 جنيه للمادة',
+                      'Only your best score counts · The first attempt is free · An optional attempt costs 200 EGP per subject'),
                   style: const TextStyle(color: AppColors.blueDark, fontSize: 13, height: 1.6),
                 ),
               ),

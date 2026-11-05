@@ -4,13 +4,15 @@ import '../app_state.dart';
 import '../content.dart';
 import '../theme.dart';
 import 'dialogs.dart';
+import 'study_timer.dart';
 import 'subject_screen.dart';
 
 class HomeTab extends StatelessWidget {
-  const HomeTab({super.key, required this.state, required this.onOpenPlan});
+  const HomeTab({super.key, required this.state, required this.onOpenPlan, required this.onOpenTrack});
 
   final AppState state;
   final VoidCallback onOpenPlan;
+  final VoidCallback onOpenTrack;
 
   Future<void> _pickNextAttempt(BuildContext context) async {
     final t = state.tr;
@@ -196,6 +198,61 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 12),
+
+              // Track setup (until a track is chosen)
+              if (state.track == null) ...<Widget>[
+                InkWell(
+                  onTap: onOpenTrack,
+                  borderRadius: BorderRadius.circular(18),
+                  child: Panel(
+                    color: AppColors.amberSoft,
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.explore, color: AppColors.amberInk),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            t('اختار مسارك عشان نظبطلك موادك الست (المجموع من 600).', 'Choose your track so we can set up your six subjects (total out of 600).'),
+                            style: const TextStyle(color: AppColors.amberInk, fontSize: 14, fontWeight: FontWeight.w600, height: 1.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Study timer
+              InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => StudyTimerScreen(state: state)),
+                ),
+                borderRadius: BorderRadius.circular(18),
+                child: Panel(
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.timer_outlined, color: AppColors.blue),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(t('مؤقت المذاكرة', 'Study timer'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 2),
+                            Text(
+                              t('النهارده ${state.todayMinutes} دقيقة · ${state.streak} يوم ورا بعض', 'Today ${state.todayMinutes} min · ${state.streak}-day streak'),
+                              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.muted),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
 
               // Subjects
@@ -244,7 +301,10 @@ class HomeTab extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
-                                Text(state.subjectName(s), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                                Text(
+                                  '${state.subjectName(s)} · ${s.year == 3 ? t('تالتة', 'Year 3') : t('تانية', 'Year 2')}',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                ),
                                 const SizedBox(height: 6),
                                 Row(
                                   children: <Widget>[

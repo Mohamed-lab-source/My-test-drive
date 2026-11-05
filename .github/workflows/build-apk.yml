@@ -47,8 +47,8 @@ jobs:
       - name: Publish APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: masar-v1.0.${{ github.run_number }}
-          name: Masar v1.0 (build ${{ github.run_number }})
+          tag_name: masar-v2.0.${{ github.run_number }}
+          name: Masar v2.0 (build ${{ github.run_number }})
           target_commitish: ${{ github.sha }}
           body: Download masar.apk below and open it on your Android phone.
           files: masar.apk
