@@ -55,6 +55,7 @@ export const SYNCED_TABLES = [
   'med_logs',
   'card_links',
   'hifz',
+  'personal_items',
   'vitals',
 ] as const;
 

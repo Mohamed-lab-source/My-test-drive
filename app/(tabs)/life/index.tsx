@@ -120,6 +120,9 @@ export default function LifeScreen() {
               { icon: 'gift.fill', label: 'Occasions', color: colors.pink, onPress: () => router.push('/life/occasions') },
               { icon: 'doc.text.fill', label: 'Notes', color: colors.gray, onPress: () => router.push('/life/notes') },
               { icon: 'lightbulb.fill', label: 'Wishlist', color: colors.yellow, onPress: () => router.push('/life/wishlist') },
+              { icon: 'gift.fill', label: 'Gifts & nokta', color: colors.purple, onPress: () => router.push('/life/gifts') },
+              { icon: 'moon.stars.fill', label: 'Eidiya', color: colors.teal, onPress: () => router.push('/life/eidiya') },
+              { icon: 'sparkles', label: 'For you', color: colors.orange, onPress: () => router.push('/for-you') },
             ]}
           />
         </Appear>

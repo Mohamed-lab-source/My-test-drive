@@ -106,6 +106,11 @@ interface SettingsState {
   setSmsWatchAllBanks: (v: boolean) => void;
   // Card numbers you said aren't yours (no more "new card" prompts).
   ignoredCards: string[];
+  // For you: suggestion kinds turned off, and ones dismissed today.
+  forYouMuted: string[];
+  setNudgeMuted: (kind: string, muted: boolean) => void;
+  forYouDismissed: { day: string; ids: string[] };
+  dismissNudge: (id: string) => void;
   // Which version of the merged-cards repair has run.
   cardsSplitVersion: number;
   setCardsSplitVersion: (v: number) => void;
@@ -323,6 +328,16 @@ export const useSettingsStore = create<SettingsState>()(
       smsWatchAllBanks: true,
       setSmsWatchAllBanks: (v) => set({ smsWatchAllBanks: v }),
       ignoredCards: [],
+      forYouMuted: [],
+      setNudgeMuted: (kind, muted) =>
+        set((st) => ({ forYouMuted: muted ? [...new Set([...st.forYouMuted, kind])] : st.forYouMuted.filter((k) => k !== kind) })),
+      forYouDismissed: { day: '', ids: [] },
+      dismissNudge: (id) =>
+        set((st) => {
+          const d = new Date();
+          const day = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+          return { forYouDismissed: { day, ids: st.forYouDismissed.day === day ? [...st.forYouDismissed.ids, id] : [id] } };
+        }),
       cardsSplitVersion: 0,
       setCardsSplitVersion: (v) => set({ cardsSplitVersion: v }),
       ignoreCard: (last4) => set((s) => ({ ignoredCards: s.ignoredCards.includes(last4) ? s.ignoredCards : [...s.ignoredCards, last4] })),

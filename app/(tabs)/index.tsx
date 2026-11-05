@@ -28,6 +28,7 @@ import { CustomizeHomeSheet } from '../../src/features/home/CustomizeHomeSheet';
 import { NextPrayerChip } from '../../src/features/home/NextPrayerChip';
 import { NextMeetingChip } from '../../src/features/home/NextMeetingChip';
 import { TodayRingsCard } from '../../src/features/home/TodayRingsCard';
+import { ForYouCard } from '../../src/features/home/ForYouCard';
 import { FridayCard } from '../../src/features/home/FridayCard';
 import { useBalanceFormatter } from '../../src/ui/useMoney';
 import { GettingStartedCard } from '../../src/features/home/GettingStartedCard';
@@ -276,6 +277,11 @@ export default function HomeScreen() {
         </View>
 
         {heroCard}
+        {show('foryou') ? (
+          <Appear index={3}>
+            <ForYouCard />
+          </Appear>
+        ) : null}
         {show('accounts') ? (
           <Appear index={3}>
             <HomeAccounts />

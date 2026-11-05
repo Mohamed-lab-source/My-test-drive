@@ -11,6 +11,8 @@ export default function LifeLayout() {
     <Stack screenListeners={listeners} screenOptions={{ headerShown: false, animation: 'ios_from_right', fullScreenGestureEnabled: true, freezeOnBlur: true, contentStyle: { backgroundColor: colors.systemGroupedBackground } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="wishlist" />
+      <Stack.Screen name="gifts" />
+      <Stack.Screen name="eidiya" />
       <Stack.Screen name="habits" />
       <Stack.Screen name="journal" />
       <Stack.Screen name="tasbih" />

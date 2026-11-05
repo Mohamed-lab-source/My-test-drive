@@ -429,6 +429,16 @@ CREATE TABLE IF NOT EXISTS notes (
   updated_at TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+-- Small personal lists (gam'eyas, gifts, Eidiya, payday steps), one row
+-- per item with its fields as JSON; kind says which list it belongs to.
+CREATE TABLE IF NOT EXISTS personal_items (
+  id TEXT PRIMARY KEY NOT NULL,
+  kind TEXT NOT NULL,
+  data TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 `;
 
 // Columns added to already-shipped tables after their initial release. A

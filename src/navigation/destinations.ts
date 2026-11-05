@@ -9,6 +9,11 @@ export interface Destination {
 }
 
 export const DESTINATIONS: Record<string, Destination> = {
+  '/for-you': { label: 'For you', icon: 'sparkles', color: 'purple', keywords: 'suggestions nudges reminders today personal' },
+  '/money/payday': { label: 'Payday checklist', icon: 'banknote.fill', color: 'green', keywords: 'salary payday checklist راتب' },
+  '/money/gameya': { label: "Gam'eya", icon: 'person.2.fill', color: 'teal', keywords: 'gameya gamaeya jameya savings circle جمعية' },
+  '/life/gifts': { label: 'Gifts & nokta', icon: 'gift.fill', color: 'pink', keywords: 'gift nokta wedding present نقطة هدية' },
+  '/life/eidiya': { label: 'Eidiya', icon: 'moon.stars.fill', color: 'purple', keywords: 'eid eidiya money notes عيدية' },
   '/money/transactions': { label: 'Transactions', icon: 'list.bullet', color: 'blue', keywords: 'spending expenses history payments purchases' },
   '/money/budgets': { label: 'Budgets', icon: 'chart.pie.fill', color: 'orange', keywords: 'budget limit category' },
   '/money/analytics': { label: 'Analytics', icon: 'chart.bar.fill', color: 'teal', keywords: 'charts reports spending trends safe to spend pace' },

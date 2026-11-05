@@ -1,5 +1,6 @@
 // Cards on Home that can be hidden from the Customize sheet.
 export const HOME_CARDS: { id: string; label: string }[] = [
+  { id: 'foryou', label: 'For you (what needs you now)' },
   { id: 'rings', label: 'Today rings (prayers · tasks · water)' },
   { id: 'friday', label: "Friday checklist (Jumu'ah)" },
   { id: 'seasons', label: 'Ramadan & Eid countdown' },

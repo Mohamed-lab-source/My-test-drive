@@ -81,6 +81,62 @@ function addDays(base: Date, days: number): Date {
   return new Date(base.getFullYear(), base.getMonth(), base.getDate() + days);
 }
 
+
+// Prayer times for a day, so "after Asr" can become a time. Set from the
+// app (it knows your city); without it, prayer words stay in the title.
+type PrayerName = 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha';
+let prayerTimesFor: ((day: Date) => Record<PrayerName, Date> | null) | null = null;
+export function setQuickAddPrayerTimes(fn: ((day: Date) => Record<PrayerName, Date> | null) | null): void {
+  prayerTimesFor = fn;
+}
+
+const PRAYER_WORDS: Record<string, PrayerName> = {
+  fajr: 'fajr', fajer: 'fajr', fajir: 'fajr', subh: 'fajr', sobh: 'fajr',
+  dhuhr: 'dhuhr', duhr: 'dhuhr', zuhr: 'dhuhr', zohr: 'dhuhr', dhuhur: 'dhuhr', duhur: 'dhuhr', jumuah: 'dhuhr', jummah: 'dhuhr', jumah: 'dhuhr', juma: 'dhuhr',
+  asr: 'asr', aser: 'asr',
+  maghrib: 'maghrib', magrib: 'maghrib', maghreb: 'maghrib', iftar: 'maghrib',
+  isha: 'isha', ishaa: 'isha', esha: 'isha',
+  'الفجر': 'fajr', 'الصبح': 'fajr', 'الظهر': 'dhuhr', 'الضهر': 'dhuhr', 'الجمعة': 'dhuhr', 'الجمعه': 'dhuhr', 'العصر': 'asr',
+  'المغرب': 'maghrib', 'الفطار': 'maghrib', 'العشا': 'isha', 'العشاء': 'isha',
+};
+
+// "after asr", "before maghrib", "at isha", "30m after asr", "بعد العصر".
+// Returns the prayer, minutes from its time, and how many words it used.
+function prayerAnchor(words: string[], i: number): { prayer: PrayerName; offset: number; used: number } | null {
+  const w = (k: number) => words[i + k]?.toLowerCase().replace(/[.,!?]$/, '');
+  let k = 0;
+  let custom: number | null = null;
+  const amount = w(0)?.match(/^(\d+)(m|min|mins|h|hr|hrs)?$/);
+  if (amount) {
+    const unitWord = amount[2] ?? w(1);
+    const unit = unitWord && /^(h|hr|hrs|hour|hours)$/.test(unitWord) ? 60 : unitWord && /^(m|min|mins|minute|minutes)$/.test(unitWord) ? 1 : 0;
+    if (!unit) return null;
+    custom = Number(amount[1]) * unit;
+    k = amount[2] ? 1 : 2;
+  }
+  const rel = w(k);
+  const isAfter = rel === 'after' || rel === 'بعد';
+  const isBefore = rel === 'before' || rel === 'قبل';
+  const isAt = rel === 'at' || rel === 'by' || rel === 'عند';
+  if (!isAfter && !isBefore && !(isAt && custom == null)) return null;
+  let p = w(k + 1);
+  let used = k + 2;
+  // "after the asr" / "after asr prayer" / "after friday prayer".
+  if (p === 'the') {
+    p = w(k + 2);
+    used++;
+  }
+  if (p === 'friday' && w(used) === 'prayer') {
+    p = 'jumuah';
+  }
+  const prayer = p ? PRAYER_WORDS[p] : undefined;
+  if (!prayer) return null;
+  if (w(used) === 'prayer' || w(used) === 'salah' || w(used) === 'salat') used++;
+  // After praying (about 20 minutes on), half an hour before, or exactly at.
+  const offset = isAfter ? custom ?? 20 : isBefore ? -(custom ?? 30) : 0;
+  return { prayer, offset, used };
+}
+
 export function parseQuickTask(
   text: string,
   projects: { id: string; name: string }[],
@@ -98,6 +154,7 @@ export function parseQuickTask(
   let deadline: string | null = null;
   let estimate: number | null = null;
   let waitingOn: string | null = null;
+  let prayerAt: { prayer: PrayerName; offset: number } | null = null;
 
   // A day word, as used after "by"/"due": today, tomorrow, a weekday, "next week".
   const dayFrom = (w: string | undefined, w2: string | undefined): { key: string; used: number } | null => {
@@ -114,6 +171,17 @@ export function parseQuickTask(
     const raw = words[i];
     const word = raw.toLowerCase();
     const next = words[i + 1]?.toLowerCase();
+
+    // "after Asr", "before Maghrib", "15m after Isha", "بعد العصر".
+    if (prayerTimesFor) {
+      const pa = prayerAnchor(words, i);
+      if (pa) {
+        prayerAt = { prayer: pa.prayer, offset: pa.offset };
+        backlog = false;
+        i += pa.used - 1;
+        continue;
+      }
+    }
 
     // "~30m", "~1h", "~1.5h", "~90"
     const est = word.match(/^~(\d+(?:\.\d+)?)(m|min|h|hr)?$/);
@@ -318,6 +386,26 @@ export function parseQuickTask(
       continue;
     }
     titleWords.push(raw);
+  }
+
+  // A prayer time on the chosen day; if it has already passed today (and
+  // no other day was given), the same prayer tomorrow.
+  if (prayerAt && prayerTimesFor) {
+    const resolve = (key: string) => {
+      const [y, m, d] = key.split('-').map(Number);
+      const times = prayerTimesFor!(new Date(y, m - 1, d));
+      return times ? new Date(times[prayerAt!.prayer].getTime() + prayerAt!.offset * 60000) : null;
+    };
+    let key = scheduledDate ?? dateKey(now);
+    let at = resolve(key);
+    if (at && key === dateKey(now) && at.getTime() <= now.getTime()) {
+      key = dateKey(addDays(now, 1));
+      at = resolve(key);
+    }
+    if (at) {
+      scheduledDate = key;
+      remindTime = hhmm(at.getHours(), at.getMinutes());
+    }
   }
 
   return { title: titleWords.join(' '), priority, scheduledDate, backlog, projectId, projectName, remindTime, repeat, deadline, estimate, waitingOn };

@@ -29,7 +29,8 @@ import { applyAutoRoutines } from '../src/utils/autoRoutines';
 import { useSmsStore, syncSmsAlertConfig } from '../src/sms/smsStore';
 import { splitMergedCards, splitMessage } from '../src/sms/cardAccounts';
 import { useUndoStore } from '../src/store/undoStore';
-import { setAsrMadhab, setPrayerAdjustments } from '../src/utils/prayerTimes';
+import { findPrayerCity, getPrayerSchedule, setAsrMadhab, setPrayerAdjustments } from '../src/utils/prayerTimes';
+import { setQuickAddPrayerTimes } from '../src/utils/quickAdd';
 import { setUse24hClock } from '../src/utils/date';
 import { setWholeMoney } from '../src/utils/money';
 import { setMonthStartDay } from '../src/utils/period';
@@ -114,6 +115,11 @@ function AppShell() {
         await settingsHydrated();
         setPrayerAdjustments(useSettingsStore.getState().prayerAdjust);
         setAsrMadhab(useSettingsStore.getState().asrMadhab);
+        // Quick add understands "after Asr" using your city's prayer times.
+        setQuickAddPrayerTimes((day) => {
+          const city = findPrayerCity(useSettingsStore.getState().prayerCityId);
+          return city ? getPrayerSchedule(city, day) : null;
+        });
         // Housekeeping waits until the first screen has finished appearing,
         // so opening the app stays smooth.
         await new Promise<void>((resolve) => setTimeout(() => InteractionManager.runAfterInteractions(() => resolve()), 1200));
@@ -211,6 +217,7 @@ function AppShell() {
         <Stack.Screen name="widgets" />
         <Stack.Screen name="recap" />
         <Stack.Screen name="achievements" />
+        <Stack.Screen name="for-you" />
       </Stack>
       <UndoSnackbar />
     </>

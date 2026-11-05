@@ -24,6 +24,8 @@ export function MoneyMenu({ badges }: { badges: { budgets: number; sms: number; 
       title: 'Plan',
       items: [
         { label: 'Spending plan', icon: 'target', color: 'green', href: '/money/plan' },
+        { label: 'Payday checklist', icon: 'banknote.fill', color: 'green', href: '/money/payday' },
+        { label: "Gam'eya", icon: 'person.2.fill', color: 'teal', href: '/money/gameya' },
         { label: 'Budgets', icon: 'chart.pie.fill', color: 'orange', href: '/money/budgets', badge: badges.budgets },
         { label: 'Savings goals', icon: 'banknote.fill', color: 'mint', href: '/money/savings' },
         { label: 'Challenges', icon: 'trophy.fill', color: 'yellow', href: '/money/challenges' },

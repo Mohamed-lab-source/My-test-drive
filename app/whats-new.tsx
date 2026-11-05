@@ -7,6 +7,25 @@ import { Card } from '../src/ui/Card';
 // A tour of where things live — Anchor has grown a lot.
 const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
   {
+    title: 'Made for you',
+    emoji: '✨',
+    items: [
+      'For you (Home, Settings, Life): what needs you right now, picked from your own money, cards, prayers, habits, tasks and occasions — long-press to dismiss for today or turn a kind off',
+      'Salary arrived → payday checklist; salary late; days to next month with money per day; card payment due, card near its limit, statement closing and the best card to use today',
+      'Rides (Uber, Careem, inDrive…) and food delivery (Talabat, elmenus, Breadfast…) up on last month, coffee count, subscriptions renewing, big or double charges, late-night spending, a weekly recap and no-spend days',
+      'Over today\'s limit, bank SMS to review, uncategorized spending, budgets running out, savings goals behind, your Umrah fund and money people owe you',
+      'Next prayer soon, prayers not marked, Surat Al-Kahf on Friday, Monday/Thursday and White Day fasts, Quran goal, zakat year, Eid & Ramadan coming',
+      'Water, habits left, streaks at risk, journal, overdue tasks, meetings soon, birthdays with what they gave you last time, Thursday weekend planning and a morning summary',
+      "Gam'eya (جمعية): every circle, whose turn it is, your turn and payout, pay your share (and log it), the pot as income, late shares and names per turn",
+      'Payday checklist: pay the cards (with Pay buttons), save %, sadaqah %, gam\'eya, family and bills — amounts from your salary, ticks reset each payday',
+      'Gifts & nokta (النقطة): what you gave and got at weddings, births and Eids, who to give back to and how much, upcoming occasions, year totals, log as an expense',
+      'Eidiya (العيدية): envelopes by group, the new notes to get from the bank (and share the list), tick as you give, New Eid keeps everyone',
+      'Calculators for Egypt: restaurant bill with 12% service + 14% VAT, gold by karat, bank certificates, the interest hidden in instalments, Ramadan budget, fuel for a trip and a raise',
+      'Quick add by prayer time: "call mom after Asr", "15m before Maghrib", "after Friday prayer", "بعد العصر" — using your city\'s times',
+      'More Egyptian shops recognised for bank SMS categories: Kazyon, Mo\'men, Go Bus, Fawry, WATCH IT, B.TECH, Al Borg and more',
+    ],
+  },
+  {
     title: 'Money',
     emoji: '💰',
     items: [

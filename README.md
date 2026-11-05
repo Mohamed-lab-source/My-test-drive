@@ -22,6 +22,15 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 
 ## Features
 
+**Made for you**
+- For you: a feed (and a Home card) of what needs you now, from your own data — 44 kinds of suggestions across salary, cards, spending habits, prayer, fasting, Quran, health, habits, tasks, occasions, gam'eya and Eid; dismiss one for today or turn a kind off (and back on)
+- Gam'eya (جمعية) tracker: schedule, your turn and payout countdown, monthly shares (optionally logged as expenses), the pot as income, late shares, names per turn, several circles with a monthly total
+- Payday checklist: % of salary, fixed amounts, all card balances with Pay buttons, or reminders; suggested steps; salary taken from your income; resets each pay period; reorder and edit
+- Gifts & nokta ledger: given/received money or presents by occasion, per-person balance, "what to give back" suggestions, coming occasions, search, year totals, log as an expense
+- Eidiya planner: envelopes by group, quick amounts, the exact new notes to get from the bank (shareable), tick as given, start a new Eid
+- Egypt calculators: restaurant bill (service + VAT, split), gold by karat, bank certificates, hidden instalment interest, Ramadan budget, fuel trip, raise
+- Quick add by prayer time ("after Asr", "15m before Maghrib", "بعد العصر"), and more Egyptian merchants auto-categorised
+
 **Money**
 - Accounts (cash, bank, savings, credit) with running balances, converted to one net worth via manual FX rates for multi-currency accounts
 - Income / expense / transfer transactions with categories, an optional receipt photo, and a global search

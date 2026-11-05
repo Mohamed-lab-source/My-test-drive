@@ -22,6 +22,15 @@ import {
   CardPayoffCalculator,
   FiftyThirtyTwentyCalculator,
 } from '../../../src/features/money/Calculators';
+import {
+  RestaurantBillCalculator,
+  GoldCalculator,
+  CertificateCalculator,
+  HiddenInterestCalculator,
+  FuelTripCalculator,
+  RaiseCalculator,
+  RamadanBudgetCalculator,
+} from '../../../src/features/money/EgyptCalculators';
 import { useSpendingPlan } from '../../../src/features/money/plan';
 import { formatMoney, toMinorUnits } from '../../../src/utils/money';
 
@@ -84,6 +93,13 @@ export default function ToolsScreen() {
           <AmortisationTable principal={p} annualRate={Number(rate) || 0} months={n} payment={monthly} currency={currency} />
         </Card>
 
+        <RestaurantBillCalculator currency={currency} />
+        <GoldCalculator currency={currency} />
+        <CertificateCalculator currency={currency} />
+        <HiddenInterestCalculator currency={currency} />
+        <RamadanBudgetCalculator currency={currency} />
+        <FuelTripCalculator currency={currency} />
+        <RaiseCalculator currency={currency} />
         <CardPayoffCalculator currency={currency} />
         <FiftyThirtyTwentyCalculator currency={currency} income={toolsPlan?.income ?? 0} />
         <CostPerUseCalculator currency={currency} />

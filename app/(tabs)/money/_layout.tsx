@@ -44,6 +44,8 @@ export default function MoneyLayout() {
       <Stack.Screen name="cards" options={{ presentation: 'card' }} />
       <Stack.Screen name="plan" options={{ presentation: 'card' }} />
       <Stack.Screen name="limits" options={{ presentation: 'card' }} />
+      <Stack.Screen name="gameya" options={{ presentation: 'card' }} />
+      <Stack.Screen name="payday" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

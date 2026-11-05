@@ -360,6 +360,13 @@ export function SettingsScreen({ section }: { section?: SettingsSection }) {
         <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
           <Card padded={false}>
             <ListRow
+              title="For you"
+              subtitle="What needs you now, and the suggestions you've turned off"
+              leading={<IconCircle filled name="sparkles" color={colors.orange} size={32} />}
+              onPress={() => router.push('/for-you')}
+              showChevron
+            />
+            <ListRow
               title="Achievements"
               subtitle="Milestones you've reached"
               leading={<IconCircle filled name="star.fill" color={colors.yellow} size={32} />}
