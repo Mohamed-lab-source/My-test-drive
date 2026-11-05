@@ -8,6 +8,7 @@ import { useSmsStore } from '../../src/sms/smsStore';
 import { todayKey } from '../../src/db/client';
 import { QuickAddButton } from '../../src/features/quickadd/QuickAddButton';
 import { GlobalSheets } from '../../src/features/quickadd/GlobalSheets';
+import { tabReturnListeners } from '../../src/navigation/tabReturn';
 
 // Opening on a tab other than Home happens once per app launch.
 let startTabApplied = false;
@@ -38,6 +39,9 @@ export default function TabsLayout() {
       tabBar={(props) => <GlassTabBar {...props} accessory={<QuickAddButton />} />}
       // A quick cross-fade between tabs.
       // Tabs you're not looking at don't redraw when data changes.
+      // Back from a tab's main screen returns to the tab you were on before.
+      backBehavior="history"
+      screenListeners={tabReturnListeners}
       screenOptions={{ headerShown: false, animation: 'fade', freezeOnBlur: true }}
     >
       <Tabs.Screen

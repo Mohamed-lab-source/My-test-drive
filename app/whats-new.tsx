@@ -10,6 +10,7 @@ const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
     title: 'Money',
     emoji: '💰',
     items: [
+      'Back goes where you came from: open a card from Home and back (button, Android back or swipe) returns to Home, and Money still opens on Money',
       'Fixed: every card gets its own account — new cards no longer pile onto the first card detected, merged cards are split back apart with their charges, and Money → Cards has “Fix cards on the wrong account”',
       'Each build now has its own version number (bottom of Settings), so the APK always installs as an update',
       'Spots any card you use, from any bank — new banks are added automatically, and new cards show on Home to add, link or ignore',

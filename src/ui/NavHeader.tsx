@@ -27,7 +27,7 @@ export function NavHeader({ title, right }: NavHeaderProps) {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.systemGroupedBackground }]} />
       )}
       <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
-      <PressableScale onPress={() => router.back()} haptic="none" scaleTo={0.88} style={styles.back} hitSlop={12}>
+      <PressableScale onPress={() => router.back()} haptic="none" scaleTo={0.88} style={styles.back} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
         <Icon name="chevron.left" size={26} color={colors.blue} />
       </PressableScale>
       <Text style={[typography.headline, { color: colors.label, flex: 1, textAlign: 'center' }]} numberOfLines={1}>

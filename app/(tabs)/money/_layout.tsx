@@ -1,11 +1,15 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import { useTheme } from '../../../src/theme/ThemeProvider';
+import { tabStackListeners } from '../../../src/navigation/tabReturn';
+
+const listeners = tabStackListeners('money');
 
 export default function MoneyLayout() {
   const { colors } = useTheme();
   return (
     <Stack
+      screenListeners={listeners}
       screenOptions={{
         headerShown: false,
         // The iOS push: slides in from the right with the old screen parallaxing away.
