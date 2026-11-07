@@ -106,6 +106,12 @@ interface SettingsState {
   setSmsWatchAllBanks: (v: boolean) => void;
   // Card numbers you said aren't yours (no more "new card" prompts).
   ignoredCards: string[];
+  // Debt-free plan: the monthly amount, the order, and where you started.
+  debtPlan: { budget: number; strategy: 'avalanche' | 'snowball'; startTotal: number; startedAt: string } | null;
+  setDebtPlan: (v: SettingsState['debtPlan']) => void;
+  // Interest and monthly minimum for loans (cards keep theirs on the account).
+  debtTerms: Record<string, { apr: number; min: number }>;
+  setDebtTerms: (id: string, terms: { apr: number; min: number }) => void;
   // Wealth: backup money (emergency fund) and investing.
   backupMonths: number;
   setBackupMonths: (v: number) => void;
@@ -348,6 +354,10 @@ export const useSettingsStore = create<SettingsState>()(
       smsWatchAllBanks: true,
       setSmsWatchAllBanks: (v) => set({ smsWatchAllBanks: v }),
       ignoredCards: [],
+      debtPlan: null,
+      setDebtPlan: (v) => set({ debtPlan: v }),
+      debtTerms: {},
+      setDebtTerms: (id, terms) => set((st) => ({ debtTerms: { ...st.debtTerms, [id]: terms } })),
       backupMonths: 6,
       setBackupMonths: (v) => set({ backupMonths: v }),
       backupAccountIds: null,

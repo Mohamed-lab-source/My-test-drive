@@ -22,6 +22,10 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 
 ## Features
 
+**Debts & categories**
+- Debt-free plan (Money → Debt-free plan): card balances (rate, minimum %, due day from the card) and loans you owe (with optional interest and instalment) simulated month by month; avalanche or snowball; this month's payment per debt with a focus debt and Pay buttons; payoff month per debt and a debt-free date; interest vs minimum-only; progress since starting; payday checklist step and a payday nudge; banner on Debts and Cards & limits
+- Categories: Spending / Income tabs with usage and this month's totals, create and edit (name, kind, 58 icons, colours), archive/restore, delete with "move transactions to…", suggested categories, and inline "New" category while adding a transaction
+
 **Wealth (Money → Wealth)**
 - Overview: a money ladder (track → starter backup → clear cards → save monthly → full backup → pay debts → invest monthly) with your current step, plus savings rate, backup months and invested total
 - Save: 6-month saved-per-month chart and average savings rate, a savings % goal, savings ideas from your own subscriptions and habits, and a growth projection with inflation-adjusted value

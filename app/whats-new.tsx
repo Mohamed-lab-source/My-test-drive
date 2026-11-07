@@ -7,6 +7,17 @@ import { Card } from '../src/ui/Card';
 // A tour of where things live — Anchor has grown a lot.
 const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
   {
+    title: 'Debts & categories',
+    emoji: '🎯',
+    items: [
+      'Money → Debt-free plan: every card balance and loan in one plan — a monthly amount, highest-interest or smallest-first order, what to pay on each this month (with Pay buttons), when each is cleared and your debt-free date',
+      'See how much interest the plan saves compared with paying only the minimums, and how much you\'ve paid off since you started; add it to the payday checklist; set interest and instalments for loans',
+      'For you reminds you on payday what to pay toward debts and which debt is the focus',
+      'Categories (Money menu or Settings): separate Spending and Income lists with this month\'s totals, edit name/icon/colour, 58 icons, archive and restore, delete safely by moving transactions to another category, and one-tap suggestions like Rent, Kids & school, Gam\'eya, Freelance, Bonus',
+      'Create a new category right while adding a transaction — tap "New" in the category list',
+    ],
+  },
+  {
     title: 'Wealth',
     emoji: '🌱',
     items: [

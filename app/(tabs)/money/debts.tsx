@@ -24,6 +24,7 @@ import { planDebtPayoff, type DebtStrategy } from '../../../src/utils/debtPlan';
 import { TextField } from '../../../src/ui/TextField';
 import { ChipSelector } from '../../../src/ui/ChipSelector';
 import { useSettingsStore } from '../../../src/store/settingsStore';
+import { DebtPlanBanner } from '../../../src/features/debt/DebtPlanBanner';
 
 function DebtCard({ debt, onPay, onDelete }: { debt: Debt; onPay: () => void; onDelete: () => void }) {
   const { colors, typography, spacing } = useTheme();
@@ -133,6 +134,7 @@ export default function DebtsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Debts" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <DebtPlanBanner />
         {debts.length === 0 ? (
           <EmptyState icon="exclamationmark.triangle.fill" title="No debts tracked" message="Add money you owe or that's owed to you." />
         ) : (

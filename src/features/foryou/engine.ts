@@ -66,6 +66,7 @@ export const NUDGE_KINDS = {
   backup: 'Backup money',
   invest: 'Monthly investing',
   overspend: 'Spending more than you earn',
+  debtPlan: 'Debt plan payments',
 } as const;
 export type NudgeKind = keyof typeof NUDGE_KINDS;
 
@@ -129,6 +130,8 @@ export interface NudgeInput {
   monthlyInvest?: number;
   // This money month so far.
   month?: { income: number; expense: number };
+  // Your debt plan: this month's total and the focus debt.
+  debtPlan?: { budget: number; focus: string | null; months: number } | null;
 }
 
 const DAY = 86400000;
@@ -464,6 +467,17 @@ export function buildNudges(i: NudgeInput): Nudge[] {
     if (bits.length) push({ kind: 'morning', emoji: '☀️', title: 'Your day', detail: `${bits.join(' · ')}. Bismillah.`, route: '/tasks', priority: 27, tone: 'orange' });
   }
 
+  if (i.debtPlan && i.debtPlan.budget > 0 && lastPayday && startOfDay(lastPayday).getTime() === today.getTime()) {
+    push({
+      kind: 'debtPlan',
+      emoji: '🎯',
+      title: `Pay ${fmt(i.debtPlan.budget)} toward your debts`,
+      detail: `${i.debtPlan.focus ? `Focus on ${i.debtPlan.focus}. ` : ''}${i.debtPlan.months ? `Debt-free in ${i.debtPlan.months} month${i.debtPlan.months === 1 ? '' : 's'} at this pace.` : ''}`,
+      route: '/money/debt-plan',
+      priority: 78,
+      tone: 'green',
+    });
+  }
   // ---- Saving, backup money and investing
   if (i.backup && i.backup.monthly > 0 && i.backup.months < i.backup.target) {
     const m = i.backup.months;

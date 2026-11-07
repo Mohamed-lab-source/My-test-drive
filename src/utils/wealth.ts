@@ -121,7 +121,7 @@ export function moneyLadder(i: {
       title: 'Clear credit card balances',
       detail: i.cardDebt > 0 ? `${i.fmt(i.cardDebt)} on your cards. Card interest is higher than any investment returns.` : 'Pay cards in full every month.',
       done: i.cardDebt <= 0,
-      route: '/money/limits',
+      route: '/money/debt-plan',
     },
     { id: 'save', title: 'Save every month', detail: 'Aim for at least 10–20% of income, paid to yourself on payday.', done: (i.savingRate ?? 0) >= 0.1, route: '/money/wealth?tab=save' },
     { id: 'full', title: `Full backup: ${i.targetMonths} months`, detail: 'Covers losing income or a big health or car bill without debt.', done: i.backupMonths >= i.targetMonths, route: '/money/wealth?tab=backup' },
@@ -130,7 +130,7 @@ export function moneyLadder(i: {
       title: 'Pay back what you owe',
       detail: i.otherDebt > 0 ? `${i.fmt(i.otherDebt)} still owed to people or loans.` : 'No other debts.',
       done: i.otherDebt <= 0,
-      route: '/money/debts',
+      route: '/money/debt-plan',
     },
     { id: 'invest', title: 'Invest every month', detail: 'Spread across gold, stocks/funds and safe savings to beat inflation.', done: i.investing, route: '/money/wealth?tab=invest' },
   ];

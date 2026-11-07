@@ -18,6 +18,7 @@ import { statementPeriods } from '../../../src/utils/statement';
 import { DEFAULT_MIN_PCT, minimumPayment, monthlyInterest, payoffMonths, utilizationTone } from '../../../src/utils/cardMath';
 import type { Account, Transaction } from '../../../src/db/types';
 import { currentMonthStart, dayOfPeriod, daysIn as periodDays, monthPeriod } from '../../../src/utils/period';
+import { DebtPlanBanner } from '../../../src/features/debt/DebtPlanBanner';
 
 const DAY = 86400000;
 
@@ -108,6 +109,7 @@ export default function CardsAndAccountsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
       <NavHeader title="Cards & accounts" />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }}>
+        <DebtPlanBanner />
         {cards.length ? (
           <Appear index={0}>
             <Card style={{ marginBottom: spacing.lg }}>

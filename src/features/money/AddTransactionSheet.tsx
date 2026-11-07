@@ -38,7 +38,7 @@ const TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 export function AddTransactionSheet({ visible, onClose, editing, initialType, initialAccountId, initialToAccountId, initialAmount, initialNote }: AddTransactionSheetProps) {
   const { colors, typography, spacing } = useTheme();
   const router = useRouter();
-  const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt, addRecurringRule } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, addTransaction: s.addTransaction, updateTransaction: s.updateTransaction, addDebt: s.addDebt, addRecurringRule: s.addRecurringRule })));
+  const { accounts, categories, transactions, addTransaction, updateTransaction, addDebt, addRecurringRule, addCategory } = useFinanceStore(useShallow((s) => ({ accounts: s.accounts, categories: s.categories, transactions: s.transactions, addTransaction: s.addTransaction, updateTransaction: s.updateTransaction, addDebt: s.addDebt, addRecurringRule: s.addRecurringRule, addCategory: s.addCategory })));
   const currency = useSettingsStore((s) => s.currency);
   const defaultAccountId = useSettingsStore((s) => s.defaultAccountId);
 
@@ -48,6 +48,8 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
   const [accountId, setAccountId] = useState<string | null>(null);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  // A category being created right here (null = not adding one).
+  const [newCategory, setNewCategory] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [receiptUri, setReceiptUri] = useState<string | null>(null);
   const [splitWith, setSplitWith] = useState('');
@@ -135,7 +137,7 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
   };
 
   const relevantCategories = useMemo(
-    () => categories.filter((c) => c.kind === 'both' || c.kind === type),
+    () => categories.filter((c) => !c.is_archived && (c.kind === 'both' || c.kind === type)),
     [categories, type]
   );
 
@@ -446,11 +448,38 @@ export function AddTransactionSheet({ visible, onClose, editing, initialType, in
             </Text>
             <View style={{ marginBottom: spacing.md }}>
               <ChipSelector
-                options={relevantCategories.map((c) => ({ id: c.id, label: c.name, color: c.color, icon: c.icon }))}
+                options={[
+                  ...relevantCategories.map((c) => ({ id: c.id, label: c.name, color: c.color, icon: c.icon })),
+                  { id: '__new', label: 'New', icon: 'plus' },
+                ]}
                 selectedId={categoryId}
-                onSelect={setCategoryId}
+                onSelect={(id) => (id === '__new' ? setNewCategory('') : setCategoryId(id))}
               />
             </View>
+            {newCategory !== null ? (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: -spacing.sm }}>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <TextField placeholder={type === 'income' ? 'New income category' : 'New spending category'} value={newCategory} onChangeText={setNewCategory} autoFocus />
+                </View>
+                <Button
+                  title="Add"
+                  disabled={!newCategory.trim() || categories.some((c) => !c.is_archived && c.name.toLowerCase() === newCategory.trim().toLowerCase())}
+                  onPress={async () => {
+                    const palette = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5AC8FA', '#5856D6', '#30B0C7'];
+                    const id = await addCategory({
+                      name: newCategory.trim(),
+                      icon: type === 'income' ? 'banknote.fill' : 'tag.fill',
+                      color: palette[categories.length % palette.length],
+                      kind: type === 'income' ? 'income' : 'expense',
+                      sort_order: categories.length,
+                    });
+                    setCategoryId(id);
+                    setNewCategory(null);
+                  }}
+                  style={{ paddingHorizontal: spacing.md }}
+                />
+              </View>
+            ) : null}
           </>
         )}
 

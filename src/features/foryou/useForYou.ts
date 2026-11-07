@@ -23,6 +23,7 @@ import type { BudgetStatus } from '../../utils/budgets';
 import type { Occasion } from '../../db/types';
 import { buildNudges, visibleNudges, type Nudge, type NudgeInput } from './engine';
 import { useWealth } from '../wealth/useWealth';
+import { useDebtPlan } from '../debt/useDebtPlan';
 
 // Islamic dates far ahead are slow to search for, so they're worked out
 // once per day.
@@ -73,6 +74,7 @@ export function useForYou(budgetStatuses: Record<string, BudgetStatus> = {}, bud
   const pendingSms = useSmsStore((s) => s.pending.length);
   const plan = useSpendingPlan();
   const wealth = useWealth();
+  const debt = useDebtPlan();
   const monthlyInvest = useSettingsStore((s) => s.monthlyInvest);
   const [occasions, setOccasions] = useState<Occasion[]>([]);
   // Re-check every couple of minutes: "Asr in 20 min" goes stale.
@@ -163,10 +165,11 @@ export function useForYou(budgetStatuses: Record<string, BudgetStatus> = {}, bud
       backup: { months: wealth.backup.months, target: wealth.backup.targetMonths, monthly: wealth.backup.monthly, per12: wealth.backup.per12 },
       monthlyInvest,
       month: { income: wealth.thisMonth.income, expense: wealth.thisMonth.expense },
+      debtPlan: debt.plan && debt.list.length ? { budget: debt.budget, focus: debt.list.find((d) => d.id === debt.result.focusId)?.name ?? null, months: debt.result.feasible ? debt.result.months : 0 } : null,
     };
     return buildNudges(input);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f, st.currency, st.prayerCityId, st.waterGoal, st.quranDailyGoal, st.hijriOffset, st.zakatHawl, st.monthFromPayday, st.monthStartDay, st.weekStart, life, hb, pr, water, personal, pendingSms, plan, occasions, budgetStatuses, budgetNames, tick, wealth, monthlyInvest]);
+  }, [f, st.currency, st.prayerCityId, st.waterGoal, st.quranDailyGoal, st.hijriOffset, st.zakatHawl, st.monthFromPayday, st.monthStartDay, st.weekStart, life, hb, pr, water, personal, pendingSms, plan, occasions, budgetStatuses, budgetNames, tick, wealth, monthlyInvest, debt]);
 
   const dayKey = (() => {
     const d = new Date();

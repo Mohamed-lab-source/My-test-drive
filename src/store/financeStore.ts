@@ -63,8 +63,10 @@ interface FinanceState {
 
   addAccount: (input: Parameters<typeof repo.createAccount>[0]) => Promise<void>;
   updateAccount: (id: string, patch: Partial<Account>) => Promise<void>;
-  addCategory: (input: Parameters<typeof repo.createCategory>[0]) => Promise<void>;
-  deleteCategory: (id: string) => Promise<void>;
+  addCategory: (input: Parameters<typeof repo.createCategory>[0]) => Promise<string>;
+  updateCategory: (id: string, patch: Partial<Category>) => Promise<void>;
+  // moveTo: where its transactions and bills go (null = no category).
+  deleteCategory: (id: string, moveTo?: string | null) => Promise<void>;
 
   addRecurringRule: (input: Parameters<typeof repo.createRecurringRule>[0]) => Promise<void>;
   removeRecurringRule: (id: string) => Promise<void>;
@@ -223,12 +225,20 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
     await get().refreshAccounts();
   },
   addCategory: async (input) => {
-    await repo.createCategory(input);
+    const id = await repo.createCategory(input);
+    await get().refreshCategories();
+    return id;
+  },
+  updateCategory: async (id, patch) => {
+    await repo.updateCategory(id, patch);
     await get().refreshCategories();
   },
-  deleteCategory: async (id) => {
+  deleteCategory: async (id, moveTo = null) => {
+    // Nothing is left pointing at a category that's gone.
+    for (const t of get().transactions.filter((x) => x.category_id === id)) await repo.updateTransaction(t.id, { category_id: moveTo });
+    for (const r of get().recurringRules.filter((x) => x.category_id === id)) await repo.updateRecurringRule(r.id, { category_id: moveTo });
     await repo.deleteCategory(id);
-    await get().refreshCategories();
+    await Promise.all([get().refreshCategories(), get().refreshTransactions(), get().refreshRecurring()]);
   },
 
   addRecurringRule: async (input) => {
