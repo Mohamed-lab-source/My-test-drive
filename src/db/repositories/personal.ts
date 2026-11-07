@@ -1,8 +1,8 @@
 import { newId, nowIso } from '../client';
 import { allRows, deleteRow, insertRow, updateRow } from '../helpers';
 
-// Small personal lists kept as JSON in one table (see personal_items).
-export type PersonalKind = 'gameya' | 'gift' | 'eidiya' | 'payday_step';
+// Small personal lists (and investment holdings) kept as JSON in one table (see personal_items).
+export type PersonalKind = 'gameya' | 'gift' | 'eidiya' | 'payday_step' | 'holding';
 
 export interface PersonalRow {
   id: string;

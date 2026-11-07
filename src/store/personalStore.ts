@@ -5,6 +5,7 @@ import type { Gameya } from '../utils/gameya';
 import type { Gift } from '../utils/gifts';
 import type { EidiyaPerson } from '../utils/eidiya';
 import type { PaydayStep } from '../utils/payday';
+import type { Holding } from '../utils/wealth';
 
 // The personal lists: gam'eyas, gifts given and received, Eidiya and the
 // payday checklist. Loaded once, on first use.
@@ -15,6 +16,7 @@ interface DataByKind {
   gift: Gift;
   eidiya: EidiyaPerson;
   payday_step: PaydayStep;
+  holding: Holding;
 }
 
 interface PersonalState {
@@ -23,13 +25,14 @@ interface PersonalState {
   gift: Item<Gift>[];
   eidiya: Item<EidiyaPerson>[];
   payday_step: Item<PaydayStep>[];
+  holding: Item<Holding>[];
   hydrate: () => Promise<void>;
   add: <K extends PersonalKind>(kind: K, data: DataByKind[K]) => Promise<string>;
   update: <K extends PersonalKind>(kind: K, id: string, data: DataByKind[K]) => Promise<void>;
   remove: (kind: PersonalKind, id: string) => Promise<void>;
 }
 
-const KINDS: PersonalKind[] = ['gameya', 'gift', 'eidiya', 'payday_step'];
+const KINDS: PersonalKind[] = ['gameya', 'gift', 'eidiya', 'payday_step', 'holding'];
 
 export const usePersonalStore = create<PersonalState>((set, get) => ({
   loaded: false,
@@ -37,6 +40,7 @@ export const usePersonalStore = create<PersonalState>((set, get) => ({
   gift: [],
   eidiya: [],
   payday_step: [],
+  holding: [],
   hydrate: async () => {
     const rows = await repo.listPersonalRows();
     const next: Record<string, unknown[]> = Object.fromEntries(KINDS.map((k) => [k, []]));

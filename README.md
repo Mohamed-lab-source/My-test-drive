@@ -22,6 +22,12 @@ Firestore access is locked down by `firestore.rules` at the repo root: a user ma
 
 ## Features
 
+**Wealth (Money → Wealth)**
+- Overview: a money ladder (track → starter backup → clear cards → save monthly → full backup → pay debts → invest monthly) with your current step, plus savings rate, backup months and invested total
+- Save: 6-month saved-per-month chart and average savings rate, a savings % goal, savings ideas from your own subscriptions and habits, and a growth projection with inflation-adjusted value
+- Backup money (emergency fund): months covered, 3/6/9/12-month target on all or essential spending, chosen accounts and liquid holdings, monthly amount to fill it, add to the payday checklist, open a separate account, guidance on keeping it liquid and separate
+- Invest: risk-style quiz → target mix (safe savings, gold, stocks & funds, foreign currency), "avoid interest" mode, holdings tracker (gold valued from the 24k price shared with zakat, certificates with maturity, funds, stocks, FX via your rates), real vs target mix, rebalance hints, monthly invest split toward the target, maturing-soon list, and plain-language guidance (not financial advice)
+
 **Made for you**
 - For you: a feed (and a Home card) of what needs you now, from your own data — 44 kinds of suggestions across salary, cards, spending habits, prayer, fasting, Quran, health, habits, tasks, occasions, gam'eya and Eid; dismiss one for today or turn a kind off (and back on)
 - Gam'eya (جمعية) tracker: schedule, your turn and payout countdown, monthly shares (optionally logged as expenses), the pot as income, late shares, names per turn, several circles with a monthly total

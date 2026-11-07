@@ -7,6 +7,17 @@ import { Card } from '../src/ui/Card';
 // A tour of where things live — Anchor has grown a lot.
 const SECTIONS: { title: string; emoji: string; items: string[] }[] = [
   {
+    title: 'Wealth',
+    emoji: '🌱',
+    items: [
+      'Money → Wealth: your next money step (backup, cards, saving, full backup, debts, investing), with how you stand on each',
+      'Save: how much you keep each month (6-month chart), a savings goal as a % of income, where you could save (subscriptions, delivery, rides, coffee, top categories) and what it grows into, with inflation',
+      'Backup money: how many months it would last, a 3–12 month target sized on all or essential spending, which accounts (and liquid investments) hold it, how much a month fills it, one tap to add it to the payday checklist',
+      'Invest: a four-question investing style with a mix to aim for, an "avoid interest" mode that points to sukuk and Sharia-screened stocks, everything you hold (gold by grams and karat, certificates, sukuk, funds, stocks, dollars, property) with gains, your real mix vs the target, and where this month\'s money should go',
+      'For you now nudges you when backup money is low, to invest on payday, and when spending passes income',
+    ],
+  },
+  {
     title: 'Made for you',
     emoji: '✨',
     items: [

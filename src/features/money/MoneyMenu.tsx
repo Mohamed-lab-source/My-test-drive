@@ -23,6 +23,7 @@ export function MoneyMenu({ badges }: { badges: { budgets: number; sms: number; 
     {
       title: 'Plan',
       items: [
+        { label: 'Wealth: save, backup & invest', icon: 'chart.line.uptrend.xyaxis', color: 'green', href: '/money/wealth' },
         { label: 'Spending plan', icon: 'target', color: 'green', href: '/money/plan' },
         { label: 'Payday checklist', icon: 'banknote.fill', color: 'green', href: '/money/payday' },
         { label: "Gam'eya", icon: 'person.2.fill', color: 'teal', href: '/money/gameya' },

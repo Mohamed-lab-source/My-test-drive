@@ -22,6 +22,7 @@ import { giftsToReturn, personKey } from '../../utils/gifts';
 import type { BudgetStatus } from '../../utils/budgets';
 import type { Occasion } from '../../db/types';
 import { buildNudges, visibleNudges, type Nudge, type NudgeInput } from './engine';
+import { useWealth } from '../wealth/useWealth';
 
 // Islamic dates far ahead are slow to search for, so they're worked out
 // once per day.
@@ -71,6 +72,8 @@ export function useForYou(budgetStatuses: Record<string, BudgetStatus> = {}, bud
   const personal = usePersonalStore(useShallow((s) => ({ gameya: s.gameya, gift: s.gift })));
   const pendingSms = useSmsStore((s) => s.pending.length);
   const plan = useSpendingPlan();
+  const wealth = useWealth();
+  const monthlyInvest = useSettingsStore((s) => s.monthlyInvest);
   const [occasions, setOccasions] = useState<Occasion[]>([]);
   // Re-check every couple of minutes: "Asr in 20 min" goes stale.
   const [tick, setTick] = useState(0);
@@ -157,10 +160,13 @@ export function useForYou(budgetStatuses: Record<string, BudgetStatus> = {}, bud
       weekStart: st.weekStart,
       todayTasks: pr.tasks.filter((t) => t.status !== 'done' && t.scheduled_date === today).length,
       todayMeetings: pr.meetings.filter((m) => todayKey(new Date(m.start_at)) === today).length,
+      backup: { months: wealth.backup.months, target: wealth.backup.targetMonths, monthly: wealth.backup.monthly, per12: wealth.backup.per12 },
+      monthlyInvest,
+      month: { income: wealth.thisMonth.income, expense: wealth.thisMonth.expense },
     };
     return buildNudges(input);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f, st.currency, st.prayerCityId, st.waterGoal, st.quranDailyGoal, st.hijriOffset, st.zakatHawl, st.monthFromPayday, st.monthStartDay, st.weekStart, life, hb, pr, water, personal, pendingSms, plan, occasions, budgetStatuses, budgetNames, tick]);
+  }, [f, st.currency, st.prayerCityId, st.waterGoal, st.quranDailyGoal, st.hijriOffset, st.zakatHawl, st.monthFromPayday, st.monthStartDay, st.weekStart, life, hb, pr, water, personal, pendingSms, plan, occasions, budgetStatuses, budgetNames, tick, wealth, monthlyInvest]);
 
   const dayKey = (() => {
     const d = new Date();

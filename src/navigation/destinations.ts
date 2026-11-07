@@ -10,6 +10,7 @@ export interface Destination {
 
 export const DESTINATIONS: Record<string, Destination> = {
   '/for-you': { label: 'For you', icon: 'sparkles', color: 'purple', keywords: 'suggestions nudges reminders today personal' },
+  '/money/wealth': { label: 'Wealth', icon: 'chart.line.uptrend.xyaxis', color: 'green', keywords: 'save saving invest investment gold stocks emergency fund backup money portfolio sukuk certificate ادخار استثمار' },
   '/money/payday': { label: 'Payday checklist', icon: 'banknote.fill', color: 'green', keywords: 'salary payday checklist راتب' },
   '/money/gameya': { label: "Gam'eya", icon: 'person.2.fill', color: 'teal', keywords: 'gameya gamaeya jameya savings circle جمعية' },
   '/life/gifts': { label: 'Gifts & nokta', icon: 'gift.fill', color: 'pink', keywords: 'gift nokta wedding present نقطة هدية' },

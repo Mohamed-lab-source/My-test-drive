@@ -106,6 +106,26 @@ interface SettingsState {
   setSmsWatchAllBanks: (v: boolean) => void;
   // Card numbers you said aren't yours (no more "new card" prompts).
   ignoredCards: string[];
+  // Wealth: backup money (emergency fund) and investing.
+  backupMonths: number;
+  setBackupMonths: (v: number) => void;
+  // Accounts holding your backup; null = your savings accounts.
+  backupAccountIds: string[] | null;
+  setBackupAccountIds: (v: string[] | null) => void;
+  backupHoldingIds: string[];
+  setBackupHoldingIds: (v: string[]) => void;
+  backupEssentialsOnly: boolean;
+  setBackupEssentialsOnly: (v: boolean) => void;
+  riskAnswers: number[] | null;
+  setRiskAnswers: (v: number[] | null) => void;
+  avoidInterest: boolean;
+  setAvoidInterest: (v: boolean) => void;
+  monthlyInvest: number;
+  setMonthlyInvest: (v: number) => void;
+  expectedReturn: number;
+  setExpectedReturn: (v: number) => void;
+  inflationPct: number;
+  setInflationPct: (v: number) => void;
   // For you: suggestion kinds turned off, and ones dismissed today.
   forYouMuted: string[];
   setNudgeMuted: (kind: string, muted: boolean) => void;
@@ -328,6 +348,24 @@ export const useSettingsStore = create<SettingsState>()(
       smsWatchAllBanks: true,
       setSmsWatchAllBanks: (v) => set({ smsWatchAllBanks: v }),
       ignoredCards: [],
+      backupMonths: 6,
+      setBackupMonths: (v) => set({ backupMonths: v }),
+      backupAccountIds: null,
+      setBackupAccountIds: (v) => set({ backupAccountIds: v }),
+      backupHoldingIds: [],
+      setBackupHoldingIds: (v) => set({ backupHoldingIds: v }),
+      backupEssentialsOnly: false,
+      setBackupEssentialsOnly: (v) => set({ backupEssentialsOnly: v }),
+      riskAnswers: null,
+      setRiskAnswers: (v) => set({ riskAnswers: v }),
+      avoidInterest: true,
+      setAvoidInterest: (v) => set({ avoidInterest: v }),
+      monthlyInvest: 0,
+      setMonthlyInvest: (v) => set({ monthlyInvest: v }),
+      expectedReturn: 12,
+      setExpectedReturn: (v) => set({ expectedReturn: v }),
+      inflationPct: 0,
+      setInflationPct: (v) => set({ inflationPct: v }),
       forYouMuted: [],
       setNudgeMuted: (kind, muted) =>
         set((st) => ({ forYouMuted: muted ? [...new Set([...st.forYouMuted, kind])] : st.forYouMuted.filter((k) => k !== kind) })),

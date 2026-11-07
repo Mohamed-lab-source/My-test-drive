@@ -63,6 +63,9 @@ export const NUDGE_KINDS = {
   noSpend: 'No-spend days',
   duplicate: 'Possible double charges',
   morning: 'Morning summary',
+  backup: 'Backup money',
+  invest: 'Monthly investing',
+  overspend: 'Spending more than you earn',
 } as const;
 export type NudgeKind = keyof typeof NUDGE_KINDS;
 
@@ -121,6 +124,11 @@ export interface NudgeInput {
   weekStart: number;
   todayTasks: number;
   todayMeetings: number;
+  // Backup money in months of spending, and the target.
+  backup?: { months: number; target: number; monthly: number; per12: number } | null;
+  monthlyInvest?: number;
+  // This money month so far.
+  month?: { income: number; expense: number };
 }
 
 const DAY = 86400000;
@@ -454,6 +462,30 @@ export function buildNudges(i: NudgeInput): Nudge[] {
       i.plan && i.plan.dailyLeft > 0 ? `${fmt(i.plan.dailyLeft)} to spend` : null,
     ].filter(Boolean);
     if (bits.length) push({ kind: 'morning', emoji: '☀️', title: 'Your day', detail: `${bits.join(' · ')}. Bismillah.`, route: '/tasks', priority: 27, tone: 'orange' });
+  }
+
+  // ---- Saving, backup money and investing
+  if (i.backup && i.backup.monthly > 0 && i.backup.months < i.backup.target) {
+    const m = i.backup.months;
+    const words = m < 1 ? `${Math.max(0, Math.round(m * 4.3))} weeks` : `${m.toFixed(1)} months`;
+    push({
+      kind: 'backup',
+      emoji: '🛟',
+      title: m < 1 ? `Your backup money covers ${words}` : `Backup: ${words} of ${i.backup.target}`,
+      detail: m < 1 ? `Get to one month first — ${fmt(i.backup.monthly)}. Then keep going.` : `${fmt(i.backup.per12)} a month fills it within a year.`,
+      route: '/money/wealth?tab=backup',
+      priority: m < 1 ? 49 : 17,
+      tone: m < 1 ? 'orange' : 'blue',
+    });
+  }
+  if (i.monthlyInvest && i.monthlyInvest > 0 && lastPayday && startOfDay(lastPayday).getTime() === today.getTime()) {
+    push({ kind: 'invest', emoji: '📈', title: `Invest ${fmt(i.monthlyInvest)} this month`, detail: 'See how to split it across your mix.', route: '/money/wealth?tab=invest', priority: 72, tone: 'green' });
+  }
+  if (i.month && i.month.income > 0 && i.month.expense > i.month.income) {
+    const elapsed = (now.getTime() - i.period.start.getTime()) / Math.max(1, i.period.end.getTime() - i.period.start.getTime());
+    if (elapsed >= 0.4) {
+      push({ kind: 'overspend', emoji: '⚠️', title: 'Spending more than you earned', detail: `${fmt(i.month.expense - i.month.income)} over this month's income so far. Slow down to protect your savings.`, route: '/money/wealth?tab=save', priority: 53, tone: 'red' });
+    }
   }
 
   return out.sort((a, b) => b.priority - a.priority);
