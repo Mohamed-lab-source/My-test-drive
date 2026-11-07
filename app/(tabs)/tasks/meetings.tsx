@@ -1,0 +1,99 @@
+import React, { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { View, Text, ScrollView, Pressable, Platform, Linking, Alert } from 'react-native';
+import { Icon } from '../../../src/ui/Icon';
+import { meetingCountdown, meetingLink } from '../../../src/utils/meetingInfo';
+import { NavHeader } from '../../../src/ui/NavHeader';
+import { useTheme } from '../../../src/theme/ThemeProvider';
+import { useProductivityStore } from '../../../src/store/productivityStore';
+import { Card } from '../../../src/ui/Card';
+import { IconCircle } from '../../../src/ui/IconCircle';
+import { EmptyState } from '../../../src/ui/EmptyState';
+import { FAB } from '../../../src/ui/FAB';
+import { SwipeableRow } from '../../../src/ui/SwipeableRow';
+import { showUndoDelete } from '../../../src/ui/undo';
+import { formatDateLong, formatTime } from '../../../src/utils/date';
+import { AddMeetingSheet } from '../../../src/features/tasks/AddMeetingSheet';
+import { SegmentedControl } from '../../../src/ui/SegmentedControl';
+
+// A link (video call) opens directly; anything else is searched in Maps.
+function openLocation(location: string) {
+  const url = /^https?:\/\//i.test(location)
+    ? location
+    : Platform.OS === 'ios'
+      ? `http://maps.apple.com/?q=${encodeURIComponent(location)}`
+      : `geo:0,0?q=${encodeURIComponent(location)}`;
+  Linking.openURL(url).catch(() => Alert.alert('Could not open', location));
+}
+
+export default function MeetingsScreen() {
+  const { colors, typography, spacing } = useTheme();
+  const { meetings, removeMeeting, refreshMeetings } = useProductivityStore(useShallow((s) => ({ meetings: s.meetings, removeMeeting: s.removeMeeting, refreshMeetings: s.refreshMeetings })));
+  const [addVisible, setAddVisible] = useState(false);
+  const [editing, setEditing] = useState<(typeof meetings)[number] | null>(null);
+  const [tab, setTab] = useState(0);
+  // A meeting stays "upcoming" until it has ended (or an hour after it began).
+  const endOf = (m: (typeof meetings)[number]) => (m.end_at ? new Date(m.end_at).getTime() : new Date(m.start_at).getTime() + 3600000);
+  const upcoming = meetings.filter((m) => endOf(m) >= Date.now()).sort((a, b) => a.start_at.localeCompare(b.start_at));
+  const past = meetings.filter((m) => endOf(m) < Date.now()).sort((a, b) => b.start_at.localeCompare(a.start_at));
+  const shown = tab === 0 ? upcoming : past;
+
+  const handleDelete = async (meeting: (typeof meetings)[number]) => {
+    await removeMeeting(meeting.id);
+    showUndoDelete('meetings', meeting, 'Meeting deleted', refreshMeetings);
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.systemGroupedBackground }}>
+      <NavHeader title="Meetings" />
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+        <View style={{ marginBottom: spacing.md }}>
+          <SegmentedControl options={[`Upcoming (${upcoming.length})`, `Past (${past.length})`]} selectedIndex={tab} onChange={setTab} />
+        </View>
+        {shown.length === 0 ? (
+          <EmptyState icon="calendar" title={tab === 0 ? 'No meetings scheduled' : 'No past meetings'} />
+        ) : (
+          shown.map((m) => (
+            <SwipeableRow key={m.id} actions={[{ label: 'Delete', color: colors.red, onPress: () => handleDelete(m) }]}>
+              <Pressable onPress={() => setEditing(m)}>
+                <Card style={{ marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'center' }}>
+                  <IconCircle name="calendar" color={colors.indigo} />
+                  <View style={{ marginLeft: spacing.sm, flex: 1 }}>
+                    <Text style={[typography.headline, { color: colors.label }]}>{m.title}</Text>
+                    <Text style={[typography.footnote, { color: colors.secondaryLabel }]}>
+                      {formatDateLong(m.start_at)} · {formatTime(m.start_at)}
+                      {meetingCountdown(m.start_at, m.end_at) ? (
+                        <Text style={{ color: meetingCountdown(m.start_at, m.end_at) === 'Now' ? colors.green : colors.orange, fontWeight: '700' }}>
+                          {'  '}
+                          {meetingCountdown(m.start_at, m.end_at)}
+                        </Text>
+                      ) : null}
+                    </Text>
+                    {m.location ? (
+                      <Text style={[typography.caption1, { color: colors.tertiaryLabel, marginTop: 2 }]}>{m.location}</Text>
+                    ) : null}
+                  </View>
+                  {meetingLink(m) && tab === 0 ? (
+                    <Pressable
+                      onPress={() => Linking.openURL(meetingLink(m)!).catch(() => {})}
+                      style={{ backgroundColor: colors.green, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, marginLeft: spacing.sm }}
+                    >
+                      <Text style={[typography.subhead, { color: '#fff', fontWeight: '700' }]}>Join</Text>
+                    </Pressable>
+                  ) : m.location ? (
+                    <Pressable onPress={() => openLocation(m.location!)} hitSlop={10} style={{ marginLeft: spacing.sm }}>
+                      <Icon name={/^https?:\/\//i.test(m.location) ? 'link' : 'map.fill'} size={22} color={colors.blue} />
+                    </Pressable>
+                  ) : null}
+                </Card>
+              </Pressable>
+            </SwipeableRow>
+          ))
+        )}
+      </ScrollView>
+      <FAB onPress={() => setAddVisible(true)} />
+      <AddMeetingSheet visible={addVisible} onClose={() => setAddVisible(false)} />
+      <AddMeetingSheet visible={!!editing} editing={editing} onClose={() => setEditing(null)} />
+    </View>
+  );
+}

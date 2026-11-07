@@ -1,0 +1,18 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.READ_SMS" />
+  <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+  <application>
+    <!-- Posts an instant "new debit" notification when a bank SMS arrives,
+         even while Anchor is closed. Parsing and import still happen in the
+         app, the next time it opens. -->
+    <receiver
+      android:name="expo.modules.anchorsms.SmsDebitReceiver"
+      android:exported="true"
+      android:permission="android.permission.BROADCAST_SMS">
+      <intent-filter>
+        <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>
